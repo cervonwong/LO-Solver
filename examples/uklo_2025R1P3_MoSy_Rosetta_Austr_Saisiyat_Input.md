@@ -16,17 +16,17 @@ Note that in some instances, some context about the situation affects the gramma
 | 8 | Sia mobay ka kakaat hisia. | She gives him a pen. [She is his sister] |
 | 9 | ‘Oya’ pasibaeaeh ka kakaat ‘inisia. | The mother lends him a pen. [He is far away] |
 
-# Question 1
+# Part 1
 Translate the following sentences into Saisiyat, taking the context into account if it is given.
 
 | No. | English |
 | :--- | :--- |
-| 1 | The child writes mother a letter. |
-| 2 | The father gives him some aubergine. [The father is angry with him] |
-| 3 | She gives him some sweet potato. [She is not angry with him] |
-| 4 | The child offers the old man some sweet potato. [The old man is away in hospital, and the child sends some sweet potato into hospital for him] |
+| 10 | The child writes mother a letter. |
+| 11 | The father gives him some aubergine. [The father is angry with him] |
+| 12 | She gives him some sweet potato. [She is not angry with him] |
+| 13 | The child offers the old man some sweet potato. [The old man is away in hospital, and the child sends some sweet potato into hospital for him] |
 
-# Question 2
+# Part 2
 Here are some more Saisiyat words:
 | Saisiyat | English |
 | :--- | :--- |
@@ -40,17 +40,17 @@ Translate the following into English. If the Saisiyat sentence conveys extra con
 
 | No. | Saisiyat |
 | :--- | :--- |
-| 1 | Yaba’ mobay ka rayhil ‘inisia. |
-| 2 | ‘Oya’ pasibaeaeh ka kaibaaen no korkoring. |
-| 3 | ‘Oya’ pasibaeaeh ka kaibaaen ka korkoring. |
+| 14 | Yaba’ mobay ka rayhil ‘inisia. |
+| 15 | ‘Oya’ pasibaeaeh ka kaibaaen no korkoring. |
+| 16 | ‘Oya’ pasibaeaeh ka kaibaaen ka korkoring. |
 
-# Question 3
+# Part 3
 Translate the following into Saisiyat, taking the context into account:
 
 | No. | English |
 | :--- | :--- |
-| 1 | The old man gives the father the money. [The old man does not really want to give the father any money] |
-| 2 | The mother offers the money to the child. [The mother is happy to give her child money] |
-| 3 | The child offers sweet potato to the sibling. [It is the child’s own sibling] |
-| 4 | He offers pork to the foreigner. [He does not know the foreigner] |
+| 17 | The old man gives the father the money. [The old man does not really want to give the father any money] |
+| 18 | The mother offers the money to the child. [The mother is happy to give her child money] |
+| 19 | The child offers sweet potato to the sibling. [It is the child’s own sibling] |
+| 20 | He offers pork to the foreigner. [He does not know the foreigner] |
     
