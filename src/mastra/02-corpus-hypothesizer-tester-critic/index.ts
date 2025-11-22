@@ -1,14 +1,14 @@
-import { corpusHypothesizerTesterCriticWorkflow } from "./corpus-hypothesizer-tester-critic-workflow";
-import { structuredProblemExtractorAgent } from "./structured-problem-extractor-agent";
+import { corpusHypothesizerTesterCriticWorkflow } from './corpus-hypothesizer-tester-critic-workflow';
+import { structuredProblemExtractorAgent } from './structured-problem-extractor-agent';
 
 export const corpusHypothesizerTesterCriticAgents = {
-    structuredProblemExtractorAgent,
-}
+  structuredProblemExtractorAgent,
+};
 
 export const corpusHypothesizerTesterCriticScorers = {
-    // Add scorers here if any
-}
+  // Add scorers here if any
+};
 
 export const corpusHypothesizerTesterCriticWorkflows = {
-    corpusHypothesizerTesterCriticWorkflow,
-}
+  corpusHypothesizerTesterCriticWorkflow,
+};

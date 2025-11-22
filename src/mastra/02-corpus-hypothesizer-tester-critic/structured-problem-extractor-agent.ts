@@ -14,8 +14,8 @@ export const structuredProblemExtractorAgent = new Agent({
       stripControlChars: false,
       preserveEmojis: true,
       collapseWhitespace: true,
-      trim: true
-    })
+      trim: true,
+    }),
   ],
   memory: new Memory({
     storage: new LibSQLStore({
