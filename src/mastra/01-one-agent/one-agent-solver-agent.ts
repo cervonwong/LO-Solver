@@ -1,9 +1,9 @@
 import { Agent } from '@mastra/core/agent';
 import { Memory } from '@mastra/memory';
 import { LibSQLStore } from '@mastra/libsql';
-import { scorers } from '../scorers/one-agent-solver-scorers';
 import { UnicodeNormalizer } from '@mastra/core/processors';
 import { ONE_AGNENT_SOLVER_INSTRUCTIONS } from './one-agent-solver-instructions';
+import { completenessScorer } from './one-agent-solver-scorers';
 
 export const oneAgentSolverAgent = new Agent({
   name: 'One-Agent Solver Agent',
@@ -12,7 +12,7 @@ export const oneAgentSolverAgent = new Agent({
   tools: {},
   scorers: {
     completeness: {
-      scorer: scorers.completenessScorer,
+      scorer: completenessScorer,
       sampling: {
         type: 'ratio',
         rate: 1,
