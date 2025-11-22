@@ -1,8 +1,6 @@
-# Solution: Saisiyat (UKLO 2025 Round 1 Problem 3)
+# Lexicon and Gloss
 
-## Lexicon and Gloss
-
-### Nouns
+## Nouns
 *   `tatini’` — old man
 *   `‘oya’` — mother
 *   `yaba’` — father
@@ -18,7 +16,7 @@
 *   `kaibaaen` — clothes
 *   `ayam` — pork
 
-### Verbs
+## Verbs
 *   `tomalek` — cook
 *   `komaat` — write
 *   `somatel` — send
@@ -26,18 +24,18 @@
 *   `saeoe` — offer
 *   `pasibaeaeh` — lend
 
-### Pronouns / Deictics
+## Pronouns / Deictics
 *   `sia` — 3sg subject pronoun (he/she)
 *   `hisia` — 3sg proximate recipient pronoun (close / positive)
 *   `‘inisia` — 3sg distal/distant recipient pronoun (far / emotionally distant)
 
-### Particles / Case Markers
+## Particles / Case Markers
 *   `ka` — marks (most) direct objects; also used for close/proximate indirect objects
 *   `no` — marks distant/alienated indirect objects (dative-like)
 
 ---
 
-## Core Grammatical Generalizations
+# Core Grammatical Generalizations
 
 1.  **Word Order:** Subject — Verb — [(`ka`) Direct Object] — [(`ka` / `no`) Indirect Object].
 2.  **Direct Object (DO):** Normally preceded by `ka`.
@@ -49,7 +47,7 @@
     *   `hisia` = proximate
     *   `‘inisia` = distant
 
-### Distribution Matrix (Recipient Marking)
+## Distribution Matrix (Recipient Marking)
 
 | Verb | Recipient Marking | Note |
 | :--- | :--- | :--- |
@@ -61,9 +59,9 @@
 
 ---
 
-## Detailed Breakdowns
+# Detailed Breakdowns
 
-### Part 1 (Translate into Saisiyat)
+## Part 1 (Translate into Saisiyat)
 
 **10. English: The child writes mother a letter.**
 *   **Answer:** `Korkoring komaat kakinaat no ‘oya’.`
@@ -101,7 +99,7 @@
     *   `no tatini’` = IO old man marked `no` because he is away/in hospital (distant)
 *   **Justification:** physical distance → use `no`.
 
-### Part 2 (Translate Saisiyat → English; include possible context)
+## Part 2 (Translate Saisiyat → English; include possible context)
 
 **14. Saisiyat: `Yaba’ mobay ka rayhil ‘inisia.`**
 *   **Gloss + translation:** `Yaba’` (father) `mobay` (gives) `ka rayhil` (money) `‘inisia` (him-distant).
@@ -118,7 +116,7 @@
 *   **English:** The mother lends the child clothes. [Context option: it is her child / child is present / closeness]
 *   **Rationale:** IO marked `ka` indicates proximity/positive relation.
 
-### Part 3 (Translate into Saisiyat)
+## Part 3 (Translate into Saisiyat)
 
 **17. English: The old man gives the father the money. [The old man does not really want to give the father any money]**
 *   **Answer:** `Tatini’ mobay ka rayhil no yaba’.`
