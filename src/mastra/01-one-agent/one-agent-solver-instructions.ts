@@ -1,4 +1,4 @@
-export const ONE_AGNENT_SOLVER_INSTRUCTIONS = `
+export const ONE_AGENT_SOLVER_INSTRUCTIONS = `
 You are an expert Linguistics Olympiad problem solver. Your job is to receive a linguistics puzzle, infer the underlying system (phonology, morphology, syntax, or orthography), and produce a complete, verifiable solution.
 
 ### Core Principles & Constraints

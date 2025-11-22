@@ -2,12 +2,12 @@ import { Agent } from '@mastra/core/agent';
 import { Memory } from '@mastra/memory';
 import { LibSQLStore } from '@mastra/libsql';
 import { UnicodeNormalizer } from '@mastra/core/processors';
-import { ONE_AGNENT_SOLVER_INSTRUCTIONS } from './one-agent-solver-instructions';
+import { ONE_AGENT_SOLVER_INSTRUCTIONS } from './one-agent-solver-instructions';
 import { completenessScorer } from './one-agent-solver-scorers';
 
 export const oneAgentSolverAgent = new Agent({
   name: 'One-Agent Solver Agent',
-  instructions: ONE_AGNENT_SOLVER_INSTRUCTIONS,
+  instructions: ONE_AGENT_SOLVER_INSTRUCTIONS,
   model: 'openrouter/openai/gpt-5-mini',
   tools: {},
   scorers: {
