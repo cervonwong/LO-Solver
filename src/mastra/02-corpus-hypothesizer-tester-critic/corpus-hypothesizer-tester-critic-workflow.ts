@@ -57,6 +57,10 @@ const extractionStep = createStep({
         structuredOutput: {
           schema: structuredProblemSchema,
         },
+        memory: {
+          thread: `from-workflow-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
+          resource: 'structuredProblemExtractorAgent', // This resource name allows you to see conversation history in agents tab.
+        },
       });
 
     // validate the agent response against the expected schema so the step returns the correct type
