@@ -1,0 +1,19 @@
+# Build artifacts
+build/
+dist/
+coverage/
+node_modules/
+
+# Environment files
+.env
+.env*
+
+# Databases
+*.db
+*.db-*
+
+# Examples
+examples/
+
+# Miscellaneous
+.mastra

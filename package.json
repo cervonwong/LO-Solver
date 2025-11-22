@@ -26,6 +26,7 @@
   "devDependencies": {
     "@types/node": "^24.10.1",
     "mastra": "^0.18.5",
+    "prettier": "3.6.2",
     "typescript": "^5.9.3"
   }
 }
