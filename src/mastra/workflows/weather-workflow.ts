@@ -1,4 +1,5 @@
 import { createStep, createWorkflow } from '@mastra/core/workflows';
+import { fetchWithRetry } from '@mastra/core/utils';
 import { z } from 'zod';
 
 const forecastSchema = z.object({
@@ -45,7 +46,7 @@ const fetchWeather = createStep({
     }
 
     const geocodingUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(inputData.city)}&count=1`;
-    const geocodingResponse = await fetch(geocodingUrl);
+    const geocodingResponse = await fetchWithRetry(geocodingUrl);
     const geocodingData = (await geocodingResponse.json()) as {
       results: { latitude: number; longitude: number; name: string }[];
     };
@@ -57,7 +58,7 @@ const fetchWeather = createStep({
     const { latitude, longitude, name } = geocodingData.results[0];
 
     const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=precipitation,weathercode&timezone=auto,&hourly=precipitation_probability,temperature_2m`;
-    const response = await fetch(weatherUrl);
+    const response = await fetchWithRetry(weatherUrl);
     const data = (await response.json()) as {
       current: {
         time: string;
