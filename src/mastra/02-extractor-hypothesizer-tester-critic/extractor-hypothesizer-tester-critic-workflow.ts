@@ -77,8 +77,8 @@ const extractionStep = createStep({
   },
 });
 
-const corpusHypothesizerTesterCriticWorkflow = createWorkflow({
-  id: 'corpus-hypothesizer-tester-critic-workflow',
+const extractorHypothesizerTesterCriticWorkflow = createWorkflow({
+  id: 'extractor-hypothesizer-tester-critic-workflow',
   inputSchema: z.object({
     rawProblemText: z.string(),
   }),
@@ -87,4 +87,4 @@ const corpusHypothesizerTesterCriticWorkflow = createWorkflow({
   .then(extractionStep)
   .commit();
 
-export { corpusHypothesizerTesterCriticWorkflow };
+export { extractorHypothesizerTesterCriticWorkflow };
