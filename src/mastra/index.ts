@@ -9,9 +9,17 @@ import {
 } from './02-extractor-hypothesizer-tester-critic';
 
 export const mastra = new Mastra({
-  agents: { ...oneAgentSolverAgents, ...extractorHypothesizerTesterCriticAgents },
-  scorers: { ...oneAgentSolverScorers, ...extractorHypothesizerTesterCriticScorers },
-  workflows: { ...extractorHypothesizerTesterCriticWorkflows },
+  agents: {
+    // ...oneAgentSolverAgents,
+    ...extractorHypothesizerTesterCriticAgents,
+  },
+  scorers: {
+    // ...oneAgentSolverScorers,
+    ...extractorHypothesizerTesterCriticScorers,
+  },
+  workflows: {
+    ...extractorHypothesizerTesterCriticWorkflows,
+  },
   storage: new LibSQLStore({
     // stores observability, scores, ...
     // if storing in memory, use `url: ":memory:"`;
