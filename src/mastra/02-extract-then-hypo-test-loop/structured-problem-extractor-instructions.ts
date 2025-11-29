@@ -54,12 +54,13 @@ Translate:
    - **Standardization**: Renumber IDs sequentially (1, 2, 3...) regardless of the original numbering.
    - **Complete Pairs Only**: Only include items where BOTH the foreign phrase and the English phrase are present.
    - If an item in the main list has a missing part (e.g., "___" or "?"), do NOT put it in the dataset; move it to questions.
+   - **Additional Columns**: Include any extra row-specific information (e.g., grammatical features, context labels) as additional fields in each dataset entry.
 
 3. **Questions**: Identify the specific questions the user needs to answer.
    - **Standardization**: Renumber Question IDs sequentially (Q1, Q2, Q3...).
    - **Explicit Questions**: Include tasks explicitly listed as questions (e.g., "Translate the following...").
-   - **Implicit Questions**: Include items from the main list that have missing parts (fill-in-the-blanks).
-   - Classify the task type (e.g., 'translate-to-english', 'translate-to-target', 'other').
+   - **Implicit Questions**: Include items from the main list that have missing parts (e.g. fill-in-the-blanks).
+   - Classify the task type (e.g., 'translate-to-english', 'translate-to-target', 'fill-in-the-blanks', etc.).
 
 # Constraints
 - Do not attempt to solve the problem.
