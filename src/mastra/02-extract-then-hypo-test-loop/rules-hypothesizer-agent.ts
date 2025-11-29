@@ -7,7 +7,7 @@ import { RULES_HYPOTHESIZER_INSTRUCTIONS } from './rules-hypothesizer-instructio
 export const rulesHypothesizerAgent = new Agent({
   name: 'Rules Hypothesizer Agent',
   instructions: RULES_HYPOTHESIZER_INSTRUCTIONS,
-  model: 'openrouter/openai/gpt-5-mini',
+  model: 'openrouter/deepseek/deepseek-r1-0528',
   tools: {},
   inputProcessors: [
     new UnicodeNormalizer({
