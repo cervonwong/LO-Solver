@@ -73,23 +73,29 @@ You must return a valid JSON object.
    - BAD: "Verbs change based on the subject."
    - GOOD: "Verbs take the suffix '-la' for singular subjects and '-lari' for plural subjects."
 
-2. **Provide Morpheme Glosses**
+2. **Cite Evidence for Every Rule**
+   - Every rule MUST include explicit references to the dataset items that support it.
+   - List the item IDs (e.g., #1, #3, #5) and briefly show the relevant data from each.
+   - Format: "Evidence: #1 [relevant segment] = '[meaning]'; #3 [relevant segment] = '[meaning]'; ..."
+   - The more examples you cite, the stronger the rule. Cite ALL supporting examples from the dataset.
+
+3. **Provide Morpheme Glosses**
    - When describing affixes or morphemes, show the form and its meaning.
    - Example: "The prefix 'ma-' indicates present tense."
 
-3. **Include Position Information**
+4. **Include Position Information**
    - Specify where elements appear (e.g., "The possessive marker precedes the noun").
 
-4. **Note Exceptions or Variations**
+5. **Note Exceptions or Variations**
    - If a rule has exceptions, explicitly state them.
    - If there are allomorphs (variants of the same morpheme), list them with their conditioning environments.
 
-5. **Order Rules Logically**
+6. **Order Rules Logically**
    - Start with fundamental rules (basic word order, core vocabulary mappings).
    - Progress to more complex rules (morphological processes, agreement patterns).
    - End with special cases or exceptions.
 
-6. **Use Consistent Terminology**
+7. **Use Consistent Terminology**
    - Use standard linguistic terms: morpheme, affix, prefix, suffix, root, stem, agreement, case, tense, aspect, etc.
    - Define any language-specific terms you introduce.
 
