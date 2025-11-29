@@ -11,6 +11,36 @@ const rawProblemInputSchema = z.object({
 const generateWorkflowRunId = () =>
   `workflow-run-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
 
+// Helper to create an onChunk handler for agent execution logging
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const createChunkHandler = (agentName: string): ((chunk: any) => void) => {
+  return (chunk) => {
+    switch (chunk.type) {
+      case 'text-start':
+        process.stdout.write(`[${agentName}] 📝 Text: `);
+        break;
+      case 'text-delta':
+        process.stdout.write(chunk.payload?.text ?? '');
+        break;
+      case 'text-end':
+        process.stdout.write('\n');
+        break;
+      case 'reasoning-start':
+        process.stdout.write(`[${agentName}] 🧠 Reasoning: `);
+        break;
+      case 'reasoning-delta':
+        process.stdout.write(chunk.payload?.text ?? '');
+        break;
+      case 'reasoning-end':
+        process.stdout.write('\n');
+        break;
+      case 'error':
+        console.error(`[${agentName}] ❌ Error:`, chunk.payload?.error);
+        break;
+    }
+  };
+};
+
 // Shared workflow state schema - used to share workflowRunId across all steps
 const workflowStateSchema = z.object({
   workflowRunId: z.string(),
@@ -183,6 +213,10 @@ const extractionStep = createStep({
     const workflowRunId = generateWorkflowRunId();
     setState({ ...state, workflowRunId });
 
+    console.log(`\n${'='.repeat(60)}`);
+    console.log(`[Structured Problem Extractor] 🚀 Starting extraction...`);
+    console.log(`${'='.repeat(60)}`);
+
     const response = await mastra
       .getAgent('structuredProblemExtractorAgent')
       .generate(`${inputData.rawProblemText}`, {
@@ -193,7 +227,10 @@ const extractionStep = createStep({
           thread: `${workflowRunId}-extractor`,
           resource: 'structuredProblemExtractorAgent', // This resource name allows you to see conversation history in agents tab.
         },
+        onChunk: createChunkHandler('Extractor'),
       });
+
+    console.log(`[Structured Problem Extractor] ✅ Extraction complete.`);
 
     // validate the agent response against the expected schema so the step returns the correct type
     const parsed = structuredProblemSchema.parse(response.object);
@@ -225,6 +262,12 @@ const hypothesisAndTestLoopStep = createStep({
       iterationCount,
     } = inputData;
 
+    console.log(`\n${'='.repeat(60)}`);
+    console.log(
+      `[Hypothesis-Test Loop] 🔄 Iteration ${iterationCount + 1}/${MAX_HYPOTHESIS_TEST_ITERATIONS}`,
+    );
+    console.log(`${'='.repeat(60)}`);
+
     // Step 1: Hypothesize rules (or revise if we have previous test results)
     const hypothesizerPrompt =
       previousTestResults !== null
@@ -240,6 +283,10 @@ const hypothesisAndTestLoopStep = createStep({
             instruction: 'Please analyze the dataset and hypothesize the linguistic rules.',
           });
 
+    console.log(
+      `[Rules Hypothesizer] 🚀 Starting ${previousTestResults !== null ? 'revision' : 'hypothesis'}...`,
+    );
+
     const hypothesizerResponse = await mastra
       .getAgent('rulesHypothesizerAgent')
       .generate(hypothesizerPrompt, {
@@ -250,7 +297,10 @@ const hypothesisAndTestLoopStep = createStep({
           thread: `${workflowRunId}-hypothesizer`,
           resource: 'rulesHypothesizerAgent',
         },
+        onChunk: createChunkHandler('Hypothesizer'),
       });
+
+    console.log(`[Rules Hypothesizer] ✅ Hypothesis complete.`);
 
     const hypothesizerParsed = rulesSchema.parse(hypothesizerResponse.object);
 
@@ -267,6 +317,8 @@ const hypothesisAndTestLoopStep = createStep({
       rules: hypothesizerParsed.rules,
     });
 
+    console.log(`[Rules Tester] 🚀 Starting rule validation...`);
+
     const testerResponse = await mastra.getAgent('rulesTesterAgent').generate(testerPrompt, {
       structuredOutput: {
         schema: rulesTestResultsSchema,
@@ -275,9 +327,12 @@ const hypothesisAndTestLoopStep = createStep({
         thread: `${workflowRunId}-tester`,
         resource: 'rulesTesterAgent',
       },
+      onChunk: createChunkHandler('Tester'),
     });
 
     const testerParsed = rulesTestResultsSchema.parse(testerResponse.object);
+
+    console.log(`[Rules Tester] ✅ Validation complete. Result: ${testerParsed.conclusion}`);
 
     // Return the updated loop state
     return {
@@ -295,14 +350,7 @@ const vocabularyExtractionInputSchema = z.object({
   rules: rulesArraySchema,
 });
 
-// Schema for passing data from vocabulary extraction to question answering
-const vocabToAnswerInputSchema = z.object({
-  structuredProblem: structuredProblemDataSchema,
-  rules: rulesArraySchema,
-  vocabulary: vocabularySchema,
-});
-
-// Schema for the question answering step input
+// Schema for the question answering step input (also used as output of vocabulary extraction)
 const questionAnsweringInputSchema = z.object({
   structuredProblem: structuredProblemDataSchema,
   rules: rulesArraySchema,
@@ -313,11 +361,15 @@ const questionAnsweringInputSchema = z.object({
 const extractVocabularyStep = createStep({
   id: 'extract-vocabulary',
   inputSchema: vocabularyExtractionInputSchema,
-  outputSchema: vocabToAnswerInputSchema,
+  outputSchema: questionAnsweringInputSchema,
   stateSchema: workflowStateSchema,
   execute: async ({ inputData, mastra, bail, state }) => {
     const { workflowRunId } = state;
     const { structuredProblem, rules } = inputData;
+
+    console.log(`\n${'='.repeat(60)}`);
+    console.log(`[Vocabulary Extractor] 🚀 Starting vocabulary extraction...`);
+    console.log(`${'='.repeat(60)}`);
 
     const extractorPrompt = JSON.stringify({
       context: structuredProblem.context,
@@ -335,7 +387,10 @@ const extractVocabularyStep = createStep({
           thread: `${workflowRunId}-vocabulary`,
           resource: 'vocabularyExtractorAgent',
         },
+        onChunk: createChunkHandler('Vocabulary'),
       });
+
+    console.log(`[Vocabulary Extractor] ✅ Extraction complete.`);
 
     const extractorParsed = vocabularySchema.parse(extractorResponse.object);
 
@@ -347,11 +402,11 @@ const extractVocabularyStep = createStep({
       });
     }
 
-    // Pass through the structured problem, rules, and add vocabulary
+    // Pass through the structured problem, rules, and add vocabulary array directly
     return {
       structuredProblem,
       rules,
-      vocabulary: extractorParsed,
+      vocabulary: extractorParsed.vocabulary!,
     };
   },
 });
@@ -365,6 +420,10 @@ const answerQuestionsStep = createStep({
   execute: async ({ inputData, mastra, bail, state }) => {
     const { workflowRunId } = state;
     const { structuredProblem, rules, vocabulary } = inputData;
+
+    console.log(`\n${'='.repeat(60)}`);
+    console.log(`[Question Answerer] 🚀 Starting to answer questions...`);
+    console.log(`${'='.repeat(60)}`);
 
     const answererPrompt = JSON.stringify({
       context: structuredProblem.context,
@@ -384,7 +443,10 @@ const answerQuestionsStep = createStep({
           thread: `${workflowRunId}-answerer`,
           resource: 'questionAnswererAgent',
         },
+        onChunk: createChunkHandler('Answerer'),
       });
+
+    console.log(`[Question Answerer] ✅ Answering complete.`);
 
     const answererParsed = questionsAnsweredSchema.parse(answererResponse.object);
 
@@ -434,11 +496,6 @@ export const extractThenHypoTestLoopWorkflow = createWorkflow({
   }))
   // Step 3: Extract vocabulary using the validated rules
   .then(extractVocabularyStep)
-  .map(async ({ inputData }) => ({
-    structuredProblem: inputData.structuredProblem,
-    rules: inputData.rules,
-    vocabulary: inputData.vocabulary.vocabulary!,
-  }))
   // Step 4: Answer the user's questions using the validated rules and extracted vocabulary.
   .then(answerQuestionsStep)
   .commit();
