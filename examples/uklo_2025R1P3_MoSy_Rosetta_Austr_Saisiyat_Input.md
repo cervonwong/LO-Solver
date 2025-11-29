@@ -7,7 +7,7 @@ Note that in some instances, some context about the situation affects the gramma
 | No. | Saisiyat | English |
 | :--- | :--- | :--- |
 | 1 | Tatini’ tomalek ka ‘aewpir. | The old man cooks some sweet potato. |
-| 2 | Sia komaat kakinaat no korkoring. | He writes the child a letter. |
+| 2 | Sia komaat ka kinaat no korkoring. | He writes the child a letter. |
 | 3 | Yaba’ somatel ka kakaat no korkoring. | The father sends the child a pen. |
 | 4 | Sia mobay ka kakaat ka korkoring. | He gives the child a pen. [It is his own child] |
 | 5 | Yaba’ saeoe ka talor ka korkoring. | The father offers the child some aubergine. [It is the father’s own child] |
