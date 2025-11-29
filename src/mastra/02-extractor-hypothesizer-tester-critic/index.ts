@@ -1,4 +1,4 @@
-import { extractorHypothesizerTesterCriticWorkflow } from './extractor-hypothesizer-tester-critic-workflow';
+import { extractorHypothesizerTesterCriticWorkflow } from './workflow';
 import { rulesHypothesizerAgent } from './rules-hypothesizer-agent';
 import { rulesTesterAgent } from './rules-tester-agent';
 import { structuredProblemExtractorAgent } from './structured-problem-extractor-agent';
