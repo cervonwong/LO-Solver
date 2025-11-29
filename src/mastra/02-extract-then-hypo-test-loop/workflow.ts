@@ -7,6 +7,15 @@ const rawProblemInputSchema = z.object({
   rawProblemText: z.string(),
 });
 
+// Helper to generate a unique workflow run ID
+const generateWorkflowRunId = () =>
+  `workflow-run-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+
+// Shared workflow state schema - used to share workflowRunId across all steps
+const workflowStateSchema = z.object({
+  workflowRunId: z.string(),
+});
+
 const structuredProblemDataSchema = z.object({
   context: z
     .string()
@@ -91,6 +100,66 @@ const rulesTestResultsSchema = z.object({
     ),
 });
 
+const questionAnswerSchema = z.object({
+  questionId: z.string().describe('The ID of the question being answered (e.g., Q1, Q2)'),
+  answer: z.string().describe('The final translated phrase or answer'),
+  workingSteps: z
+    .string()
+    .describe(
+      'Step-by-step breakdown showing how the answer was derived, including morpheme segmentation, rule application, and glosses',
+    ),
+});
+
+const questionsAnsweredSchema = z.object({
+  success: z
+    .boolean()
+    .describe(
+      'Set to true if all questions were successfully answered. Set to false if unable to answer due to missing rules, ambiguity, or other issues.',
+    ),
+  explanation: z
+    .string()
+    .describe(
+      'If success is false, explain which questions could not be answered and why. If true, provide a brief summary.',
+    ),
+  answers: z
+    .array(questionAnswerSchema)
+    .nullable()
+    .describe('Array of answers for each question. Null if success is false.'),
+});
+
+const vocabularyEntrySchema = z.object({
+  foreignForm: z.string().describe('The foreign language morpheme or word'),
+  meaning: z.string().describe('The English meaning or gloss'),
+  type: z
+    .string()
+    .describe(
+      'The morpheme type (e.g., noun, verb-root, adjective, pronoun, tense-marker, number-marker, case-marker, agreement-marker, etc.)',
+    ),
+  notes: z
+    .string()
+    .describe(
+      'Additional notes including dataset item references, allomorphs, combinatorial restrictions, etc.',
+    ),
+});
+
+const vocabularyArraySchema = z.array(vocabularyEntrySchema);
+
+const vocabularySchema = z.object({
+  success: z
+    .boolean()
+    .describe(
+      'Set to true if vocabulary was successfully extracted. Set to false if extraction failed.',
+    ),
+  explanation: z
+    .string()
+    .describe(
+      'If success is false, explain what went wrong. If true, provide a brief summary of what was extracted.',
+    ),
+  vocabulary: vocabularyArraySchema
+    .nullable()
+    .describe('Array of vocabulary entries. Null if success is false.'),
+});
+
 // Combined schema for the hypothesis-test loop
 // This schema carries all the data needed for both the hypothesizer and tester
 const hypothesisTestLoopSchema = z.object({
@@ -108,7 +177,12 @@ const extractionStep = createStep({
   id: 'extract-structure',
   inputSchema: rawProblemInputSchema,
   outputSchema: structuredProblemSchema,
-  execute: async ({ inputData, mastra, bail }) => {
+  stateSchema: workflowStateSchema,
+  execute: async ({ inputData, mastra, bail, state, setState }) => {
+    // Generate and store workflowRunId in shared state
+    const workflowRunId = generateWorkflowRunId();
+    setState({ ...state, workflowRunId });
+
     const response = await mastra
       .getAgent('structuredProblemExtractorAgent')
       .generate(`${inputData.rawProblemText}`, {
@@ -116,7 +190,7 @@ const extractionStep = createStep({
           schema: structuredProblemSchema,
         },
         memory: {
-          thread: `from-workflow-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
+          thread: `${workflowRunId}-extractor`,
           resource: 'structuredProblemExtractorAgent', // This resource name allows you to see conversation history in agents tab.
         },
       });
@@ -141,7 +215,9 @@ const hypothesisAndTestLoopStep = createStep({
   id: 'hypothesize-and-test-rules-loop',
   inputSchema: hypothesisTestLoopSchema,
   outputSchema: hypothesisTestLoopSchema,
-  execute: async ({ inputData, mastra, bail }) => {
+  stateSchema: workflowStateSchema,
+  execute: async ({ inputData, mastra, bail, state }) => {
+    const { workflowRunId } = state;
     const {
       structuredProblem,
       rules: previousRules,
@@ -171,7 +247,7 @@ const hypothesisAndTestLoopStep = createStep({
           schema: rulesSchema,
         },
         memory: {
-          thread: `from-workflow-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
+          thread: `${workflowRunId}-hypothesizer`,
           resource: 'rulesHypothesizerAgent',
         },
       });
@@ -196,7 +272,7 @@ const hypothesisAndTestLoopStep = createStep({
         schema: rulesTestResultsSchema,
       },
       memory: {
-        thread: `from-workflow-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`,
+        thread: `${workflowRunId}-tester`,
         resource: 'rulesTesterAgent',
       },
     });
@@ -213,44 +289,156 @@ const hypothesisAndTestLoopStep = createStep({
   },
 });
 
-// Final step to extract the rules from the loop state
-const extractFinalRulesStep = createStep({
-  id: 'extract-final-rules',
-  inputSchema: hypothesisTestLoopSchema,
-  outputSchema: rulesSchema,
-  execute: async ({ inputData }) => {
+// Schema for the vocabulary extraction step input
+const vocabularyExtractionInputSchema = z.object({
+  structuredProblem: structuredProblemDataSchema,
+  rules: rulesArraySchema,
+});
+
+// Schema for passing data from vocabulary extraction to question answering
+const vocabToAnswerInputSchema = z.object({
+  structuredProblem: structuredProblemDataSchema,
+  rules: rulesArraySchema,
+  vocabulary: vocabularySchema,
+});
+
+// Schema for the question answering step input
+const questionAnsweringInputSchema = z.object({
+  structuredProblem: structuredProblemDataSchema,
+  rules: rulesArraySchema,
+  vocabulary: vocabularyArraySchema,
+});
+
+// Step to extract vocabulary from the dataset using validated rules
+const extractVocabularyStep = createStep({
+  id: 'extract-vocabulary',
+  inputSchema: vocabularyExtractionInputSchema,
+  outputSchema: vocabToAnswerInputSchema,
+  stateSchema: workflowStateSchema,
+  execute: async ({ inputData, mastra, bail, state }) => {
+    const { workflowRunId } = state;
+    const { structuredProblem, rules } = inputData;
+
+    const extractorPrompt = JSON.stringify({
+      context: structuredProblem.context,
+      dataset: structuredProblem.dataset,
+      rules: rules,
+    });
+
+    const extractorResponse = await mastra
+      .getAgent('vocabularyExtractorAgent')
+      .generate(extractorPrompt, {
+        structuredOutput: {
+          schema: vocabularySchema,
+        },
+        memory: {
+          thread: `${workflowRunId}-vocabulary`,
+          resource: 'vocabularyExtractorAgent',
+        },
+      });
+
+    const extractorParsed = vocabularySchema.parse(extractorResponse.object);
+
+    if (extractorParsed.success === false) {
+      return bail({
+        success: false,
+        message:
+          '[Extract Vocabulary Step] Failed to extract vocabulary: ' + extractorParsed.explanation,
+      });
+    }
+
+    // Pass through the structured problem, rules, and add vocabulary
     return {
-      success: true,
-      explanation: `Rules validated successfully. Test conclusion: ${inputData.testResults?.conclusion}. ${inputData.testResults?.explanation}`,
-      rules: inputData.rules,
+      structuredProblem,
+      rules,
+      vocabulary: extractorParsed,
     };
+  },
+});
+
+// Step to answer questions using the validated rules and vocabulary
+const answerQuestionsStep = createStep({
+  id: 'answer-questions',
+  inputSchema: questionAnsweringInputSchema,
+  outputSchema: questionsAnsweredSchema,
+  stateSchema: workflowStateSchema,
+  execute: async ({ inputData, mastra, bail, state }) => {
+    const { workflowRunId } = state;
+    const { structuredProblem, rules, vocabulary } = inputData;
+
+    const answererPrompt = JSON.stringify({
+      context: structuredProblem.context,
+      dataset: structuredProblem.dataset,
+      questions: structuredProblem.questions,
+      rules: rules,
+      vocabulary: vocabulary,
+    });
+
+    const answererResponse = await mastra
+      .getAgent('questionAnswererAgent')
+      .generate(answererPrompt, {
+        structuredOutput: {
+          schema: questionsAnsweredSchema,
+        },
+        memory: {
+          thread: `${workflowRunId}-answerer`,
+          resource: 'questionAnswererAgent',
+        },
+      });
+
+    const answererParsed = questionsAnsweredSchema.parse(answererResponse.object);
+
+    if (answererParsed.success === false) {
+      return bail({
+        success: false,
+        message:
+          '[Answer Questions Step] Failed to answer questions: ' + answererParsed.explanation,
+      });
+    }
+
+    return answererParsed;
   },
 });
 
 export const extractThenHypoTestLoopWorkflow = createWorkflow({
   id: 'extract-then-hypo-test-loop-workflow',
   inputSchema: rawProblemInputSchema,
-  outputSchema: rulesSchema,
+  outputSchema: questionsAnsweredSchema,
+  stateSchema: workflowStateSchema,
 })
+  // Step 1: Extract structured problem data.
   .then(extractionStep)
-  // Map the extraction output to the loop input schema
   .map(async ({ inputData }) => ({
     structuredProblem: inputData.data!,
     rules: null,
     testResults: null,
     iterationCount: 0,
   }))
-  // Loop until rules pass the test or max iterations reached
+  // Step 2: Up to 5 iterations, perform the hypothesis-test loop:
+  // - Hypothesize or revise rules based on previous test results.
+  // - Test the hypothesized rules against the dataset.
   .dountil(hypothesisAndTestLoopStep, async ({ inputData }) => {
-    // Stop if max iterations reached
+    // Exit if max iterations reached
     if (inputData.iterationCount >= MAX_HYPOTHESIS_TEST_ITERATIONS) {
       console.warn(
         `[Hypothesis-Test Loop] Max iterations (${MAX_HYPOTHESIS_TEST_ITERATIONS}) reached. Proceeding with current rules.`,
       );
       return true;
     }
-    // Stop if all rules are correct
+    // Exit if all rules are correct
     return inputData.testResults?.conclusion === 'All rules correct';
   })
-  .then(extractFinalRulesStep)
+  .map(async ({ inputData }) => ({
+    structuredProblem: inputData.structuredProblem,
+    rules: inputData.rules!,
+  }))
+  // Step 3: Extract vocabulary using the validated rules
+  .then(extractVocabularyStep)
+  .map(async ({ inputData }) => ({
+    structuredProblem: inputData.structuredProblem,
+    rules: inputData.rules,
+    vocabulary: inputData.vocabulary.vocabulary!,
+  }))
+  // Step 4: Answer the user's questions using the validated rules and extracted vocabulary.
+  .then(answerQuestionsStep)
   .commit();
