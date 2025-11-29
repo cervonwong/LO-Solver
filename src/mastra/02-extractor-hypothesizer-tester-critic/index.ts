@@ -1,10 +1,12 @@
 import { extractorHypothesizerTesterCriticWorkflow } from './extractor-hypothesizer-tester-critic-workflow';
 import { rulesHypothesizerAgent } from './rules-hypothesizer-agent';
+import { rulesTesterAgent } from './rules-tester-agent';
 import { structuredProblemExtractorAgent } from './structured-problem-extractor-agent';
 
 export const extractorHypothesizerTesterCriticAgents = {
   structuredProblemExtractorAgent,
   rulesHypothesizerAgent,
+  rulesTesterAgent,
 };
 
 export const extractorHypothesizerTesterCriticScorers = {
