@@ -97,9 +97,7 @@ const structuredProblemDataSchema = z.object({
           id: z.string().describe('Sequential ID (1, 2, 3...)'),
         })
         .catchall(
-          z
-            .string()
-            .describe('Variable fields containing the data (e.g. english, foreign_language)'),
+          z.string().describe('Variable fields containing the data (e.g. english, foreignForm)'),
         ),
     )
     .describe('Core data for analysis. Complete pairs only.'),
@@ -141,11 +139,28 @@ const rulesArraySchema = z.array(
   }),
 );
 
+const vocabularyEntrySchema = z.object({
+  foreignForm: z.string().describe('The foreign language morpheme or word'),
+  meaning: z.string().describe('The English meaning or gloss'),
+  type: z
+    .string()
+    .describe(
+      'The morpheme type (e.g., noun, verb-root, adjective, pronoun, tense-marker, number-marker, case-marker, agreement-marker, etc.)',
+    ),
+  notes: z
+    .string()
+    .describe(
+      'Additional notes including dataset item references, allomorphs, combinatorial restrictions, etc.',
+    ),
+});
+
+const vocabularyArraySchema = z.array(vocabularyEntrySchema);
+
 const rulesSchema = z.object({
   success: z
     .boolean()
     .describe(
-      'Set to true if rules were successfully extracted. Set to false if extraction failed.',
+      'Set to true if rules and vocabulary were successfully extracted. Set to false if extraction failed.',
     ),
   explanation: z
     .string()
@@ -154,6 +169,11 @@ const rulesSchema = z.object({
     .nullable()
     .describe(
       'An ordered list of rules extracted from the linguistic data. Null if success is false.',
+    ),
+  vocabulary: vocabularyArraySchema
+    .nullable()
+    .describe(
+      'A comprehensive vocabulary list (lexicon) mapping foreign language morphemes/words to their English meanings. Null if success is false.',
     ),
 });
 
@@ -197,47 +217,16 @@ const questionsAnsweredSchema = z.object({
     .describe('Array of answers for each question. Null if success is false.'),
 });
 
-const vocabularyEntrySchema = z.object({
-  foreignForm: z.string().describe('The foreign language morpheme or word'),
-  meaning: z.string().describe('The English meaning or gloss'),
-  type: z
-    .string()
-    .describe(
-      'The morpheme type (e.g., noun, verb-root, adjective, pronoun, tense-marker, number-marker, case-marker, agreement-marker, etc.)',
-    ),
-  notes: z
-    .string()
-    .describe(
-      'Additional notes including dataset item references, allomorphs, combinatorial restrictions, etc.',
-    ),
-});
-
-const vocabularyArraySchema = z.array(vocabularyEntrySchema);
-
-const vocabularySchema = z.object({
-  success: z
-    .boolean()
-    .describe(
-      'Set to true if vocabulary was successfully extracted. Set to false if extraction failed.',
-    ),
-  explanation: z
-    .string()
-    .describe(
-      'If success is false, explain what went wrong. If true, provide a brief summary of what was extracted.',
-    ),
-  vocabulary: vocabularyArraySchema
-    .nullable()
-    .describe('Array of vocabulary entries. Null if success is false.'),
-});
-
 // Combined schema for the hypothesis-test loop
 // This schema carries all the data needed for both the hypothesizer and tester
 const hypothesisTestLoopSchema = z.object({
   // The original structured problem data (immutable through the loop)
   structuredProblem: structuredProblemDataSchema,
-  // The current hypothesized rules (updated each iteration)
+  // The current hypothesized rules (null on first iteration, updated each iteration)
   rules: rulesArraySchema.nullable(),
-  // The test results from the previous iteration (null on first iteration)
+  // The current vocabulary list (null on first iteration, updated each iteration)
+  vocabulary: vocabularyArraySchema.nullable(),
+  // The test results from the previous iteration (null on first iteration, updated each iteration)
   testResults: rulesTestResultsSchema.nullable(),
   // The current iteration count (for tracking purposes, not passed to agents)
   iterationCount: z.number(),
@@ -301,6 +290,7 @@ const hypothesisAndTestLoopStep = createStep({
     const {
       structuredProblem,
       rules: previousRules,
+      vocabulary: previousVocabulary,
       testResults: previousTestResults,
       iterationCount,
     } = inputData;
@@ -311,19 +301,21 @@ const hypothesisAndTestLoopStep = createStep({
     );
     logToOutput(`${'='.repeat(60)}`);
 
-    // Step 1: Hypothesize rules (or revise if we have previous test results)
+    // Step 1: Hypothesize rules and vocabulary (or revise if we have previous test results)
     const hypothesizerPrompt =
       previousTestResults !== null
         ? JSON.stringify({
             structuredProblem,
             previousRules,
+            previousVocabulary,
             testFeedback: previousTestResults,
             instruction:
-              'Your previous rules did not pass the test. Please revise your rules based on the feedback provided.',
+              'Your previous rules did not pass the test. Please revise your rules and vocabulary based on the feedback provided.',
           })
         : JSON.stringify({
             structuredProblem,
-            instruction: 'Please analyze the dataset and hypothesize the linguistic rules.',
+            instruction:
+              'Please analyze the dataset and hypothesize the linguistic rules and extract the vocabulary.',
           });
 
     logToOutput(
@@ -347,7 +339,11 @@ const hypothesisAndTestLoopStep = createStep({
 
     const hypothesizerParsed = rulesSchema.parse(hypothesizerResponse.object);
 
-    if (hypothesizerParsed.success === false || hypothesizerParsed.rules === null) {
+    if (
+      hypothesizerParsed.success === false ||
+      hypothesizerParsed.rules === null ||
+      hypothesizerParsed.vocabulary === null
+    ) {
       return bail({
         success: false,
         message: '[Hypothesize Rules Step] Hypothesis failed: ' + hypothesizerParsed.explanation,
@@ -381,77 +377,18 @@ const hypothesisAndTestLoopStep = createStep({
     return {
       structuredProblem,
       rules: hypothesizerParsed.rules,
+      vocabulary: hypothesizerParsed.vocabulary,
       testResults: testerParsed,
       iterationCount: iterationCount + 1,
     };
   },
 });
 
-// Schema for the vocabulary extraction step input
-const vocabularyExtractionInputSchema = z.object({
-  structuredProblem: structuredProblemDataSchema,
-  rules: rulesArraySchema,
-});
-
-// Schema for the question answering step input (also used as output of vocabulary extraction)
+// Schema for the question answering step input
 const questionAnsweringInputSchema = z.object({
   structuredProblem: structuredProblemDataSchema,
   rules: rulesArraySchema,
   vocabulary: vocabularyArraySchema,
-});
-
-// Step to extract vocabulary from the dataset using validated rules
-const extractVocabularyStep = createStep({
-  id: 'extract-vocabulary',
-  inputSchema: vocabularyExtractionInputSchema,
-  outputSchema: questionAnsweringInputSchema,
-  stateSchema: workflowStateSchema,
-  execute: async ({ inputData, mastra, bail, state }) => {
-    const { workflowRunId } = state;
-    const { structuredProblem, rules } = inputData;
-
-    logToOutput(`\n${'='.repeat(60)}`);
-    logToOutput(`[Vocabulary Extractor] 🚀 Starting vocabulary extraction...`);
-    logToOutput(`${'='.repeat(60)}`);
-
-    const extractorPrompt = JSON.stringify({
-      context: structuredProblem.context,
-      dataset: structuredProblem.dataset,
-      rules: rules,
-    });
-
-    const extractorResponse = await mastra
-      .getAgent('vocabularyExtractorAgent')
-      .generate(extractorPrompt, {
-        structuredOutput: {
-          schema: vocabularySchema,
-        },
-        memory: {
-          thread: `${workflowRunId}-vocabulary`,
-          resource: 'vocabularyExtractorAgent',
-        },
-        onChunk: createChunkHandler('Vocabulary'),
-      });
-
-    logToOutput(`[Vocabulary Extractor] ✅ Extraction complete.`);
-
-    const extractorParsed = vocabularySchema.parse(extractorResponse.object);
-
-    if (extractorParsed.success === false) {
-      return bail({
-        success: false,
-        message:
-          '[Extract Vocabulary Step] Failed to extract vocabulary: ' + extractorParsed.explanation,
-      });
-    }
-
-    // Pass through the structured problem, rules, and add vocabulary array directly
-    return {
-      structuredProblem,
-      rules,
-      vocabulary: extractorParsed.vocabulary!,
-    };
-  },
 });
 
 // Step to answer questions using the validated rules and vocabulary
@@ -515,12 +452,13 @@ export const extractThenHypoTestLoopWorkflow = createWorkflow({
   .then(extractionStep)
   .map(async ({ inputData }) => ({
     structuredProblem: inputData.data!,
-    rules: null,
-    testResults: null,
+    rules: null, // Initially no rules
+    vocabulary: null, // Initially no vocabulary
+    testResults: null, // Initially no test results
     iterationCount: 0,
   }))
   // Step 2: Up to 5 iterations, perform the hypothesis-test loop:
-  // - Hypothesize or revise rules based on previous test results.
+  // - Hypothesize or revise rules and vocabulary based on previous test results.
   // - Test the hypothesized rules against the dataset.
   .dountil(hypothesisAndTestLoopStep, async ({ inputData }) => {
     // Exit if max iterations reached
@@ -536,9 +474,8 @@ export const extractThenHypoTestLoopWorkflow = createWorkflow({
   .map(async ({ inputData }) => ({
     structuredProblem: inputData.structuredProblem,
     rules: inputData.rules!,
+    vocabulary: inputData.vocabulary!,
   }))
-  // Step 3: Extract vocabulary using the validated rules
-  .then(extractVocabularyStep)
-  // Step 4: Answer the user's questions using the validated rules and extracted vocabulary.
+  // Step 3: Answer the user's questions using the validated rules and extracted vocabulary.
   .then(answerQuestionsStep)
   .commit();

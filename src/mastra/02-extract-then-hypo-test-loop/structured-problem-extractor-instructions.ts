@@ -25,8 +25,8 @@ Translate:
   "data": {
     "context": "Swahili sentences.",
     "dataset": [
-      { "id": "1", "foreign_language": "Juma anapenda kusoma", "english": "Juma likes to read" },
-      { "id": "2", "foreign_language": "Watoto wanacheza", "english": "The children are playing" }
+      { "id": "1", "foreignForm": "Juma anapenda kusoma", "english": "Juma likes to read" },
+      { "id": "2", "foreignForm": "Watoto wanacheza", "english": "The children are playing" }
     ],
     "questions": [
       { "id": "Q1", "type": "translate-to-english", "input": "Juma anacheza" }
