@@ -100,6 +100,8 @@ const hypothesisTestLoopSchema = z.object({
   rules: rulesArraySchema.nullable(),
   // The test results from the previous iteration (null on first iteration)
   testResults: rulesTestResultsSchema.nullable(),
+  // The current iteration count (for tracking purposes, not passed to agents)
+  iterationCount: z.number(),
 });
 
 const extractionStep = createStep({
@@ -140,7 +142,12 @@ const hypothesisAndTestLoopStep = createStep({
   inputSchema: hypothesisTestLoopSchema,
   outputSchema: hypothesisTestLoopSchema,
   execute: async ({ inputData, mastra, bail }) => {
-    const { structuredProblem, rules: previousRules, testResults: previousTestResults } = inputData;
+    const {
+      structuredProblem,
+      rules: previousRules,
+      testResults: previousTestResults,
+      iterationCount,
+    } = inputData;
 
     // Step 1: Hypothesize rules (or revise if we have previous test results)
     const hypothesizerPrompt =
@@ -201,6 +208,7 @@ const hypothesisAndTestLoopStep = createStep({
       structuredProblem,
       rules: hypothesizerParsed.rules,
       testResults: testerParsed,
+      iterationCount: iterationCount + 1,
     };
   },
 });
@@ -219,8 +227,8 @@ const extractFinalRulesStep = createStep({
   },
 });
 
-const extractorHypothesizerTesterCriticWorkflow = createWorkflow({
-  id: 'extractor-hypothesizer-tester-critic-workflow',
+export const extractThenHypoTestLoopWorkflow = createWorkflow({
+  id: 'extract-then-hypo-test-loop-workflow',
   inputSchema: rawProblemInputSchema,
   outputSchema: rulesSchema,
 })
@@ -230,11 +238,12 @@ const extractorHypothesizerTesterCriticWorkflow = createWorkflow({
     structuredProblem: inputData.data!,
     rules: null,
     testResults: null,
+    iterationCount: 0,
   }))
   // Loop until rules pass the test or max iterations reached
-  .dountil(hypothesisAndTestLoopStep, async ({ inputData, iterationCount }) => {
+  .dountil(hypothesisAndTestLoopStep, async ({ inputData }) => {
     // Stop if max iterations reached
-    if (iterationCount >= MAX_HYPOTHESIS_TEST_ITERATIONS) {
+    if (inputData.iterationCount >= MAX_HYPOTHESIS_TEST_ITERATIONS) {
       console.warn(
         `[Hypothesis-Test Loop] Max iterations (${MAX_HYPOTHESIS_TEST_ITERATIONS}) reached. Proceeding with current rules.`,
       );
@@ -245,5 +254,3 @@ const extractorHypothesizerTesterCriticWorkflow = createWorkflow({
   })
   .then(extractFinalRulesStep)
   .commit();
-
-export { extractorHypothesizerTesterCriticWorkflow };
