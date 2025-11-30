@@ -5,7 +5,7 @@ import { UnicodeNormalizer } from '@mastra/core/processors';
 import { RULES_TESTER_INSTRUCTIONS } from './rules-tester-instructions';
 
 export const rulesTesterAgent = new Agent({
-  name: 'Rules Tester Agent',
+  name: '[02-02b] Rules Tester Agent',
   instructions: RULES_TESTER_INSTRUCTIONS,
   model: 'openrouter/openai/gpt-5-mini',
   tools: {},

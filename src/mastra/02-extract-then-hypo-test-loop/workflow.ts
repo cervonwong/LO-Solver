@@ -234,6 +234,7 @@ const hypothesisTestLoopSchema = z.object({
 
 const extractionStep = createStep({
   id: 'extract-structure',
+  description: 'Step 1: Extract structured problem data from raw text input.',
   inputSchema: rawProblemInputSchema,
   outputSchema: structuredProblemSchema,
   stateSchema: workflowStateSchema,
@@ -282,6 +283,7 @@ const extractionStep = createStep({
 // It takes the loop state, generates/revises rules, tests them, and returns the updated state
 const hypothesisAndTestLoopStep = createStep({
   id: 'hypothesize-and-test-rules-loop',
+  description: `Step 2: Hypothesize, test+critic, then revise linguistic rules and vocabulary, up to ${MAX_HYPOTHESIS_TEST_ITERATIONS} iterations.`,
   inputSchema: hypothesisTestLoopSchema,
   outputSchema: hypothesisTestLoopSchema,
   stateSchema: workflowStateSchema,
@@ -394,6 +396,8 @@ const questionAnsweringInputSchema = z.object({
 // Step to answer questions using the validated rules and vocabulary
 const answerQuestionsStep = createStep({
   id: 'answer-questions',
+  description:
+    "Step 3: Answer the user's questions using the validated rules and extracted vocabulary.",
   inputSchema: questionAnsweringInputSchema,
   outputSchema: questionsAnsweredSchema,
   stateSchema: workflowStateSchema,
@@ -443,12 +447,12 @@ const answerQuestionsStep = createStep({
 });
 
 export const extractThenHypoTestLoopWorkflow = createWorkflow({
-  id: 'extract-then-hypo-test-loop-workflow',
+  id: '02-extract-then-hypo-test-loop-workflow',
   inputSchema: rawProblemInputSchema,
   outputSchema: questionsAnsweredSchema,
   stateSchema: workflowStateSchema,
 })
-  // Step 1: Extract structured problem data.
+  // Step 1: Extract structured problem data from raw text input.
   .then(extractionStep)
   .map(async ({ inputData }) => ({
     structuredProblem: inputData.data!,

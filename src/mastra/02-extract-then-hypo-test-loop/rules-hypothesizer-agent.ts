@@ -5,7 +5,7 @@ import { UnicodeNormalizer } from '@mastra/core/processors';
 import { RULES_HYPOTHESIZER_INSTRUCTIONS } from './rules-hypothesizer-instructions';
 
 export const rulesHypothesizerAgent = new Agent({
-  name: 'Rules Hypothesizer Agent',
+  name: '[02-02a] Rules Hypothesizer Agent',
   instructions: RULES_HYPOTHESIZER_INSTRUCTIONS,
   model: 'openrouter/deepseek/deepseek-r1-0528',
   tools: {},

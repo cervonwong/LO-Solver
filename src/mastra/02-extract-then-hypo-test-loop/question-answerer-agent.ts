@@ -5,7 +5,7 @@ import { UnicodeNormalizer } from '@mastra/core/processors';
 import { QUESTION_ANSWERER_INSTRUCTIONS } from './question-answerer-instructions';
 
 export const questionAnswererAgent = new Agent({
-  name: 'Question Answerer Agent',
+  name: '[02-03] Question Answerer Agent',
   instructions: QUESTION_ANSWERER_INSTRUCTIONS,
   model: 'openrouter/openai/gpt-5-mini',
   tools: {},

@@ -5,7 +5,7 @@ import { UnicodeNormalizer } from '@mastra/core/processors';
 import { STRUCTURED_PROBLEM_EXTRACTOR_INSTRUCTIONS } from './structured-problem-extractor-instructions';
 
 export const structuredProblemExtractorAgent = new Agent({
-  name: 'Structured Problem Extractor Agent',
+  name: '[02-01] Structured Problem Extractor Agent',
   instructions: STRUCTURED_PROBLEM_EXTRACTOR_INSTRUCTIONS,
   model: 'openrouter/openai/gpt-5-mini',
   tools: {},
