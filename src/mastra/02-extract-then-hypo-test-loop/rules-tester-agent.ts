@@ -3,11 +3,21 @@ import { Memory } from '@mastra/memory';
 import { LibSQLStore } from '@mastra/libsql';
 import { UnicodeNormalizer } from '@mastra/core/processors';
 import { RULES_TESTER_INSTRUCTIONS } from './rules-tester-instructions';
+import { createOpenRouter } from '@openrouter/ai-sdk-provider';
+
+const openrouter = createOpenRouter({
+  apiKey: process.env.OPENROUTER_API_KEY!,
+  extraBody: {
+    reasoning: {
+      effort: 'high',
+    },
+  },
+});
 
 export const rulesTesterAgent = new Agent({
   name: '[02-02b] Rules Tester Agent',
   instructions: RULES_TESTER_INSTRUCTIONS,
-  model: 'openrouter/openai/gpt-5-mini',
+  model: openrouter('openai/gpt-5'),
   tools: {},
   inputProcessors: [
     new UnicodeNormalizer({

@@ -10,11 +10,11 @@ import {
 
 export const mastra = new Mastra({
   agents: {
-    // ...oneAgentSolverAgents,
+    ...oneAgentSolverAgents,
     ...extractThenHypoTestLoopAgents,
   },
   scorers: {
-    // ...oneAgentSolverScorers,
+    ...oneAgentSolverScorers,
     ...extractThenHypoTestLoopScorers,
   },
   workflows: {
