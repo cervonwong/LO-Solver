@@ -3,22 +3,20 @@ import { PinoLogger } from '@mastra/loggers';
 import { LibSQLStore } from '@mastra/libsql';
 import { oneAgentSolverAgents, oneAgentSolverScorers } from './01-one-agent';
 import {
-  extractThenHypoTestLoopAgents,
-  extractThenHypoTestLoopScorers,
-  extractThenHypoTestLoopWorkflows,
+  extractThenHypoTestLoopWorkflowAgents,
 } from './02-extract-then-hypo-test-loop';
+import { extractThenHypoTestLoopWorkflow } from './02-extract-then-hypo-test-loop/workflow';
 
 export const mastra = new Mastra({
   agents: {
     ...oneAgentSolverAgents,
-    ...extractThenHypoTestLoopAgents,
+    ...extractThenHypoTestLoopWorkflowAgents,
   },
   scorers: {
     ...oneAgentSolverScorers,
-    ...extractThenHypoTestLoopScorers,
   },
   workflows: {
-    ...extractThenHypoTestLoopWorkflows,
+    extractThenHypoTestLoopWorkflow,
   },
   storage: new LibSQLStore({
     // stores observability, scores, ...
