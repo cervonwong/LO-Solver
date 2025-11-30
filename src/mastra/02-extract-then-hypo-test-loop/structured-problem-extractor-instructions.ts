@@ -25,8 +25,8 @@ Translate:
   "data": {
     "context": "Swahili sentences.",
     "dataset": [
-      { "id": "1", "foreignForm": "Juma anapenda kusoma", "english": "Juma likes to read" },
-      { "id": "2", "foreignForm": "Watoto wanacheza", "english": "The children are playing" }
+      { "id": "#1", "foreignForm": "Juma anapenda kusoma", "english": "Juma likes to read" },
+      { "id": "#2", "foreignForm": "Watoto wanacheza", "english": "The children are playing" }
     ],
     "questions": [
       { "id": "Q1", "type": "translate-to-english", "input": "Juma anacheza" }
@@ -51,7 +51,7 @@ Translate:
    - **Exclude**: General trivia, demographics, geography, history, or speaker population (e.g. "spoken by 6000 people", "mountainous regions") unless it explicitly affects the linguistic rules.
 
 2. **Dataset**: Identify the core data provided for analysis.
-   - **Standardization**: Renumber IDs sequentially (1, 2, 3...) regardless of the original numbering.
+   - **Standardization**: Renumber IDs sequentially (#1, #2, #3...) regardless of the original numbering.
    - **Complete Pairs Only**: Only include items where BOTH the foreign phrase and the English phrase are present.
    - If an item in the main list has a missing part (e.g., "___" or "?"), do NOT put it in the dataset; move it to questions.
    - **Additional Columns**: Include any extra row-specific information (e.g., grammatical features, context labels) as additional fields in each dataset entry.
