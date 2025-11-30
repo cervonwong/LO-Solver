@@ -76,10 +76,10 @@
 *   **Segmentation:** `sia` (she) + `mobay` (give) + `ka 'aewpir` (DO: sweet potato) + `hisia` (IO: him/proximate)
 *   **Justification:** No anger implies emotional closeness/positive affect, so the proximate pronoun `hisia` is used for the recipient.
 
-**13. English: The child offers the old man some sweet potato. [The old man is away in hospital, and the child sends some sweet potato into hospital for him]**
+**13. English: The child offers the old man some sweet potato. [The old man is away in hospital, and the child orders some sweet potato into hospital for him]**
 *   **Answer:** `Korkoring saeoe ka 'aewpir no tatini'.`
 *   **Segmentation:** `korkoring` (child) + `saeoe` (offer) + `ka 'aewpir` (DO: sweet potato) + `no tatini'` (IO: old man)
-*   **Justification:** The old man is physically distant (away in hospital, receiving via sending), so `no` marks the recipient.
+*   **Justification:** The old man is physically distant (away in hospital, receiving via order), so `no` marks the recipient.
 
 ---
 

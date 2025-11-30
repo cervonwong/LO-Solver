@@ -5,7 +5,8 @@
         solutionFile: "uklo_2025R1P3_MoSy_Rosetta_Austr_Sasiyat_Solution.md",
         sourceUrl: "https://uklo.org/",
         problemUrl: "https://www.uklo.org/wp-content/uploads/2025/04/2025R1-3-Saisiyat.pdf",
-        solutionUrl: "https://www.uklo.org/wp-content/uploads/2025/04/2025R1-3-Saisiyat.pdf"
+        solutionUrl: "https://www.uklo.org/wp-content/uploads/2025/04/2025R1-3-Saisiyat.pdf",
+        notes: "Changed No. 13 input description from 'sends' to 'orders' to better reflect the intended meaning."
     }
     ,{
         source: "Onling.org",

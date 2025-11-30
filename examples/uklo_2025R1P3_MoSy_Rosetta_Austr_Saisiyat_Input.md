@@ -24,7 +24,7 @@ Translate the following sentences into Saisiyat, taking the context into account
 | 10 | The child writes mother a letter. |
 | 11 | The father gives him some aubergine. [The father is angry with him] |
 | 12 | She gives him some sweet potato. [She is not angry with him] |
-| 13 | The child offers the old man some sweet potato. [The old man is away in hospital, and the child sends some sweet potato into hospital for him] |
+| 13 | The child offers the old man some sweet potato. [The old man is away in hospital, and the child orders some sweet potato into hospital for him] |
 
 # Part 2
 Here are some more Saisiyat words:
