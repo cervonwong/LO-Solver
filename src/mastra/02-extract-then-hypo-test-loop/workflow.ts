@@ -251,7 +251,7 @@ const extractionStep = createStep({
     logToOutput(`${'='.repeat(60)}`);
 
     const response = await mastra
-      .getAgent('structuredProblemExtractorAgent')
+      .getAgent('wf02_structuredProblemExtractorAgent')
       .generate(`${inputData.rawProblemText}`, {
         structuredOutput: {
           schema: structuredProblemSchema,
@@ -325,7 +325,7 @@ const hypothesisAndTestLoopStep = createStep({
     );
 
     const hypothesizerResponse = await mastra
-      .getAgent('rulesHypothesizerAgent')
+      .getAgent('wf02_rulesHypothesizerAgent')
       .generate(hypothesizerPrompt, {
         structuredOutput: {
           schema: rulesSchema,
@@ -360,7 +360,7 @@ const hypothesisAndTestLoopStep = createStep({
 
     logToOutput(`[Rules Tester] 🚀 Starting rule validation...`);
 
-    const testerResponse = await mastra.getAgent('rulesTesterAgent').generate(testerPrompt, {
+    const testerResponse = await mastra.getAgent('wf02_rulesTesterAgent').generate(testerPrompt, {
       structuredOutput: {
         schema: rulesTestResultsSchema,
       },
@@ -418,7 +418,7 @@ const answerQuestionsStep = createStep({
     });
 
     const answererResponse = await mastra
-      .getAgent('questionAnswererAgent')
+      .getAgent('wf02_questionAnswererAgent')
       .generate(answererPrompt, {
         structuredOutput: {
           schema: questionsAnsweredSchema,

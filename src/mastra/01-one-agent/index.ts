@@ -2,9 +2,9 @@ import { oneAgentSolverAgent } from './one-agent-solver-agent';
 import { completenessScorer } from './one-agent-solver-scorers';
 
 export const oneAgentSolverAgents = {
-  oneAgentSolverAgent,
+  wf01_oneAgentSolverAgent: oneAgentSolverAgent,
 };
 
 export const oneAgentSolverScorers = {
-  completenessScorer,
+  wf01_completenessScorer: completenessScorer,
 };
