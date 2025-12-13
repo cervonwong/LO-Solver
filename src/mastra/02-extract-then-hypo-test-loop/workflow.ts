@@ -97,26 +97,28 @@ const initializeLogFile = (): string => {
   return currentLogFile;
 };
 
-// Helper type for reasoning chunks from Mastra
-type ReasoningChunk = { type: string; text?: string };
-
-const formatReasoning = (
-  reasoning: ReasoningChunk[] | string | null | undefined,
-): string | null => {
-  if (!reasoning) return null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const formatReasoning = (reasoning: any): string | null => {
+  if (!reasoning) {
+    return null;
+  }
   if (typeof reasoning === 'string') return reasoning;
-  // Extract text from reasoning chunks
-  return reasoning
-    .filter((chunk) => chunk.text)
-    .map((chunk) => chunk.text)
+  if (!Array.isArray(reasoning)) return null;
+
+  const result = reasoning
+    .map((chunk: any) => chunk.payload?.text || chunk.text || '')
+    .filter((text: string) => text && text !== '[REDACTED]')
     .join('');
+
+  return result || null;
 };
 
 const logAgentOutput = (
   stepName: string,
   agentName: string,
   output: unknown,
-  reasoning?: ReasoningChunk[] | string | null,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  reasoning?: any,
 ): void => {
   if (!currentLogFile) {
     initializeLogFile();
