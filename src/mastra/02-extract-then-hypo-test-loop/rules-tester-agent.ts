@@ -7,17 +7,12 @@ import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 
 const openrouter = createOpenRouter({
   apiKey: process.env.OPENROUTER_API_KEY!,
-  extraBody: {
-    reasoning: {
-      effort: 'high',
-    },
-  },
 });
 
 export const rulesTesterAgent = new Agent({
   name: '[02-02b] Rules Tester Agent',
   instructions: RULES_TESTER_INSTRUCTIONS,
-  model: openrouter('openai/gpt-5'),
+  model: openrouter('deepseek/deepseek-v3.2'),
   tools: {},
   inputProcessors: [
     new UnicodeNormalizer({
