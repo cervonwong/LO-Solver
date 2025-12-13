@@ -1,12 +1,45 @@
 import { createStep, createWorkflow } from '@mastra/core/workflows';
 import { z } from 'zod';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
+import * as fs from 'fs';
+import * as path from 'path';
 
 const openrouter = createOpenRouter({
   apiKey: process.env.OPENROUTER_API_KEY!,
 });
 
 const MAX_HYPOTHESIS_TEST_ITERATIONS = 5;
+
+// Logging utilities
+const getLogDirectory = () => process.env.LOG_DIRECTORY || path.join(process.cwd(), 'logs');
+
+const getLogFilePath = () => {
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  return path.join(getLogDirectory(), `workflow-${timestamp}.md`);
+};
+
+let currentLogFile: string | null = null;
+
+const initializeLogFile = (): string => {
+  const logDir = getLogDirectory();
+  if (!fs.existsSync(logDir)) {
+    fs.mkdirSync(logDir, { recursive: true });
+  }
+  currentLogFile = getLogFilePath();
+  fs.writeFileSync(
+    currentLogFile,
+    `# Workflow Execution Log\n\n_Generated: ${new Date().toISOString()}_\n\n---\n\n`,
+  );
+  return currentLogFile;
+};
+
+const logAgentOutput = (stepName: string, agentName: string, output: unknown): void => {
+  if (!currentLogFile) {
+    initializeLogFile();
+  }
+  const content = `## ${stepName}\n\n**Agent:** ${agentName}\n\n\`\`\`json\n${JSON.stringify(output, null, 2)}\n\`\`\`\n\n---\n\n`;
+  fs.appendFileSync(currentLogFile!, content);
+};
 
 const rawProblemInputSchema = z.object({
   rawProblemText: z.string(),
@@ -164,6 +197,9 @@ const extractionStep = createStep({
   inputSchema: rawProblemInputSchema,
   outputSchema: structuredProblemSchema,
   execute: async ({ inputData, mastra, bail }) => {
+    // Initialize log file at the start of the workflow
+    initializeLogFile();
+
     const response = await mastra
       .getAgent('wf02_structuredProblemExtractorAgent')
       .generate(`${inputData.rawProblemText}`, {
@@ -174,6 +210,8 @@ const extractionStep = createStep({
 
     // validate the agent response against the expected schema so the step returns the correct type
     const parsed = structuredProblemSchema.parse(response.object);
+
+    logAgentOutput('Step 1: Extract Structure', 'Structured Problem Extractor Agent', parsed);
 
     if (parsed.success === false) {
       return bail({
@@ -228,6 +266,12 @@ const hypothesisAndTestLoopStep = createStep({
 
     const hypothesizerParsed = rulesSchema.parse(hypothesizerResponse.object);
 
+    logAgentOutput(
+      `Step 2: Hypothesis-Test Loop (Iteration ${iterationCount + 1})`,
+      'Rules Hypothesizer Agent',
+      hypothesizerParsed,
+    );
+
     if (
       hypothesizerParsed.success === false ||
       hypothesizerParsed.rules === null ||
@@ -253,6 +297,12 @@ const hypothesisAndTestLoopStep = createStep({
     });
 
     const testerParsed = rulesTestResultsSchema.parse(testerResponse.object);
+
+    logAgentOutput(
+      `Step 2: Hypothesis-Test Loop (Iteration ${iterationCount + 1})`,
+      'Rules Tester Agent',
+      testerParsed,
+    );
 
     // Return the updated loop state
     return {
@@ -300,6 +350,8 @@ const answerQuestionsStep = createStep({
       });
 
     const answererParsed = questionsAnsweredSchema.parse(answererResponse.object);
+
+    logAgentOutput('Step 3: Answer Questions', 'Question Answerer Agent', answererParsed);
 
     if (answererParsed.success === false) {
       return bail({
