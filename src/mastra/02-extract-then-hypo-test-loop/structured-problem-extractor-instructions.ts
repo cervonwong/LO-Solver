@@ -61,9 +61,12 @@ Translate:
    - **Explicit Questions**: Include tasks explicitly listed as questions (e.g., "Translate the following...").
    - **Implicit Questions**: Include items from the main list that have missing parts (e.g. fill-in-the-blanks).
    - Classify the task type (e.g., 'translate-to-english', 'translate-to-target', 'fill-in-the-blanks', etc.).
+   - **Copy Verbatim**: Copy the question text EXACTLY as it appears in the input. Do NOT answer, solve, or translate the questions—only extract them as-is.
 
 # Constraints
-- Do not attempt to solve the problem.
+- Do not attempt to solve the problem or answer any questions.
+- Do not translate or provide answers for any questions—your job is ONLY to extract them.
+- Copy all question text exactly as written in the original input.
 - Do not hallucinate data not present in the text.
 - Return ONLY the JSON object.
 `.trim();
