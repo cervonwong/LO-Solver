@@ -14,11 +14,73 @@ const MAX_HYPOTHESIS_TEST_ITERATIONS = 5;
 const getLogDirectory = () => process.env.LOG_DIRECTORY || path.join(process.cwd(), 'logs');
 
 const getLogFilePath = () => {
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-  return path.join(getLogDirectory(), `workflow-${timestamp}.md`);
+  // Get current time in GMT+8
+  const now = new Date();
+  const gmt8 = new Date(now.getTime() + 8 * 60 * 60 * 1000);
+  const year = gmt8.getUTCFullYear();
+  const month = String(gmt8.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(gmt8.getUTCDate()).padStart(2, '0');
+  const hours = String(gmt8.getUTCHours()).padStart(2, '0');
+  const minutes = String(gmt8.getUTCMinutes()).padStart(2, '0');
+  const seconds = String(gmt8.getUTCSeconds()).padStart(2, '0');
+  const timestamp = `${year}-${month}-${day}_${hours}-${minutes}-${seconds}`;
+  return path.join(getLogDirectory(), `workflow-02_${timestamp}.md`);
 };
 
 let currentLogFile: string | null = null;
+let workflowStartTime: Date | null = null;
+let lastStepEndTime: Date | null = null;
+
+// Timing tracking for each step
+interface StepTiming {
+  stepName: string;
+  agentName: string;
+  endTime: string; // HH:MM:SS in GMT+8
+  durationMinutes: number;
+}
+const stepTimings: StepTiming[] = [];
+
+const formatTimeGMT8 = (date: Date): string => {
+  const gmt8 = new Date(date.getTime() + 8 * 60 * 60 * 1000);
+  const hours = String(gmt8.getUTCHours()).padStart(2, '0');
+  const minutes = String(gmt8.getUTCMinutes()).padStart(2, '0');
+  const seconds = String(gmt8.getUTCSeconds()).padStart(2, '0');
+  return `${hours}:${minutes}:${seconds}`;
+};
+
+const recordStepTiming = (stepName: string, agentName: string, startTime: Date): void => {
+  const endTime = new Date();
+  const durationMinutes = (endTime.getTime() - startTime.getTime()) / 60000;
+  stepTimings.push({
+    stepName,
+    agentName,
+    endTime: formatTimeGMT8(endTime),
+    durationMinutes: Math.round(durationMinutes * 100) / 100,
+  });
+  lastStepEndTime = endTime;
+};
+
+const logWorkflowSummary = (): void => {
+  if (!currentLogFile || !workflowStartTime) return;
+
+  const endTime = new Date();
+  const totalDurationMinutes = (endTime.getTime() - workflowStartTime.getTime()) / 60000;
+
+  let content = `## Workflow Timing Summary\n\n`;
+  content += `**Start Time:** ${formatTimeGMT8(workflowStartTime)}\n`;
+  content += `**End Time:** ${formatTimeGMT8(endTime)}\n`;
+  content += `**Total Duration:** ${Math.round(totalDurationMinutes * 100) / 100} minutes\n\n`;
+  content += `### Step Timings\n\n`;
+  content += `| Step | Agent | Finished At | Duration (min) |\n`;
+  content += `|------|-------|-------------|----------------|\n`;
+
+  for (const timing of stepTimings) {
+    content += `| ${timing.stepName} | ${timing.agentName} | ${timing.endTime} | ${timing.durationMinutes} |\n`;
+  }
+
+  content += `\n---\n`;
+  fs.appendFileSync(currentLogFile, content);
+};
 
 const initializeLogFile = (): string => {
   const logDir = getLogDirectory();
@@ -26,6 +88,8 @@ const initializeLogFile = (): string => {
     fs.mkdirSync(logDir, { recursive: true });
   }
   currentLogFile = getLogFilePath();
+  workflowStartTime = new Date();
+  stepTimings.length = 0; // Reset step timings
   fs.writeFileSync(
     currentLogFile,
     `# Workflow Execution Log\n\n_Generated: ${new Date().toISOString()}_\n\n---\n\n`,
@@ -235,6 +299,7 @@ const extractionStep = createStep({
     // Initialize log file at the start of the workflow
     initializeLogFile();
 
+    const step1StartTime = new Date();
     const response = await mastra
       .getAgent('wf02_structuredProblemExtractorAgent')
       .generate(`${inputData.rawProblemText}`, {
@@ -242,6 +307,12 @@ const extractionStep = createStep({
           schema: structuredProblemSchema,
         },
       });
+
+    recordStepTiming('Step 1', 'Structured Problem Extractor Agent', step1StartTime);
+    const timing1 = stepTimings[stepTimings.length - 1];
+    console.log(
+      `[Step 1] Structured Problem Extractor Agent finished at ${timing1.endTime} (${timing1.durationMinutes} min).`,
+    );
 
     // validate the agent response against the expected schema so the step returns the correct type
     const parseResult = structuredProblemSchema.safeParse(response.object);
@@ -305,6 +376,7 @@ const hypothesisAndTestLoopStep = createStep({
             structuredProblem,
           });
 
+    const hypothesizerStartTime = new Date();
     const hypothesizerResponse = await mastra
       .getAgent('wf02_rulesHypothesizerAgent')
       .generate(hypothesizerPrompt, {
@@ -313,6 +385,16 @@ const hypothesisAndTestLoopStep = createStep({
           model: openrouter('openai/gpt-5-mini'),
         },
       });
+
+    recordStepTiming(
+      `Step 2 (Iter ${iterationCount + 1})`,
+      'Rules Hypothesizer Agent',
+      hypothesizerStartTime,
+    );
+    const hypothesizerTiming = stepTimings[stepTimings.length - 1];
+    console.log(
+      `[Step 2] Rules Hypothesizer Agent finished (Iteration ${iterationCount + 1}) at ${hypothesizerTiming.endTime} (${hypothesizerTiming.durationMinutes} min).`,
+    );
 
     const hypothesizerParseResult = rulesSchema.safeParse(hypothesizerResponse.object);
 
@@ -354,12 +436,19 @@ const hypothesisAndTestLoopStep = createStep({
       rules: hypothesizerParsed.rules,
     });
 
+    const testerStartTime = new Date();
     const testerResponse = await mastra.getAgent('wf02_rulesTesterAgent').generate(testerPrompt, {
       structuredOutput: {
         schema: rulesTestResultsSchema,
         model: openrouter('openai/gpt-5-mini'),
       },
     });
+
+    recordStepTiming(`Step 2 (Iter ${iterationCount + 1})`, 'Rules Tester Agent', testerStartTime);
+    const testerTiming = stepTimings[stepTimings.length - 1];
+    console.log(
+      `[Step 2] Rules Tester Agent finished (Iteration ${iterationCount + 1}) at ${testerTiming.endTime} (${testerTiming.durationMinutes} min).`,
+    );
 
     const testerParseResult = rulesTestResultsSchema.safeParse(testerResponse.object);
 
@@ -419,6 +508,7 @@ const answerQuestionsStep = createStep({
       vocabulary: vocabulary,
     });
 
+    const answererStartTime = new Date();
     const answererResponse = await mastra
       .getAgent('wf02_questionAnswererAgent')
       .generate(answererPrompt, {
@@ -427,6 +517,12 @@ const answerQuestionsStep = createStep({
           model: openrouter('openai/gpt-5-mini'),
         },
       });
+
+    recordStepTiming('Step 3', 'Question Answerer Agent', answererStartTime);
+    const answererTiming = stepTimings[stepTimings.length - 1];
+    console.log(
+      `[Step 3] Question Answerer Agent finished at ${answererTiming.endTime} (${answererTiming.durationMinutes} min).`,
+    );
 
     const answererParseResult = questionsAnsweredSchema.safeParse(answererResponse.object);
 
@@ -454,6 +550,9 @@ const answerQuestionsStep = createStep({
           '[Answer Questions Step] Failed to answer questions: ' + answererParsed.explanation,
       });
     }
+
+    // Log the workflow timing summary at the end
+    logWorkflowSummary();
 
     return answererParsed;
   },
