@@ -12,7 +12,8 @@ const openrouter = createOpenRouter({
 export const rulesTesterAgent = new Agent({
   name: '[02-02b] Rules Tester Agent',
   instructions: RULES_TESTER_INSTRUCTIONS,
-  model: openrouter('deepseek/deepseek-v3.2'),
+  // model: openrouter('deepseek/deepseek-v3.2'),
+  model: openrouter('google/gemini-3-pro-preview'),
   tools: {},
   inputProcessors: [
     new UnicodeNormalizer({

@@ -12,7 +12,8 @@ const openrouter = createOpenRouter({
 export const questionAnswererAgent = new Agent({
   name: '[02-03] Question Answerer Agent',
   instructions: QUESTION_ANSWERER_INSTRUCTIONS,
-  model: openrouter('openai/gpt-5-mini'),
+  // model: openrouter('openai/gpt-5-mini'),
+  model: openrouter('google/gemini-3-pro-preview'),
   tools: {},
   inputProcessors: [
     new UnicodeNormalizer({

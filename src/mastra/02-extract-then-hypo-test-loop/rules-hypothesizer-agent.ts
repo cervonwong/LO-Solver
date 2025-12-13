@@ -15,7 +15,8 @@ export const rulesHypothesizerAgent = new Agent({
     role: 'system',
     content: RULES_HYPOTHESIZER_INSTRUCTIONS,
   },
-  model: openrouter('deepseek/deepseek-v3.2'),
+  // model: openrouter('deepseek/deepseek-v3.2'),
+  model: openrouter('google/gemini-3-pro-preview'),
   tools: {},
   inputProcessors: [
     new UnicodeNormalizer({
