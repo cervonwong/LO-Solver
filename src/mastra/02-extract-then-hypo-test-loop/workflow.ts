@@ -33,11 +33,46 @@ const initializeLogFile = (): string => {
   return currentLogFile;
 };
 
-const logAgentOutput = (stepName: string, agentName: string, output: unknown): void => {
+// Helper type for reasoning chunks from Mastra
+type ReasoningChunk = { type: string; text?: string };
+
+const formatReasoning = (
+  reasoning: ReasoningChunk[] | string | null | undefined,
+): string | null => {
+  if (!reasoning) return null;
+  if (typeof reasoning === 'string') return reasoning;
+  // Extract text from reasoning chunks
+  return reasoning
+    .filter((chunk) => chunk.text)
+    .map((chunk) => chunk.text)
+    .join('');
+};
+
+const logAgentOutput = (
+  stepName: string,
+  agentName: string,
+  output: unknown,
+  reasoning?: ReasoningChunk[] | string | null,
+): void => {
   if (!currentLogFile) {
     initializeLogFile();
   }
-  const content = `## ${stepName}\n\n**Agent:** ${agentName}\n\n\`\`\`json\n${JSON.stringify(output, null, 2)}\n\`\`\`\n\n---\n\n`;
+  let content = `## ${stepName}\n\n**Agent:** ${agentName}\n\n`;
+
+  const formattedReasoning = formatReasoning(reasoning);
+  if (formattedReasoning) {
+    content += `### Reasoning\n\n${formattedReasoning}\n\n`;
+  }
+
+  content += `### Output\n\n\`\`\`json\n${JSON.stringify(output, null, 2)}\n\`\`\`\n\n---\n\n`;
+  fs.appendFileSync(currentLogFile!, content);
+};
+
+const logValidationError = (stepName: string, error: z.ZodError): void => {
+  if (!currentLogFile) {
+    initializeLogFile();
+  }
+  const content = `## ⚠️ Validation Error: ${stepName}\n\n\`\`\`\n${error.message}\n\`\`\`\n\n**Issues:**\n${error.issues.map((issue) => `- **${issue.path.join('.')}**: ${issue.message}`).join('\n')}\n\n---\n\n`;
   fs.appendFileSync(currentLogFile!, content);
 };
 
@@ -209,9 +244,24 @@ const extractionStep = createStep({
       });
 
     // validate the agent response against the expected schema so the step returns the correct type
-    const parsed = structuredProblemSchema.parse(response.object);
+    const parseResult = structuredProblemSchema.safeParse(response.object);
 
-    logAgentOutput('Step 1: Extract Structure', 'Structured Problem Extractor Agent', parsed);
+    logAgentOutput(
+      'Step 1: Extract Structure',
+      'Structured Problem Extractor Agent',
+      response.object,
+      response.reasoning,
+    );
+
+    if (!parseResult.success) {
+      logValidationError('Step 1: Extract Structure', parseResult.error);
+      return bail({
+        success: false,
+        message: '[Extract Structure Step] Validation failed: ' + parseResult.error.message,
+      });
+    }
+
+    const parsed = parseResult.data;
 
     if (parsed.success === false) {
       return bail({
@@ -264,13 +314,28 @@ const hypothesisAndTestLoopStep = createStep({
         },
       });
 
-    const hypothesizerParsed = rulesSchema.parse(hypothesizerResponse.object);
+    const hypothesizerParseResult = rulesSchema.safeParse(hypothesizerResponse.object);
 
     logAgentOutput(
       `Step 2: Hypothesis-Test Loop (Iteration ${iterationCount + 1})`,
       'Rules Hypothesizer Agent',
-      hypothesizerParsed,
+      hypothesizerResponse.object,
+      hypothesizerResponse.reasoning,
     );
+
+    if (!hypothesizerParseResult.success) {
+      logValidationError(
+        `Step 2: Hypothesis-Test Loop (Iteration ${iterationCount + 1}) - Hypothesizer`,
+        hypothesizerParseResult.error,
+      );
+      return bail({
+        success: false,
+        message:
+          '[Hypothesize Rules Step] Validation failed: ' + hypothesizerParseResult.error.message,
+      });
+    }
+
+    const hypothesizerParsed = hypothesizerParseResult.data;
 
     if (
       hypothesizerParsed.success === false ||
@@ -296,13 +361,27 @@ const hypothesisAndTestLoopStep = createStep({
       },
     });
 
-    const testerParsed = rulesTestResultsSchema.parse(testerResponse.object);
+    const testerParseResult = rulesTestResultsSchema.safeParse(testerResponse.object);
 
     logAgentOutput(
       `Step 2: Hypothesis-Test Loop (Iteration ${iterationCount + 1})`,
       'Rules Tester Agent',
-      testerParsed,
+      testerResponse.object,
+      testerResponse.reasoning,
     );
+
+    if (!testerParseResult.success) {
+      logValidationError(
+        `Step 2: Hypothesis-Test Loop (Iteration ${iterationCount + 1}) - Tester`,
+        testerParseResult.error,
+      );
+      return bail({
+        success: false,
+        message: '[Test Rules Step] Validation failed: ' + testerParseResult.error.message,
+      });
+    }
+
+    const testerParsed = testerParseResult.data;
 
     // Return the updated loop state
     return {
@@ -349,9 +428,24 @@ const answerQuestionsStep = createStep({
         },
       });
 
-    const answererParsed = questionsAnsweredSchema.parse(answererResponse.object);
+    const answererParseResult = questionsAnsweredSchema.safeParse(answererResponse.object);
 
-    logAgentOutput('Step 3: Answer Questions', 'Question Answerer Agent', answererParsed);
+    logAgentOutput(
+      'Step 3: Answer Questions',
+      'Question Answerer Agent',
+      answererResponse.object,
+      answererResponse.reasoning,
+    );
+
+    if (!answererParseResult.success) {
+      logValidationError('Step 3: Answer Questions', answererParseResult.error);
+      return bail({
+        success: false,
+        message: '[Answer Questions Step] Validation failed: ' + answererParseResult.error.message,
+      });
+    }
+
+    const answererParsed = answererParseResult.data;
 
     if (answererParsed.success === false) {
       return bail({
