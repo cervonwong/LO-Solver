@@ -128,6 +128,8 @@ const logAgentOutput = (
   const formattedReasoning = formatReasoning(reasoning);
   if (formattedReasoning) {
     content += `### Reasoning\n\n${formattedReasoning}\n\n`;
+  } else {
+    content += `### Reasoning\n\n(Reasoning not provided.)\n\n`;
   }
 
   content += `### Output\n\n\`\`\`json\n${JSON.stringify(output, null, 2)}\n\`\`\`\n\n---\n\n`;
