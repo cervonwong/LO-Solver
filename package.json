@@ -6,6 +6,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "mastra dev",
+    "dev:new": "powershell -Command \"Remove-Item -Path 'mastra.db*' -Force -ErrorAction SilentlyContinue\" && mastra dev",
     "build": "mastra build",
     "start": "mastra start"
   },
