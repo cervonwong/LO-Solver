@@ -1,89 +1,15 @@
 import { createStep, createWorkflow } from '@mastra/core/workflows';
 import { z } from 'zod';
-import * as fs from 'fs';
-import * as path from 'path';
+import { createOpenRouter } from '@openrouter/ai-sdk-provider';
+
+const openrouter = createOpenRouter({
+  apiKey: process.env.OPENROUTER_API_KEY!,
+});
 
 const MAX_HYPOTHESIS_TEST_ITERATIONS = 5;
 
-// Output file stream for logging
-let outputFileStream: fs.WriteStream | null = null;
-
-const getOutputDirectory = () => process.env.LOG_DIRECTORY || path.join(process.cwd(), 'output');
-
-const getOutputFilePath = (workflowRunId: string) =>
-  path.join(getOutputDirectory(), `${workflowRunId}.log`);
-
-const initializeOutputFile = (workflowRunId: string): void => {
-  const outputDir = getOutputDirectory();
-  if (!fs.existsSync(outputDir)) {
-    fs.mkdirSync(outputDir, { recursive: true });
-  }
-  const filePath = getOutputFilePath(workflowRunId);
-  outputFileStream = fs.createWriteStream(filePath, { flags: 'a' });
-};
-
-const writeToOutput = (text: string): void => {
-  process.stdout.write(text);
-  if (outputFileStream) {
-    outputFileStream.write(text);
-  }
-};
-
-const logToOutput = (text: string): void => {
-  console.log(text);
-  if (outputFileStream) {
-    outputFileStream.write(text + '\n');
-  }
-};
-
-const logErrorToOutput = (prefix: string, error: unknown): void => {
-  console.error(prefix, error);
-  if (outputFileStream) {
-    outputFileStream.write(`${prefix} ${JSON.stringify(error)}\n`);
-  }
-};
-
 const rawProblemInputSchema = z.object({
   rawProblemText: z.string(),
-});
-
-// Helper to generate a unique workflow run ID
-const generateWorkflowRunId = () =>
-  `workflow-run-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
-
-// Helper to create an onChunk handler for agent execution logging
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const createChunkHandler = (agentName: string): ((chunk: any) => void) => {
-  return (chunk) => {
-    switch (chunk.type) {
-      case 'text-start':
-        writeToOutput(`[${agentName}] 📝 Text: `);
-        break;
-      case 'text-delta':
-        writeToOutput(chunk.payload?.text ?? '');
-        break;
-      case 'text-end':
-        writeToOutput('\n');
-        break;
-      case 'reasoning-start':
-        writeToOutput(`[${agentName}] 🧠 Reasoning: `);
-        break;
-      case 'reasoning-delta':
-        writeToOutput(chunk.payload?.text ?? '');
-        break;
-      case 'reasoning-end':
-        writeToOutput('\n');
-        break;
-      case 'error':
-        logErrorToOutput(`[${agentName}] ❌ Error:`, chunk.payload?.error);
-        break;
-    }
-  };
-};
-
-// Shared workflow state schema - used to share workflowRunId across all steps
-const workflowStateSchema = z.object({
-  workflowRunId: z.string(),
 });
 
 const structuredProblemDataSchema = z.object({
@@ -237,33 +163,14 @@ const extractionStep = createStep({
   description: 'Step 1: Extract structured problem data from raw text input.',
   inputSchema: rawProblemInputSchema,
   outputSchema: structuredProblemSchema,
-  stateSchema: workflowStateSchema,
-  execute: async ({ inputData, mastra, bail, state, setState }) => {
-    // Generate and store workflowRunId in shared state
-    const workflowRunId = generateWorkflowRunId();
-    setState({ ...state, workflowRunId });
-
-    // Initialize output file for this workflow run
-    initializeOutputFile(workflowRunId);
-
-    logToOutput(`\n${'='.repeat(60)}`);
-    logToOutput(`[Structured Problem Extractor] 🚀 Starting extraction...`);
-    logToOutput(`${'='.repeat(60)}`);
-
+  execute: async ({ inputData, mastra, bail }) => {
     const response = await mastra
       .getAgent('wf02_structuredProblemExtractorAgent')
       .generate(`${inputData.rawProblemText}`, {
         structuredOutput: {
           schema: structuredProblemSchema,
         },
-        memory: {
-          thread: `${workflowRunId}-extractor`,
-          resource: 'structuredProblemExtractorAgent', // This resource name allows you to see conversation history in agents tab.
-        },
-        onChunk: createChunkHandler('Extractor'),
       });
-
-    logToOutput(`[Structured Problem Extractor] ✅ Extraction complete.`);
 
     // validate the agent response against the expected schema so the step returns the correct type
     const parsed = structuredProblemSchema.parse(response.object);
@@ -286,9 +193,7 @@ const hypothesisAndTestLoopStep = createStep({
   description: `Step 2: Hypothesize, test+critic, then revise linguistic rules and vocabulary, up to ${MAX_HYPOTHESIS_TEST_ITERATIONS} iterations.`,
   inputSchema: hypothesisTestLoopSchema,
   outputSchema: hypothesisTestLoopSchema,
-  stateSchema: workflowStateSchema,
-  execute: async ({ inputData, mastra, bail, state }) => {
-    const { workflowRunId } = state;
+  execute: async ({ inputData, mastra, bail }) => {
     const {
       structuredProblem,
       rules: previousRules,
@@ -296,12 +201,6 @@ const hypothesisAndTestLoopStep = createStep({
       testResults: previousTestResults,
       iterationCount,
     } = inputData;
-
-    logToOutput(`\n${'='.repeat(60)}`);
-    logToOutput(
-      `[Hypothesis-Test Loop] 🔄 Iteration ${iterationCount + 1}/${MAX_HYPOTHESIS_TEST_ITERATIONS}`,
-    );
-    logToOutput(`${'='.repeat(60)}`);
 
     // Step 1: Hypothesize rules and vocabulary (or revise if we have previous test results)
     const hypothesizerPrompt =
@@ -318,25 +217,14 @@ const hypothesisAndTestLoopStep = createStep({
             structuredProblem,
           });
 
-    logToOutput(
-      `[Rules Hypothesizer] 🚀 Starting ${previousTestResults !== null ? 'revision' : 'hypothesis'}...`,
-    );
-
     const hypothesizerResponse = await mastra
       .getAgent('wf02_rulesHypothesizerAgent')
       .generate(hypothesizerPrompt, {
         structuredOutput: {
           schema: rulesSchema,
-          jsonPromptInjection: true,
+          model: openrouter('openai/gpt-5-mini'),
         },
-        memory: {
-          thread: `${workflowRunId}-hypothesizer`,
-          resource: 'rulesHypothesizerAgent',
-        },
-        onChunk: createChunkHandler('Hypothesizer'),
       });
-
-    logToOutput(`[Rules Hypothesizer] ✅ Hypothesis complete.`);
 
     const hypothesizerParsed = rulesSchema.parse(hypothesizerResponse.object);
 
@@ -357,23 +245,14 @@ const hypothesisAndTestLoopStep = createStep({
       rules: hypothesizerParsed.rules,
     });
 
-    logToOutput(`[Rules Tester] 🚀 Starting rule validation...`);
-
     const testerResponse = await mastra.getAgent('wf02_rulesTesterAgent').generate(testerPrompt, {
       structuredOutput: {
         schema: rulesTestResultsSchema,
-        jsonPromptInjection: true,
+        model: openrouter('openai/gpt-5-mini'),
       },
-      memory: {
-        thread: `${workflowRunId}-tester`,
-        resource: 'rulesTesterAgent',
-      },
-      onChunk: createChunkHandler('Tester'),
     });
 
     const testerParsed = rulesTestResultsSchema.parse(testerResponse.object);
-
-    logToOutput(`[Rules Tester] ✅ Validation complete. Result: ${testerParsed.conclusion}`);
 
     // Return the updated loop state
     return {
@@ -400,14 +279,8 @@ const answerQuestionsStep = createStep({
     "Step 3: Answer the user's questions using the validated rules and extracted vocabulary.",
   inputSchema: questionAnsweringInputSchema,
   outputSchema: questionsAnsweredSchema,
-  stateSchema: workflowStateSchema,
-  execute: async ({ inputData, mastra, bail, state }) => {
-    const { workflowRunId } = state;
+  execute: async ({ inputData, mastra, bail }) => {
     const { structuredProblem, rules, vocabulary } = inputData;
-
-    logToOutput(`\n${'='.repeat(60)}`);
-    logToOutput(`[Question Answerer] 🚀 Starting to answer questions...`);
-    logToOutput(`${'='.repeat(60)}`);
 
     const answererPrompt = JSON.stringify({
       context: structuredProblem.context,
@@ -422,15 +295,9 @@ const answerQuestionsStep = createStep({
       .generate(answererPrompt, {
         structuredOutput: {
           schema: questionsAnsweredSchema,
+          model: openrouter('openai/gpt-5-mini'),
         },
-        memory: {
-          thread: `${workflowRunId}-answerer`,
-          resource: 'questionAnswererAgent',
-        },
-        onChunk: createChunkHandler('Answerer'),
       });
-
-    logToOutput(`[Question Answerer] ✅ Answering complete.`);
 
     const answererParsed = questionsAnsweredSchema.parse(answererResponse.object);
 
@@ -450,7 +317,6 @@ export const extractThenHypoTestLoopWorkflow = createWorkflow({
   id: '02-extract-then-hypo-test-loop-workflow',
   inputSchema: rawProblemInputSchema,
   outputSchema: questionsAnsweredSchema,
-  stateSchema: workflowStateSchema,
 })
   // Step 1: Extract structured problem data from raw text input.
   .then(extractionStep)
@@ -465,14 +331,10 @@ export const extractThenHypoTestLoopWorkflow = createWorkflow({
   // - Hypothesize or revise rules and vocabulary based on previous test results.
   // - Test the hypothesized rules against the dataset.
   .dountil(hypothesisAndTestLoopStep, async ({ inputData }) => {
-    // Exit if max iterations reached
+    // Exit if max iterations reached or all rules are correct
     if (inputData.iterationCount >= MAX_HYPOTHESIS_TEST_ITERATIONS) {
-      logToOutput(
-        `[Hypothesis-Test Loop] ⚠️ Max iterations (${MAX_HYPOTHESIS_TEST_ITERATIONS}) reached. Proceeding with current rules.`,
-      );
       return true;
     }
-    // Exit if all rules are correct
     return inputData.testResults?.conclusion === 'All rules correct';
   })
   .map(async ({ inputData }) => ({
