@@ -306,18 +306,16 @@ const hypothesisAndTestLoopStep = createStep({
     // Step 1: Hypothesize rules and vocabulary (or revise if we have previous test results)
     const hypothesizerPrompt =
       previousTestResults !== null
-        ? JSON.stringify({
+        ? 'Your previous rules did not pass the test. Please revise your rules and vocabulary based on the feedback provided.\n\n' +
+          JSON.stringify({
             structuredProblem,
             previousRules,
             previousVocabulary,
             testFeedback: previousTestResults,
-            instruction:
-              'Your previous rules did not pass the test. Please revise your rules and vocabulary based on the feedback provided.',
           })
-        : JSON.stringify({
+        : 'Please analyze the dataset and hypothesize the linguistic rules and extract the vocabulary.\n\n' +
+          JSON.stringify({
             structuredProblem,
-            instruction:
-              'Please analyze the dataset and hypothesize the linguistic rules and extract the vocabulary.',
           });
 
     logToOutput(
@@ -329,6 +327,7 @@ const hypothesisAndTestLoopStep = createStep({
       .generate(hypothesizerPrompt, {
         structuredOutput: {
           schema: rulesSchema,
+          jsonPromptInjection: true,
         },
         memory: {
           thread: `${workflowRunId}-hypothesizer`,
@@ -363,6 +362,7 @@ const hypothesisAndTestLoopStep = createStep({
     const testerResponse = await mastra.getAgent('wf02_rulesTesterAgent').generate(testerPrompt, {
       structuredOutput: {
         schema: rulesTestResultsSchema,
+        jsonPromptInjection: true,
       },
       memory: {
         thread: `${workflowRunId}-tester`,
