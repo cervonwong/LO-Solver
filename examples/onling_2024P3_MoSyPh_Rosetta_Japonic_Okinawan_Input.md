@@ -1,9 +1,11 @@
 # Context
+
 Okinawan belongs to the Japonic language family. It is spoken by approx. 95,000 people in the southern portion of the Island of Okinawa. ç ~ ts in cats, c ~ ch in church, hw ~ f in father, j ~ y in yes, Q indicates lengthening of the following consonant, z ~ j in judge, ʔ is the pause in uh-oh, double vowels indicate length.
 Lychee and loquat are types of fruit. A decoction refers to extracts, especially pertaining to ones from plants, used in medicine.
 Below are some sentences in Okinawan and their English translations. The words between asterisks are focused, meaning they convey information new to the listener.
 
 # Problem
+
 | No. | Okinawan | English |
 | :--- | :--- | :--- |
 | 1 | riicee hwahwanudu çiçicuru | As for the lychee, *the mother* pokes it. |
@@ -14,6 +16,7 @@ Below are some sentences in Okinawan and their English translations. The words b
 | 6 | Qcunu kuri ncan | The person peeled this thing. |
 
 # Part 1
+
 The following sentences in Okinawan each contain exactly one mistake. Write the correct sentences:
 
 | No. | Okinawan | English |
@@ -22,6 +25,7 @@ The following sentences in Okinawan each contain exactly one mistake. Write the 
 | 8 | kuree ʔanda çigan | As for this thing, it does not pour the oil. |
 
 # Part 2
+
 Translate into English:
 
 | No. | Okinawan |
@@ -31,6 +35,7 @@ Translate into English:
 | 11 | ʔacoodoo riicidu ncuru |
 
 # Part 3
+
 You are given the following words in Okinawan and their English translations:
 
 | Okinawan | English |

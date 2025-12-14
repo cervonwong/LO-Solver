@@ -1,8 +1,10 @@
 # Context
+
 Forest Enets belongs to the Samoyedic branch of the Uralic language family. It is spoken by 36 native speakers in Northern Siberia. ɛ is a vowel; tʃ, th, dy, ny, ŋ, ’ are consonants. sg = singular (one person), pl = plural (two or more people).
 Below are some Forest Enets sentences with their English translations.
 
 # Problem
+
 | No. | Forest Enets | English |
 | :--- | :--- | :--- |
 | 1 | Aga dyotu bu entʃuguth nɛbimunu. | The big goose hears him running from the people. |
@@ -19,9 +21,11 @@ Below are some Forest Enets sentences with their English translations.
 | 12 | Uuda’ sɛsur’ odud mora’. | You (pl) take the foxes to the boat. |
 
 # Part 1
+
 What is the literal translation of "Enets people" in Forest Enets?
 
 # Part 2
+
 Translate into English:
 
 | No. | Forest Enets |
@@ -33,6 +37,7 @@ Translate into English:
 | 17 | Uu budu’ dyurimunuth’ aga entʃi’ onai bathan dyuriŋa. |
 
 # Part 3
+
 Translate into Forest Enets:
 
 | No. | English |
