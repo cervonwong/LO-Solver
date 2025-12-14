@@ -1,0 +1,40 @@
+import { Agent } from '@mastra/core/agent';
+import { Memory } from '@mastra/memory';
+import { LibSQLStore } from '@mastra/libsql';
+import { UnicodeNormalizer } from '@mastra/core/processors';
+import { VERIFIER_ORCHESTRATOR_INSTRUCTIONS } from './03a-verifier-orchestrator-instructions';
+import { createOpenRouter } from '@openrouter/ai-sdk-provider';
+
+const openrouter = createOpenRouter({
+  apiKey: process.env.OPENROUTER_API_KEY!,
+});
+
+/**
+ * Factory function to create a verifier orchestrator agent with dynamic tools.
+ * Tools are created per-iteration with the current context baked in.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function createVerifierOrchestratorAgent(tools: Record<string, any>) {
+  return new Agent({
+    name: '[03-3a] Verifier Orchestrator Agent',
+    instructions: VERIFIER_ORCHESTRATOR_INSTRUCTIONS,
+    model: openrouter('google/gemini-3-pro-preview'),
+    tools,
+    inputProcessors: [
+      new UnicodeNormalizer({
+        stripControlChars: false,
+        preserveEmojis: true,
+        collapseWhitespace: true,
+        trim: true,
+      }),
+    ],
+    memory: new Memory({
+      storage: new LibSQLStore({
+        url: 'file:../../mastra.db', // path is relative to the .mastra/output directory
+      }),
+    }),
+    defaultStreamOptions: {
+      maxSteps: 100,
+    },
+  });
+}
