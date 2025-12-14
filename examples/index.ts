@@ -16,4 +16,12 @@
         problemUrl: "https://onling.org/contests/student-2024/online/eng/",
         solutionUrl: "https://onling.org/contests/student-2024/files/solutions.pdf"
     }
+    ,{
+        source: "Onling.org",
+        inputFile: "onling_2024P3_MoSyPh_Rosetta_Japonic_Okinawan_Input.md",
+        solutionFile: "onling_2024P3_MoSyPh_Rosetta_Japonic_Okinawan_Solution.md",
+        sourceUrl: "https://onling.org/",
+        problemUrl: "https://onling.org/contests/student-2024/online/eng/",
+        solutionUrl: "https://onling.org/contests/student-2024/files/solutions.pdf"
+    }
 ]
