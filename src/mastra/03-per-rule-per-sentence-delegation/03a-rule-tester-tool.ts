@@ -1,7 +1,6 @@
 import { createTool } from '@mastra/core/tools';
 import { Agent } from '@mastra/core/agent';
 import { z } from 'zod';
-import { sharedMemory } from './shared-memory';
 import { openrouter } from '../openrouter';
 
 const ruleTestInputSchema = z.object({
@@ -82,11 +81,21 @@ interface StructuredProblemData {
   questions: { id: string; type: string; input: string }[];
 }
 
+interface VocabularyEntry {
+  foreignForm: string;
+  meaning: string;
+  type: string;
+  notes: string;
+}
+
 /**
  * Factory function to create a rule tester tool with shared context baked in.
  * The orchestrator only needs to specify which rule to test.
  */
-export function createTestRuleTool(structuredProblem: StructuredProblemData) {
+export function createTestRuleTool(
+  structuredProblem: StructuredProblemData,
+  vocabulary: VocabularyEntry[],
+) {
   // Create a dedicated agent for rule testing
   const ruleTesterAgent = new Agent({
     id: 'wf03-rule-tester',
@@ -94,7 +103,6 @@ export function createTestRuleTool(structuredProblem: StructuredProblemData) {
     instructions: RULE_TESTER_SYSTEM_PROMPT,
     model: openrouter('openai/gpt-5-mini'),
     tools: {},
-    memory: sharedMemory,
   });
 
   return createTool({
@@ -119,10 +127,13 @@ ${structuredProblem.context}
 ## Dataset Items
 ${JSON.stringify(structuredProblem.dataset, null, 2)}
 
+## Vocabulary
+${JSON.stringify(vocabulary, null, 2)}
+
 ## Questions (for reference)
 ${JSON.stringify(structuredProblem.questions, null, 2)}
 
-Analyze this rule against the dataset and provide your assessment.
+Analyze this rule against the dataset and vocabulary. Verify the rule correctly handles all vocabulary entries and dataset patterns.
 `.trim();
 
       try {

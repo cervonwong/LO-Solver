@@ -1,7 +1,6 @@
 import { Agent } from '@mastra/core/agent';
 import { UnicodeNormalizer } from '@mastra/core/processors';
 import { RULES_IMPROVEMENT_EXTRACTOR_INSTRUCTIONS } from './03b2-rules-improvement-extractor-instructions';
-import { sharedMemory } from './shared-memory';
 import { openrouter } from '../openrouter';
 
 export const rulesImprovementExtractorAgent = new Agent({
@@ -21,5 +20,4 @@ export const rulesImprovementExtractorAgent = new Agent({
       trim: true,
     }),
   ],
-  memory: sharedMemory,
 });

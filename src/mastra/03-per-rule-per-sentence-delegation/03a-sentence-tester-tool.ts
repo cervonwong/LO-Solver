@@ -1,7 +1,6 @@
 import { createTool } from '@mastra/core/tools';
 import { Agent } from '@mastra/core/agent';
 import { z } from 'zod';
-import { sharedMemory } from './shared-memory';
 import { openrouter } from '../openrouter';
 
 const sentenceTestInputSchema = z.object({
@@ -57,7 +56,7 @@ You will receive:
 2. A single sentence to translate (either from the dataset or a question)
 3. The translation direction (if applicable)
 
-Note: You have access to working memory where vocabulary is stored. Use your memory to look up morphemes and words as needed during translation.
+Note: You will receive the vocabulary entries directly in the prompt - use these to look up morphemes and words during translation.
 
 # Translation Process
 1. Attempt to translate the sentence step by step using ONLY the provided rules and your vocabulary memory
@@ -70,7 +69,7 @@ Note: You have access to working memory where vocabulary is stored. Use your mem
 - **translation**: Your best attempt at the translation (even if ambiguous)
 - **ambiguities**: List every point where:
   - A rule could apply multiple ways
-  - A word/morpheme isn't in your vocabulary memory
+  - A word/morpheme isn't in the provided vocabulary
   - The rules don't specify order or combination
   - There are exceptions not covered
 - **suggestions**: EXACTLY 3 suggestions for improving the ruleset, ranked:
@@ -123,12 +122,23 @@ interface Rule {
   description: string;
 }
 
+interface VocabularyEntry {
+  foreignForm: string;
+  meaning: string;
+  type: string;
+  notes: string;
+}
+
 /**
  * Factory function to create a sentence tester tool with shared context baked in.
  * The orchestrator only needs to specify which sentence to test.
- * The agent calling this tool has access to vocabulary via working memory.
+ * Vocabulary is passed in directly to the prompt.
  */
-export function createTestSentenceTool(problemContext: string, rules: Rule[]) {
+export function createTestSentenceTool(
+  problemContext: string,
+  rules: Rule[],
+  vocabulary: VocabularyEntry[],
+) {
   // Create a dedicated agent for sentence testing
   const sentenceTesterAgent = new Agent({
     id: 'wf03-sentence-tester',
@@ -136,13 +146,12 @@ export function createTestSentenceTool(problemContext: string, rules: Rule[]) {
     instructions: SENTENCE_TESTER_SYSTEM_PROMPT,
     model: openrouter('openai/gpt-5-mini'),
     tools: {},
-    memory: sharedMemory,
   });
 
   return createTool({
     id: 'testSentence',
     description:
-      'Tests a single sentence against the ruleset to verify it can be translated unambiguously. Call this for EACH sentence you want to test. Vocabulary is available via working memory.',
+      'Tests a single sentence against the ruleset to verify it can be translated unambiguously. Call this for EACH sentence you want to test.',
     inputSchema: sentenceTestInputSchema,
     outputSchema: sentenceTestResultSchema,
     execute: async (inputData, _context) => {
@@ -164,7 +173,10 @@ ${problemContext}
 ## Rules
 ${rules.map((r, i) => `${i + 1}. **${r.title}**: ${r.description}`).join('\n\n')}
 
-Attempt to translate this sentence step by step using the rules above and vocabulary from your memory. Flag any ambiguities or issues.
+## Vocabulary
+${JSON.stringify(vocabulary, null, 2)}
+
+Attempt to translate this sentence step by step using the rules and vocabulary above. Flag any ambiguities or issues.
 `.trim();
 
       try {

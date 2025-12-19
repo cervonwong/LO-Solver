@@ -1,7 +1,6 @@
 import { Agent } from '@mastra/core/agent';
 import { UnicodeNormalizer } from '@mastra/core/processors';
 import { INITIAL_HYPOTHESIS_EXTRACTOR_INSTRUCTIONS } from './02a-initial-hypothesis-extractor-instructions';
-import { sharedMemory } from './shared-memory';
 import { openrouter } from '../openrouter';
 
 export const initialHypothesisExtractorAgent = new Agent({
@@ -21,5 +20,4 @@ export const initialHypothesisExtractorAgent = new Agent({
       trim: true,
     }),
   ],
-  memory: sharedMemory,
 });

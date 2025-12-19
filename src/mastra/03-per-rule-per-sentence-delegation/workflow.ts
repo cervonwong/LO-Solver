@@ -5,17 +5,41 @@ import * as path from 'path';
 import { createTestRuleTool } from './03a-rule-tester-tool';
 import { createTestSentenceTool } from './03a-sentence-tester-tool';
 import { createVerifierOrchestratorAgent } from './03a-verifier-orchestrator-agent';
-import { generateWorkflowIds, logMemoryOperation } from './shared-memory';
+import { createInitialHypothesizerAgent } from './02-initial-hypothesizer-agent';
+import { createRulesImproverAgent } from './03b-rules-improver-agent';
+import {
+  createVocabularyTools,
+  vocabularyEntrySchema,
+  type VocabularyTools,
+  type VocabularyEntry,
+} from './vocabulary-tools';
 
 const MAX_VERIFY_IMPROVE_ITERATIONS = 4;
 
-// Workflow-level memory IDs (generated per run)
-let workflowMemoryIds: { threadId: string; resourceId: string } | null = null;
+// Step timing schema for workflow state
+const stepTimingSchema = z.object({
+  stepName: z.string(),
+  agentName: z.string(),
+  endTime: z.string(), // HH:MM:SS in GMT+8
+  durationMinutes: z.number(),
+});
+
+type StepTiming = z.infer<typeof stepTimingSchema>;
+
+// Workflow state schema - per-run isolated state
+export const workflowStateSchema = z.object({
+  vocabulary: z.record(z.string(), vocabularyEntrySchema), // Vocabulary keyed by foreignForm
+  logFile: z.string(),
+  startTime: z.string(), // ISO string
+  stepTimings: z.array(stepTimingSchema),
+});
+
+export type WorkflowState = z.infer<typeof workflowStateSchema>;
 
 // Logging utilities
 const getLogDirectory = () => process.env.LOG_DIRECTORY || path.join(process.cwd(), 'logs');
 
-const getLogFilePath = () => {
+const getLogFilePath = (): string => {
   // Get current time in GMT+8
   const now = new Date();
   const gmt8 = new Date(now.getTime() + 8 * 60 * 60 * 1000);
@@ -29,19 +53,6 @@ const getLogFilePath = () => {
   return path.join(getLogDirectory(), `workflow-03_${timestamp}.md`);
 };
 
-let currentLogFile: string | null = null;
-let workflowStartTime: Date | null = null;
-let lastStepEndTime: Date | null = null;
-
-// Timing tracking for each step
-interface StepTiming {
-  stepName: string;
-  agentName: string;
-  endTime: string; // HH:MM:SS in GMT+8
-  durationMinutes: number;
-}
-const stepTimings: StepTiming[] = [];
-
 const formatTimeGMT8 = (date: Date): string => {
   const gmt8 = new Date(date.getTime() + 8 * 60 * 60 * 1000);
   const hours = String(gmt8.getUTCHours()).padStart(2, '0');
@@ -50,26 +61,30 @@ const formatTimeGMT8 = (date: Date): string => {
   return `${hours}:${minutes}:${seconds}`;
 };
 
-const recordStepTiming = (stepName: string, agentName: string, startTime: Date): void => {
+// Records a step timing and returns the new timing entry
+const recordStepTiming = (stepName: string, agentName: string, startTime: Date): StepTiming => {
   const endTime = new Date();
   const durationMinutes = (endTime.getTime() - startTime.getTime()) / 60000;
-  stepTimings.push({
+  return {
     stepName,
     agentName,
     endTime: formatTimeGMT8(endTime),
     durationMinutes: Math.round(durationMinutes * 100) / 100,
-  });
-  lastStepEndTime = endTime;
+  };
 };
 
-const logWorkflowSummary = (): void => {
-  if (!currentLogFile || !workflowStartTime) return;
-
+// Logs workflow summary to the specified log file
+const logWorkflowSummary = (
+  logFile: string,
+  startTimeIso: string,
+  stepTimings: StepTiming[],
+): void => {
+  const startTime = new Date(startTimeIso);
   const endTime = new Date();
-  const totalDurationMinutes = (endTime.getTime() - workflowStartTime.getTime()) / 60000;
+  const totalDurationMinutes = (endTime.getTime() - startTime.getTime()) / 60000;
 
   let content = `## Workflow Timing Summary\n\n`;
-  content += `**Start Time:** ${formatTimeGMT8(workflowStartTime)}\n`;
+  content += `**Start Time:** ${formatTimeGMT8(startTime)}\n`;
   content += `**End Time:** ${formatTimeGMT8(endTime)}\n`;
   content += `**Total Duration:** ${Math.round(totalDurationMinutes * 100) / 100} minutes\n\n`;
   content += `### Step Timings\n\n`;
@@ -81,33 +96,26 @@ const logWorkflowSummary = (): void => {
   }
 
   content += `\n---\n`;
-  fs.appendFileSync(currentLogFile, content);
+  fs.appendFileSync(logFile, content);
 };
 
-const initializeLogFile = (): string => {
+// Initialize workflow state - returns initial state object
+const initializeWorkflowState = (): WorkflowState => {
   const logDir = getLogDirectory();
   if (!fs.existsSync(logDir)) {
     fs.mkdirSync(logDir, { recursive: true });
   }
-  currentLogFile = getLogFilePath();
-  workflowStartTime = new Date();
-  stepTimings.length = 0; // Reset step timings
+  const logFile = getLogFilePath();
+  const startTime = new Date().toISOString();
 
-  // Generate unique memory IDs for this workflow run
-  workflowMemoryIds = generateWorkflowIds();
+  fs.writeFileSync(logFile, `# Workflow Execution Log\n\n_Generated: ${startTime}_\n\n---\n\n`);
 
-  fs.writeFileSync(
-    currentLogFile,
-    `# Workflow Execution Log\n\n_Generated: ${new Date().toISOString()}_\n\n**Memory Thread ID:** ${workflowMemoryIds.threadId}\n**Memory Resource ID:** ${workflowMemoryIds.resourceId}\n\n---\n\n`,
-  );
-
-  logMemoryOperation(
-    currentLogFile,
-    'WRITE',
-    `Initialized workflow memory IDs: thread=${workflowMemoryIds.threadId}, resource=${workflowMemoryIds.resourceId}`,
-  );
-
-  return currentLogFile;
+  return {
+    vocabulary: {},
+    logFile,
+    startTime,
+    stepTimings: [],
+  };
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -127,15 +135,13 @@ const formatReasoning = (reasoning: any): string | null => {
 };
 
 const logAgentOutput = (
+  logFile: string,
   stepName: string,
   agentName: string,
   output: unknown,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   reasoning?: any,
 ): void => {
-  if (!currentLogFile) {
-    initializeLogFile();
-  }
   let content = `## ${stepName}\n\n**Agent:** ${agentName}\n\n`;
 
   const formattedReasoning = formatReasoning(reasoning);
@@ -146,15 +152,12 @@ const logAgentOutput = (
   }
 
   content += `### Output\n\n\`\`\`json\n${JSON.stringify(output, null, 2)}\n\`\`\`\n\n---\n\n`;
-  fs.appendFileSync(currentLogFile!, content);
+  fs.appendFileSync(logFile, content);
 };
 
-const logValidationError = (stepName: string, error: z.ZodError): void => {
-  if (!currentLogFile) {
-    initializeLogFile();
-  }
+const logValidationError = (logFile: string, stepName: string, error: z.ZodError): void => {
   const content = `## ⚠️ Validation Error: ${stepName}\n\n\`\`\`\n${error.message}\n\`\`\`\n\n**Issues:**\n${error.issues.map((issue) => `- **${issue.path.join('.')}**: ${issue.message}`).join('\n')}\n\n---\n\n`;
-  fs.appendFileSync(currentLogFile!, content);
+  fs.appendFileSync(logFile, content);
 };
 
 const rawProblemInputSchema = z.object({
@@ -217,20 +220,7 @@ const rulesArraySchema = z.array(
   }),
 );
 
-const vocabularyEntrySchema = z.object({
-  foreignForm: z.string().describe('The foreign language morpheme or word'),
-  meaning: z.string().describe('The English meaning or gloss'),
-  type: z
-    .string()
-    .describe(
-      'The morpheme type (e.g., noun, verb-root, adjective, pronoun, tense-marker, number-marker, case-marker, agreement-marker, etc.)',
-    ),
-  notes: z
-    .string()
-    .describe(
-      'Additional notes including dataset item references, allomorphs, combinatorial restrictions, etc.',
-    ),
-});
+// Note: vocabularyEntrySchema is imported from vocabulary-tools.ts
 
 const vocabularyArraySchema = z.array(vocabularyEntrySchema);
 
@@ -342,9 +332,12 @@ const extractionStep = createStep({
   description: 'Step 1: Extract structured problem data from raw text input.',
   inputSchema: rawProblemInputSchema,
   outputSchema: structuredProblemSchema,
-  execute: async ({ inputData, mastra, bail }) => {
-    // Initialize log file at the start of the workflow
-    initializeLogFile();
+  stateSchema: workflowStateSchema,
+  execute: async ({ inputData, mastra, bail, state, setState }) => {
+    // Initialize workflow state at the start of the workflow
+    const initialState = initializeWorkflowState();
+    await setState(initialState);
+    const logFile = initialState.logFile;
 
     const step1StartTime = new Date();
     const response = await mastra
@@ -353,14 +346,14 @@ const extractionStep = createStep({
         structuredOutput: {
           schema: structuredProblemSchema,
         },
-        memory: {
-          thread: workflowMemoryIds!.threadId,
-          resource: workflowMemoryIds!.resourceId,
-        },
       });
 
-    recordStepTiming('Step 1', 'Structured Problem Extractor Agent', step1StartTime);
-    const timing1 = stepTimings[stepTimings.length - 1]!;
+    const timing1 = recordStepTiming(
+      'Step 1',
+      'Structured Problem Extractor Agent',
+      step1StartTime,
+    );
+    await setState({ ...initialState, stepTimings: [...initialState.stepTimings, timing1] });
     console.log(
       `[Step 1] Structured Problem Extractor Agent finished at ${timing1.endTime} (${timing1.durationMinutes} min).`,
     );
@@ -369,6 +362,7 @@ const extractionStep = createStep({
     const parseResult = structuredProblemSchema.safeParse(response.object);
 
     logAgentOutput(
+      logFile,
       'Step 1: Extract Structure',
       'Structured Problem Extractor Agent',
       response.object,
@@ -376,7 +370,7 @@ const extractionStep = createStep({
     );
 
     if (!parseResult.success) {
-      logValidationError('Step 1: Extract Structure', parseResult.error);
+      logValidationError(logFile, 'Step 1: Extract Structure', parseResult.error);
       return bail({
         success: false,
         message: '[Extract Structure Step] Validation failed: ' + parseResult.error.message,
@@ -411,32 +405,38 @@ const initialHypothesisStep = createStep({
   description: 'Step 2: Generate initial rules and vocabulary from structured problem.',
   inputSchema: initialHypothesisInputSchema,
   outputSchema: initialHypothesisOutputSchema,
-  execute: async ({ inputData, mastra, bail }) => {
+  stateSchema: workflowStateSchema,
+  execute: async ({ inputData, mastra, bail, state, setState }) => {
     const structuredProblem = inputData;
+    const logFile = state.logFile;
+
+    // Rebuild vocabulary state and tools from workflow state
+    const vocabularyState = new Map(Object.entries(state.vocabulary));
+    const vocabularyTools = createVocabularyTools(vocabularyState);
 
     // Step 2a: Call the Initial Rules Hypothesizer Agent (natural language output)
+    const hypothesizerAgent = createInitialHypothesizerAgent(vocabularyTools);
+    const vocabulary = Array.from(vocabularyState.values());
+
     const hypothesizerPrompt =
-      'Please analyze the dataset and hypothesize the linguistic rules and extract the vocabulary.\n\n' +
-      JSON.stringify({ structuredProblem });
+      'Please analyze the dataset and hypothesize the linguistic rules and extract the vocabulary.\\n\\n' +
+      JSON.stringify({ vocabulary, structuredProblem });
 
     const hypothesizerStartTime = new Date();
-    const hypothesizerResponse = await mastra
-      .getAgentById('wf03-initial-hypothesizer')
-      .generate(hypothesizerPrompt, {
-        memory: {
-          thread: workflowMemoryIds!.threadId,
-          resource: workflowMemoryIds!.resourceId,
-        },
-      });
+    const hypothesizerResponse = await hypothesizerAgent.generate(hypothesizerPrompt);
 
-    recordStepTiming('Step 2a', 'Initial Hypothesizer Agent', hypothesizerStartTime);
-    const hypothesizerTiming = stepTimings[stepTimings.length - 1]!;
+    const hypothesizerTiming = recordStepTiming(
+      'Step 2a',
+      'Initial Hypothesizer Agent',
+      hypothesizerStartTime,
+    );
     console.log(
       `[Step 2a] Initial Hypothesizer Agent finished at ${hypothesizerTiming.endTime} (${hypothesizerTiming.durationMinutes} min).`,
     );
 
     // Log the natural language output from the hypothesizer
     logAgentOutput(
+      logFile,
       'Step 2a: Initial Hypothesis (Natural Language)',
       'Initial Hypothesizer Agent',
       { naturalLanguageOutput: hypothesizerResponse.text },
@@ -445,7 +445,7 @@ const initialHypothesisStep = createStep({
 
     // Step 2b: Call the Initial Hypothesis Extractor Agent to parse into JSON
     const extractorPrompt =
-      'Please extract the rules and vocabulary from the following linguistic analysis:\n\n' +
+      'Please extract the rules and vocabulary from the following linguistic analysis:\\n\\n' +
       hypothesizerResponse.text;
 
     const extractorStartTime = new Date();
@@ -455,14 +455,13 @@ const initialHypothesisStep = createStep({
         structuredOutput: {
           schema: rulesSchema,
         },
-        memory: {
-          thread: workflowMemoryIds!.threadId,
-          resource: workflowMemoryIds!.resourceId,
-        },
       });
 
-    recordStepTiming('Step 2b', 'Initial Hypothesis Extractor Agent', extractorStartTime);
-    const extractorTiming = stepTimings[stepTimings.length - 1]!;
+    const extractorTiming = recordStepTiming(
+      'Step 2b',
+      'Initial Hypothesis Extractor Agent',
+      extractorStartTime,
+    );
     console.log(
       `[Step 2b] Initial Hypothesis Extractor Agent finished at ${extractorTiming.endTime} (${extractorTiming.durationMinutes} min).`,
     );
@@ -470,6 +469,7 @@ const initialHypothesisStep = createStep({
     const extractorParseResult = rulesSchema.safeParse(extractorResponse.object);
 
     logAgentOutput(
+      logFile,
       'Step 2b: Initial Hypothesis (JSON Extraction)',
       'Initial Hypothesis Extractor Agent',
       extractorResponse.object,
@@ -478,6 +478,7 @@ const initialHypothesisStep = createStep({
 
     if (!extractorParseResult.success) {
       logValidationError(
+        logFile,
         'Step 2b: Initial Hypothesis (JSON Extraction)',
         extractorParseResult.error,
       );
@@ -498,7 +499,12 @@ const initialHypothesisStep = createStep({
       });
     }
 
-    // Note: Vocabulary is managed via working memory by the hypothesizer agent directly
+    // Save updated vocabulary and timings to state
+    await setState({
+      ...state,
+      vocabulary: Object.fromEntries(vocabularyState),
+      stepTimings: [...state.stepTimings, hypothesizerTiming, extractorTiming],
+    });
 
     // Return the initial loop state with hypothesized rules
     return {
@@ -517,8 +523,15 @@ const verifyImproveLoopStep = createStep({
   description: `Step 3: Verify rules and improve based on feedback, up to ${MAX_VERIFY_IMPROVE_ITERATIONS} iterations.`,
   inputSchema: hypothesisTestLoopSchema,
   outputSchema: hypothesisTestLoopSchema,
-  execute: async ({ inputData, mastra, bail }) => {
+  stateSchema: workflowStateSchema,
+  execute: async ({ inputData, mastra, bail, state, setState }) => {
     const { structuredProblem, rules: currentRules, iterationCount } = inputData;
+    const logFile = state.logFile;
+    let currentStepTimings = [...state.stepTimings];
+
+    // Rebuild vocabulary state and tools from workflow state
+    const vocabularyState = new Map(Object.entries(state.vocabulary));
+    const vocabularyTools = createVocabularyTools(vocabularyState);
 
     // Rules should never be null here (they come from initial hypothesis step)
     if (currentRules === null) {
@@ -529,16 +542,21 @@ const verifyImproveLoopStep = createStep({
     }
 
     // Step 3a: Verify rules using the orchestrator (which calls testRule/testSentence tools)
-    // Create tools dynamically with current context baked in
-    // Note: agent handles vocabulary access via its own working memory
-    const testRule = createTestRuleTool(structuredProblem);
-    const testSentence = createTestSentenceTool(structuredProblem.context, currentRules);
+    // Create tools dynamically with current context and vocabulary baked in
+    const vocabulary = Array.from(vocabularyState.values());
+    const testRule = createTestRuleTool(structuredProblem, vocabulary);
+    const testSentence = createTestSentenceTool(
+      structuredProblem.context,
+      currentRules,
+      vocabulary,
+    );
 
     // Create orchestrator agent with the dynamic tools
     const orchestratorAgent = createVerifierOrchestratorAgent({ testRule, testSentence });
 
-    // Note: vocabulary not passed - agent reads from working memory
+    // Note: vocabulary is passed in the prompt (read-only for verifier)
     const orchestratorPrompt = JSON.stringify({
+      vocabulary,
       structuredProblem,
       rules: currentRules,
     });
@@ -548,18 +566,14 @@ const verifyImproveLoopStep = createStep({
       structuredOutput: {
         schema: verifierFeedbackSchema,
       },
-      memory: {
-        thread: workflowMemoryIds!.threadId,
-        resource: workflowMemoryIds!.resourceId,
-      },
     });
 
-    recordStepTiming(
+    const orchestratorTiming = recordStepTiming(
       `Step 3a (Iter ${iterationCount + 1})`,
       'Verifier Orchestrator Agent',
       orchestratorStartTime,
     );
-    const orchestratorTiming = stepTimings[stepTimings.length - 1]!;
+    currentStepTimings.push(orchestratorTiming);
     console.log(
       `[Step 3a] Verifier Orchestrator Agent finished (Iteration ${iterationCount + 1}) at ${orchestratorTiming.endTime} (${orchestratorTiming.durationMinutes} min).`,
     );
@@ -567,6 +581,7 @@ const verifyImproveLoopStep = createStep({
     const orchestratorParseResult = verifierFeedbackSchema.safeParse(orchestratorResponse.object);
 
     logAgentOutput(
+      logFile,
       `Step 3a: Verify-Improve Loop (Iteration ${iterationCount + 1}) - Verifier`,
       'Verifier Orchestrator Agent',
       orchestratorResponse.object,
@@ -575,6 +590,7 @@ const verifyImproveLoopStep = createStep({
 
     if (!orchestratorParseResult.success) {
       logValidationError(
+        logFile,
         `Step 3a: Verify-Improve Loop (Iteration ${iterationCount + 1}) - Verifier`,
         orchestratorParseResult.error,
       );
@@ -588,6 +604,7 @@ const verifyImproveLoopStep = createStep({
 
     // If all rules pass, we're done - no need to improve
     if (verifierFeedback.conclusion === 'ALL_RULES_PASS') {
+      await setState({ ...state, stepTimings: currentStepTimings });
       return {
         structuredProblem,
         rules: currentRules,
@@ -600,9 +617,15 @@ const verifyImproveLoopStep = createStep({
     // This step chains two agents:
     // 1. Rules Improver Agent - outputs natural language with reasoning and alternatives
     // 2. Rules Improvement Extractor Agent - extracts JSON from the natural language output
+
+    // Create improver agent with vocabulary tools
+    const improverAgent = createRulesImproverAgent(vocabularyTools);
+    const improverVocabulary = Array.from(vocabularyState.values());
+
     const improverPrompt =
-      'Your previous rules did not fully pass verification. Please improve your rules and vocabulary based on the feedback provided. Think outside the box and generate 2-3 alternative hypotheses for problematic areas.\n\n' +
+      'Your previous rules did not fully pass verification. Please improve your rules and vocabulary based on the feedback provided. Think outside the box and generate 2-3 alternative hypotheses for problematic areas.\\n\\n' +
       JSON.stringify({
+        vocabulary: improverVocabulary,
         structuredProblem,
         previousRules: currentRules,
         verifierFeedback,
@@ -610,27 +633,21 @@ const verifyImproveLoopStep = createStep({
 
     // Step 3b1: Call the Rules Improver Agent (natural language output)
     const improverStartTime = new Date();
-    const improverResponse = await mastra
-      .getAgentById('wf03-rules-improver')
-      .generate(improverPrompt, {
-        memory: {
-          thread: workflowMemoryIds!.threadId,
-          resource: workflowMemoryIds!.resourceId,
-        },
-      });
+    const improverResponse = await improverAgent.generate(improverPrompt);
 
-    recordStepTiming(
+    const improverTiming = recordStepTiming(
       `Step 3b1 (Iter ${iterationCount + 1})`,
       'Rules Improver Agent',
       improverStartTime,
     );
-    const improverTiming = stepTimings[stepTimings.length - 1]!;
+    currentStepTimings.push(improverTiming);
     console.log(
       `[Step 3b1] Rules Improver Agent finished (Iteration ${iterationCount + 1}) at ${improverTiming.endTime} (${improverTiming.durationMinutes} min).`,
     );
 
     // Log the natural language output from the improver
     logAgentOutput(
+      logFile,
       `Step 3b1: Verify-Improve Loop (Iteration ${iterationCount + 1}) - Improver (Natural Language)`,
       'Rules Improver Agent',
       { naturalLanguageOutput: improverResponse.text },
@@ -639,7 +656,7 @@ const verifyImproveLoopStep = createStep({
 
     // Step 3b2: Call the Rules Improvement Extractor Agent to parse into JSON
     const extractorPrompt =
-      'Please extract the revised rules and vocabulary from the following improvement analysis:\n\n' +
+      'Please extract the revised rules and vocabulary from the following improvement analysis:\\n\\n' +
       improverResponse.text;
 
     const extractorStartTime = new Date();
@@ -649,18 +666,14 @@ const verifyImproveLoopStep = createStep({
         structuredOutput: {
           schema: rulesSchema,
         },
-        memory: {
-          thread: workflowMemoryIds!.threadId,
-          resource: workflowMemoryIds!.resourceId,
-        },
       });
 
-    recordStepTiming(
+    const extractorTiming = recordStepTiming(
       `Step 3b2 (Iter ${iterationCount + 1})`,
       'Rules Improvement Extractor Agent',
       extractorStartTime,
     );
-    const extractorTiming = stepTimings[stepTimings.length - 1]!;
+    currentStepTimings.push(extractorTiming);
     console.log(
       `[Step 3b2] Rules Improvement Extractor Agent finished (Iteration ${iterationCount + 1}) at ${extractorTiming.endTime} (${extractorTiming.durationMinutes} min).`,
     );
@@ -668,6 +681,7 @@ const verifyImproveLoopStep = createStep({
     const extractorParseResult = rulesSchema.safeParse(extractorResponse.object);
 
     logAgentOutput(
+      logFile,
       `Step 3b2: Verify-Improve Loop (Iteration ${iterationCount + 1}) - Extractor (JSON)`,
       'Rules Improvement Extractor Agent',
       extractorResponse.object,
@@ -676,6 +690,7 @@ const verifyImproveLoopStep = createStep({
 
     if (!extractorParseResult.success) {
       logValidationError(
+        logFile,
         `Step 3b2: Verify-Improve Loop (Iteration ${iterationCount + 1}) - Extractor`,
         extractorParseResult.error,
       );
@@ -696,7 +711,12 @@ const verifyImproveLoopStep = createStep({
       });
     }
 
-    // Note: Vocabulary is managed via working memory by the improver agent directly
+    // Save updated vocabulary and timings to state
+    await setState({
+      ...state,
+      vocabulary: Object.fromEntries(vocabularyState),
+      stepTimings: currentStepTimings,
+    });
 
     // Return the updated loop state with improved rules
     return {
@@ -715,19 +735,24 @@ const questionAnsweringInputSchema = z.object({
   rules: rulesArraySchema,
 });
 
-// Step 4: Answer questions using the validated rules and vocabulary from working memory
+// Step 4: Answer questions using the validated rules and vocabulary from state
 const answerQuestionsStep = createStep({
   id: 'answer-questions',
   description:
-    "Step 4: Answer the user's questions using the validated rules and vocabulary from working memory.",
+    "Step 4: Answer the user's questions using the validated rules and vocabulary from workflow state.",
   inputSchema: questionAnsweringInputSchema,
   outputSchema: questionsAnsweredSchema,
-  execute: async ({ inputData, mastra, bail }) => {
+  stateSchema: workflowStateSchema,
+  execute: async ({ inputData, mastra, bail, state, setState }) => {
     const { structuredProblem, rules } = inputData;
+    const logFile = state.logFile;
 
-    // Note: vocabulary is not passed - agent reads from working memory directly
+    // Rebuild vocabulary from workflow state (read-only for question answerer)
+    const vocabularyState = new Map(Object.entries(state.vocabulary));
+    const answererVocabulary = Array.from(vocabularyState.values());
 
     const answererPrompt = JSON.stringify({
+      vocabulary: answererVocabulary,
       context: structuredProblem.context,
       dataset: structuredProblem.dataset,
       questions: structuredProblem.questions,
@@ -741,14 +766,10 @@ const answerQuestionsStep = createStep({
         structuredOutput: {
           schema: questionsAnsweredSchema,
         },
-        memory: {
-          thread: workflowMemoryIds!.threadId,
-          resource: workflowMemoryIds!.resourceId,
-        },
       });
 
-    recordStepTiming('Step 4', 'Question Answerer Agent', answererStartTime);
-    const answererTiming = stepTimings[stepTimings.length - 1]!;
+    const answererTiming = recordStepTiming('Step 4', 'Question Answerer Agent', answererStartTime);
+    const finalStepTimings = [...state.stepTimings, answererTiming];
     console.log(
       `[Step 4] Question Answerer Agent finished at ${answererTiming.endTime} (${answererTiming.durationMinutes} min).`,
     );
@@ -756,6 +777,7 @@ const answerQuestionsStep = createStep({
     const answererParseResult = questionsAnsweredSchema.safeParse(answererResponse.object);
 
     logAgentOutput(
+      logFile,
       'Step 4: Answer Questions',
       'Question Answerer Agent',
       answererResponse.object,
@@ -763,7 +785,7 @@ const answerQuestionsStep = createStep({
     );
 
     if (!answererParseResult.success) {
-      logValidationError('Step 4: Answer Questions', answererParseResult.error);
+      logValidationError(logFile, 'Step 4: Answer Questions', answererParseResult.error);
       return bail({
         success: false,
         message: '[Answer Questions Step] Validation failed: ' + answererParseResult.error.message,
@@ -781,7 +803,10 @@ const answerQuestionsStep = createStep({
     }
 
     // Log the workflow timing summary at the end
-    logWorkflowSummary();
+    logWorkflowSummary(logFile, state.startTime, finalStepTimings);
+
+    // Save final state
+    await setState({ ...state, stepTimings: finalStepTimings });
 
     return answererParsed;
   },
@@ -791,6 +816,7 @@ export const workflow03 = createWorkflow({
   id: '03-per-rule-per-sentence-delegation-workflow',
   inputSchema: rawProblemInputSchema,
   outputSchema: questionsAnsweredSchema,
+  stateSchema: workflowStateSchema,
 })
   // Step 1: Extract structured problem data from raw text input.
   .then(extractionStep)

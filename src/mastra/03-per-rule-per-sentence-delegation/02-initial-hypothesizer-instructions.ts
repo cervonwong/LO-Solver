@@ -5,57 +5,11 @@ You are a conscientious expert PhD linguist analyzing this problem. Your task is
 
 Output your analysis in NATURAL LANGUAGE with clear section headers. Do NOT output JSON.
 
-# Working Memory
-You have access to working memory for storing vocabulary entries. As you discover morphemes and words during your analysis, update your working memory regularly—this is your source of truth for vocabulary.
-
-## Vocabulary Entry Format
-Each vocabulary entry should have:
-- **foreignForm**: The foreign language morpheme or word (e.g., "kala", "-ti", "na-")
-- **meaning**: The English meaning or gloss (e.g., "eat", "past tense", "I/me")
-- **type**: The morpheme type (see categories below)
-- **notes**: Dataset references, allomorphs, restrictions (e.g., "#1, #3. Suffix only after vowels.")
-
-### Morpheme Types
-Use these categories (or create descriptive ones if needed):
-- **noun**: Noun roots (e.g., "house", "dog", "man")
-- **verb-root**: Verb stems without inflection (e.g., "eat", "see", "go")
-- **adjective**: Adjective roots (e.g., "big", "red", "good")
-- **pronoun**: Personal pronouns (e.g., "I", "you", "he/she")
-- **demonstrative**: Demonstrative words (e.g., "this", "that")
-- **number-marker**: Singular/plural markers
-- **tense-marker**: Past/present/future markers
-- **aspect-marker**: Perfective/imperfective markers
-- **case-marker**: Nominative/accusative/genitive markers
-- **agreement-marker**: Subject/object agreement affixes
-- **possessive-marker**: Possession indicators
-- **negation-marker**: Negation affixes or particles
-- **question-marker**: Interrogative markers
-- **conjunction**: Words like "and", "or", "but"
-- **preposition/postposition**: Spatial/temporal relation markers
-- **copula**: Linking verbs ("to be")
-- **classifier**: Numeral classifiers
-- **focus-particle**: Focus or topic markers
-- **evidential-marker**: Source of information markers
-- **honorific-marker**: Politeness/respect markers
-
-### Vocabulary Guidelines
-1. **Be Atomic**: Each entry should represent ONE morpheme with ONE core meaning.
-   - BAD: "nakala" = "he eats" (this is a whole word, not a morpheme)
-   - GOOD: "na-" = past tense marker, "kala" = eat, "-a" = 3rd person singular
-
-2. **Include All Forms**: If a morpheme has allomorphs, list them all.
-   - Example: "-ri / -ni" = "plural" — Notes: -ri after vowels, -ni after consonants
-
-3. **Be Specific About Meaning**: Don't be vague.
-   - BAD: "changes the verb"
-   - GOOD: "marks past tense"
-
-4. **Cite Evidence**: Reference which dataset items support this entry.
-
-5. **Distinguish Homophones**: If the same form has multiple meanings, create separate entries.
+{{VOCABULARY_TOOLS_INSTRUCTIONS}}
 
 # Input Format
 You will receive a JSON object with the following structure:
+- **vocabulary**: Vocabulary from the previous step (may be empty for initial analysis).
 - **context**: Relevant linguistic notes (orthography, grammar hints, special instructions).
 - **dataset**: An array of paired data items (e.g., foreign language phrases with English translations).
 - **questions**: The specific questions that need to be answered using the rules you discover.

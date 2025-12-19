@@ -1,12 +1,12 @@
 import { Agent } from '@mastra/core/agent';
 import { UnicodeNormalizer } from '@mastra/core/processors';
 import { VERIFIER_ORCHESTRATOR_INSTRUCTIONS } from './03a-verifier-orchestrator-instructions';
-import { sharedMemory } from './shared-memory';
 import { openrouter } from '../openrouter';
 
 /**
  * Factory function to create a verifier orchestrator agent with dynamic tools.
  * Tools are created per-iteration with the current context baked in.
+ * Vocabulary is passed in the prompt (read-only).
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function createVerifierOrchestratorAgent(tools: Record<string, any>) {
@@ -24,6 +24,5 @@ export function createVerifierOrchestratorAgent(tools: Record<string, any>) {
         trim: true,
       }),
     ],
-    memory: sharedMemory,
   });
 }

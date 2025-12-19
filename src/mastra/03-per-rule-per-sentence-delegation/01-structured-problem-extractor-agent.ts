@@ -1,7 +1,6 @@
 import { Agent } from '@mastra/core/agent';
 import { UnicodeNormalizer } from '@mastra/core/processors';
 import { STRUCTURED_PROBLEM_EXTRACTOR_INSTRUCTIONS } from './01-structured-problem-extractor-instructions';
-import { sharedMemory } from './shared-memory';
 import { openrouter } from '../openrouter';
 
 export const structuredProblemExtractorAgent = new Agent({
@@ -18,5 +17,4 @@ export const structuredProblemExtractorAgent = new Agent({
       trim: true,
     }),
   ],
-  memory: sharedMemory,
 });
