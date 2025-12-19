@@ -6,6 +6,7 @@ import { extractThenHypoTestLoopWorkflowAgents } from './02-extract-then-hypo-te
 import { extractThenHypoTestLoopWorkflow } from './02-extract-then-hypo-test-loop/workflow';
 import { workflow03Agents } from './03-per-rule-per-sentence-delegation';
 import { workflow03 } from './03-per-rule-per-sentence-delegation/workflow';
+import { Observability } from '@mastra/observability';
 
 export const mastra = new Mastra({
   agents: {
@@ -21,6 +22,7 @@ export const mastra = new Mastra({
     workflow03,
   },
   storage: new LibSQLStore({
+    id: 'mastra-storage',
     // stores observability, scores, ...
     // if storing in memory, use `url: ":memory:"`;
     // if it needs to persist, use `url: "file:../../mastra.db"`
@@ -30,11 +32,7 @@ export const mastra = new Mastra({
     name: 'Mastra',
     level: 'info',
   }),
-  telemetry: {
-    enabled: false,
-  },
-  observability: {
-    // Enables DefaultExporter and CloudExporter for AI tracing
+  observability: new Observability({
     default: { enabled: true },
-  },
+  }),
 });

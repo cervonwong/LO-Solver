@@ -24,6 +24,7 @@ export type VocabularyWorkingMemory = z.infer<typeof vocabularyWorkingMemorySche
 // Shared memory instance with working memory enabled
 export const sharedMemory = new Memory({
   storage: new LibSQLStore({
+    id: 'workflow03-memory-storage',
     url: 'file:../../mastra.db', // path is relative to the .mastra/output directory
   }),
   options: {

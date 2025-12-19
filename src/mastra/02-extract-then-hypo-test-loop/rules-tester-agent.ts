@@ -3,17 +3,13 @@ import { Memory } from '@mastra/memory';
 import { LibSQLStore } from '@mastra/libsql';
 import { UnicodeNormalizer } from '@mastra/core/processors';
 import { RULES_TESTER_INSTRUCTIONS } from './rules-tester-instructions';
-import { createOpenRouter } from '@openrouter/ai-sdk-provider';
-
-const openrouter = createOpenRouter({
-  apiKey: process.env.OPENROUTER_API_KEY!,
-});
 
 export const rulesTesterAgent = new Agent({
+  id: 'wf02-rules-tester',
   name: '[02-02b] Rules Tester Agent',
   instructions: RULES_TESTER_INSTRUCTIONS,
-  // model: openrouter('deepseek/deepseek-v3.2'),
-  model: openrouter('google/gemini-3-pro-preview'),
+  // model: 'openrouter/deepseek/deepseek-v3.2',
+  model: 'openrouter/google/gemini-3-pro-preview',
   tools: {},
   inputProcessors: [
     new UnicodeNormalizer({
@@ -25,7 +21,8 @@ export const rulesTesterAgent = new Agent({
   ],
   memory: new Memory({
     storage: new LibSQLStore({
-      url: 'file:../../mastra.db', // path is relative to the .mastra/output directory
+      id: 'wf02-rules-tester-memory',
+      url: 'file:../../mastra.db',
     }),
   }),
 });

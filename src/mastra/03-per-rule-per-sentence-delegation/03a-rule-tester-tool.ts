@@ -1,11 +1,7 @@
 import { createTool } from '@mastra/core/tools';
+import { Agent } from '@mastra/core/agent';
 import { z } from 'zod';
-import { createOpenRouter } from '@openrouter/ai-sdk-provider';
-import { generateObject } from 'ai';
-
-const openrouter = createOpenRouter({
-  apiKey: process.env.OPENROUTER_API_KEY!,
-});
+import { sharedMemory } from './shared-memory';
 
 const ruleTestInputSchema = z.object({
   title: z.string().describe('The title/category of the rule'),
@@ -90,14 +86,24 @@ interface StructuredProblemData {
  * The orchestrator only needs to specify which rule to test.
  */
 export function createTestRuleTool(structuredProblem: StructuredProblemData) {
+  // Create a dedicated agent for rule testing
+  const ruleTesterAgent = new Agent({
+    id: 'wf03-rule-tester',
+    name: '[03-3a-tool] Rule Tester Agent',
+    instructions: RULE_TESTER_SYSTEM_PROMPT,
+    model: 'openrouter/openai/gpt-5-mini',
+    tools: {},
+    memory: sharedMemory,
+  });
+
   return createTool({
     id: 'testRule',
     description:
       'Tests a single linguistic rule against the dataset to verify correctness and consistency. Call this for EACH rule you want to test.',
     inputSchema: ruleTestInputSchema,
     outputSchema: ruleTestResultSchema,
-    execute: async ({ context }) => {
-      const { title, description } = context;
+    execute: async (inputData, _context) => {
+      const { title, description } = inputData;
 
       const prompt = `
 Test the following rule against the dataset:
@@ -119,14 +125,13 @@ Analyze this rule against the dataset and provide your assessment.
 `.trim();
 
       try {
-        const result = await generateObject({
-          model: openrouter('openai/gpt-5-mini'),
-          system: RULE_TESTER_SYSTEM_PROMPT,
-          prompt,
-          schema: ruleTestSuccessSchema,
+        const result = await ruleTesterAgent.generate(prompt, {
+          structuredOutput: {
+            schema: ruleTestSuccessSchema,
+          },
         });
 
-        return result.object;
+        return result.object as z.infer<typeof ruleTestSuccessSchema>;
       } catch (err) {
         return {
           success: false as const,

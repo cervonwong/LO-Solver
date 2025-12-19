@@ -1,11 +1,7 @@
 import { createTool } from '@mastra/core/tools';
+import { Agent } from '@mastra/core/agent';
 import { z } from 'zod';
-import { createOpenRouter } from '@openrouter/ai-sdk-provider';
-import { generateObject } from 'ai';
-
-const openrouter = createOpenRouter({
-  apiKey: process.env.OPENROUTER_API_KEY!,
-});
+import { sharedMemory } from './shared-memory';
 
 const sentenceTestInputSchema = z.object({
   id: z.string().describe('Identifier for the sentence (e.g., "1", "Q1")'),
@@ -132,14 +128,24 @@ interface Rule {
  * The agent calling this tool has access to vocabulary via working memory.
  */
 export function createTestSentenceTool(problemContext: string, rules: Rule[]) {
+  // Create a dedicated agent for sentence testing
+  const sentenceTesterAgent = new Agent({
+    id: 'wf03-sentence-tester',
+    name: '[03-3a-tool] Sentence Tester Agent',
+    instructions: SENTENCE_TESTER_SYSTEM_PROMPT,
+    model: 'openrouter/openai/gpt-5-mini',
+    tools: {},
+    memory: sharedMemory,
+  });
+
   return createTool({
     id: 'testSentence',
     description:
       'Tests a single sentence against the ruleset to verify it can be translated unambiguously. Call this for EACH sentence you want to test. Vocabulary is available via working memory.',
     inputSchema: sentenceTestInputSchema,
     outputSchema: sentenceTestResultSchema,
-    execute: async ({ context }) => {
-      const { id, content, sourceLanguage, targetLanguage, expectedTranslation } = context;
+    execute: async (inputData, _context) => {
+      const { id, content, sourceLanguage, targetLanguage, expectedTranslation } = inputData;
 
       const prompt = `
 Translate and validate the following sentence using the provided ruleset:
@@ -161,14 +167,13 @@ Attempt to translate this sentence step by step using the rules above and vocabu
 `.trim();
 
       try {
-        const result = await generateObject({
-          model: openrouter('openai/gpt-5-mini'),
-          system: SENTENCE_TESTER_SYSTEM_PROMPT,
-          prompt,
-          schema: sentenceTestSuccessSchema,
+        const result = await sentenceTesterAgent.generate(prompt, {
+          structuredOutput: {
+            schema: sentenceTestSuccessSchema,
+          },
         });
 
-        return result.object;
+        return result.object as z.infer<typeof sentenceTestSuccessSchema>;
       } catch (err) {
         return {
           success: false as const,

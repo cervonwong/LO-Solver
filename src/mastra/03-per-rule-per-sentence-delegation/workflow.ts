@@ -1,16 +1,11 @@
 import { createStep, createWorkflow } from '@mastra/core/workflows';
 import { z } from 'zod';
-import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import * as fs from 'fs';
 import * as path from 'path';
 import { createTestRuleTool } from './03a-rule-tester-tool';
 import { createTestSentenceTool } from './03a-sentence-tester-tool';
 import { createVerifierOrchestratorAgent } from './03a-verifier-orchestrator-agent';
 import { generateWorkflowIds, logMemoryOperation } from './shared-memory';
-
-const openrouter = createOpenRouter({
-  apiKey: process.env.OPENROUTER_API_KEY!,
-});
 
 const MAX_VERIFY_IMPROVE_ITERATIONS = 4;
 
@@ -353,10 +348,14 @@ const extractionStep = createStep({
 
     const step1StartTime = new Date();
     const response = await mastra
-      .getAgent('wf03_structuredProblemExtractorAgent')
+      .getAgentById('wf03-structured-problem-extractor')
       .generate(`${inputData.rawProblemText}`, {
         structuredOutput: {
           schema: structuredProblemSchema,
+        },
+        memory: {
+          thread: workflowMemoryIds!.threadId,
+          resource: workflowMemoryIds!.resourceId,
         },
       });
 
@@ -422,8 +421,13 @@ const initialHypothesisStep = createStep({
 
     const hypothesizerStartTime = new Date();
     const hypothesizerResponse = await mastra
-      .getAgent('wf03_initialHypothesizerAgent')
-      .generate(hypothesizerPrompt);
+      .getAgentById('wf03-initial-hypothesizer')
+      .generate(hypothesizerPrompt, {
+        memory: {
+          thread: workflowMemoryIds!.threadId,
+          resource: workflowMemoryIds!.resourceId,
+        },
+      });
 
     recordStepTiming('Step 2a', 'Initial Hypothesizer Agent', hypothesizerStartTime);
     const hypothesizerTiming = stepTimings[stepTimings.length - 1]!;
@@ -446,10 +450,14 @@ const initialHypothesisStep = createStep({
 
     const extractorStartTime = new Date();
     const extractorResponse = await mastra
-      .getAgent('wf03_initialHypothesisExtractorAgent')
+      .getAgentById('wf03-initial-hypothesis-extractor')
       .generate(extractorPrompt, {
         structuredOutput: {
           schema: rulesSchema,
+        },
+        memory: {
+          thread: workflowMemoryIds!.threadId,
+          resource: workflowMemoryIds!.resourceId,
         },
       });
 
@@ -540,6 +548,10 @@ const verifyImproveLoopStep = createStep({
       structuredOutput: {
         schema: verifierFeedbackSchema,
       },
+      memory: {
+        thread: workflowMemoryIds!.threadId,
+        resource: workflowMemoryIds!.resourceId,
+      },
     });
 
     recordStepTiming(
@@ -599,8 +611,13 @@ const verifyImproveLoopStep = createStep({
     // Step 3b1: Call the Rules Improver Agent (natural language output)
     const improverStartTime = new Date();
     const improverResponse = await mastra
-      .getAgent('wf03_rulesImproverAgent')
-      .generate(improverPrompt);
+      .getAgentById('wf03-rules-improver')
+      .generate(improverPrompt, {
+        memory: {
+          thread: workflowMemoryIds!.threadId,
+          resource: workflowMemoryIds!.resourceId,
+        },
+      });
 
     recordStepTiming(
       `Step 3b1 (Iter ${iterationCount + 1})`,
@@ -627,10 +644,14 @@ const verifyImproveLoopStep = createStep({
 
     const extractorStartTime = new Date();
     const extractorResponse = await mastra
-      .getAgent('wf03_rulesImprovementExtractorAgent')
+      .getAgentById('wf03-rules-improvement-extractor')
       .generate(extractorPrompt, {
         structuredOutput: {
           schema: rulesSchema,
+        },
+        memory: {
+          thread: workflowMemoryIds!.threadId,
+          resource: workflowMemoryIds!.resourceId,
         },
       });
 
@@ -715,11 +736,14 @@ const answerQuestionsStep = createStep({
 
     const answererStartTime = new Date();
     const answererResponse = await mastra
-      .getAgent('wf03_questionAnswererAgent')
+      .getAgentById('wf03-question-answerer')
       .generate(answererPrompt, {
         structuredOutput: {
           schema: questionsAnsweredSchema,
-          model: openrouter('openai/gpt-5-mini'),
+        },
+        memory: {
+          thread: workflowMemoryIds!.threadId,
+          resource: workflowMemoryIds!.resourceId,
         },
       });
 

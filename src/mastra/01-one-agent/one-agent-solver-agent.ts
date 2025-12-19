@@ -6,6 +6,7 @@ import { ONE_AGENT_SOLVER_INSTRUCTIONS } from './one-agent-solver-instructions';
 import { completenessScorer } from './one-agent-solver-scorers';
 
 export const oneAgentSolverAgent = new Agent({
+  id: 'one-agent-solver',
   name: '[01] One-Agent Solver Agent',
   instructions: ONE_AGENT_SOLVER_INSTRUCTIONS,
   model: 'openrouter/openai/gpt-5-mini',
@@ -29,6 +30,7 @@ export const oneAgentSolverAgent = new Agent({
   ],
   memory: new Memory({
     storage: new LibSQLStore({
+      id: 'one-agent-solver-memory-storage',
       url: 'file:../mastra.db', // path is relative to the .mastra/output directory
     }),
   }),

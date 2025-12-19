@@ -129,6 +129,6 @@ const mastra = new Mastra({
 });
 
 // Use the agent directly
-const agent = mastra.getAgent('wf01_oneAgentSolverAgent');
+const agent = mastra.getAgentById('one-agent-solver');
 const response = await agent.generate('... your linguistics problem text ...');
 ```

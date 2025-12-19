@@ -1,12 +1,7 @@
 import { Agent } from '@mastra/core/agent';
 import { UnicodeNormalizer } from '@mastra/core/processors';
 import { VERIFIER_ORCHESTRATOR_INSTRUCTIONS } from './03a-verifier-orchestrator-instructions';
-import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { sharedMemory } from './shared-memory';
-
-const openrouter = createOpenRouter({
-  apiKey: process.env.OPENROUTER_API_KEY!,
-});
 
 /**
  * Factory function to create a verifier orchestrator agent with dynamic tools.
@@ -15,9 +10,10 @@ const openrouter = createOpenRouter({
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function createVerifierOrchestratorAgent(tools: Record<string, any>) {
   return new Agent({
+    id: 'wf03-verifier-orchestrator',
     name: '[03-3a] Verifier Orchestrator Agent',
     instructions: VERIFIER_ORCHESTRATOR_INSTRUCTIONS,
-    model: openrouter('google/gemini-3-pro-preview'),
+    model: 'openrouter/google/gemini-3-pro-preview',
     tools,
     inputProcessors: [
       new UnicodeNormalizer({
@@ -28,8 +24,5 @@ export function createVerifierOrchestratorAgent(tools: Record<string, any>) {
       }),
     ],
     memory: sharedMemory,
-    defaultStreamOptions: {
-      maxSteps: 100,
-    },
   });
 }

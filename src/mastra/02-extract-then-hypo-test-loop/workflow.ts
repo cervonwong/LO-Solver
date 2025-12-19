@@ -1,12 +1,7 @@
 import { createStep, createWorkflow } from '@mastra/core/workflows';
 import { z } from 'zod';
-import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import * as fs from 'fs';
 import * as path from 'path';
-
-const openrouter = createOpenRouter({
-  apiKey: process.env.OPENROUTER_API_KEY!,
-});
 
 const MAX_HYPOTHESIS_TEST_ITERATIONS = 5;
 
@@ -305,7 +300,7 @@ const extractionStep = createStep({
 
     const step1StartTime = new Date();
     const response = await mastra
-      .getAgent('wf02_structuredProblemExtractorAgent')
+      .getAgentById('wf02-structured-problem-extractor')
       .generate(`${inputData.rawProblemText}`, {
         structuredOutput: {
           schema: structuredProblemSchema,
@@ -315,7 +310,7 @@ const extractionStep = createStep({
     recordStepTiming('Step 1', 'Structured Problem Extractor Agent', step1StartTime);
     const timing1 = stepTimings[stepTimings.length - 1];
     console.log(
-      `[Step 1] Structured Problem Extractor Agent finished at ${timing1.endTime} (${timing1.durationMinutes} min).`,
+      `[Step 1] Structured Problem Extractor Agent finished at ${timing1?.endTime ?? 'N/A'} (${timing1?.durationMinutes ?? 'N/A'} min).`,
     );
 
     // validate the agent response against the expected schema so the step returns the correct type
@@ -382,11 +377,10 @@ const hypothesisAndTestLoopStep = createStep({
 
     const hypothesizerStartTime = new Date();
     const hypothesizerResponse = await mastra
-      .getAgent('wf02_rulesHypothesizerAgent')
+      .getAgentById('wf02-rules-hypothesizer')
       .generate(hypothesizerPrompt, {
         structuredOutput: {
           schema: rulesSchema,
-          model: openrouter('openai/gpt-5-mini'),
         },
       });
 
@@ -397,7 +391,7 @@ const hypothesisAndTestLoopStep = createStep({
     );
     const hypothesizerTiming = stepTimings[stepTimings.length - 1];
     console.log(
-      `[Step 2] Rules Hypothesizer Agent finished (Iteration ${iterationCount + 1}) at ${hypothesizerTiming.endTime} (${hypothesizerTiming.durationMinutes} min).`,
+      `[Step 2] Rules Hypothesizer Agent finished (Iteration ${iterationCount + 1}) at ${hypothesizerTiming?.endTime ?? 'N/A'} (${hypothesizerTiming?.durationMinutes ?? 'N/A'} min).`,
     );
 
     const hypothesizerParseResult = rulesSchema.safeParse(hypothesizerResponse.object);
@@ -441,17 +435,18 @@ const hypothesisAndTestLoopStep = createStep({
     });
 
     const testerStartTime = new Date();
-    const testerResponse = await mastra.getAgent('wf02_rulesTesterAgent').generate(testerPrompt, {
+    const testerResponse = await mastra
+      .getAgentById('wf02-rules-tester')
+      .generate(testerPrompt, {
       structuredOutput: {
         schema: rulesTestResultsSchema,
-        model: openrouter('openai/gpt-5-mini'),
       },
     });
 
     recordStepTiming(`Step 2 (Iter ${iterationCount + 1})`, 'Rules Tester Agent', testerStartTime);
     const testerTiming = stepTimings[stepTimings.length - 1];
     console.log(
-      `[Step 2] Rules Tester Agent finished (Iteration ${iterationCount + 1}) at ${testerTiming.endTime} (${testerTiming.durationMinutes} min).`,
+      `[Step 2] Rules Tester Agent finished (Iteration ${iterationCount + 1}) at ${testerTiming?.endTime ?? 'N/A'} (${testerTiming?.durationMinutes ?? 'N/A'} min).`,
     );
 
     const testerParseResult = rulesTestResultsSchema.safeParse(testerResponse.object);
@@ -514,18 +509,17 @@ const answerQuestionsStep = createStep({
 
     const answererStartTime = new Date();
     const answererResponse = await mastra
-      .getAgent('wf02_questionAnswererAgent')
+      .getAgentById('wf02-question-answerer')
       .generate(answererPrompt, {
         structuredOutput: {
           schema: questionsAnsweredSchema,
-          model: openrouter('openai/gpt-5-mini'),
         },
       });
 
     recordStepTiming('Step 3', 'Question Answerer Agent', answererStartTime);
     const answererTiming = stepTimings[stepTimings.length - 1];
     console.log(
-      `[Step 3] Question Answerer Agent finished at ${answererTiming.endTime} (${answererTiming.durationMinutes} min).`,
+      `[Step 3] Question Answerer Agent finished at ${answererTiming?.endTime ?? 'N/A'} (${answererTiming?.durationMinutes ?? 'N/A'} min).`,
     );
 
     const answererParseResult = questionsAnsweredSchema.safeParse(answererResponse.object);

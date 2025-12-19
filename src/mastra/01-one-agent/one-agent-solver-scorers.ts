@@ -1,3 +1,3 @@
-import { createCompletenessScorer } from '@mastra/evals/scorers/code';
+import { createCompletenessScorer } from '@mastra/evals/scorers/prebuilt';
 
 export const completenessScorer = createCompletenessScorer();
