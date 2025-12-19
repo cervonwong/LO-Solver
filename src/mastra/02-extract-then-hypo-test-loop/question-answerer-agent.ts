@@ -3,13 +3,14 @@ import { Memory } from '@mastra/memory';
 import { LibSQLStore } from '@mastra/libsql';
 import { UnicodeNormalizer } from '@mastra/core/processors';
 import { QUESTION_ANSWERER_INSTRUCTIONS } from './question-answerer-instructions';
+import { openrouter } from '../openrouter';
 
 export const questionAnswererAgent = new Agent({
   id: 'wf02-question-answerer',
   name: '[02-03] Question Answerer Agent',
   instructions: QUESTION_ANSWERER_INSTRUCTIONS,
-  // model: 'openrouter/openai/gpt-5-mini',
-  model: 'openrouter/google/gemini-3-pro-preview',
+  // model: openrouter('openai/gpt-5-mini'),
+  model: openrouter('google/gemini-3-pro-preview'),
   tools: {},
   inputProcessors: [
     new UnicodeNormalizer({

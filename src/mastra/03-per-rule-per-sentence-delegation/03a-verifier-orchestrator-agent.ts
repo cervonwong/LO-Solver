@@ -2,6 +2,7 @@ import { Agent } from '@mastra/core/agent';
 import { UnicodeNormalizer } from '@mastra/core/processors';
 import { VERIFIER_ORCHESTRATOR_INSTRUCTIONS } from './03a-verifier-orchestrator-instructions';
 import { sharedMemory } from './shared-memory';
+import { openrouter } from '../openrouter';
 
 /**
  * Factory function to create a verifier orchestrator agent with dynamic tools.
@@ -13,7 +14,7 @@ export function createVerifierOrchestratorAgent(tools: Record<string, any>) {
     id: 'wf03-verifier-orchestrator',
     name: '[03-3a] Verifier Orchestrator Agent',
     instructions: VERIFIER_ORCHESTRATOR_INSTRUCTIONS,
-    model: 'openrouter/google/gemini-3-pro-preview',
+    model: openrouter('google/gemini-3-pro-preview'),
     tools,
     inputProcessors: [
       new UnicodeNormalizer({

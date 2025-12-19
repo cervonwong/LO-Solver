@@ -2,6 +2,7 @@ import { createTool } from '@mastra/core/tools';
 import { Agent } from '@mastra/core/agent';
 import { z } from 'zod';
 import { sharedMemory } from './shared-memory';
+import { openrouter } from '../openrouter';
 
 const ruleTestInputSchema = z.object({
   title: z.string().describe('The title/category of the rule'),
@@ -91,7 +92,7 @@ export function createTestRuleTool(structuredProblem: StructuredProblemData) {
     id: 'wf03-rule-tester',
     name: '[03-3a-tool] Rule Tester Agent',
     instructions: RULE_TESTER_SYSTEM_PROMPT,
-    model: 'openrouter/openai/gpt-5-mini',
+    model: openrouter('openai/gpt-5-mini'),
     tools: {},
     memory: sharedMemory,
   });

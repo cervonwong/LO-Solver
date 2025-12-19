@@ -2,6 +2,7 @@ import { Agent } from '@mastra/core/agent';
 import { UnicodeNormalizer } from '@mastra/core/processors';
 import { INITIAL_HYPOTHESIS_EXTRACTOR_INSTRUCTIONS } from './02a-initial-hypothesis-extractor-instructions';
 import { sharedMemory } from './shared-memory';
+import { openrouter } from '../openrouter';
 
 export const initialHypothesisExtractorAgent = new Agent({
   id: 'wf03-initial-hypothesis-extractor',
@@ -10,7 +11,7 @@ export const initialHypothesisExtractorAgent = new Agent({
     role: 'system',
     content: INITIAL_HYPOTHESIS_EXTRACTOR_INSTRUCTIONS,
   },
-  model: 'openrouter/openai/gpt-5-mini',
+  model: openrouter('openai/gpt-5-mini'),
   tools: {},
   inputProcessors: [
     new UnicodeNormalizer({

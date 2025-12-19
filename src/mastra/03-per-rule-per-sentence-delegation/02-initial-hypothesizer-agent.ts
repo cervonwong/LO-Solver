@@ -2,6 +2,7 @@ import { Agent } from '@mastra/core/agent';
 import { UnicodeNormalizer } from '@mastra/core/processors';
 import { INITIAL_HYPOTHESIZER_INSTRUCTIONS } from './02-initial-hypothesizer-instructions';
 import { sharedMemory } from './shared-memory';
+import { openrouter } from '../openrouter';
 
 export const initialHypothesizerAgent = new Agent({
   id: 'wf03-initial-hypothesizer',
@@ -10,8 +11,8 @@ export const initialHypothesizerAgent = new Agent({
     role: 'system',
     content: INITIAL_HYPOTHESIZER_INSTRUCTIONS,
   },
-  // model: 'openrouter/deepseek/deepseek-v3.2',
-  model: 'openrouter/google/gemini-3-pro-preview',
+  // model: openrouter('deepseek/deepseek-v3.2'),
+  model: openrouter('google/gemini-3-pro-preview'),
   tools: {},
   inputProcessors: [
     new UnicodeNormalizer({

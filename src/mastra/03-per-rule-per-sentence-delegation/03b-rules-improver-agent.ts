@@ -2,6 +2,7 @@ import { Agent } from '@mastra/core/agent';
 import { UnicodeNormalizer } from '@mastra/core/processors';
 import { RULES_IMPROVER_INSTRUCTIONS } from './03b-rules-improver-instructions';
 import { sharedMemory } from './shared-memory';
+import { openrouter } from '../openrouter';
 
 export const rulesImproverAgent = new Agent({
   id: 'wf03-rules-improver',
@@ -10,7 +11,7 @@ export const rulesImproverAgent = new Agent({
     role: 'system',
     content: RULES_IMPROVER_INSTRUCTIONS,
   },
-  model: 'openrouter/google/gemini-3-pro-preview',
+  model: openrouter('google/gemini-3-pro-preview'),
   tools: {},
   inputProcessors: [
     new UnicodeNormalizer({

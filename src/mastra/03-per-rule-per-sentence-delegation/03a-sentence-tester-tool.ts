@@ -2,6 +2,7 @@ import { createTool } from '@mastra/core/tools';
 import { Agent } from '@mastra/core/agent';
 import { z } from 'zod';
 import { sharedMemory } from './shared-memory';
+import { openrouter } from '../openrouter';
 
 const sentenceTestInputSchema = z.object({
   id: z.string().describe('Identifier for the sentence (e.g., "1", "Q1")'),
@@ -133,7 +134,7 @@ export function createTestSentenceTool(problemContext: string, rules: Rule[]) {
     id: 'wf03-sentence-tester',
     name: '[03-3a-tool] Sentence Tester Agent',
     instructions: SENTENCE_TESTER_SYSTEM_PROMPT,
-    model: 'openrouter/openai/gpt-5-mini',
+    model: openrouter('openai/gpt-5-mini'),
     tools: {},
     memory: sharedMemory,
   });

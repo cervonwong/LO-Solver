@@ -3,6 +3,7 @@ import { Memory } from '@mastra/memory';
 import { LibSQLStore } from '@mastra/libsql';
 import { UnicodeNormalizer } from '@mastra/core/processors';
 import { RULES_HYPOTHESIZER_INSTRUCTIONS } from './rules-hypothesizer-instructions';
+import { openrouter } from '../openrouter';
 
 export const rulesHypothesizerAgent = new Agent({
   id: 'wf02-rules-hypothesizer',
@@ -11,8 +12,8 @@ export const rulesHypothesizerAgent = new Agent({
     role: 'system',
     content: RULES_HYPOTHESIZER_INSTRUCTIONS,
   },
-  // model: 'openrouter/deepseek/deepseek-v3.2',
-  model: 'openrouter/google/gemini-3-pro-preview',
+  // model: openrouter('deepseek/deepseek-v3.2'),
+  model: openrouter('google/gemini-3-pro-preview'),
   tools: {},
   inputProcessors: [
     new UnicodeNormalizer({

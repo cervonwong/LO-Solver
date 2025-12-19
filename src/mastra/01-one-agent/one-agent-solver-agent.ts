@@ -4,12 +4,13 @@ import { LibSQLStore } from '@mastra/libsql';
 import { UnicodeNormalizer } from '@mastra/core/processors';
 import { ONE_AGENT_SOLVER_INSTRUCTIONS } from './one-agent-solver-instructions';
 import { completenessScorer } from './one-agent-solver-scorers';
+import { openrouter } from '../openrouter';
 
 export const oneAgentSolverAgent = new Agent({
   id: 'one-agent-solver',
   name: '[01] One-Agent Solver Agent',
   instructions: ONE_AGENT_SOLVER_INSTRUCTIONS,
-  model: 'openrouter/openai/gpt-5-mini',
+  model: openrouter('openai/gpt-5-mini'),
   tools: {},
   scorers: {
     completeness: {
