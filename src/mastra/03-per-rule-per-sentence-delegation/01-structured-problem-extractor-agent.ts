@@ -1,9 +1,8 @@
 import { Agent } from '@mastra/core/agent';
-import { Memory } from '@mastra/memory';
-import { LibSQLStore } from '@mastra/libsql';
 import { UnicodeNormalizer } from '@mastra/core/processors';
 import { STRUCTURED_PROBLEM_EXTRACTOR_INSTRUCTIONS } from './01-structured-problem-extractor-instructions';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
+import { sharedMemory } from './shared-memory';
 
 const openrouter = createOpenRouter({
   apiKey: process.env.OPENROUTER_API_KEY!,
@@ -22,9 +21,5 @@ export const structuredProblemExtractorAgent = new Agent({
       trim: true,
     }),
   ],
-  memory: new Memory({
-    storage: new LibSQLStore({
-      url: 'file:../../mastra.db', // path is relative to the .mastra/output directory
-    }),
-  }),
+  memory: sharedMemory,
 });

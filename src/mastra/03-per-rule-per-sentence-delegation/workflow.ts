@@ -6,12 +6,16 @@ import * as path from 'path';
 import { createTestRuleTool } from './03a-rule-tester-tool';
 import { createTestSentenceTool } from './03a-sentence-tester-tool';
 import { createVerifierOrchestratorAgent } from './03a-verifier-orchestrator-agent';
+import { generateWorkflowIds, logMemoryOperation } from './shared-memory';
 
 const openrouter = createOpenRouter({
   apiKey: process.env.OPENROUTER_API_KEY!,
 });
 
 const MAX_VERIFY_IMPROVE_ITERATIONS = 4;
+
+// Workflow-level memory IDs (generated per run)
+let workflowMemoryIds: { threadId: string; resourceId: string } | null = null;
 
 // Logging utilities
 const getLogDirectory = () => process.env.LOG_DIRECTORY || path.join(process.cwd(), 'logs');
@@ -93,10 +97,21 @@ const initializeLogFile = (): string => {
   currentLogFile = getLogFilePath();
   workflowStartTime = new Date();
   stepTimings.length = 0; // Reset step timings
+
+  // Generate unique memory IDs for this workflow run
+  workflowMemoryIds = generateWorkflowIds();
+
   fs.writeFileSync(
     currentLogFile,
-    `# Workflow Execution Log\n\n_Generated: ${new Date().toISOString()}_\n\n---\n\n`,
+    `# Workflow Execution Log\n\n_Generated: ${new Date().toISOString()}_\n\n**Memory Thread ID:** ${workflowMemoryIds.threadId}\n**Memory Resource ID:** ${workflowMemoryIds.resourceId}\n\n---\n\n`,
   );
+
+  logMemoryOperation(
+    currentLogFile,
+    'WRITE',
+    `Initialized workflow memory IDs: thread=${workflowMemoryIds.threadId}, resource=${workflowMemoryIds.resourceId}`,
+  );
+
   return currentLogFile;
 };
 
@@ -228,7 +243,7 @@ const rulesSchema = z.object({
   success: z
     .boolean()
     .describe(
-      'Set to true if rules and vocabulary were successfully extracted. Set to false if extraction failed.',
+      'Set to true if rules were successfully extracted. Set to false if extraction failed.',
     ),
   explanation: z
     .string()
@@ -238,11 +253,7 @@ const rulesSchema = z.object({
     .describe(
       'An ordered list of rules extracted from the linguistic data. Null if success is false.',
     ),
-  vocabulary: vocabularyArraySchema
-    .nullable()
-    .describe(
-      'A comprehensive vocabulary list (lexicon) mapping foreign language morphemes/words to their English meanings. Null if success is false.',
-    ),
+  // Note: Vocabulary is managed via working memory by the agents, not extracted here
 });
 
 // Schema for the verifier orchestrator's aggregated feedback
@@ -319,13 +330,12 @@ const questionsAnsweredSchema = z.object({
 
 // Combined schema for the hypothesis-test loop
 // This schema carries all the data needed for both the hypothesizer and tester
+// Vocabulary is managed via working memory, not passed in schema
 const hypothesisTestLoopSchema = z.object({
   // The original structured problem data (immutable through the loop)
   structuredProblem: structuredProblemDataSchema,
   // The current hypothesized rules (null on first iteration, updated each iteration)
   rules: rulesArraySchema.nullable(),
-  // The current vocabulary list (null on first iteration, updated each iteration)
-  vocabulary: vocabularyArraySchema.nullable(),
   // The test results from the previous iteration (null on first iteration, updated each iteration)
   testResults: verifierFeedbackSchema.nullable(),
   // The current iteration count (for tracking purposes, not passed to agents)
@@ -473,22 +483,19 @@ const initialHypothesisStep = createStep({
 
     const extractorParsed = extractorParseResult.data;
 
-    if (
-      extractorParsed.success === false ||
-      extractorParsed.rules === null ||
-      extractorParsed.vocabulary === null
-    ) {
+    if (extractorParsed.success === false || extractorParsed.rules === null) {
       return bail({
         success: false,
         message: '[Initial Hypothesis Step] Extraction failed: ' + extractorParsed.explanation,
       });
     }
 
+    // Note: Vocabulary is managed via working memory by the hypothesizer agent directly
+
     // Return the initial loop state with hypothesized rules
     return {
       structuredProblem,
       rules: extractorParsed.rules,
-      vocabulary: extractorParsed.vocabulary,
       testResults: null, // No test results yet
       iterationCount: 0,
     };
@@ -503,38 +510,29 @@ const verifyImproveLoopStep = createStep({
   inputSchema: hypothesisTestLoopSchema,
   outputSchema: hypothesisTestLoopSchema,
   execute: async ({ inputData, mastra, bail }) => {
-    const {
-      structuredProblem,
-      rules: currentRules,
-      vocabulary: currentVocabulary,
-      iterationCount,
-    } = inputData;
+    const { structuredProblem, rules: currentRules, iterationCount } = inputData;
 
-    // Rules and vocabulary should never be null here (they come from initial hypothesis step)
-    if (currentRules === null || currentVocabulary === null) {
+    // Rules should never be null here (they come from initial hypothesis step)
+    if (currentRules === null) {
       return bail({
         success: false,
-        message:
-          '[Verify-Improve Loop] Rules and vocabulary must be provided from initial hypothesis step.',
+        message: '[Verify-Improve Loop] Rules must be provided from initial hypothesis step.',
       });
     }
 
     // Step 3a: Verify rules using the orchestrator (which calls testRule/testSentence tools)
     // Create tools dynamically with current context baked in
+    // Note: agent handles vocabulary access via its own working memory
     const testRule = createTestRuleTool(structuredProblem);
-    const testSentence = createTestSentenceTool(
-      structuredProblem.context,
-      currentRules,
-      currentVocabulary,
-    );
+    const testSentence = createTestSentenceTool(structuredProblem.context, currentRules);
 
     // Create orchestrator agent with the dynamic tools
     const orchestratorAgent = createVerifierOrchestratorAgent({ testRule, testSentence });
 
+    // Note: vocabulary not passed - agent reads from working memory
     const orchestratorPrompt = JSON.stringify({
       structuredProblem,
       rules: currentRules,
-      vocabulary: currentVocabulary,
     });
 
     const orchestratorStartTime = new Date();
@@ -581,7 +579,6 @@ const verifyImproveLoopStep = createStep({
       return {
         structuredProblem,
         rules: currentRules,
-        vocabulary: currentVocabulary,
         testResults: verifierFeedback,
         iterationCount: iterationCount + 1,
       };
@@ -596,7 +593,6 @@ const verifyImproveLoopStep = createStep({
       JSON.stringify({
         structuredProblem,
         previousRules: currentRules,
-        previousVocabulary: currentVocabulary,
         verifierFeedback,
       });
 
@@ -672,22 +668,19 @@ const verifyImproveLoopStep = createStep({
 
     const extractorParsed = extractorParseResult.data;
 
-    if (
-      extractorParsed.success === false ||
-      extractorParsed.rules === null ||
-      extractorParsed.vocabulary === null
-    ) {
+    if (extractorParsed.success === false || extractorParsed.rules === null) {
       return bail({
         success: false,
         message: '[Improve Rules Step] Extraction failed: ' + extractorParsed.explanation,
       });
     }
 
+    // Note: Vocabulary is managed via working memory by the improver agent directly
+
     // Return the updated loop state with improved rules
     return {
       structuredProblem,
       rules: extractorParsed.rules,
-      vocabulary: extractorParsed.vocabulary,
       testResults: verifierFeedback,
       iterationCount: iterationCount + 1,
     };
@@ -695,28 +688,29 @@ const verifyImproveLoopStep = createStep({
 });
 
 // Schema for the question answering step input
+// Vocabulary is read from working memory, not passed in schema
 const questionAnsweringInputSchema = z.object({
   structuredProblem: structuredProblemDataSchema,
   rules: rulesArraySchema,
-  vocabulary: vocabularyArraySchema,
 });
 
-// Step 4: Answer questions using the validated rules and vocabulary
+// Step 4: Answer questions using the validated rules and vocabulary from working memory
 const answerQuestionsStep = createStep({
   id: 'answer-questions',
   description:
-    "Step 4: Answer the user's questions using the validated rules and extracted vocabulary.",
+    "Step 4: Answer the user's questions using the validated rules and vocabulary from working memory.",
   inputSchema: questionAnsweringInputSchema,
   outputSchema: questionsAnsweredSchema,
   execute: async ({ inputData, mastra, bail }) => {
-    const { structuredProblem, rules, vocabulary } = inputData;
+    const { structuredProblem, rules } = inputData;
+
+    // Note: vocabulary is not passed - agent reads from working memory directly
 
     const answererPrompt = JSON.stringify({
       context: structuredProblem.context,
       dataset: structuredProblem.dataset,
       questions: structuredProblem.questions,
       rules: rules,
-      vocabulary: vocabulary,
     });
 
     const answererStartTime = new Date();
@@ -792,7 +786,6 @@ export const workflow03 = createWorkflow({
   .map(async ({ inputData }) => ({
     structuredProblem: inputData.structuredProblem,
     rules: inputData.rules!,
-    vocabulary: inputData.vocabulary!,
   }))
   // Step 4: Answer the user's questions using the validated rules and extracted vocabulary.
   .then(answerQuestionsStep)

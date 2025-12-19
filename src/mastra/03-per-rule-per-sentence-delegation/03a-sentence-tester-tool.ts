@@ -52,16 +52,18 @@ const sentenceTestResultSchema = z.discriminatedUnion('success', [
 ]);
 
 const SENTENCE_TESTER_SYSTEM_PROMPT = `
-You are a specialized linguistic sentence translator and validator. Your job is to attempt translating a SINGLE sentence using a given ruleset and vocabulary, identifying any ambiguities or issues.
+You are a specialized linguistic sentence translator and validator. Your job is to attempt translating a SINGLE sentence using a given ruleset, identifying any ambiguities or issues.
 
 # Your Task
 You will receive:
-1. A complete set of rules and vocabulary
+1. A complete set of rules
 2. A single sentence to translate (either from the dataset or a question)
 3. The translation direction (if applicable)
 
+Note: You have access to working memory where vocabulary is stored. Use your memory to look up morphemes and words as needed during translation.
+
 # Translation Process
-1. Attempt to translate the sentence step by step using ONLY the provided rules and vocabulary
+1. Attempt to translate the sentence step by step using ONLY the provided rules and your vocabulary memory
 2. At each step, note if there are multiple valid interpretations
 3. Flag ANY ambiguity, missing rule, or unclear instruction immediately
 4. Even if you can guess the correct translation, flag issues that make it non-deterministic
@@ -71,7 +73,7 @@ You will receive:
 - **translation**: Your best attempt at the translation (even if ambiguous)
 - **ambiguities**: List every point where:
   - A rule could apply multiple ways
-  - A word/morpheme isn't in the vocabulary
+  - A word/morpheme isn't in your vocabulary memory
   - The rules don't specify order or combination
   - There are exceptions not covered
 - **suggestions**: EXACTLY 3 suggestions for improving the ruleset, ranked:
@@ -87,7 +89,7 @@ You will receive:
 - Be VERY strict about ambiguity - if there's ANY doubt, flag it
 - **Detect Missing Rules**: If a sentence cannot be translated because NO rule covers the pattern, explicitly flag this as "MISSING_RULE_NEEDED" and describe what rule is required
 - Each suggestion should be DIFFERENT and offer a DISTINCT fix
-- Cite specific rules or vocabulary entries that cause issues
+- Cite specific rules that cause issues
 - Think like a devil's advocate - find every possible issue
 
 # Example Output
@@ -96,7 +98,7 @@ You will receive:
   "translation": "kala-ri na-tu (best guess)",
   "ambiguities": [
     "Rule 3 says plurals use '-ri' but doesn't specify if it applies to verb objects",
-    "Word 'tu' not found in vocabulary - guessed from similar pattern in item #4"
+    "Word 'tu' not found in vocabulary memory - guessed from similar pattern in item #4"
   ],
   "suggestions": [
     {
@@ -124,26 +126,16 @@ interface Rule {
   description: string;
 }
 
-interface VocabularyEntry {
-  foreignForm: string;
-  meaning: string;
-  type: string;
-  notes: string;
-}
-
 /**
  * Factory function to create a sentence tester tool with shared context baked in.
  * The orchestrator only needs to specify which sentence to test.
+ * The agent calling this tool has access to vocabulary via working memory.
  */
-export function createTestSentenceTool(
-  problemContext: string,
-  rules: Rule[],
-  vocabulary: VocabularyEntry[],
-) {
+export function createTestSentenceTool(problemContext: string, rules: Rule[]) {
   return createTool({
     id: 'testSentence',
     description:
-      'Tests a single sentence against the ruleset to verify it can be translated unambiguously. Call this for EACH sentence you want to test.',
+      'Tests a single sentence against the ruleset to verify it can be translated unambiguously. Call this for EACH sentence you want to test. Vocabulary is available via working memory.',
     inputSchema: sentenceTestInputSchema,
     outputSchema: sentenceTestResultSchema,
     execute: async ({ context }) => {
@@ -165,10 +157,7 @@ ${problemContext}
 ## Rules
 ${rules.map((r, i) => `${i + 1}. **${r.title}**: ${r.description}`).join('\n\n')}
 
-## Vocabulary
-${vocabulary.map((v) => `- **${v.foreignForm}** (${v.type}): ${v.meaning} [${v.notes}]`).join('\n')}
-
-Attempt to translate this sentence step by step using ONLY the rules and vocabulary above. Flag any ambiguities or issues.
+Attempt to translate this sentence step by step using the rules above and vocabulary from your memory. Flag any ambiguities or issues.
 `.trim();
 
       try {
