@@ -59,7 +59,7 @@ You will receive:
 Note: You will receive the vocabulary entries directly in the prompt - use these to look up morphemes and words during translation.
 
 # Translation Process
-1. Attempt to translate the sentence step by step using ONLY the provided rules and your vocabulary memory
+1. Attempt to translate the sentence step by step using ONLY the provided rules and vocabulary
 2. At each step, note if there are multiple valid interpretations
 3. Flag ANY ambiguity, missing rule, or unclear instruction immediately
 4. Even if you can guess the correct translation, flag issues that make it non-deterministic
@@ -94,7 +94,7 @@ Note: You will receive the vocabulary entries directly in the prompt - use these
   "translation": "kala-ri na-tu (best guess)",
   "ambiguities": [
     "Rule 3 says plurals use '-ri' but doesn't specify if it applies to verb objects",
-    "Word 'tu' not found in vocabulary memory - guessed from similar pattern in item #4"
+    "Word 'tu' not found in provided vocabulary - guessed from similar pattern in item #4"
   ],
   "suggestions": [
     {

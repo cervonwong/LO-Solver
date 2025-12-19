@@ -238,7 +238,7 @@ const rulesSchema = z.object({
     .describe(
       'An ordered list of rules extracted from the linguistic data. Null if success is false.',
     ),
-  // Note: Vocabulary is managed via working memory by the agents, not extracted here
+  // Note: Vocabulary is managed via workflow state, not extracted in this schema
 });
 
 // Schema for the verifier orchestrator's aggregated feedback
@@ -315,7 +315,7 @@ const questionsAnsweredSchema = z.object({
 
 // Combined schema for the hypothesis-test loop
 // This schema carries all the data needed for both the hypothesizer and tester
-// Vocabulary is managed via working memory, not passed in schema
+// Vocabulary is managed via workflow state, not passed in this schema
 const hypothesisTestLoopSchema = z.object({
   // The original structured problem data (immutable through the loop)
   structuredProblem: structuredProblemDataSchema,
@@ -729,7 +729,7 @@ const verifyImproveLoopStep = createStep({
 });
 
 // Schema for the question answering step input
-// Vocabulary is read from working memory, not passed in schema
+// Vocabulary is read from workflow state, not passed in this schema
 const questionAnsweringInputSchema = z.object({
   structuredProblem: structuredProblemDataSchema,
   rules: rulesArraySchema,
