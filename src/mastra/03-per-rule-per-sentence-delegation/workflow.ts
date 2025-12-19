@@ -27,11 +27,12 @@ const stepTimingSchema = z.object({
 type StepTiming = z.infer<typeof stepTimingSchema>;
 
 // Workflow state schema - per-run isolated state
+// All fields have defaults so workflow can start without initialState
 export const workflowStateSchema = z.object({
-  vocabulary: z.record(z.string(), vocabularyEntrySchema), // Vocabulary keyed by foreignForm
-  logFile: z.string(),
-  startTime: z.string(), // ISO string
-  stepTimings: z.array(stepTimingSchema),
+  vocabulary: z.record(z.string(), vocabularyEntrySchema).default({}), // Vocabulary keyed by foreignForm
+  logFile: z.string().default(''), // Will be set in first step
+  startTime: z.string().default(''), // Will be set in first step (ISO string)
+  stepTimings: z.array(stepTimingSchema).default([]),
 });
 
 export type WorkflowState = z.infer<typeof workflowStateSchema>;
