@@ -58,16 +58,16 @@ flowchart TB
 
 ## Tools
 
-### Testing Tools (`testing-tools.ts`)
+### Testing Tools (`03a-rule-tester-tool.ts`, `03a-sentence-tester-tool.ts`)
 
-Used by the Verifier Orchestrator to test rules:
+Used by agents to test rules:
 
-| Tool                      | Description                                                            |
-| ------------------------- | ---------------------------------------------------------------------- |
-| `testRule`                | Tests a single rule against dataset with full ruleset context          |
-| `testSentence`            | Tests sentence translation (blind - agent doesn't see expected answer) |
-| `testRuleWithRuleset`     | Same as testRule but accepts ruleset as parameter                      |
-| `testSentenceWithRuleset` | Same as testSentence but accepts ruleset as parameter                  |
+| Tool                      | Description                                                             |
+| ------------------------- | ----------------------------------------------------------------------- |
+| `testRule`                | Tests a single rule against dataset (reads ruleset from context)        |
+| `testSentence`            | Tests sentence translation (reads ruleset from context)                 |
+| `testRuleWithRuleset`     | Same as testRule but accepts ruleset as parameter (for draft rules)     |
+| `testSentenceWithRuleset` | Same as testSentence but accepts ruleset as parameter (for draft rules) |
 
 ### Vocabulary Tools (`vocabulary-tools.ts`)
 
@@ -130,7 +130,7 @@ Tools access shared state (vocabulary, rules, problem data) via `RequestContext`
 ├── request-context-types.ts              # TypeScript types for context
 ├── vocabulary-tools.ts                   # Vocabulary management tools
 ├── vocabulary-tools-prompt.ts            # Vocabulary tool instructions
-├── testing-tools.ts                      # Rule/sentence testing tools
+├── logging-utils.ts                      # Test result logging utilities
 ├── shared-memory.ts                      # Shared memory utilities
 │
 ├── 01-structured-problem-extractor-*.ts  # Step 1: Parse raw input

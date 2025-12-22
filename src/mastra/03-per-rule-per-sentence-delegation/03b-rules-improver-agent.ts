@@ -4,7 +4,8 @@ import { RULES_IMPROVER_INSTRUCTIONS } from './03b-rules-improver-instructions';
 import { VOCABULARY_TOOLS_INSTRUCTIONS } from './vocabulary-tools-prompt';
 import { openrouter } from '../openrouter';
 import { vocabularyTools } from './vocabulary-tools';
-import { testRuleWithRulesetTool, testSentenceWithRulesetTool } from './testing-tools';
+import { testRuleWithRulesetTool } from './03a-rule-tester-tool';
+import { testSentenceWithRulesetTool } from './03a-sentence-tester-tool';
 
 // Inject the vocabulary tools instructions into the prompt
 const instructions = RULES_IMPROVER_INSTRUCTIONS.replace(

@@ -9,9 +9,8 @@ import { verifierFeedbackExtractorAgent } from './03a2-verifier-feedback-extract
 import { ruleTesterAgent } from './03a-rule-tester-agent';
 import { sentenceTesterAgent } from './03a-sentence-tester-agent';
 import { vocabularyTools } from './vocabulary-tools';
-import { testRuleTool } from './03a-rule-tester-tool';
-import { testSentenceTool } from './03a-sentence-tester-tool';
-import { testingTools } from './testing-tools';
+import { testRuleTool, testRuleWithRulesetTool } from './03a-rule-tester-tool';
+import { testSentenceTool, testSentenceWithRulesetTool } from './03a-sentence-tester-tool';
 
 // All agents for workflow 03, registered for observability
 export const workflow03Agents = {
@@ -32,5 +31,6 @@ export const workflow03Tools = {
   ...vocabularyTools,
   testRule: testRuleTool,
   testSentence: testSentenceTool,
-  ...testingTools,
+  testRuleWithRuleset: testRuleWithRulesetTool,
+  testSentenceWithRuleset: testSentenceWithRulesetTool,
 };
