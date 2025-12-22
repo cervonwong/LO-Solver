@@ -302,10 +302,11 @@ const initialHypothesisStep = createStep({
     // Rebuild vocabulary state from workflow state
     const vocabularyState = new Map(Object.entries(state.vocabulary));
 
-    // Create RequestContext with vocabulary state for the agent
+    // Create RequestContext with vocabulary state and structured problem for the agent
     const requestContext = new RequestContext<Workflow03RequestContext>();
     requestContext.set('vocabulary-state', vocabularyState);
     requestContext.set('log-file', logFile);
+    requestContext.set('structured-problem', structuredProblem);
 
     // Step 2a: Call the Initial Rules Hypothesizer Agent (natural language output)
     const vocabulary = Array.from(vocabularyState.values());
