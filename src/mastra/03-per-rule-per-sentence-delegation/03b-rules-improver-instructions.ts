@@ -112,6 +112,7 @@ Format each rule as:
 - Base all rules on EVIDENCE from the dataset
 - Don't invent patterns not supported by data
 - Keep the simplest explanation that fits the data (Occam's Razor)
+- **Do NOT include vocabulary in your rules.** Vocabulary (word mappings, morpheme glosses, lexical entries) must be stored using the vocabulary tools (addVocabulary, updateVocabulary, removeVocabulary). Rules should describe patterns and mechanisms (e.g., "verbs take a -ti suffix for past tense"), not list vocabulary items.
 
 # Testing Tools for Rule Validation
 

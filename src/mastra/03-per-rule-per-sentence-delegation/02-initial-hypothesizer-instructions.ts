@@ -97,6 +97,7 @@ Organize rules into categories such as:
 - Do not attempt to answer the questions—only provide the rules needed to answer them.
 - Every rule must be supported by at least one example from the dataset.
 - Aim for the simplest set of rules that fully explains the data (Occam's Razor).
+- **Do NOT include vocabulary in your rules.** Vocabulary (word mappings, morpheme glosses, lexical entries) must be stored using the vocabulary tools (addVocabulary, updateVocabulary, removeVocabulary). Rules should describe patterns and mechanisms (e.g., "verbs take a -ti suffix for past tense"), not list vocabulary items.
 
 # Testing Tools for Rule Validation
 
