@@ -4,9 +4,11 @@ import {
   getProblemContext,
   getCurrentRules,
   getVocabularyArray,
+  getLogFile,
   normalizeTranslation,
   type ToolExecuteContext,
 } from './request-context-helpers';
+import { logSentenceTestResult } from './workflow';
 
 const sentenceTestInputSchema = z.object({
   id: z.string().describe('Identifier for the sentence (e.g., "1", "Q1")'),
@@ -127,6 +129,10 @@ Attempt to translate this sentence step by step using the rules and vocabulary a
         const normalizedExpected = normalizeTranslation(expectedTranslation);
         matchesExpected = normalizedTranslation === normalizedExpected;
       }
+
+      // Log succinct result to file
+      const logFile = getLogFile(ctx?.requestContext);
+      logSentenceTestResult(logFile, id, agentResult.overallStatus);
 
       return {
         success: true as const,

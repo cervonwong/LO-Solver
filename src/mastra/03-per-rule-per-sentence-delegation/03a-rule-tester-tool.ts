@@ -4,8 +4,10 @@ import {
   getStructuredProblem,
   getVocabularyArray,
   getCurrentRules,
+  getLogFile,
   type ToolExecuteContext,
 } from './request-context-helpers';
+import { logRuleTestResult } from './workflow';
 
 const ruleTestInputSchema = z.object({
   title: z.string().describe('The title/category of the rule'),
@@ -109,7 +111,13 @@ ${JSON.stringify(structuredProblem.questions, null, 2)}
         },
       });
 
-      return result.object as z.infer<typeof ruleTestSuccessSchema>;
+      const ruleResult = result.object as z.infer<typeof ruleTestSuccessSchema>;
+
+      // Log succinct result to file
+      const logFile = getLogFile(ctx?.requestContext);
+      logRuleTestResult(logFile, title, ruleResult.status);
+
+      return ruleResult;
     } catch (err) {
       return {
         success: false as const,

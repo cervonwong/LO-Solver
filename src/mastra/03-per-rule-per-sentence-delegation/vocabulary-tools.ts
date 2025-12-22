@@ -1,7 +1,13 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 import type { Workflow03RequestContext } from './request-context-types';
-import { getVocabularyState, type ToolExecuteContext } from './request-context-helpers';
+import { getVocabularyState, getLogFile, type ToolExecuteContext } from './request-context-helpers';
+import {
+  logVocabularyAdded,
+  logVocabularyUpdated,
+  logVocabularyRemoved,
+  logVocabularyCleared,
+} from './workflow';
 
 // Vocabulary entry schema
 export const vocabularyEntrySchema = z.object({
@@ -62,12 +68,15 @@ export const addVocabulary = createTool({
   execute: async ({ entries }, context) => {
     const ctx = context as unknown as ToolExecuteContext;
     const vocabularyState = getVocabularyState(ctx?.requestContext);
+    const logFile = getLogFile(ctx?.requestContext);
     let added = 0;
     let skipped = 0;
+    const addedEntries: VocabularyEntry[] = [];
 
     for (const entry of entries) {
       if (!vocabularyState.has(entry.foreignForm)) {
         vocabularyState.set(entry.foreignForm, entry);
+        addedEntries.push(entry);
         added++;
       } else {
         skipped++;
@@ -75,6 +84,10 @@ export const addVocabulary = createTool({
     }
 
     console.log(`[VOCAB:ADD] Added ${added}, skipped ${skipped}, total ${vocabularyState.size}`);
+
+    // Log added entries to file
+    logVocabularyAdded(logFile, addedEntries);
+
     return {
       added,
       skipped,
@@ -107,12 +120,15 @@ export const updateVocabulary = createTool({
   execute: async ({ entries }, context) => {
     const ctx = context as unknown as ToolExecuteContext;
     const vocabularyState = getVocabularyState(ctx?.requestContext);
+    const logFile = getLogFile(ctx?.requestContext);
     let updated = 0;
     let skipped = 0;
+    const updatedEntries: VocabularyEntry[] = [];
 
     for (const entry of entries) {
       if (vocabularyState.has(entry.foreignForm)) {
         vocabularyState.set(entry.foreignForm, entry);
+        updatedEntries.push(entry);
         updated++;
       } else {
         skipped++;
@@ -122,6 +138,10 @@ export const updateVocabulary = createTool({
     console.log(
       `[VOCAB:UPDATE] Updated ${updated}, skipped ${skipped}, total ${vocabularyState.size}`,
     );
+
+    // Log updated entries to file
+    logVocabularyUpdated(logFile, updatedEntries);
+
     return {
       updated,
       skipped,
@@ -151,11 +171,14 @@ export const removeVocabulary = createTool({
   execute: async ({ foreignForms }, context) => {
     const ctx = context as unknown as ToolExecuteContext;
     const vocabularyState = getVocabularyState(ctx?.requestContext);
+    const logFile = getLogFile(ctx?.requestContext);
     let removed = 0;
     let notFound = 0;
+    const removedForms: string[] = [];
 
     for (const foreignForm of foreignForms) {
       if (vocabularyState.delete(foreignForm)) {
+        removedForms.push(foreignForm);
         removed++;
       } else {
         notFound++;
@@ -165,6 +188,10 @@ export const removeVocabulary = createTool({
     console.log(
       `[VOCAB:REMOVE] Removed ${removed}, not found ${notFound}, total ${vocabularyState.size}`,
     );
+
+    // Log removed entries to file
+    logVocabularyRemoved(logFile, removedForms);
+
     return {
       removed,
       notFound,
@@ -189,9 +216,14 @@ export const clearVocabulary = createTool({
   execute: async (_inputData, context) => {
     const ctx = context as unknown as ToolExecuteContext;
     const vocabularyState = getVocabularyState(ctx?.requestContext);
+    const logFile = getLogFile(ctx?.requestContext);
     const removed = vocabularyState.size;
     vocabularyState.clear();
     console.log(`[VOCAB:CLEAR] Cleared ${removed} vocabulary entries`);
+
+    // Log cleared count to file
+    logVocabularyCleared(logFile, removed);
+
     return { removed };
   },
 });

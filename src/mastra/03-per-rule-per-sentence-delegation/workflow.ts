@@ -153,6 +153,67 @@ const logValidationError = (logFile: string, stepName: string, error: z.ZodError
   fs.appendFileSync(logFile, content);
 };
 
+// Exported logging functions for tools to use
+
+/** Log vocabulary entries added (meaning → foreignForm) */
+export const logVocabularyAdded = (
+  logFile: string | undefined,
+  entries: { meaning: string; foreignForm: string }[],
+): void => {
+  if (!logFile || entries.length === 0) return;
+  const mappings = entries.map((e) => `  ${e.meaning} → ${e.foreignForm}`).join('\n');
+  fs.appendFileSync(logFile, `### Vocabulary Added (${entries.length} entries)\n\n${mappings}\n\n`);
+};
+
+/** Log vocabulary entries updated (meaning → foreignForm) */
+export const logVocabularyUpdated = (
+  logFile: string | undefined,
+  entries: { meaning: string; foreignForm: string }[],
+): void => {
+  if (!logFile || entries.length === 0) return;
+  const mappings = entries.map((e) => `  ${e.meaning} → ${e.foreignForm}`).join('\n');
+  fs.appendFileSync(
+    logFile,
+    `### Vocabulary Updated (${entries.length} entries)\n\n${mappings}\n\n`,
+  );
+};
+
+/** Log vocabulary entries removed (foreignForm list) */
+export const logVocabularyRemoved = (logFile: string | undefined, foreignForms: string[]): void => {
+  if (!logFile || foreignForms.length === 0) return;
+  const list = foreignForms.map((f) => `  - ${f}`).join('\n');
+  fs.appendFileSync(
+    logFile,
+    `### Vocabulary Removed (${foreignForms.length} entries)\n\n${list}\n\n`,
+  );
+};
+
+/** Log vocabulary cleared */
+export const logVocabularyCleared = (logFile: string | undefined, count: number): void => {
+  if (!logFile || count === 0) return;
+  fs.appendFileSync(logFile, `### Vocabulary Cleared (${count} entries)\n\n`);
+};
+
+/** Log sentence test result (ID + status) */
+export const logSentenceTestResult = (
+  logFile: string | undefined,
+  id: string,
+  status: string,
+): void => {
+  if (!logFile) return;
+  fs.appendFileSync(logFile, `[SENTENCE] #${id}: ${status}\n`);
+};
+
+/** Log rule test result (title + status) */
+export const logRuleTestResult = (
+  logFile: string | undefined,
+  title: string,
+  status: string,
+): void => {
+  if (!logFile) return;
+  fs.appendFileSync(logFile, `[RULE] "${title}": ${status}\n`);
+};
+
 const rawProblemInputSchema = z.object({
   rawProblemText: z.string(),
 });
@@ -409,6 +470,7 @@ const initialHypothesisStep = createStep({
     // Create RequestContext with vocabulary state for the agent
     const requestContext = new RequestContext<Workflow03RequestContext>();
     requestContext.set('vocabulary-state', vocabularyState);
+    requestContext.set('log-file', logFile);
 
     // Step 2a: Call the Initial Rules Hypothesizer Agent (natural language output)
     const vocabulary = Array.from(vocabularyState.values());
@@ -547,6 +609,7 @@ const verifyImproveLoopStep = createStep({
     requestContext.set('vocabulary-state', vocabularyState);
     requestContext.set('structured-problem', structuredProblem);
     requestContext.set('current-rules', currentRules);
+    requestContext.set('log-file', logFile);
 
     const vocabulary = Array.from(vocabularyState.values());
 

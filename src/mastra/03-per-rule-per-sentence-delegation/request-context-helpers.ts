@@ -84,6 +84,17 @@ export function getCurrentRules(requestContext: RequestContextGetter): Rule[] {
 }
 
 /**
+ * Helper to get log file path from request context.
+ * Returns undefined if not set (for tools that can work without logging).
+ */
+export function getLogFile(requestContext: RequestContextGetter): string | undefined {
+  if (!requestContext) {
+    return undefined;
+  }
+  return requestContext.get('log-file') as string | undefined;
+}
+
+/**
  * Normalizes a translation string for fair comparison.
  * - NFKC Unicode normalization for consistent representation
  * - Collapses whitespace to single spaces

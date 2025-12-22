@@ -32,4 +32,7 @@ export interface Workflow03RequestContext {
 
   /** Current rules (updated each iteration) */
   'current-rules': Rule[];
+
+  /** Log file path for writing tool output */
+  'log-file': string;
 }
