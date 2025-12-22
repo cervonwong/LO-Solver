@@ -1,8 +1,11 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
-import type { Workflow03RequestContext, Rule } from './request-context-types';
-import type { VocabularyEntry } from './vocabulary-tools';
-import type { Mastra } from '@mastra/core/mastra';
+import {
+  getProblemContext,
+  getCurrentRules,
+  getVocabularyArray,
+  type ToolExecuteContext,
+} from './request-context-helpers';
 
 const sentenceTestInputSchema = z.object({
   id: z.string().describe('Identifier for the sentence (e.g., "1", "Q1")'),
@@ -48,64 +51,6 @@ const sentenceTestResultSchema = z.discriminatedUnion('success', [
   sentenceTestErrorSchema,
 ]);
 
-// Type for the execute context that includes requestContext and mastra
-interface ToolExecuteContext {
-  requestContext?: {
-    get: (key: keyof Workflow03RequestContext) => unknown;
-  };
-  mastra?: Mastra;
-}
-
-/**
- * Helper to get problem context from request context.
- */
-function getProblemContext(
-  requestContext: { get: (key: keyof Workflow03RequestContext) => unknown } | undefined,
-): string {
-  if (!requestContext) {
-    throw new Error('requestContext is required for testSentenceTool');
-  }
-  const problem = requestContext.get('structured-problem') as { context: string } | undefined;
-  if (!problem) {
-    throw new Error("'structured-problem' not found in requestContext");
-  }
-  return problem.context;
-}
-
-/**
- * Helper to get current rules from request context.
- */
-function getCurrentRules(
-  requestContext: { get: (key: keyof Workflow03RequestContext) => unknown } | undefined,
-): Rule[] {
-  if (!requestContext) {
-    throw new Error('requestContext is required for testSentenceTool');
-  }
-  const rules = requestContext.get('current-rules') as Rule[] | undefined;
-  if (!rules) {
-    throw new Error("'current-rules' not found in requestContext");
-  }
-  return rules;
-}
-
-/**
- * Helper to get vocabulary from request context.
- */
-function getVocabulary(
-  requestContext: { get: (key: keyof Workflow03RequestContext) => unknown } | undefined,
-): VocabularyEntry[] {
-  if (!requestContext) {
-    throw new Error('requestContext is required for testSentenceTool');
-  }
-  const vocabularyState = requestContext.get('vocabulary-state') as
-    | Map<string, VocabularyEntry>
-    | undefined;
-  if (!vocabularyState) {
-    throw new Error("'vocabulary-state' not found in requestContext");
-  }
-  return Array.from(vocabularyState.values());
-}
-
 /**
  * testSentenceTool - Tests a single sentence translation against the ruleset.
  * Uses the static sentenceTesterAgent via mastra.getAgentById().
@@ -124,7 +69,7 @@ export const testSentenceTool = createTool({
     const ctx = context as unknown as ToolExecuteContext;
     const problemContext = getProblemContext(ctx?.requestContext);
     const rules = getCurrentRules(ctx?.requestContext);
-    const vocabulary = getVocabulary(ctx?.requestContext);
+    const vocabulary = getVocabularyArray(ctx?.requestContext);
 
     const prompt = `
 Translate and validate the following sentence using the provided ruleset:

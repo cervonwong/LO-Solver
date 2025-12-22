@@ -1,8 +1,10 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
-import type { Workflow03RequestContext, StructuredProblemData } from './request-context-types';
-import type { VocabularyEntry } from './vocabulary-tools';
-import type { Mastra } from '@mastra/core/mastra';
+import {
+  getStructuredProblem,
+  getVocabularyArray,
+  type ToolExecuteContext,
+} from './request-context-helpers';
 
 const ruleTestInputSchema = z.object({
   title: z.string().describe('The title/category of the rule'),
@@ -41,48 +43,6 @@ const ruleTestResultSchema = z.discriminatedUnion('success', [
   ruleTestErrorSchema,
 ]);
 
-// Type for the execute context that includes requestContext and mastra
-interface ToolExecuteContext {
-  requestContext?: {
-    get: (key: keyof Workflow03RequestContext) => unknown;
-  };
-  mastra?: Mastra;
-}
-
-/**
- * Helper to get structured problem from request context.
- */
-function getStructuredProblem(
-  requestContext: { get: (key: keyof Workflow03RequestContext) => unknown } | undefined,
-): StructuredProblemData {
-  if (!requestContext) {
-    throw new Error('requestContext is required for testRuleTool');
-  }
-  const problem = requestContext.get('structured-problem') as StructuredProblemData | undefined;
-  if (!problem) {
-    throw new Error("'structured-problem' not found in requestContext");
-  }
-  return problem;
-}
-
-/**
- * Helper to get vocabulary from request context.
- */
-function getVocabulary(
-  requestContext: { get: (key: keyof Workflow03RequestContext) => unknown } | undefined,
-): VocabularyEntry[] {
-  if (!requestContext) {
-    throw new Error('requestContext is required for testRuleTool');
-  }
-  const vocabularyState = requestContext.get('vocabulary-state') as
-    | Map<string, VocabularyEntry>
-    | undefined;
-  if (!vocabularyState) {
-    throw new Error("'vocabulary-state' not found in requestContext");
-  }
-  return Array.from(vocabularyState.values());
-}
-
 /**
  * testRuleTool - Tests a single linguistic rule against the dataset.
  * Uses the static ruleTesterAgent via mastra.getAgentById().
@@ -97,7 +57,7 @@ export const testRuleTool = createTool({
   execute: async ({ title, description }, context) => {
     const ctx = context as unknown as ToolExecuteContext;
     const structuredProblem = getStructuredProblem(ctx?.requestContext);
-    const vocabulary = getVocabulary(ctx?.requestContext);
+    const vocabulary = getVocabularyArray(ctx?.requestContext);
 
     const prompt = `
 Test the following rule against the dataset:

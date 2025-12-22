@@ -1,6 +1,7 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 import type { Workflow03RequestContext } from './request-context-types';
+import { getVocabularyState, type ToolExecuteContext } from './request-context-helpers';
 
 // Vocabulary entry schema
 export const vocabularyEntrySchema = z.object({
@@ -11,30 +12,6 @@ export const vocabularyEntrySchema = z.object({
 });
 
 export type VocabularyEntry = z.infer<typeof vocabularyEntrySchema>;
-
-// Type for the execute context that includes requestContext
-interface ToolExecuteContext {
-  requestContext?: {
-    get: (key: keyof Workflow03RequestContext) => unknown;
-  };
-}
-
-/**
- * Helper to get vocabulary state from request context.
- * Throws if vocabulary-state is not set in the context.
- */
-function getVocabularyState(
-  requestContext: { get: (key: keyof Workflow03RequestContext) => unknown } | undefined,
-): Map<string, VocabularyEntry> {
-  if (!requestContext) {
-    throw new Error('requestContext is required for vocabulary tools');
-  }
-  const state = requestContext.get('vocabulary-state') as Map<string, VocabularyEntry> | undefined;
-  if (!state) {
-    throw new Error("'vocabulary-state' not found in requestContext");
-  }
-  return state;
-}
 
 /**
  * getVocabulary - Read all vocabulary entries
@@ -50,7 +27,7 @@ export const getVocabulary = createTool({
     count: z.number(),
   }),
   execute: async (_inputData, context) => {
-    const ctx = context as ToolExecuteContext;
+    const ctx = context as unknown as ToolExecuteContext;
     const vocabularyState = getVocabularyState(ctx?.requestContext);
     const entries = Array.from(vocabularyState.values());
     console.log(`[VOCAB:READ] Retrieved ${entries.length} vocabulary entries`);
@@ -83,7 +60,7 @@ export const addVocabulary = createTool({
     total: z.number().describe('Total vocabulary count after operation'),
   }),
   execute: async ({ entries }, context) => {
-    const ctx = context as ToolExecuteContext;
+    const ctx = context as unknown as ToolExecuteContext;
     const vocabularyState = getVocabularyState(ctx?.requestContext);
     let added = 0;
     let skipped = 0;
@@ -128,7 +105,7 @@ export const updateVocabulary = createTool({
     total: z.number().describe('Total vocabulary count after operation'),
   }),
   execute: async ({ entries }, context) => {
-    const ctx = context as ToolExecuteContext;
+    const ctx = context as unknown as ToolExecuteContext;
     const vocabularyState = getVocabularyState(ctx?.requestContext);
     let updated = 0;
     let skipped = 0;
@@ -172,7 +149,7 @@ export const removeVocabulary = createTool({
     total: z.number().describe('Total vocabulary count after operation'),
   }),
   execute: async ({ foreignForms }, context) => {
-    const ctx = context as ToolExecuteContext;
+    const ctx = context as unknown as ToolExecuteContext;
     const vocabularyState = getVocabularyState(ctx?.requestContext);
     let removed = 0;
     let notFound = 0;
@@ -210,7 +187,7 @@ export const clearVocabulary = createTool({
     removed: z.number().describe('Number of entries that were removed'),
   }),
   execute: async (_inputData, context) => {
-    const ctx = context as ToolExecuteContext;
+    const ctx = context as unknown as ToolExecuteContext;
     const vocabularyState = getVocabularyState(ctx?.requestContext);
     const removed = vocabularyState.size;
     vocabularyState.clear();
