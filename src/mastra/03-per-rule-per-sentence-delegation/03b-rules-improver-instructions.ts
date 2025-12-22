@@ -117,15 +117,17 @@ Format each rule as:
 
 You have access to testing tools to validate your REVISED rules BEFORE committing them. Use these to ensure your fixes actually work.
 
+> **IMPORTANT**: Before running these tools, make sure you have updated the vocabulary using the vocabulary tools (addVocabulary, removeVocabulary). The testing tools use the current vocabulary state.
+
 ## Available Testing Tools
 
-### testRuleWithRuleset
+### testRule
 Tests a single rule against the dataset using your proposed ruleset.
 - **When to use**: Validate that a revised rule correctly explains the data
 - **Input**: The specific rule to test, plus your entire revised ruleset for context
 - **Returns**: Status (RULE_OK, RULE_WRONG, etc.), reasoning, and recommendations
 
-### testSentenceWithRuleset
+### testSentence
 Tests translation of a sentence using your proposed ruleset.
 - **When to use**: Verify previously failing sentences now translate correctly
 - **Input**: Sentence details (id, content, languages), plus your entire revised ruleset

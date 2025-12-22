@@ -4,7 +4,7 @@ import { INITIAL_HYPOTHESIZER_INSTRUCTIONS } from './02-initial-hypothesizer-ins
 import { VOCABULARY_TOOLS_INSTRUCTIONS } from './vocabulary-tools-prompt';
 import { openrouter } from '../openrouter';
 import { vocabularyTools } from './vocabulary-tools';
-import { testingTools } from './testing-tools';
+import { testRuleWithRulesetTool, testSentenceWithRulesetTool } from './testing-tools';
 
 // Inject the vocabulary tools instructions into the prompt
 const instructions = INITIAL_HYPOTHESIZER_INSTRUCTIONS.replace(
@@ -26,7 +26,14 @@ export const initialHypothesizerAgent = new Agent({
   },
   // model: openrouter('google/gemini-3-pro-preview'),
   model: openrouter('google/gemini-3-flash-preview'),
-  tools: { ...vocabularyTools, ...testingTools },
+  tools: {
+    ...vocabularyTools,
+    // Testing tools renamed for simpler agent usage:
+    // - testRule: actually testRuleWithRulesetTool (accepts ruleset param)
+    // - testSentence: actually testSentenceWithRulesetTool (accepts ruleset param)
+    testRule: testRuleWithRulesetTool,
+    testSentence: testSentenceWithRulesetTool,
+  },
   inputProcessors: [
     new UnicodeNormalizer({
       stripControlChars: false,

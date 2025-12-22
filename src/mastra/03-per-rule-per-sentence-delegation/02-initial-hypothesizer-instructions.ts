@@ -102,15 +102,17 @@ Organize rules into categories such as:
 
 You have access to testing tools to validate your rules BEFORE committing them. Use these to verify your hypotheses work correctly.
 
+> **IMPORTANT**: Before running these tools, make sure you have updated the vocabulary using the vocabulary tools (addVocabulary, removeVocabulary). The testing tools use the current vocabulary state.
+
 ## Available Testing Tools
 
-### testRuleWithRuleset
+### testRule
 Tests a single rule against the dataset using your proposed ruleset.
 - **When to use**: Test critical or uncertain rules to verify they correctly explain the data
 - **Input**: The specific rule to test, plus your entire draft ruleset for context
 - **Returns**: Status (RULE_OK, RULE_WRONG, etc.), reasoning, and recommendations
 
-### testSentenceWithRuleset
+### testSentence
 Tests translation of a sentence using your proposed ruleset.
 - **When to use**: Verify your rules can translate key sentences correctly
 - **Input**: Sentence details (id, content, languages), plus your entire draft ruleset
