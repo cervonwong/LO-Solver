@@ -23,7 +23,8 @@ export function createRulesImproverAgent(vocabularyTools: VocabularyTools) {
       role: 'system',
       content: instructions,
     },
-    model: openrouter('google/gemini-3-pro-preview'),
+    // model: openrouter('google/gemini-3-pro-preview'),
+    model: openrouter('google/gemini-3-flash-preview'),
     tools: {
       getVocabulary: vocabularyTools.getVocabulary,
       addVocabulary: vocabularyTools.addVocabulary,

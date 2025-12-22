@@ -14,7 +14,8 @@ export function createVerifierOrchestratorAgent(tools: Record<string, any>) {
     id: 'wf03-verifier-orchestrator',
     name: '[03-3a] Verifier Orchestrator Agent',
     instructions: VERIFIER_ORCHESTRATOR_INSTRUCTIONS,
-    model: openrouter('google/gemini-3-pro-preview'),
+    // model: openrouter('google/gemini-3-pro-preview'),
+    model: openrouter('google/gemini-3-flash-preview'),
     tools,
     inputProcessors: [
       new UnicodeNormalizer({
