@@ -1,7 +1,8 @@
 import { createTool } from '@mastra/core/tools';
-import { Agent } from '@mastra/core/agent';
 import { z } from 'zod';
-import { openrouter } from '../openrouter';
+import type { Workflow03RequestContext, Rule } from './request-context-types';
+import type { VocabularyEntry } from './vocabulary-tools';
+import type { Mastra } from '@mastra/core/mastra';
 
 const sentenceTestInputSchema = z.object({
   id: z.string().describe('Identifier for the sentence (e.g., "1", "Q1")'),
@@ -47,117 +48,85 @@ const sentenceTestResultSchema = z.discriminatedUnion('success', [
   sentenceTestErrorSchema,
 ]);
 
-const SENTENCE_TESTER_SYSTEM_PROMPT = `
-You are a specialized linguistic sentence translator and validator. Your job is to attempt translating a SINGLE sentence using a given ruleset, identifying any ambiguities or issues.
-
-# Your Task
-You will receive:
-1. A complete set of rules
-2. A single sentence to translate (either from the dataset or a question)
-3. The translation direction (if applicable)
-
-Note: You will receive the vocabulary entries directly in the prompt - use these to look up morphemes and words during translation.
-
-# Translation Process
-1. Attempt to translate the sentence step by step using ONLY the provided rules and vocabulary
-2. At each step, note if there are multiple valid interpretations
-3. Flag ANY ambiguity, missing rule, or unclear instruction immediately
-4. Even if you can guess the correct translation, flag issues that make it non-deterministic
-
-# Output Requirements
-- **canTranslate**: true only if the translation is unambiguous and deterministic
-- **translation**: Your best attempt at the translation (even if ambiguous)
-- **ambiguities**: List every point where:
-  - A rule could apply multiple ways
-  - A word/morpheme isn't in the provided vocabulary
-  - The rules don't specify order or combination
-  - There are exceptions not covered
-- **suggestions**: EXACTLY 3 suggestions for improving the ruleset, ranked:
-  - HIGH likelihood: Most likely to be the correct fix
-  - MEDIUM likelihood: Reasonable alternative interpretation  
-  - LOW likelihood: Less likely but worth considering
-- **overallStatus**: 
-  - SENTENCE_OK: Translation is unambiguous and deterministic
-  - SENTENCE_AMBIGUOUS: Translation possible but multiple interpretations exist
-  - SENTENCE_UNTRANSLATABLE: Cannot translate due to missing rules or vocabulary
-
-# Critical Instructions
-- Be VERY strict about ambiguity - if there's ANY doubt, flag it
-- **Detect Missing Rules**: If a sentence cannot be translated because NO rule covers the pattern, explicitly flag this as "MISSING_RULE_NEEDED" and describe what rule is required
-- Each suggestion should be DIFFERENT and offer a DISTINCT fix
-- Cite specific rules that cause issues
-- Think like a devil's advocate - find every possible issue
-
-# Example Output
-{
-  "canTranslate": false,
-  "translation": "kala-ri na-tu (best guess)",
-  "ambiguities": [
-    "Rule 3 says plurals use '-ri' but doesn't specify if it applies to verb objects",
-    "Word 'tu' not found in provided vocabulary - guessed from similar pattern in item #4"
-  ],
-  "suggestions": [
-    {
-      "suggestion": "Add rule: Plural marker '-ri' applies to all nouns including verb objects",
-      "likelihood": "HIGH",
-      "reasoning": "Items #2, #6, #8 show plural objects with '-ri' suffix consistently"
-    },
-    {
-      "suggestion": "Add vocabulary entry: 'tu' = 'water' (noun) based on pattern in items #4, #7",
-      "likelihood": "HIGH", 
-      "reasoning": "Context mentions water-related vocabulary; 'tu' appears with noun markers"
-    },
-    {
-      "suggestion": "Consider: '-ri' might be a general plural marker for animacy distinction",
-      "likelihood": "MEDIUM",
-      "reasoning": "Animate nouns in #3, #5 use '-ri' while #9 inanimate uses '-ra'"
-    }
-  ],
-  "overallStatus": "SENTENCE_AMBIGUOUS"
-}
-`.trim();
-
-interface Rule {
-  title: string;
-  description: string;
-}
-
-interface VocabularyEntry {
-  foreignForm: string;
-  meaning: string;
-  type: string;
-  notes: string;
+// Type for the execute context that includes requestContext and mastra
+interface ToolExecuteContext {
+  requestContext?: {
+    get: (key: keyof Workflow03RequestContext) => unknown;
+  };
+  mastra?: Mastra;
 }
 
 /**
- * Factory function to create a sentence tester tool with shared context baked in.
- * The orchestrator only needs to specify which sentence to test.
- * Vocabulary is passed in directly to the prompt.
+ * Helper to get problem context from request context.
  */
-export function createTestSentenceTool(
-  problemContext: string,
-  rules: Rule[],
-  vocabulary: VocabularyEntry[],
-) {
-  // Create a dedicated agent for sentence testing
-  const sentenceTesterAgent = new Agent({
-    id: 'wf03-sentence-tester',
-    name: '[03-3a-tool] Sentence Tester Agent',
-    instructions: SENTENCE_TESTER_SYSTEM_PROMPT,
-    model: openrouter('openai/gpt-5-mini'),
-    tools: {},
-  });
+function getProblemContext(
+  requestContext: { get: (key: keyof Workflow03RequestContext) => unknown } | undefined,
+): string {
+  if (!requestContext) {
+    throw new Error('requestContext is required for testSentenceTool');
+  }
+  const problem = requestContext.get('structured-problem') as { context: string } | undefined;
+  if (!problem) {
+    throw new Error("'structured-problem' not found in requestContext");
+  }
+  return problem.context;
+}
 
-  return createTool({
-    id: 'testSentence',
-    description:
-      'Tests a single sentence against the ruleset to verify it can be translated unambiguously. Call this for EACH sentence you want to test.',
-    inputSchema: sentenceTestInputSchema,
-    outputSchema: sentenceTestResultSchema,
-    execute: async (inputData, _context) => {
-      const { id, content, sourceLanguage, targetLanguage, expectedTranslation } = inputData;
+/**
+ * Helper to get current rules from request context.
+ */
+function getCurrentRules(
+  requestContext: { get: (key: keyof Workflow03RequestContext) => unknown } | undefined,
+): Rule[] {
+  if (!requestContext) {
+    throw new Error('requestContext is required for testSentenceTool');
+  }
+  const rules = requestContext.get('current-rules') as Rule[] | undefined;
+  if (!rules) {
+    throw new Error("'current-rules' not found in requestContext");
+  }
+  return rules;
+}
 
-      const prompt = `
+/**
+ * Helper to get vocabulary from request context.
+ */
+function getVocabulary(
+  requestContext: { get: (key: keyof Workflow03RequestContext) => unknown } | undefined,
+): VocabularyEntry[] {
+  if (!requestContext) {
+    throw new Error('requestContext is required for testSentenceTool');
+  }
+  const vocabularyState = requestContext.get('vocabulary-state') as
+    | Map<string, VocabularyEntry>
+    | undefined;
+  if (!vocabularyState) {
+    throw new Error("'vocabulary-state' not found in requestContext");
+  }
+  return Array.from(vocabularyState.values());
+}
+
+/**
+ * testSentenceTool - Tests a single sentence translation against the ruleset.
+ * Uses the static sentenceTesterAgent via mastra.getAgentById().
+ * Context (rules, vocabulary, problem context) is passed in the prompt.
+ */
+export const testSentenceTool = createTool({
+  id: 'testSentence',
+  description:
+    'Tests a single sentence against the ruleset to verify it can be translated unambiguously. Call this for EACH sentence you want to test.',
+  inputSchema: sentenceTestInputSchema,
+  outputSchema: sentenceTestResultSchema,
+  execute: async (
+    { id, content, sourceLanguage, targetLanguage, expectedTranslation },
+    context,
+  ) => {
+    const ctx = context as unknown as ToolExecuteContext;
+    const problemContext = getProblemContext(ctx?.requestContext);
+    const rules = getCurrentRules(ctx?.requestContext);
+    const vocabulary = getVocabulary(ctx?.requestContext);
+
+    const prompt = `
 Translate and validate the following sentence using the provided ruleset:
 
 ## Sentence to Translate
@@ -179,20 +148,19 @@ ${JSON.stringify(vocabulary, null, 2)}
 Attempt to translate this sentence step by step using the rules and vocabulary above. Flag any ambiguities or issues.
 `.trim();
 
-      try {
-        const result = await sentenceTesterAgent.generate(prompt, {
-          structuredOutput: {
-            schema: sentenceTestSuccessSchema,
-          },
-        });
+    try {
+      const result = await ctx.mastra!.getAgentById('wf03-sentence-tester').generate(prompt, {
+        structuredOutput: {
+          schema: sentenceTestSuccessSchema,
+        },
+      });
 
-        return result.object as z.infer<typeof sentenceTestSuccessSchema>;
-      } catch (err) {
-        return {
-          success: false as const,
-          error: `Sentence test failed: ${err instanceof Error ? err.message : 'Unknown error'}`,
-        };
-      }
-    },
-  });
-}
+      return result.object as z.infer<typeof sentenceTestSuccessSchema>;
+    } catch (err) {
+      return {
+        success: false as const,
+        error: `Sentence test failed: ${err instanceof Error ? err.message : 'Unknown error'}`,
+      };
+    }
+  },
+});

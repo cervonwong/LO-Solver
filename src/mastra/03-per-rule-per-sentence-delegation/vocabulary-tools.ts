@@ -1,5 +1,6 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
+import type { Workflow03RequestContext } from './request-context-types';
 
 // Vocabulary entry schema
 export const vocabularyEntrySchema = z.object({
@@ -11,191 +12,223 @@ export const vocabularyEntrySchema = z.object({
 
 export type VocabularyEntry = z.infer<typeof vocabularyEntrySchema>;
 
-/**
- * Factory function to create vocabulary management tools with shared state.
- * The workflow maintains the vocabulary Map and passes it to this factory.
- */
-export function createVocabularyTools(vocabularyState: Map<string, VocabularyEntry>) {
-  /**
-   * getVocabulary - Read all vocabulary entries
-   * Use this at the end of your task to verify vocabulary state after updates.
-   */
-  const getVocabulary = createTool({
-    id: 'getVocabulary',
-    description:
-      'Read all vocabulary entries. Use this at the end of your task to verify vocabulary state after you have made updates.',
-    inputSchema: z.object({}),
-    outputSchema: z.object({
-      entries: z.array(vocabularyEntrySchema),
-      count: z.number(),
-    }),
-    execute: async () => {
-      const entries = Array.from(vocabularyState.values());
-      console.log(`[VOCAB:READ] Retrieved ${entries.length} vocabulary entries`);
-      return {
-        entries,
-        count: entries.length,
-      };
-    },
-  });
-
-  /**
-   * addVocabulary - Add NEW vocabulary entries
-   * Only adds entries with new foreignForms. If a foreignForm already exists, that entry is skipped.
-   * Use this when you discover new morphemes during analysis.
-   */
-  const addVocabulary = createTool({
-    id: 'addVocabulary',
-    description:
-      'Add NEW vocabulary entries. Only adds entries with foreignForms that do not already exist (skips duplicates). Use this when you discover new morphemes during your analysis.',
-    inputSchema: z.object({
-      entries: z
-        .array(vocabularyEntrySchema)
-        .describe(
-          'Array of new vocabulary entries to add. Entries with existing foreignForms will be skipped.',
-        ),
-    }),
-    outputSchema: z.object({
-      added: z.number().describe('Number of entries actually added'),
-      skipped: z.number().describe('Number of entries skipped (foreignForm already exists)'),
-      total: z.number().describe('Total vocabulary count after operation'),
-    }),
-    execute: async ({ entries }) => {
-      let added = 0;
-      let skipped = 0;
-
-      for (const entry of entries) {
-        if (!vocabularyState.has(entry.foreignForm)) {
-          vocabularyState.set(entry.foreignForm, entry);
-          added++;
-        } else {
-          skipped++;
-        }
-      }
-
-      console.log(`[VOCAB:ADD] Added ${added}, skipped ${skipped}, total ${vocabularyState.size}`);
-      return {
-        added,
-        skipped,
-        total: vocabularyState.size,
-      };
-    },
-  });
-
-  /**
-   * updateVocabulary - Update EXISTING vocabulary entries
-   * Overwrites entries matching by foreignForm. If a foreignForm does not exist, that entry is skipped.
-   * Use this to correct or refine vocabulary entries you've already added.
-   */
-  const updateVocabulary = createTool({
-    id: 'updateVocabulary',
-    description:
-      'Update EXISTING vocabulary entries by foreignForm key. Overwrites entries that match. Entries with foreignForms that do not exist will be skipped. Use this to correct or refine vocabulary entries you have already added.',
-    inputSchema: z.object({
-      entries: z
-        .array(vocabularyEntrySchema)
-        .describe(
-          'Array of vocabulary entries to update. Only entries with existing foreignForms will be updated.',
-        ),
-    }),
-    outputSchema: z.object({
-      updated: z.number().describe('Number of entries actually updated'),
-      skipped: z.number().describe('Number of entries skipped (foreignForm does not exist)'),
-      total: z.number().describe('Total vocabulary count after operation'),
-    }),
-    execute: async ({ entries }) => {
-      let updated = 0;
-      let skipped = 0;
-
-      for (const entry of entries) {
-        if (vocabularyState.has(entry.foreignForm)) {
-          vocabularyState.set(entry.foreignForm, entry);
-          updated++;
-        } else {
-          skipped++;
-        }
-      }
-
-      console.log(
-        `[VOCAB:UPDATE] Updated ${updated}, skipped ${skipped}, total ${vocabularyState.size}`,
-      );
-      return {
-        updated,
-        skipped,
-        total: vocabularyState.size,
-      };
-    },
-  });
-
-  /**
-   * removeVocabulary - Remove vocabulary entries by foreignForm
-   * Use this to remove incorrect or redundant entries.
-   */
-  const removeVocabulary = createTool({
-    id: 'removeVocabulary',
-    description:
-      'Remove vocabulary entries by foreignForm. Use this to remove incorrect or redundant entries.',
-    inputSchema: z.object({
-      foreignForms: z
-        .array(z.string())
-        .describe('Array of foreignForm keys to remove from vocabulary.'),
-    }),
-    outputSchema: z.object({
-      removed: z.number().describe('Number of entries actually removed'),
-      notFound: z.number().describe('Number of foreignForms that were not found'),
-      total: z.number().describe('Total vocabulary count after operation'),
-    }),
-    execute: async ({ foreignForms }) => {
-      let removed = 0;
-      let notFound = 0;
-
-      for (const foreignForm of foreignForms) {
-        if (vocabularyState.delete(foreignForm)) {
-          removed++;
-        } else {
-          notFound++;
-        }
-      }
-
-      console.log(
-        `[VOCAB:REMOVE] Removed ${removed}, not found ${notFound}, total ${vocabularyState.size}`,
-      );
-      return {
-        removed,
-        notFound,
-        total: vocabularyState.size,
-      };
-    },
-  });
-
-  /**
-   * clearVocabulary - Remove all vocabulary entries
-   * Only use this when a complete vocabulary rewrite is needed.
-   * Prefer getVocabulary → removeVocabulary → addVocabulary for incremental updates.
-   */
-  const clearVocabulary = createTool({
-    id: 'clearVocabulary',
-    description:
-      'Remove ALL vocabulary entries. Only use this when a complete vocabulary rewrite is needed. Prefer using getVocabulary → removeVocabulary → addVocabulary for incremental updates.',
-    inputSchema: z.object({}),
-    outputSchema: z.object({
-      removed: z.number().describe('Number of entries that were removed'),
-    }),
-    execute: async () => {
-      const removed = vocabularyState.size;
-      vocabularyState.clear();
-      console.log(`[VOCAB:CLEAR] Cleared ${removed} vocabulary entries`);
-      return { removed };
-    },
-  });
-
-  return {
-    getVocabulary,
-    addVocabulary,
-    updateVocabulary,
-    removeVocabulary,
-    clearVocabulary,
+// Type for the execute context that includes requestContext
+interface ToolExecuteContext {
+  requestContext?: {
+    get: (key: keyof Workflow03RequestContext) => unknown;
   };
 }
 
-export type VocabularyTools = ReturnType<typeof createVocabularyTools>;
+/**
+ * Helper to get vocabulary state from request context.
+ * Throws if vocabulary-state is not set in the context.
+ */
+function getVocabularyState(
+  requestContext: { get: (key: keyof Workflow03RequestContext) => unknown } | undefined,
+): Map<string, VocabularyEntry> {
+  if (!requestContext) {
+    throw new Error('requestContext is required for vocabulary tools');
+  }
+  const state = requestContext.get('vocabulary-state') as Map<string, VocabularyEntry> | undefined;
+  if (!state) {
+    throw new Error("'vocabulary-state' not found in requestContext");
+  }
+  return state;
+}
+
+/**
+ * getVocabulary - Read all vocabulary entries
+ * Use this at the end of your task to verify vocabulary state after updates.
+ */
+export const getVocabulary = createTool({
+  id: 'getVocabulary',
+  description:
+    'Read all vocabulary entries. Use this at the end of your task to verify vocabulary state after you have made updates.',
+  inputSchema: z.object({}),
+  outputSchema: z.object({
+    entries: z.array(vocabularyEntrySchema),
+    count: z.number(),
+  }),
+  execute: async (_inputData, context) => {
+    const ctx = context as ToolExecuteContext;
+    const vocabularyState = getVocabularyState(ctx?.requestContext);
+    const entries = Array.from(vocabularyState.values());
+    console.log(`[VOCAB:READ] Retrieved ${entries.length} vocabulary entries`);
+    return {
+      entries,
+      count: entries.length,
+    };
+  },
+});
+
+/**
+ * addVocabulary - Add NEW vocabulary entries
+ * Only adds entries with new foreignForms. If a foreignForm already exists, that entry is skipped.
+ * Use this when you discover new morphemes during analysis.
+ */
+export const addVocabulary = createTool({
+  id: 'addVocabulary',
+  description:
+    'Add NEW vocabulary entries. Only adds entries with foreignForms that do not already exist (skips duplicates). Use this when you discover new morphemes during your analysis.',
+  inputSchema: z.object({
+    entries: z
+      .array(vocabularyEntrySchema)
+      .describe(
+        'Array of new vocabulary entries to add. Entries with existing foreignForms will be skipped.',
+      ),
+  }),
+  outputSchema: z.object({
+    added: z.number().describe('Number of entries actually added'),
+    skipped: z.number().describe('Number of entries skipped (foreignForm already exists)'),
+    total: z.number().describe('Total vocabulary count after operation'),
+  }),
+  execute: async ({ entries }, context) => {
+    const ctx = context as ToolExecuteContext;
+    const vocabularyState = getVocabularyState(ctx?.requestContext);
+    let added = 0;
+    let skipped = 0;
+
+    for (const entry of entries) {
+      if (!vocabularyState.has(entry.foreignForm)) {
+        vocabularyState.set(entry.foreignForm, entry);
+        added++;
+      } else {
+        skipped++;
+      }
+    }
+
+    console.log(`[VOCAB:ADD] Added ${added}, skipped ${skipped}, total ${vocabularyState.size}`);
+    return {
+      added,
+      skipped,
+      total: vocabularyState.size,
+    };
+  },
+});
+
+/**
+ * updateVocabulary - Update EXISTING vocabulary entries
+ * Overwrites entries matching by foreignForm. If a foreignForm does not exist, that entry is skipped.
+ * Use this to correct or refine vocabulary entries you've already added.
+ */
+export const updateVocabulary = createTool({
+  id: 'updateVocabulary',
+  description:
+    'Update EXISTING vocabulary entries by foreignForm key. Overwrites entries that match. Entries with foreignForms that do not exist will be skipped. Use this to correct or refine vocabulary entries you have already added.',
+  inputSchema: z.object({
+    entries: z
+      .array(vocabularyEntrySchema)
+      .describe(
+        'Array of vocabulary entries to update. Only entries with existing foreignForms will be updated.',
+      ),
+  }),
+  outputSchema: z.object({
+    updated: z.number().describe('Number of entries actually updated'),
+    skipped: z.number().describe('Number of entries skipped (foreignForm does not exist)'),
+    total: z.number().describe('Total vocabulary count after operation'),
+  }),
+  execute: async ({ entries }, context) => {
+    const ctx = context as ToolExecuteContext;
+    const vocabularyState = getVocabularyState(ctx?.requestContext);
+    let updated = 0;
+    let skipped = 0;
+
+    for (const entry of entries) {
+      if (vocabularyState.has(entry.foreignForm)) {
+        vocabularyState.set(entry.foreignForm, entry);
+        updated++;
+      } else {
+        skipped++;
+      }
+    }
+
+    console.log(
+      `[VOCAB:UPDATE] Updated ${updated}, skipped ${skipped}, total ${vocabularyState.size}`,
+    );
+    return {
+      updated,
+      skipped,
+      total: vocabularyState.size,
+    };
+  },
+});
+
+/**
+ * removeVocabulary - Remove vocabulary entries by foreignForm
+ * Use this to remove incorrect or redundant entries.
+ */
+export const removeVocabulary = createTool({
+  id: 'removeVocabulary',
+  description:
+    'Remove vocabulary entries by foreignForm. Use this to remove incorrect or redundant entries.',
+  inputSchema: z.object({
+    foreignForms: z
+      .array(z.string())
+      .describe('Array of foreignForm keys to remove from vocabulary.'),
+  }),
+  outputSchema: z.object({
+    removed: z.number().describe('Number of entries actually removed'),
+    notFound: z.number().describe('Number of foreignForms that were not found'),
+    total: z.number().describe('Total vocabulary count after operation'),
+  }),
+  execute: async ({ foreignForms }, context) => {
+    const ctx = context as ToolExecuteContext;
+    const vocabularyState = getVocabularyState(ctx?.requestContext);
+    let removed = 0;
+    let notFound = 0;
+
+    for (const foreignForm of foreignForms) {
+      if (vocabularyState.delete(foreignForm)) {
+        removed++;
+      } else {
+        notFound++;
+      }
+    }
+
+    console.log(
+      `[VOCAB:REMOVE] Removed ${removed}, not found ${notFound}, total ${vocabularyState.size}`,
+    );
+    return {
+      removed,
+      notFound,
+      total: vocabularyState.size,
+    };
+  },
+});
+
+/**
+ * clearVocabulary - Remove all vocabulary entries
+ * Only use this when a complete vocabulary rewrite is needed.
+ * Prefer getVocabulary → removeVocabulary → addVocabulary for incremental updates.
+ */
+export const clearVocabulary = createTool({
+  id: 'clearVocabulary',
+  description:
+    'Remove ALL vocabulary entries. Only use this when a complete vocabulary rewrite is needed. Prefer using getVocabulary → removeVocabulary → addVocabulary for incremental updates.',
+  inputSchema: z.object({}),
+  outputSchema: z.object({
+    removed: z.number().describe('Number of entries that were removed'),
+  }),
+  execute: async (_inputData, context) => {
+    const ctx = context as ToolExecuteContext;
+    const vocabularyState = getVocabularyState(ctx?.requestContext);
+    const removed = vocabularyState.size;
+    vocabularyState.clear();
+    console.log(`[VOCAB:CLEAR] Cleared ${removed} vocabulary entries`);
+    return { removed };
+  },
+});
+
+/**
+ * Static vocabulary tools object for use by agents.
+ * All tools read vocabulary state from requestContext.
+ */
+export const vocabularyTools = {
+  getVocabulary,
+  addVocabulary,
+  updateVocabulary,
+  removeVocabulary,
+  clearVocabulary,
+};
+
+export type VocabularyTools = typeof vocabularyTools;

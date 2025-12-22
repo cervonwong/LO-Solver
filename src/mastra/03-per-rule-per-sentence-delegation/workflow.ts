@@ -1,18 +1,10 @@
 import { createStep, createWorkflow } from '@mastra/core/workflows';
+import { RequestContext } from '@mastra/core/request-context';
 import { z } from 'zod';
 import * as fs from 'fs';
 import * as path from 'path';
-import { createTestRuleTool } from './03a-rule-tester-tool';
-import { createTestSentenceTool } from './03a-sentence-tester-tool';
-import { createVerifierOrchestratorAgent } from './03a-verifier-orchestrator-agent';
-import { createInitialHypothesizerAgent } from './02-initial-hypothesizer-agent';
-import { createRulesImproverAgent } from './03b-rules-improver-agent';
-import {
-  createVocabularyTools,
-  vocabularyEntrySchema,
-  type VocabularyTools,
-  type VocabularyEntry,
-} from './vocabulary-tools';
+import { vocabularyEntrySchema, type VocabularyEntry } from './vocabulary-tools';
+import type { Workflow03RequestContext } from './request-context-types';
 
 const MAX_VERIFY_IMPROVE_ITERATIONS = 4;
 
@@ -411,12 +403,14 @@ const initialHypothesisStep = createStep({
     const structuredProblem = inputData;
     const logFile = state.logFile;
 
-    // Rebuild vocabulary state and tools from workflow state
+    // Rebuild vocabulary state from workflow state
     const vocabularyState = new Map(Object.entries(state.vocabulary));
-    const vocabularyTools = createVocabularyTools(vocabularyState);
+
+    // Create RequestContext with vocabulary state for the agent
+    const requestContext = new RequestContext<Workflow03RequestContext>();
+    requestContext.set('vocabulary-state', vocabularyState);
 
     // Step 2a: Call the Initial Rules Hypothesizer Agent (natural language output)
-    const hypothesizerAgent = createInitialHypothesizerAgent(vocabularyTools);
     const vocabulary = Array.from(vocabularyState.values());
 
     const hypothesizerPrompt =
@@ -424,7 +418,9 @@ const initialHypothesisStep = createStep({
       JSON.stringify({ vocabulary, structuredProblem });
 
     const hypothesizerStartTime = new Date();
-    const hypothesizerResponse = await hypothesizerAgent.generate(hypothesizerPrompt);
+    const hypothesizerResponse = await mastra
+      .getAgentById('wf03-initial-hypothesizer')
+      .generate(hypothesizerPrompt, { requestContext });
 
     const hypothesizerTiming = recordStepTiming(
       'Step 2a',
@@ -530,9 +526,8 @@ const verifyImproveLoopStep = createStep({
     const logFile = state.logFile;
     let currentStepTimings = [...state.stepTimings];
 
-    // Rebuild vocabulary state and tools from workflow state
+    // Rebuild vocabulary state from workflow state
     const vocabularyState = new Map(Object.entries(state.vocabulary));
-    const vocabularyTools = createVocabularyTools(vocabularyState);
 
     // Rules should never be null here (they come from initial hypothesis step)
     if (currentRules === null) {
@@ -547,19 +542,15 @@ const verifyImproveLoopStep = createStep({
     // 1. Verifier Orchestrator Agent - outputs natural language feedback
     // 2. Verifier Feedback Extractor Agent - extracts JSON from the natural language output
 
-    // Create tools dynamically with current context and vocabulary baked in
+    // Create RequestContext with all context needed by tools
+    const requestContext = new RequestContext<Workflow03RequestContext>();
+    requestContext.set('vocabulary-state', vocabularyState);
+    requestContext.set('structured-problem', structuredProblem);
+    requestContext.set('current-rules', currentRules);
+
     const vocabulary = Array.from(vocabularyState.values());
-    const testRule = createTestRuleTool(structuredProblem, vocabulary);
-    const testSentence = createTestSentenceTool(
-      structuredProblem.context,
-      currentRules,
-      vocabulary,
-    );
 
-    // Create orchestrator agent with the dynamic tools
-    const orchestratorAgent = createVerifierOrchestratorAgent({ testRule, testSentence });
-
-    // Note: vocabulary is passed in the prompt (read-only for verifier)
+    // Note: vocabulary, structuredProblem, rules are passed in the prompt for the agent
     const orchestratorPrompt = JSON.stringify({
       vocabulary,
       structuredProblem,
@@ -568,7 +559,9 @@ const verifyImproveLoopStep = createStep({
 
     // Step 3a1: Call the Verifier Orchestrator Agent (natural language output)
     const orchestratorStartTime = new Date();
-    const orchestratorResponse = await orchestratorAgent.generate(orchestratorPrompt);
+    const orchestratorResponse = await mastra
+      .getAgentById('wf03-verifier-orchestrator')
+      .generate(orchestratorPrompt, { requestContext });
 
     const orchestratorTiming = recordStepTiming(
       `Step 3a1 (Iter ${iterationCount + 1})`,
@@ -656,7 +649,6 @@ const verifyImproveLoopStep = createStep({
     // 2. Rules Improvement Extractor Agent - extracts JSON from the natural language output
 
     // Create improver agent with vocabulary tools
-    const improverAgent = createRulesImproverAgent(vocabularyTools);
     const improverVocabulary = Array.from(vocabularyState.values());
 
     const improverPrompt =
@@ -670,7 +662,9 @@ const verifyImproveLoopStep = createStep({
 
     // Step 3b1: Call the Rules Improver Agent (natural language output)
     const improverStartTime = new Date();
-    const improverResponse = await improverAgent.generate(improverPrompt);
+    const improverResponse = await mastra
+      .getAgentById('wf03-rules-improver')
+      .generate(improverPrompt, { requestContext });
 
     const improverTiming = recordStepTiming(
       `Step 3b1 (Iter ${iterationCount + 1})`,
