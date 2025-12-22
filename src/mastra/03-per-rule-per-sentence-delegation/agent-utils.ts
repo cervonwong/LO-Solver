@@ -31,6 +31,23 @@ export async function generateWithRetry<TOptions extends Parameters<Agent['gener
       // Race between the generate call and the timeout
       const result = await Promise.race([agent.generate(prompt, options), timeoutPromise]);
 
+      // Check for empty response - this should trigger a retry
+      // When structuredOutput is provided, check result.object; otherwise check result.text
+      const hasStructuredOutput =
+        options && typeof options === 'object' && 'structuredOutput' in options;
+
+      if (hasStructuredOutput) {
+        // For structured output, check if object is null/undefined
+        if (result.object === null || result.object === undefined) {
+          throw new Error('Empty response from model');
+        }
+      } else {
+        // For text output, check if text is empty
+        if (!result.text || result.text.trim() === '') {
+          throw new Error('Empty response from model');
+        }
+      }
+
       return result;
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
@@ -44,7 +61,8 @@ export async function generateWithRetry<TOptions extends Parameters<Agent['gener
         lastError.message.includes('ECONNRESET') ||
         lastError.message.includes('ETIMEDOUT') ||
         lastError.message.includes('fetch failed') ||
-        lastError.message.includes('network');
+        lastError.message.includes('network') ||
+        lastError.message.includes('Empty response from model');
 
       if (!isRetryable || attempt === maxRetries) {
         throw lastError;
