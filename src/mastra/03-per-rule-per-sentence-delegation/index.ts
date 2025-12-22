@@ -5,6 +5,7 @@ import { rulesImprovementExtractorAgent } from './03b2-rules-improvement-extract
 import { structuredProblemExtractorAgent } from './01-structured-problem-extractor-agent';
 import { questionAnswererAgent } from './04-question-answerer-agent';
 import { createVerifierOrchestratorAgent } from './03a-verifier-orchestrator-agent';
+import { verifierFeedbackExtractorAgent } from './03a2-verifier-feedback-extractor-agent';
 
 // Note: initialHypothesizerAgent and rulesImproverAgent are now factory functions
 // that require vocabulary tools to be passed in.
@@ -15,6 +16,7 @@ export const workflow03Agents = {
   wf03_structuredProblemExtractorAgent: structuredProblemExtractorAgent,
   wf03_initialHypothesisExtractorAgent: initialHypothesisExtractorAgent,
   wf03_rulesImprovementExtractorAgent: rulesImprovementExtractorAgent,
+  wf03_verifierFeedbackExtractorAgent: verifierFeedbackExtractorAgent,
   wf03_questionAnswererAgent: questionAnswererAgent,
 };
 

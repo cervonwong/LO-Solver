@@ -543,6 +543,10 @@ const verifyImproveLoopStep = createStep({
     }
 
     // Step 3a: Verify rules using the orchestrator (which calls testRule/testSentence tools)
+    // This step chains two agents:
+    // 1. Verifier Orchestrator Agent - outputs natural language feedback
+    // 2. Verifier Feedback Extractor Agent - extracts JSON from the natural language output
+
     // Create tools dynamically with current context and vocabulary baked in
     const vocabulary = Array.from(vocabularyState.values());
     const testRule = createTestRuleTool(structuredProblem, vocabulary);
@@ -562,37 +566,69 @@ const verifyImproveLoopStep = createStep({
       rules: currentRules,
     });
 
+    // Step 3a1: Call the Verifier Orchestrator Agent (natural language output)
     const orchestratorStartTime = new Date();
-    const orchestratorResponse = await orchestratorAgent.generate(orchestratorPrompt, {
-      structuredOutput: {
-        schema: verifierFeedbackSchema,
-      },
-    });
+    const orchestratorResponse = await orchestratorAgent.generate(orchestratorPrompt);
 
     const orchestratorTiming = recordStepTiming(
-      `Step 3a (Iter ${iterationCount + 1})`,
+      `Step 3a1 (Iter ${iterationCount + 1})`,
       'Verifier Orchestrator Agent',
       orchestratorStartTime,
     );
     currentStepTimings.push(orchestratorTiming);
     console.log(
-      `[Step 3a] Verifier Orchestrator Agent finished (Iteration ${iterationCount + 1}) at ${orchestratorTiming.endTime} (${orchestratorTiming.durationMinutes} min).`,
+      `[Step 3a1] Verifier Orchestrator Agent finished (Iteration ${iterationCount + 1}) at ${orchestratorTiming.endTime} (${orchestratorTiming.durationMinutes} min).`,
     );
 
-    const orchestratorParseResult = verifierFeedbackSchema.safeParse(orchestratorResponse.object);
+    // Log the natural language output from the orchestrator
+    logAgentOutput(
+      logFile,
+      `Step 3a1: Verify-Improve Loop (Iteration ${iterationCount + 1}) - Verifier (Natural Language)`,
+      'Verifier Orchestrator Agent',
+      { naturalLanguageOutput: orchestratorResponse.text },
+      orchestratorResponse.reasoning,
+    );
+
+    // Step 3a2: Call the Verifier Feedback Extractor Agent to parse into JSON
+    const verifierExtractorPrompt =
+      'Please extract the verification feedback from the following analysis:\\n\\n' +
+      orchestratorResponse.text;
+
+    const verifierExtractorStartTime = new Date();
+    const verifierExtractorResponse = await mastra
+      .getAgentById('wf03-verifier-feedback-extractor')
+      .generate(verifierExtractorPrompt, {
+        structuredOutput: {
+          schema: verifierFeedbackSchema,
+        },
+      });
+
+    const verifierExtractorTiming = recordStepTiming(
+      `Step 3a2 (Iter ${iterationCount + 1})`,
+      'Verifier Feedback Extractor Agent',
+      verifierExtractorStartTime,
+    );
+    currentStepTimings.push(verifierExtractorTiming);
+    console.log(
+      `[Step 3a2] Verifier Feedback Extractor Agent finished (Iteration ${iterationCount + 1}) at ${verifierExtractorTiming.endTime} (${verifierExtractorTiming.durationMinutes} min).`,
+    );
+
+    const orchestratorParseResult = verifierFeedbackSchema.safeParse(
+      verifierExtractorResponse.object,
+    );
 
     logAgentOutput(
       logFile,
-      `Step 3a: Verify-Improve Loop (Iteration ${iterationCount + 1}) - Verifier`,
-      'Verifier Orchestrator Agent',
-      orchestratorResponse.object,
-      orchestratorResponse.reasoning,
+      `Step 3a2: Verify-Improve Loop (Iteration ${iterationCount + 1}) - Extractor (JSON)`,
+      'Verifier Feedback Extractor Agent',
+      verifierExtractorResponse.object,
+      verifierExtractorResponse.reasoning,
     );
 
     if (!orchestratorParseResult.success) {
       logValidationError(
         logFile,
-        `Step 3a: Verify-Improve Loop (Iteration ${iterationCount + 1}) - Verifier`,
+        `Step 3a2: Verify-Improve Loop (Iteration ${iterationCount + 1}) - Extractor`,
         orchestratorParseResult.error,
       );
       return bail({

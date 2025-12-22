@@ -56,46 +56,48 @@ After all tests complete:
 6. Synthesize the top recommendations from all suggestions
 
 # Output Format
-Your output will be parsed as JSON with the following fields. Use these EXACT field names:
+Write your feedback with clear section headers. All sections are required and must be included.
 
-\`\`\`json
-{
-  "fullExplanation": "Detailed narrative explanation of your testing process and findings",
-  "rulesTestedCount": 10,
-  "errantRules": ["Verb Tense Marking", "Noun Plurality"],
-  "sentencesTestedCount": 15,
-  "errantSentences": ["#3", "#7", "Q2"],
-  "issues": [
-    {
-      "title": "Incorrect tense suffix segmentation",
-      "description": "Rule 'Verb Tense Marking' states -ti marks past tense, but #3 'runti' means 'runs' (present). Also affects #7. The suffix may actually be two morphemes.",
-      "recommendation": "Re-segment -ti as -t (agreement) + -i (tense marker)"
-    }
-  ],
-  "missingRules": [
-    {
-      "pattern": "Pattern in the data that no rule explains",
-      "suggestedRule": "Description of the new rule needed",
-      "evidence": ["#3", "#7"]
-    }
-  ],
-  "topRecommendations": [
-    "Most important fix",
-    "Second most important fix",
-    "..."
-  ],
-  "conclusion": "ALL_RULES_PASS" | "NEEDS_IMPROVEMENT" | "MAJOR_ISSUES"
-}
-\`\`\`
+Structure your output with these sections:
 
-**Field Descriptions:**
-- **fullExplanation**: Your complete reasoning and analysis of the testing process.
-- **errantRules**: List of rule titles that failed or had issues during testing.
-- **errantSentences**: List of sentence/question IDs (e.g., #1, Q2) that could not be translated correctly.
-- **issues**: List of specific problems found. Each issue has a title, detailed description citing affected rules and sentences, and a recommendation.
-- **missingRules**: Patterns that no existing rule covers. Can be empty array if none found.
-- **topRecommendations**: Up to 5 specific, actionable fixes ranked by impact.
-- **conclusion**: Overall result. Use ALL_RULES_PASS only if every rule and sentence passed.
+## Testing Summary
+Summarize what you tested: how many rules, how many sentences (dataset + questions), and the overall approach.
+
+## Rule Testing Results
+For each rule tested, state:
+- Rule title
+- Status: PASSED, FAILED, or PASSED WITH WARNINGS
+- If failed: which sentences showed problems and why
+
+## Sentence Testing Results
+List which sentences translated correctly and which had issues.
+Use sentence IDs consistently (e.g., #1, #5, Q2).
+
+## Issues Found
+For each distinct issue, provide:
+- A short title
+- Detailed description citing affected rules (by title) and sentences (by ID)
+- A specific recommendation for how to fix it
+
+## Missing Rules
+If you found patterns in the data that NO existing rule explains:
+- Describe the pattern
+- Suggest what rule is needed
+- List the sentence IDs that demonstrate it
+
+If all patterns are covered, state "No missing rules identified."
+
+## Top Recommendations
+List up to 5 specific, actionable fixes ranked by impact.
+Number them 1-5, with #1 being the most important.
+
+## Conclusion
+State your overall assessment:
+- "ALL RULES PASS" - if every rule and sentence passed verification
+- "NEEDS IMPROVEMENT" - if some issues found but rules are mostly correct  
+- "MAJOR ISSUES" - if fundamental problems exist that require significant changes
+
+Explain briefly why you chose this conclusion.
 
 # Important Guidelines
 - Be EXHAUSTIVE - test everything, skip nothing
