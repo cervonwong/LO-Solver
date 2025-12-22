@@ -170,12 +170,13 @@ export function createVocabularyTools(vocabularyState: Map<string, VocabularyEnt
 
   /**
    * clearVocabulary - Remove all vocabulary entries
-   * Use this when you need to start fresh with the vocabulary.
+   * Only use this when a complete vocabulary rewrite is needed.
+   * Prefer getVocabulary → removeVocabulary → addVocabulary for incremental updates.
    */
   const clearVocabulary = createTool({
     id: 'clearVocabulary',
     description:
-      'Remove ALL vocabulary entries. Use this when you need to start fresh with the vocabulary.',
+      'Remove ALL vocabulary entries. Only use this when a complete vocabulary rewrite is needed. Prefer using getVocabulary → removeVocabulary → addVocabulary for incremental updates.',
     inputSchema: z.object({}),
     outputSchema: z.object({
       removed: z.number().describe('Number of entries that were removed'),

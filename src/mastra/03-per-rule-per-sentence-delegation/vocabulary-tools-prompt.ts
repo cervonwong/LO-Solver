@@ -22,7 +22,7 @@ Update EXISTING vocabulary entries by foreignForm key. Overwrites entries that m
 Remove vocabulary entries by foreignForm. Use this to remove incorrect or redundant entries.
 
 ### clearVocabulary
-Remove ALL vocabulary entries. Use this when you need to start fresh with the vocabulary.
+Remove ALL vocabulary entries. **Only use this when a complete vocabulary rewrite is needed.** Prefer using getVocabulary → removeVocabulary → addVocabulary for incremental updates.
 
 ## Vocabulary Entry Format
 Each vocabulary entry should have:
@@ -32,27 +32,7 @@ Each vocabulary entry should have:
 - **notes**: Dataset references, allomorphs, restrictions (e.g., "#1, #3. Suffix only after vowels.")
 
 ### Morpheme Types
-Use these categories (or create descriptive ones if needed):
-- **noun**: Noun roots (e.g., "house", "dog", "man")
-- **verb-root**: Verb stems without inflection (e.g., "eat", "see", "go")
-- **adjective**: Adjective roots (e.g., "big", "red", "good")
-- **pronoun**: Personal pronouns (e.g., "I", "you", "he/she")
-- **demonstrative**: Demonstrative words (e.g., "this", "that")
-- **number-marker**: Singular/plural markers
-- **tense-marker**: Past/present/future markers
-- **aspect-marker**: Perfective/imperfective markers
-- **case-marker**: Nominative/accusative/genitive markers
-- **agreement-marker**: Subject/object agreement affixes
-- **possessive-marker**: Possession indicators
-- **negation-marker**: Negation affixes or particles
-- **question-marker**: Interrogative markers
-- **conjunction**: Words like "and", "or", "but"
-- **preposition/postposition**: Spatial/temporal relation markers
-- **copula**: Linking verbs ("to be")
-- **classifier**: Numeral classifiers
-- **focus-particle**: Focus or topic markers
-- **evidential-marker**: Source of information markers
-- **honorific-marker**: Politeness/respect markers
+Use descriptive type names. Common categories: **noun**, **verb-root**, **adjective**, **pronoun**, **tense-marker**, **aspect-marker**, **case-marker**, **number-marker**, **agreement-marker**, **negation-marker**, **question-marker**, **conjunction**, **postposition**. Create other descriptive types as needed (e.g., "evidential-marker", "honorific-marker").
 
 ## Vocabulary Guidelines
 1. **Be Atomic**: Each entry should represent ONE morpheme with ONE core meaning.
