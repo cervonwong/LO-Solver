@@ -3,6 +3,7 @@ import { z } from 'zod';
 import {
   getStructuredProblem,
   getVocabularyArray,
+  getCurrentRules,
   type ToolExecuteContext,
 } from './request-context-helpers';
 
@@ -46,25 +47,45 @@ const ruleTestResultSchema = z.discriminatedUnion('success', [
 /**
  * testRuleTool - Tests a single linguistic rule against the dataset.
  * Uses the static ruleTesterAgent via mastra.getAgentById().
- * Context (structured problem, vocabulary) is passed in the prompt.
+ * Provides full ruleset context for understanding rule interdependencies.
  */
 export const testRuleTool = createTool({
   id: 'testRule',
   description:
-    'Tests a single linguistic rule against the dataset to verify correctness and consistency. Call this for EACH rule you want to test.',
+    'Tests a single linguistic rule against the dataset to verify correctness and consistency. The full ruleset is provided for context. Call this for EACH rule you want to test.',
   inputSchema: ruleTestInputSchema,
   outputSchema: ruleTestResultSchema,
   execute: async ({ title, description }, context) => {
     const ctx = context as unknown as ToolExecuteContext;
     const structuredProblem = getStructuredProblem(ctx?.requestContext);
     const vocabulary = getVocabularyArray(ctx?.requestContext);
+    const allRules = getCurrentRules(ctx?.requestContext);
+
+    // Format all rules, highlighting the one being tested
+    const formattedRules = allRules
+      .map((r, i) => {
+        const isTarget = r.title === title;
+        const prefix = isTarget ? '>>> ' : '    ';
+        const suffix = isTarget ? ' <<< [TESTING THIS RULE]' : '';
+        return `${prefix}${i + 1}. **${r.title}** (${r.confidence}): ${r.description}${suffix}`;
+      })
+      .join('\n\n');
 
     const prompt = `
-Test the following rule against the dataset:
+# Rule to Test
 
-## Rule to Test
 **Title:** ${title}
 **Description:** ${description}
+
+This is the rule you must validate. Test it against ALL relevant sentences in the dataset.
+
+---
+
+## Full Ruleset Context (for reference)
+
+These are all the rules in the current grammar. The rule being tested is highlighted with >>> markers. Use this to understand how the target rule interacts with others.
+
+${formattedRules}
 
 ## Dataset Context
 ${structuredProblem.context}
@@ -78,7 +99,7 @@ ${JSON.stringify(vocabulary, null, 2)}
 ## Questions (for reference)
 ${JSON.stringify(structuredProblem.questions, null, 2)}
 
-Analyze this rule against the dataset and vocabulary. Verify the rule correctly handles all vocabulary entries and dataset patterns.
+**Your task**: Test the rule shown above against ALL relevant sentences in the dataset. Check if the rule's predictions match the actual data. Note any conflicts with other rules as a secondary concern.
 `.trim();
 
     try {

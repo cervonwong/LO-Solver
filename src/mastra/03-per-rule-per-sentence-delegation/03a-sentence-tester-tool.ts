@@ -4,6 +4,7 @@ import {
   getProblemContext,
   getCurrentRules,
   getVocabularyArray,
+  normalizeTranslation,
   type ToolExecuteContext,
 } from './request-context-helpers';
 
@@ -15,7 +16,7 @@ const sentenceTestInputSchema = z.object({
   expectedTranslation: z
     .string()
     .optional()
-    .describe('Expected translation if known (from dataset)'),
+    .describe('Expected translation if known (from dataset).'),
 });
 
 const suggestionSchema = z.object({
@@ -32,6 +33,14 @@ const sentenceTestSuccessSchema = z.object({
     .boolean()
     .describe('Whether the sentence can be confidently translated using the ruleset'),
   translation: z.string().describe('The attempted translation, or empty if not possible'),
+  matchesExpected: z
+    .boolean()
+    .nullable()
+    .describe('Whether the translation matches expected (null if no expected provided)'),
+  expectedTranslation: z
+    .string()
+    .nullable()
+    .describe('The expected translation for reference (null if not provided)'),
   ambiguities: z.array(z.string()).describe('List of ambiguous or confusing parts encountered'),
   suggestions: z
     .array(suggestionSchema)
@@ -51,15 +60,24 @@ const sentenceTestResultSchema = z.discriminatedUnion('success', [
   sentenceTestErrorSchema,
 ]);
 
+// Schema for the agent's response (without matchesExpected, expectedTranslation)
+const agentResponseSchema = z.object({
+  canTranslate: z.boolean(),
+  translation: z.string(),
+  ambiguities: z.array(z.string()),
+  suggestions: z.array(suggestionSchema),
+  overallStatus: z.enum(['SENTENCE_OK', 'SENTENCE_AMBIGUOUS', 'SENTENCE_UNTRANSLATABLE']),
+});
+
 /**
  * testSentenceTool - Tests a single sentence translation against the ruleset.
- * Uses the static sentenceTesterAgent via mastra.getAgentById().
- * Context (rules, vocabulary, problem context) is passed in the prompt.
+ * Uses blind translation: the agent translates WITHOUT seeing the expected answer.
+ * After translation, the tool compares the result to the expected translation (if provided).
  */
 export const testSentenceTool = createTool({
   id: 'testSentence',
   description:
-    'Tests a single sentence against the ruleset to verify it can be translated unambiguously. Call this for EACH sentence you want to test.',
+    'Tests a single sentence against the ruleset to verify it can be translated unambiguously. Uses blind translation (agent does not see expected answer) to avoid bias.',
   inputSchema: sentenceTestInputSchema,
   outputSchema: sentenceTestResultSchema,
   execute: async (
@@ -71,6 +89,7 @@ export const testSentenceTool = createTool({
     const rules = getCurrentRules(ctx?.requestContext);
     const vocabulary = getVocabularyArray(ctx?.requestContext);
 
+    // Phase 1: Blind Translation - agent does NOT see expected translation
     const prompt = `
 Translate and validate the following sentence using the provided ruleset:
 
@@ -79,28 +98,46 @@ Translate and validate the following sentence using the provided ruleset:
 **Content:** ${content}
 **From:** ${sourceLanguage}
 **To:** ${targetLanguage}
-${expectedTranslation ? `**Expected Translation:** ${expectedTranslation}` : ''}
 
 ## Context
 ${problemContext}
 
 ## Rules
-${rules.map((r, i) => `${i + 1}. **${r.title}**: ${r.description}`).join('\n\n')}
+${rules.map((r, i) => `${i + 1}. **${r.title}** (${r.confidence}): ${r.description}`).join('\n\n')}
 
 ## Vocabulary
 ${JSON.stringify(vocabulary, null, 2)}
 
-Attempt to translate this sentence step by step using the rules and vocabulary above. Flag any ambiguities or issues.
+Attempt to translate this sentence step by step using the rules and vocabulary above. Flag any ambiguities or issues. Produce your BEST translation based solely on the rules.
 `.trim();
 
     try {
       const result = await ctx.mastra!.getAgentById('wf03-sentence-tester').generate(prompt, {
         structuredOutput: {
-          schema: sentenceTestSuccessSchema,
+          schema: agentResponseSchema,
         },
       });
 
-      return result.object as z.infer<typeof sentenceTestSuccessSchema>;
+      const agentResult = result.object as z.infer<typeof agentResponseSchema>;
+
+      // Phase 2: Post-hoc Comparison (if expected translation provided)
+      let matchesExpected: boolean | null = null;
+      if (expectedTranslation) {
+        const normalizedTranslation = normalizeTranslation(agentResult.translation);
+        const normalizedExpected = normalizeTranslation(expectedTranslation);
+        matchesExpected = normalizedTranslation === normalizedExpected;
+      }
+
+      return {
+        success: true as const,
+        canTranslate: agentResult.canTranslate,
+        translation: agentResult.translation,
+        matchesExpected,
+        expectedTranslation: expectedTranslation ?? null,
+        ambiguities: agentResult.ambiguities,
+        suggestions: agentResult.suggestions,
+        overallStatus: agentResult.overallStatus,
+      };
     } catch (err) {
       return {
         success: false as const,

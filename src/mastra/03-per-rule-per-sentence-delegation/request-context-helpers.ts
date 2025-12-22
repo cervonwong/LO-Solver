@@ -82,3 +82,14 @@ export function getCurrentRules(requestContext: RequestContextGetter): Rule[] {
   }
   return rules;
 }
+
+/**
+ * Normalizes a translation string for fair comparison.
+ * - NFKC Unicode normalization for consistent representation
+ * - Collapses whitespace to single spaces
+ * - Trims leading/trailing whitespace
+ * - Removes trailing periods
+ */
+export function normalizeTranslation(s: string): string {
+  return s.normalize('NFKC').replace(/\s+/g, ' ').trim().replace(/\.+$/, '');
+}
