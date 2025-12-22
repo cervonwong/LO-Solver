@@ -7,7 +7,7 @@ import {
   getLogFile,
   type ToolExecuteContext,
 } from './request-context-helpers';
-import { logRuleTestResult } from './workflow';
+import { logRuleTestResult } from './logging-utils';
 
 const ruleTestInputSchema = z.object({
   title: z.string().describe('The title/category of the rule'),

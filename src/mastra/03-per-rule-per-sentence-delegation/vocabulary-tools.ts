@@ -7,7 +7,7 @@ import {
   logVocabularyUpdated,
   logVocabularyRemoved,
   logVocabularyCleared,
-} from './workflow';
+} from './logging-utils';
 
 // Vocabulary entry schema
 export const vocabularyEntrySchema = z.object({

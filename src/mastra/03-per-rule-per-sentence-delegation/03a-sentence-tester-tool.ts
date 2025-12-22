@@ -8,7 +8,7 @@ import {
   normalizeTranslation,
   type ToolExecuteContext,
 } from './request-context-helpers';
-import { logSentenceTestResult } from './workflow';
+import { logSentenceTestResult } from './logging-utils';
 
 const sentenceTestInputSchema = z.object({
   id: z.string().describe('Identifier for the sentence (e.g., "1", "Q1")'),
