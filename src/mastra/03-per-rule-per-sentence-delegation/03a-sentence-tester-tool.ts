@@ -116,7 +116,7 @@ Translate and validate the following sentence using the provided ruleset:
 ${problemContext}
 
 ## Rules
-${rules.map((r, i) => `${i + 1}. **${r.title}** (${r.confidence}): ${r.description}`).join('\n\n')}
+${rules.map((r, i) => `${i + 1}. **${r.title}**${r.confidence ? ` (${r.confidence})` : ''}: ${r.description}`).join('\n\n')}
 
 ## Vocabulary
 ${JSON.stringify(vocabulary, null, 2)}
@@ -258,11 +258,11 @@ export const testSentenceWithRulesetTool = createTool({
     const vocabulary = getVocabularyArray(ctx?.requestContext);
     const logFile = getLogFile(ctx?.requestContext);
 
-    // Convert ruleset to Rule[] format
+    // Convert ruleset to Rule[] format (conditionally include confidence if present)
     const rules: Rule[] = ruleset.map((r) => ({
       title: r.title,
       description: r.description,
-      confidence: r.confidence,
+      ...(r.confidence !== undefined && { confidence: r.confidence }),
     }));
 
     return executeSentenceTest({

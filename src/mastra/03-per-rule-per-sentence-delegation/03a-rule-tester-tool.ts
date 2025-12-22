@@ -19,7 +19,10 @@ import type { Mastra } from '@mastra/core/mastra';
 export const ruleSchema = z.object({
   title: z.string().describe('A short title that groups or organises the rule'),
   description: z.string().describe('A detailed description of the rule'),
-  confidence: z.enum(['HIGH', 'MEDIUM', 'LOW']).describe('Confidence level for this rule'),
+  confidence: z
+    .enum(['HIGH', 'MEDIUM', 'LOW'])
+    .optional()
+    .describe('Confidence level for this rule'),
 });
 
 const ruleTestSuccessSchema = z.object({
@@ -59,7 +62,7 @@ const ruleTestResultSchema = z.discriminatedUnion('success', [
 // ============================================================================
 
 interface ExecuteRuleTestParams {
-  rule: { title: string; description: string; confidence?: string };
+  rule: { title: string; description: string; confidence?: 'HIGH' | 'MEDIUM' | 'LOW' };
   allRules: Rule[];
   structuredProblem: StructuredProblemData;
   vocabulary: VocabularyEntry[];
@@ -85,7 +88,7 @@ async function executeRuleTest({
       const isTarget = r.title === rule.title;
       const prefix = isTarget ? '>>> ' : '    ';
       const suffix = isTarget ? ' <<< [TESTING THIS RULE]' : '';
-      return `${prefix}${i + 1}. **${r.title}** (${r.confidence}): ${r.description}${suffix}`;
+      return `${prefix}${i + 1}. **${r.title}**${r.confidence ? ` (${r.confidence})` : ''}: ${r.description}${suffix}`;
     })
     .join('\n\n');
 
@@ -212,15 +215,19 @@ export const testRuleWithRulesetTool = createTool({
     const vocabulary = getVocabularyArray(ctx?.requestContext);
     const logFile = getLogFile(ctx?.requestContext);
 
-    // Convert ruleset to Rule[] format (add confidence if missing)
+    // Convert ruleset to Rule[] format (conditionally include confidence if present)
     const allRules: Rule[] = ruleset.map((r) => ({
       title: r.title,
       description: r.description,
-      confidence: r.confidence,
+      ...(r.confidence !== undefined && { confidence: r.confidence }),
     }));
 
     return executeRuleTest({
-      rule,
+      rule: {
+        title: rule.title,
+        description: rule.description,
+        ...(rule.confidence !== undefined && { confidence: rule.confidence }),
+      },
       allRules,
       structuredProblem,
       vocabulary,

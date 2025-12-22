@@ -16,7 +16,7 @@ export interface StructuredProblemData {
 export interface Rule {
   title: string;
   description: string;
-  confidence: 'HIGH' | 'MEDIUM' | 'LOW';
+  confidence?: 'HIGH' | 'MEDIUM' | 'LOW';
 }
 
 /**
