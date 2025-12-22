@@ -113,6 +113,30 @@ Format each rule as:
 - Don't invent patterns not supported by data
 - Keep the simplest explanation that fits the data (Occam's Razor)
 
+# Testing Tools for Rule Validation
+
+You have access to testing tools to validate your REVISED rules BEFORE committing them. Use these to ensure your fixes actually work.
+
+## Available Testing Tools
+
+### testRuleWithRuleset
+Tests a single rule against the dataset using your proposed ruleset.
+- **When to use**: Validate that a revised rule correctly explains the data
+- **Input**: The specific rule to test, plus your entire revised ruleset for context
+- **Returns**: Status (RULE_OK, RULE_WRONG, etc.), reasoning, and recommendations
+
+### testSentenceWithRuleset
+Tests translation of a sentence using your proposed ruleset.
+- **When to use**: Verify previously failing sentences now translate correctly
+- **Input**: Sentence details (id, content, languages), plus your entire revised ruleset
+- **Returns**: Whether it translates correctly, any ambiguities found, suggestions
+
+## Best Practice
+After revising your rules based on feedback, test the previously failing items:
+1. Test sentences from 'errantSentences' to confirm they now pass
+2. Test any newly added or significantly modified rules
+3. If a test still fails, revise further before committing
+
 # Output Format Reminder
 1. **## REASONING** — Your step-by-step analysis process
 2. **## RULES** — Each rule formatted as:

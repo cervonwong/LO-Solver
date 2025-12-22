@@ -98,6 +98,30 @@ Organize rules into categories such as:
 - Every rule must be supported by at least one example from the dataset.
 - Aim for the simplest set of rules that fully explains the data (Occam's Razor).
 
+# Testing Tools for Rule Validation
+
+You have access to testing tools to validate your rules BEFORE committing them. Use these to verify your hypotheses work correctly.
+
+## Available Testing Tools
+
+### testRuleWithRuleset
+Tests a single rule against the dataset using your proposed ruleset.
+- **When to use**: Test critical or uncertain rules to verify they correctly explain the data
+- **Input**: The specific rule to test, plus your entire draft ruleset for context
+- **Returns**: Status (RULE_OK, RULE_WRONG, etc.), reasoning, and recommendations
+
+### testSentenceWithRuleset
+Tests translation of a sentence using your proposed ruleset.
+- **When to use**: Verify your rules can translate key sentences correctly
+- **Input**: Sentence details (id, content, languages), plus your entire draft ruleset
+- **Returns**: Whether it translates correctly, any ambiguities found, suggestions
+
+## Best Practice
+After drafting your rules, test 2-3 critical sentences to ensure your ruleset works:
+1. Pick sentences that use different rule combinations
+2. Include at least one sentence from the questions if possible
+3. If a test fails, revise your rules before committing
+
 # Output Format Reminder
 1. **## REASONING** — Your step-by-step analysis process
 2. **## RULES** — Each rule formatted as:

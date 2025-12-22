@@ -11,6 +11,7 @@ import { sentenceTesterAgent } from './03a-sentence-tester-agent';
 import { vocabularyTools } from './vocabulary-tools';
 import { testRuleTool } from './03a-rule-tester-tool';
 import { testSentenceTool } from './03a-sentence-tester-tool';
+import { testingTools } from './testing-tools';
 
 // All agents for workflow 03, registered for observability
 export const workflow03Agents = {
@@ -31,4 +32,5 @@ export const workflow03Tools = {
   ...vocabularyTools,
   testRule: testRuleTool,
   testSentence: testSentenceTool,
+  ...testingTools,
 };

@@ -4,6 +4,7 @@ import { INITIAL_HYPOTHESIZER_INSTRUCTIONS } from './02-initial-hypothesizer-ins
 import { VOCABULARY_TOOLS_INSTRUCTIONS } from './vocabulary-tools-prompt';
 import { openrouter } from '../openrouter';
 import { vocabularyTools } from './vocabulary-tools';
+import { testingTools } from './testing-tools';
 
 // Inject the vocabulary tools instructions into the prompt
 const instructions = INITIAL_HYPOTHESIZER_INSTRUCTIONS.replace(
@@ -14,6 +15,7 @@ const instructions = INITIAL_HYPOTHESIZER_INSTRUCTIONS.replace(
 /**
  * Initial Hypothesizer Agent - generates initial rules and vocabulary from structured problem.
  * Uses static vocabulary tools that read state from requestContext.
+ * Has access to testing tools to validate rules before committing.
  */
 export const initialHypothesizerAgent = new Agent({
   id: 'wf03-initial-hypothesizer',
@@ -24,7 +26,7 @@ export const initialHypothesizerAgent = new Agent({
   },
   // model: openrouter('google/gemini-3-pro-preview'),
   model: openrouter('google/gemini-3-flash-preview'),
-  tools: vocabularyTools,
+  tools: { ...vocabularyTools, ...testingTools },
   inputProcessors: [
     new UnicodeNormalizer({
       stripControlChars: false,

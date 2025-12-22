@@ -4,6 +4,7 @@ import { RULES_IMPROVER_INSTRUCTIONS } from './03b-rules-improver-instructions';
 import { VOCABULARY_TOOLS_INSTRUCTIONS } from './vocabulary-tools-prompt';
 import { openrouter } from '../openrouter';
 import { vocabularyTools } from './vocabulary-tools';
+import { testingTools } from './testing-tools';
 
 // Inject the vocabulary tools instructions into the prompt
 const instructions = RULES_IMPROVER_INSTRUCTIONS.replace(
@@ -14,6 +15,7 @@ const instructions = RULES_IMPROVER_INSTRUCTIONS.replace(
 /**
  * Rules Improver Agent - improves rules based on verifier feedback.
  * Uses static vocabulary tools that read state from requestContext.
+ * Has access to testing tools to validate revised rules before committing.
  */
 export const rulesImproverAgent = new Agent({
   id: 'wf03-rules-improver',
@@ -24,7 +26,7 @@ export const rulesImproverAgent = new Agent({
   },
   // model: openrouter('google/gemini-3-pro-preview'),
   model: openrouter('google/gemini-3-flash-preview'),
-  tools: vocabularyTools,
+  tools: { ...vocabularyTools, ...testingTools },
   inputProcessors: [
     new UnicodeNormalizer({
       stripControlChars: false,
