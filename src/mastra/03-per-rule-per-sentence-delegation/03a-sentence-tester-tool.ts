@@ -14,6 +14,7 @@ import { ruleSchema } from './03a-rule-tester-tool';
 import type { Rule } from './request-context-types';
 import type { VocabularyEntry } from './vocabulary-tools';
 import type { Mastra } from '@mastra/core/mastra';
+import { generateWithRetry } from './agent-utils';
 
 // ============================================================================
 // Shared Schemas
@@ -125,10 +126,13 @@ Attempt to translate this sentence step by step using the rules and vocabulary a
 `.trim();
 
   try {
-    const result = await mastra.getAgentById('wf03-sentence-tester').generate(prompt, {
-      maxSteps: 100,
-      structuredOutput: {
-        schema: agentResponseSchema,
+    const result = await generateWithRetry(mastra.getAgentById('wf03-sentence-tester'), {
+      prompt,
+      options: {
+        maxSteps: 100,
+        structuredOutput: {
+          schema: agentResponseSchema,
+        },
       },
     });
 

@@ -11,6 +11,7 @@ import { logRuleTestResult } from './logging-utils';
 import type { StructuredProblemData, Rule } from './request-context-types';
 import type { VocabularyEntry } from './vocabulary-tools';
 import type { Mastra } from '@mastra/core/mastra';
+import { generateWithRetry } from './agent-utils';
 
 // ============================================================================
 // Shared Schemas
@@ -124,10 +125,13 @@ ${JSON.stringify(structuredProblem.questions, null, 2)}
 `.trim();
 
   try {
-    const result = await mastra.getAgentById('wf03-rule-tester').generate(prompt, {
-      maxSteps: 100,
-      structuredOutput: {
-        schema: ruleTestSuccessSchema,
+    const result = await generateWithRetry(mastra.getAgentById('wf03-rule-tester'), {
+      prompt,
+      options: {
+        maxSteps: 100,
+        structuredOutput: {
+          schema: ruleTestSuccessSchema,
+        },
       },
     });
 

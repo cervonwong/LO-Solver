@@ -12,6 +12,7 @@ import {
   logAgentOutput,
   logValidationError,
 } from './logging-utils';
+import { generateWithRetry } from './agent-utils';
 
 const MAX_VERIFY_IMPROVE_ITERATIONS = 4;
 
@@ -228,14 +229,18 @@ const extractionStep = createStep({
     const logFile = initialState.logFile;
 
     const step1StartTime = new Date();
-    const response = await mastra
-      .getAgentById('wf03-structured-problem-extractor')
-      .generate(`${inputData.rawProblemText}`, {
-        maxSteps: 100,
-        structuredOutput: {
-          schema: structuredProblemSchema,
+    const response = await generateWithRetry(
+      mastra.getAgentById('wf03-structured-problem-extractor'),
+      {
+        prompt: `${inputData.rawProblemText}`,
+        options: {
+          maxSteps: 100,
+          structuredOutput: {
+            schema: structuredProblemSchema,
+          },
         },
-      });
+      },
+    );
 
     const timing1 = recordStepTiming(
       'Step 1',
@@ -316,9 +321,13 @@ const initialHypothesisStep = createStep({
       JSON.stringify({ vocabulary, structuredProblem });
 
     const hypothesizerStartTime = new Date();
-    const hypothesizerResponse = await mastra
-      .getAgentById('wf03-initial-hypothesizer')
-      .generate(hypothesizerPrompt, { maxSteps: 100, requestContext });
+    const hypothesizerResponse = await generateWithRetry(
+      mastra.getAgentById('wf03-initial-hypothesizer'),
+      {
+        prompt: hypothesizerPrompt,
+        options: { maxSteps: 100, requestContext },
+      },
+    );
 
     const hypothesizerTiming = recordStepTiming(
       'Step 2a',
@@ -344,14 +353,18 @@ const initialHypothesisStep = createStep({
       hypothesizerResponse.text;
 
     const extractorStartTime = new Date();
-    const extractorResponse = await mastra
-      .getAgentById('wf03-initial-hypothesis-extractor')
-      .generate(extractorPrompt, {
-        maxSteps: 100,
-        structuredOutput: {
-          schema: rulesSchema,
+    const extractorResponse = await generateWithRetry(
+      mastra.getAgentById('wf03-initial-hypothesis-extractor'),
+      {
+        prompt: extractorPrompt,
+        options: {
+          maxSteps: 100,
+          structuredOutput: {
+            schema: rulesSchema,
+          },
         },
-      });
+      },
+    );
 
     const extractorTiming = recordStepTiming(
       'Step 2b',
@@ -459,9 +472,13 @@ const verifyImproveLoopStep = createStep({
 
     // Step 3a1: Call the Verifier Orchestrator Agent (natural language output)
     const orchestratorStartTime = new Date();
-    const orchestratorResponse = await mastra
-      .getAgentById('wf03-verifier-orchestrator')
-      .generate(orchestratorPrompt, { maxSteps: 100, requestContext });
+    const orchestratorResponse = await generateWithRetry(
+      mastra.getAgentById('wf03-verifier-orchestrator'),
+      {
+        prompt: orchestratorPrompt,
+        options: { maxSteps: 100, requestContext },
+      },
+    );
 
     const orchestratorTiming = recordStepTiming(
       `Step 3a1 (Iter ${iterationCount + 1})`,
@@ -488,14 +505,18 @@ const verifyImproveLoopStep = createStep({
       orchestratorResponse.text;
 
     const verifierExtractorStartTime = new Date();
-    const verifierExtractorResponse = await mastra
-      .getAgentById('wf03-verifier-feedback-extractor')
-      .generate(verifierExtractorPrompt, {
-        maxSteps: 100,
-        structuredOutput: {
-          schema: verifierFeedbackSchema,
+    const verifierExtractorResponse = await generateWithRetry(
+      mastra.getAgentById('wf03-verifier-feedback-extractor'),
+      {
+        prompt: verifierExtractorPrompt,
+        options: {
+          maxSteps: 100,
+          structuredOutput: {
+            schema: verifierFeedbackSchema,
+          },
         },
-      });
+      },
+    );
 
     const verifierExtractorTiming = recordStepTiming(
       `Step 3a2 (Iter ${iterationCount + 1})`,
@@ -563,9 +584,10 @@ const verifyImproveLoopStep = createStep({
 
     // Step 3b1: Call the Rules Improver Agent (natural language output)
     const improverStartTime = new Date();
-    const improverResponse = await mastra
-      .getAgentById('wf03-rules-improver')
-      .generate(improverPrompt, { maxSteps: 100, requestContext });
+    const improverResponse = await generateWithRetry(mastra.getAgentById('wf03-rules-improver'), {
+      prompt: improverPrompt,
+      options: { maxSteps: 100, requestContext },
+    });
 
     const improverTiming = recordStepTiming(
       `Step 3b1 (Iter ${iterationCount + 1})`,
@@ -592,14 +614,18 @@ const verifyImproveLoopStep = createStep({
       improverResponse.text;
 
     const extractorStartTime = new Date();
-    const extractorResponse = await mastra
-      .getAgentById('wf03-rules-improvement-extractor')
-      .generate(extractorPrompt, {
-        maxSteps: 100,
-        structuredOutput: {
-          schema: rulesSchema,
+    const extractorResponse = await generateWithRetry(
+      mastra.getAgentById('wf03-rules-improvement-extractor'),
+      {
+        prompt: extractorPrompt,
+        options: {
+          maxSteps: 100,
+          structuredOutput: {
+            schema: rulesSchema,
+          },
         },
-      });
+      },
+    );
 
     const extractorTiming = recordStepTiming(
       `Step 3b2 (Iter ${iterationCount + 1})`,
@@ -693,14 +719,18 @@ const answerQuestionsStep = createStep({
     });
 
     const answererStartTime = new Date();
-    const answererResponse = await mastra
-      .getAgentById('wf03-question-answerer')
-      .generate(answererPrompt, {
-        maxSteps: 100,
-        structuredOutput: {
-          schema: questionsAnsweredSchema,
+    const answererResponse = await generateWithRetry(
+      mastra.getAgentById('wf03-question-answerer'),
+      {
+        prompt: answererPrompt,
+        options: {
+          maxSteps: 100,
+          structuredOutput: {
+            schema: questionsAnsweredSchema,
+          },
         },
-      });
+      },
+    );
 
     const answererTiming = recordStepTiming('Step 4', 'Question Answerer Agent', answererStartTime);
     const finalStepTimings = [...state.stepTimings, answererTiming];
