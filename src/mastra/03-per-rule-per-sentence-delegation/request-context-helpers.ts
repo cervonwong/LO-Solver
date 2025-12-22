@@ -91,5 +91,5 @@ export function getCurrentRules(requestContext: RequestContextGetter): Rule[] {
  * - Removes trailing periods
  */
 export function normalizeTranslation(s: string): string {
-  return s.normalize('NFKC').replace(/\s+/g, ' ').trim().replace(/\.+$/, '');
+  return s.normalize('NFC').replace(/\s+/g, ' ').trim().replace(/\.+$/, '');
 }
