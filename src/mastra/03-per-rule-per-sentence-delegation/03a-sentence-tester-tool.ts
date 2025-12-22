@@ -126,6 +126,7 @@ Attempt to translate this sentence step by step using the rules and vocabulary a
 
   try {
     const result = await mastra.getAgentById('wf03-sentence-tester').generate(prompt, {
+      maxSteps: 100,
       structuredOutput: {
         schema: agentResponseSchema,
       },

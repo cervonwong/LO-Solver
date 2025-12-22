@@ -122,6 +122,7 @@ ${JSON.stringify(structuredProblem.questions, null, 2)}
 
   try {
     const result = await mastra.getAgentById('wf03-rule-tester').generate(prompt, {
+      maxSteps: 100,
       structuredOutput: {
         schema: ruleTestSuccessSchema,
       },

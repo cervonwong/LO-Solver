@@ -231,6 +231,7 @@ const extractionStep = createStep({
     const response = await mastra
       .getAgentById('wf03-structured-problem-extractor')
       .generate(`${inputData.rawProblemText}`, {
+        maxSteps: 100,
         structuredOutput: {
           schema: structuredProblemSchema,
         },
@@ -316,7 +317,7 @@ const initialHypothesisStep = createStep({
     const hypothesizerStartTime = new Date();
     const hypothesizerResponse = await mastra
       .getAgentById('wf03-initial-hypothesizer')
-      .generate(hypothesizerPrompt, { requestContext });
+      .generate(hypothesizerPrompt, { maxSteps: 100, requestContext });
 
     const hypothesizerTiming = recordStepTiming(
       'Step 2a',
@@ -345,6 +346,7 @@ const initialHypothesisStep = createStep({
     const extractorResponse = await mastra
       .getAgentById('wf03-initial-hypothesis-extractor')
       .generate(extractorPrompt, {
+        maxSteps: 100,
         structuredOutput: {
           schema: rulesSchema,
         },
@@ -458,7 +460,7 @@ const verifyImproveLoopStep = createStep({
     const orchestratorStartTime = new Date();
     const orchestratorResponse = await mastra
       .getAgentById('wf03-verifier-orchestrator')
-      .generate(orchestratorPrompt, { requestContext });
+      .generate(orchestratorPrompt, { maxSteps: 100, requestContext });
 
     const orchestratorTiming = recordStepTiming(
       `Step 3a1 (Iter ${iterationCount + 1})`,
@@ -488,6 +490,7 @@ const verifyImproveLoopStep = createStep({
     const verifierExtractorResponse = await mastra
       .getAgentById('wf03-verifier-feedback-extractor')
       .generate(verifierExtractorPrompt, {
+        maxSteps: 100,
         structuredOutput: {
           schema: verifierFeedbackSchema,
         },
@@ -561,7 +564,7 @@ const verifyImproveLoopStep = createStep({
     const improverStartTime = new Date();
     const improverResponse = await mastra
       .getAgentById('wf03-rules-improver')
-      .generate(improverPrompt, { requestContext });
+      .generate(improverPrompt, { maxSteps: 100, requestContext });
 
     const improverTiming = recordStepTiming(
       `Step 3b1 (Iter ${iterationCount + 1})`,
@@ -591,6 +594,7 @@ const verifyImproveLoopStep = createStep({
     const extractorResponse = await mastra
       .getAgentById('wf03-rules-improvement-extractor')
       .generate(extractorPrompt, {
+        maxSteps: 100,
         structuredOutput: {
           schema: rulesSchema,
         },
@@ -691,6 +695,7 @@ const answerQuestionsStep = createStep({
     const answererResponse = await mastra
       .getAgentById('wf03-question-answerer')
       .generate(answererPrompt, {
+        maxSteps: 100,
         structuredOutput: {
           schema: questionsAnsweredSchema,
         },
