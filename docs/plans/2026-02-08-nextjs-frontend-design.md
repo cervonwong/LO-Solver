@@ -227,6 +227,118 @@ url: "file:/absolute/path/to/lo-solver/mastra.db"
 
 Run both `dev:next` and `dev:studio` during development. Studio provides direct workflow access; the Next.js app provides the user-facing and dev trace UIs.
 
+## Implementation Plan
+
+### Phase 1: Project Setup
+
+**Step 1.1: Initialize Next.js inside the existing project**
+- Install `next`, `react`, `react-dom` as dependencies
+- Install `@ai-sdk/react`, `ai`, `@mastra/ai-sdk` for streaming
+- Create `next.config.ts` with any needed config (e.g., `serverExternalPackages` for Mastra/LibSQL)
+- Create `mastra.config.ts` for Studio
+- Update `tsconfig.json` for Next.js (JSX, paths, etc.)
+- Update `package.json` scripts: `dev:next`, `dev:studio`, `build`, `start`
+
+**Step 1.2: Set up Tailwind + shadcn**
+- Install and configure Tailwind CSS
+- Run `npx shadcn@latest init`
+- Install needed components: Collapsible, Badge, Tabs, ScrollArea, ResizablePanel, Table, Textarea, Button
+
+**Step 1.3: Absolute DB path**
+- Update `src/mastra/index.ts` LibSQL URL to absolute path for Studio coexistence
+
+**Step 1.4: Verify coexistence**
+- Run `npm run dev:next` — Next.js starts without errors
+- Run `npm run dev:studio` — Mastra Studio starts and can access workflows
+- Confirm both can read/write `mastra.db`
+
+### Phase 2: API Route + Streaming Foundation
+
+**Step 2.1: Create the solve API route**
+- `src/app/api/solve/route.ts` — POST handler using `handleWorkflowStream` + `createUIMessageStreamResponse`
+- Verify the workflow can be triggered and events stream back (test with curl or a minimal page)
+
+**Step 2.2: Define custom event types**
+- `src/lib/workflow-events.ts` — TypeScript types for all custom `data-*` parts (step-start, agent-reasoning, tool-call, tool-result, vocabulary-update, iteration-boundary)
+
+**Step 2.3: Add `writer.write()` calls to workflow.ts**
+- Emit `data-step-start` and `data-step-complete` at each step boundary
+- Emit `data-agent-reasoning` after each `generateWithRetry` call with agent name + reasoning text
+- Emit `data-iteration-update` at verify/improve loop boundaries with iteration count + conclusion
+
+**Step 2.4: Add trace events to tool files**
+- `03a-rule-tester-tool.ts`: emit `data-tool-call` with rule title + result status
+- `03a-sentence-tester-tool.ts`: emit `data-tool-call` with sentence ID + match status
+- `vocabulary-tools.ts`: emit `data-vocabulary-update` with current vocabulary snapshot
+
+### Phase 3: Home Page + Run Page (User View)
+
+**Step 3.1: Root layout**
+- `src/app/layout.tsx` — minimal layout with nav bar (project name, link to home)
+
+**Step 3.2: Home page**
+- `src/app/page.tsx` — textarea, submit button, example problem dropdown
+- On submit: call `sendMessage` via `useChat`, navigate to run page
+- Use example problems from `examples/` directory
+
+**Step 3.3: Run page — progress bar**
+- `src/app/run/[runId]/page.tsx` — consume `useChat` messages
+- `src/components/step-progress.tsx` — 4-step indicator driven by `data-workflow` parts
+- Map workflow step IDs (`extract-structure`, `initial-hypothesis`, `verify-improve-rules-loop`, `answer-questions`) to display labels
+- Show active/completed/pending states
+
+**Step 3.4: Run page — results panel**
+- `src/components/results-panel.tsx` — renders when workflow completes
+- Answers section: question ID, answer text, confidence badge
+- Rules section: expandable list with title, description, confidence
+- Vocabulary section: table with foreignForm, meaning, type, notes
+- Extract data from the final `data-workflow` step outputs
+
+### Phase 4: Dev Trace Page
+
+**Step 4.1: Trace page layout**
+- `src/app/run/[runId]/trace/page.tsx` — ResizablePanel split: swimlanes (left) + detail panel (right)
+- Consumes the same `useChat` stream as the run page (or replays from stored data)
+
+**Step 4.2: Swimlane component**
+- `src/components/dev/swimlane.tsx` — single agent column
+- Header: agent name, model name, duration, status indicator (pulsing/checkmark)
+- Body sections: prompt (truncated), reasoning (truncated), tool calls (compact badges), output (truncated JSON)
+- Each section clickable — sets the selected item for the detail panel
+
+**Step 4.3: Swimlane container**
+- `src/components/dev/dev-trace.tsx` — horizontal scroll container of swimlane columns
+- Accumulates swimlane data from `data-step-start`, `data-agent-reasoning`, `data-tool-call`, `data-workflow` parts
+- Orders lanes chronologically
+
+**Step 4.4: Iteration tabs**
+- `src/components/dev/iteration-tabs.tsx` — Tabs component for verify/improve loop iterations
+- Filters swimlanes by iteration number
+
+**Step 4.5: Detail panel**
+- `src/components/dev/detail-panel.tsx` — right-side inspector
+- Renders full content of selected swimlane section
+- Syntax highlighting for JSON (use a lightweight library or `<pre>` with Tailwind)
+- Empty state when nothing selected
+
+### Phase 5: Polish + Integration Testing
+
+**Step 5.1: End-to-end test with a real problem**
+- Submit one of the example problems through the UI
+- Verify progress bar updates correctly through all steps
+- Verify results render correctly
+- Verify dev trace populates all swimlanes with correct data
+- Verify detail panel shows full content on click
+
+**Step 5.2: Error handling**
+- Display workflow errors (bail states) gracefully on the run page
+- Handle SSE disconnection/reconnection
+
+**Step 5.3: Styling pass**
+- Consistent spacing, typography, color scheme
+- Responsive layout (swimlanes stack vertically on narrow screens or remain horizontal with scroll)
+- Loading states and transitions
+
 ## References
 
 - [Mastra + Next.js guide](https://mastra.ai/guides/getting-started/next-js)
