@@ -1,3 +1,5 @@
+import { resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { Mastra } from '@mastra/core/mastra';
 import { PinoLogger } from '@mastra/loggers';
 import { LibSQLStore } from '@mastra/libsql';
@@ -7,6 +9,9 @@ import { extractThenHypoTestLoopWorkflow } from './02-extract-then-hypo-test-loo
 import { workflow03Agents } from './03-per-rule-per-sentence-delegation';
 import { workflow03 } from './03-per-rule-per-sentence-delegation/workflow';
 import { Observability } from '@mastra/observability';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const DB_PATH = resolve(__dirname, '../../mastra.db');
 
 export const mastra = new Mastra({
   agents: {
@@ -23,10 +28,7 @@ export const mastra = new Mastra({
   },
   storage: new LibSQLStore({
     id: 'mastra-storage',
-    // stores observability, scores, ...
-    // if storing in memory, use `url: ":memory:"`;
-    // if it needs to persist, use `url: "file:../../mastra.db"`
-    url: 'file:../../mastra.db',
+    url: `file:${DB_PATH}`,
   }),
   logger: new PinoLogger({
     name: 'Mastra',

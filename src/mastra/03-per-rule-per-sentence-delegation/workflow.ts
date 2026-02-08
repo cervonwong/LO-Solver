@@ -222,9 +222,18 @@ const extractionStep = createStep({
   inputSchema: rawProblemInputSchema,
   outputSchema: structuredProblemSchema,
   stateSchema: workflowStateSchema,
-  execute: async ({ inputData, mastra, bail, state, setState }) => {
+  execute: async ({ inputData, mastra, bail, state, setState, writer }) => {
     // Initialize workflow state at the start of the workflow
     const initialState = initializeWorkflowState();
+
+    await writer?.custom({
+      type: 'data-step-start',
+      data: {
+        stepId: 'extract-structure',
+        stepName: 'Extract Structure',
+        timestamp: new Date().toISOString(),
+      },
+    });
     await setState(initialState);
     const logFile = initialState.logFile;
 
@@ -241,6 +250,18 @@ const extractionStep = createStep({
         },
       },
     );
+
+    await writer?.custom({
+      type: 'data-agent-reasoning',
+      data: {
+        stepId: 'extract-structure',
+        agentId: 'wf03-structured-problem-extractor',
+        agentName: 'Problem Extractor',
+        model: 'gpt-5-mini',
+        reasoning: response.text || JSON.stringify(response.object),
+        timestamp: new Date().toISOString(),
+      },
+    });
 
     const timing1 = recordStepTiming(
       'Step 1',
@@ -280,6 +301,16 @@ const extractionStep = createStep({
       });
     }
 
+    await writer?.custom({
+      type: 'data-step-complete',
+      data: {
+        stepId: 'extract-structure',
+        stepName: 'Extract Structure',
+        timestamp: new Date().toISOString(),
+        durationMs: Date.now() - step1StartTime.getTime(),
+      },
+    });
+
     return parsed;
   },
 });
@@ -300,9 +331,19 @@ const initialHypothesisStep = createStep({
   inputSchema: initialHypothesisInputSchema,
   outputSchema: initialHypothesisOutputSchema,
   stateSchema: workflowStateSchema,
-  execute: async ({ inputData, mastra, bail, state, setState }) => {
+  execute: async ({ inputData, mastra, bail, state, setState, writer }) => {
     const structuredProblem = inputData;
     const logFile = state.logFile;
+
+    const stepStartTime = Date.now();
+    await writer?.custom({
+      type: 'data-step-start',
+      data: {
+        stepId: 'initial-hypothesis',
+        stepName: 'Initial Hypothesis',
+        timestamp: new Date().toISOString(),
+      },
+    });
 
     // Rebuild vocabulary state from workflow state
     const vocabularyState = new Map(Object.entries(state.vocabulary));
@@ -328,6 +369,18 @@ const initialHypothesisStep = createStep({
         options: { maxSteps: 100, requestContext },
       },
     );
+
+    await writer?.custom({
+      type: 'data-agent-reasoning',
+      data: {
+        stepId: 'initial-hypothesis',
+        agentId: 'wf03-initial-hypothesizer',
+        agentName: 'Initial Hypothesizer',
+        model: 'gemini-3-flash',
+        reasoning: hypothesizerResponse.text || JSON.stringify(hypothesizerResponse.object),
+        timestamp: new Date().toISOString(),
+      },
+    });
 
     const hypothesizerTiming = recordStepTiming(
       'Step 2a',
@@ -365,6 +418,18 @@ const initialHypothesisStep = createStep({
         },
       },
     );
+
+    await writer?.custom({
+      type: 'data-agent-reasoning',
+      data: {
+        stepId: 'initial-hypothesis',
+        agentId: 'wf03-initial-hypothesis-extractor',
+        agentName: 'Hypothesis Extractor',
+        model: 'gpt-5-mini',
+        reasoning: extractorResponse.text || JSON.stringify(extractorResponse.object),
+        timestamp: new Date().toISOString(),
+      },
+    });
 
     const extractorTiming = recordStepTiming(
       'Step 2b',
@@ -415,6 +480,16 @@ const initialHypothesisStep = createStep({
       stepTimings: [...state.stepTimings, hypothesizerTiming, extractorTiming],
     });
 
+    await writer?.custom({
+      type: 'data-step-complete',
+      data: {
+        stepId: 'initial-hypothesis',
+        stepName: 'Initial Hypothesis',
+        timestamp: new Date().toISOString(),
+        durationMs: Date.now() - stepStartTime,
+      },
+    });
+
     // Return the initial loop state with hypothesized rules
     return {
       structuredProblem,
@@ -433,10 +508,20 @@ const verifyImproveLoopStep = createStep({
   inputSchema: hypothesisTestLoopSchema,
   outputSchema: hypothesisTestLoopSchema,
   stateSchema: workflowStateSchema,
-  execute: async ({ inputData, mastra, bail, state, setState }) => {
+  execute: async ({ inputData, mastra, bail, state, setState, writer }) => {
     const { structuredProblem, rules: currentRules, iterationCount } = inputData;
     const logFile = state.logFile;
     let currentStepTimings = [...state.stepTimings];
+
+    const stepStartTime = Date.now();
+    await writer?.custom({
+      type: 'data-step-start',
+      data: {
+        stepId: 'verify-improve',
+        stepName: 'Verify & Improve',
+        timestamp: new Date().toISOString(),
+      },
+    });
 
     // Rebuild vocabulary state from workflow state
     const vocabularyState = new Map(Object.entries(state.vocabulary));
@@ -480,6 +565,18 @@ const verifyImproveLoopStep = createStep({
       },
     );
 
+    await writer?.custom({
+      type: 'data-agent-reasoning',
+      data: {
+        stepId: 'verify-improve',
+        agentId: 'wf03-verifier-orchestrator',
+        agentName: 'Verifier Orchestrator',
+        model: 'gemini-3-flash',
+        reasoning: orchestratorResponse.text || JSON.stringify(orchestratorResponse.object),
+        timestamp: new Date().toISOString(),
+      },
+    });
+
     const orchestratorTiming = recordStepTiming(
       `Step 3a1 (Iter ${iterationCount + 1})`,
       'Verifier Orchestrator Agent',
@@ -518,6 +615,19 @@ const verifyImproveLoopStep = createStep({
       },
     );
 
+    await writer?.custom({
+      type: 'data-agent-reasoning',
+      data: {
+        stepId: 'verify-improve',
+        agentId: 'wf03-verifier-feedback-extractor',
+        agentName: 'Feedback Extractor',
+        model: 'gpt-5-mini',
+        reasoning:
+          verifierExtractorResponse.text || JSON.stringify(verifierExtractorResponse.object),
+        timestamp: new Date().toISOString(),
+      },
+    });
+
     const verifierExtractorTiming = recordStepTiming(
       `Step 3a2 (Iter ${iterationCount + 1})`,
       'Verifier Feedback Extractor Agent',
@@ -554,8 +664,29 @@ const verifyImproveLoopStep = createStep({
 
     const verifierFeedback = orchestratorParseResult.data;
 
+    await writer?.custom({
+      type: 'data-iteration-update',
+      data: {
+        stepId: 'verify-improve',
+        iteration: iterationCount + 1,
+        maxIterations: MAX_VERIFY_IMPROVE_ITERATIONS,
+        conclusion: verifierFeedback.conclusion,
+        timestamp: new Date().toISOString(),
+      },
+    });
+
     // If all rules pass, we're done - no need to improve
     if (verifierFeedback.conclusion === 'ALL_RULES_PASS') {
+      await writer?.custom({
+        type: 'data-step-complete',
+        data: {
+          stepId: 'verify-improve',
+          stepName: 'Verify & Improve',
+          timestamp: new Date().toISOString(),
+          durationMs: Date.now() - stepStartTime,
+        },
+      });
+
       await setState({ ...state, stepTimings: currentStepTimings });
       return {
         structuredProblem,
@@ -587,6 +718,18 @@ const verifyImproveLoopStep = createStep({
     const improverResponse = await generateWithRetry(mastra.getAgentById('wf03-rules-improver'), {
       prompt: improverPrompt,
       options: { maxSteps: 100, requestContext },
+    });
+
+    await writer?.custom({
+      type: 'data-agent-reasoning',
+      data: {
+        stepId: 'verify-improve',
+        agentId: 'wf03-rules-improver',
+        agentName: 'Rules Improver',
+        model: 'gemini-3-flash',
+        reasoning: improverResponse.text || JSON.stringify(improverResponse.object),
+        timestamp: new Date().toISOString(),
+      },
     });
 
     const improverTiming = recordStepTiming(
@@ -626,6 +769,18 @@ const verifyImproveLoopStep = createStep({
         },
       },
     );
+
+    await writer?.custom({
+      type: 'data-agent-reasoning',
+      data: {
+        stepId: 'verify-improve',
+        agentId: 'wf03-rules-improvement-extractor',
+        agentName: 'Improvement Extractor',
+        model: 'gpt-5-mini',
+        reasoning: extractorResponse.text || JSON.stringify(extractorResponse.object),
+        timestamp: new Date().toISOString(),
+      },
+    });
 
     const extractorTiming = recordStepTiming(
       `Step 3b2 (Iter ${iterationCount + 1})`,
@@ -677,6 +832,16 @@ const verifyImproveLoopStep = createStep({
       stepTimings: currentStepTimings,
     });
 
+    await writer?.custom({
+      type: 'data-step-complete',
+      data: {
+        stepId: 'verify-improve',
+        stepName: 'Verify & Improve',
+        timestamp: new Date().toISOString(),
+        durationMs: Date.now() - stepStartTime,
+      },
+    });
+
     // Return the updated loop state with improved rules
     return {
       structuredProblem,
@@ -702,9 +867,19 @@ const answerQuestionsStep = createStep({
   inputSchema: questionAnsweringInputSchema,
   outputSchema: questionsAnsweredSchema,
   stateSchema: workflowStateSchema,
-  execute: async ({ inputData, mastra, bail, state, setState }) => {
+  execute: async ({ inputData, mastra, bail, state, setState, writer }) => {
     const { structuredProblem, rules } = inputData;
     const logFile = state.logFile;
+
+    const stepStartTime = Date.now();
+    await writer?.custom({
+      type: 'data-step-start',
+      data: {
+        stepId: 'answer-questions',
+        stepName: 'Answer Questions',
+        timestamp: new Date().toISOString(),
+      },
+    });
 
     // Rebuild vocabulary from workflow state (read-only for question answerer)
     const vocabularyState = new Map(Object.entries(state.vocabulary));
@@ -731,6 +906,18 @@ const answerQuestionsStep = createStep({
         },
       },
     );
+
+    await writer?.custom({
+      type: 'data-agent-reasoning',
+      data: {
+        stepId: 'answer-questions',
+        agentId: 'wf03-question-answerer',
+        agentName: 'Question Answerer',
+        model: 'gemini-3-flash',
+        reasoning: answererResponse.text || JSON.stringify(answererResponse.object),
+        timestamp: new Date().toISOString(),
+      },
+    });
 
     const answererTiming = recordStepTiming('Step 4', 'Question Answerer Agent', answererStartTime);
     const finalStepTimings = [...state.stepTimings, answererTiming];
@@ -771,6 +958,16 @@ const answerQuestionsStep = createStep({
 
     // Save final state
     await setState({ ...state, stepTimings: finalStepTimings });
+
+    await writer?.custom({
+      type: 'data-step-complete',
+      data: {
+        stepId: 'answer-questions',
+        stepName: 'Answer Questions',
+        timestamp: new Date().toISOString(),
+        durationMs: Date.now() - stepStartTime,
+      },
+    });
 
     return answererParsed;
   },
