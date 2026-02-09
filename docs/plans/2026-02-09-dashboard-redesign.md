@@ -1,7 +1,7 @@
 # Dashboard Redesign — Single-Page Agent Visualization
 
 **Date:** 2026-02-09
-**Status:** Design
+**Status:** In Progress (Sprints 1–3 complete)
 
 ## Goals
 
@@ -169,6 +169,37 @@ Events from `useChat` feed into the store. All components read reactively. Repla
 - **dagre** or **elkjs** — automatic graph layout
 - **AI SDK `useChat`** — streaming connection (already in use)
 - **react-markdown** — reasoning text rendering
+
+## Implementation Progress
+
+### Sprint 1: Foundation (Complete)
+- Installed deps: `@xyflow/react`, `zustand`, `react-markdown`
+- Created Zustand store (`src/lib/workflow-store.ts`) with all state and actions
+- Extended `workflow-events.ts` with `AgentStartEvent` and `AgentCompleteEvent`
+- Simplified `layout.tsx`, rebuilt `page.tsx` as single-page layout shell with resizable panels
+
+### Sprint 2: Top Bar (Complete)
+- `top-bar.tsx` — container with left/center/right sections
+- `problem-input.tsx` — "Upload problem" / "View loaded problem" button + reset, dialog with textarea and example presets
+- `step-progress.tsx` — 4 connected badge pills with status derivation from events
+- `top-bar-actions.tsx` — three-dot menu (Ellipsis icon) with shadcn DropdownMenu for theme selection (light/dark/system using lucide icons), stop button, results button
+
+### Sprint 3: Flow Diagram (Complete)
+- `flow-utils.ts` — manual vertical layout (dagre removed due to CJS incompatibility), `buildFlowGraph()` derives nodes/edges from events
+- `step-node.tsx` — color-coded step rectangles with status indicators and duration badges
+- `agent-node.tsx` — agent cards with model pill, status dot, selection ring
+- `loop-edge.tsx` — animated bezier loop-back edge with iteration counter
+- `workflow-canvas.tsx` — React Flow wrapper with `ReactFlowProvider`, `ResizeObserver`-driven `fitView` for proper panel resize behavior
+
+### Sprint 4: Detail Panel (Pending)
+### Sprint 5: Collapsible Panes (Pending)
+### Sprint 6: Backend Events (Pending)
+### Sprint 7: Integration & Polish (Pending)
+
+### Deviations from Original Design
+- **No dagre/elkjs**: `@dagrejs/dagre` is CJS-only, incompatible with Next.js bundler. Manual layout used instead (fixed 4-step pipeline makes auto-layout unnecessary).
+- **No tool nodes**: Tool calls will be shown in the detail panel feed rather than as separate DAG nodes (reduces visual clutter).
+- **Problem input simplified**: Single button + dialog instead of compact inline input with expand popover.
 
 ## Visual Style
 

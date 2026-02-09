@@ -22,6 +22,7 @@
   },
   "dependencies": {
     "@ai-sdk/react": "^3.0.79",
+    "@dagrejs/dagre": "^2.0.3",
     "@mastra/ai-sdk": "^1.0.3",
     "@mastra/core": "^1.2.0",
     "@mastra/evals": "^1.1.0",
@@ -30,6 +31,7 @@
     "@mastra/memory": "^1.1.0",
     "@mastra/observability": "^1.2.0",
     "@openrouter/ai-sdk-provider": "^2.1.1",
+    "@xyflow/react": "^12.10.0",
     "ai": "^6.0.77",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -38,9 +40,11 @@
     "radix-ui": "^1.4.3",
     "react": "19.2.3",
     "react-dom": "19.2.3",
+    "react-markdown": "^10.1.0",
     "react-resizable-panels": "^4.6.2",
     "tailwind-merge": "^3.4.0",
-    "zod": "^4.3.6"
+    "zod": "^4.3.6",
+    "zustand": "^5.0.11"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

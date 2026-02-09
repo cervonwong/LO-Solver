@@ -4,6 +4,7 @@
 
 | Plan | Status | Description |
 |------|--------|-------------|
+| [2026-02-09-dashboard-redesign](./2026-02-09-dashboard-redesign.md) | In Progress (Sprints 1–3 done) | Single-page dashboard with React Flow DAG, agent detail panel, and collapsible panes |
 
 ## Completed Plans
 

@@ -69,10 +69,35 @@ export interface IterationUpdateEvent {
   };
 }
 
+export interface AgentStartEvent {
+  type: 'data-agent-start';
+  data: {
+    stepId: string;
+    agentId: string;
+    agentName: string;
+    model: string;
+    timestamp: string;
+  };
+}
+
+export interface AgentCompleteEvent {
+  type: 'data-agent-complete';
+  data: {
+    stepId: string;
+    agentId: string;
+    agentName: string;
+    model: string;
+    timestamp: string;
+    durationMs: number;
+  };
+}
+
 export type WorkflowEvent =
   | StepStartEvent
   | StepCompleteEvent
   | AgentReasoningEvent
   | ToolCallEvent
   | VocabularyUpdateEvent
-  | IterationUpdateEvent;
+  | IterationUpdateEvent
+  | AgentStartEvent
+  | AgentCompleteEvent;
