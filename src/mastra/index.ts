@@ -1,5 +1,4 @@
-import { resolve, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { resolve } from 'node:path';
 import { Mastra } from '@mastra/core/mastra';
 import { PinoLogger } from '@mastra/loggers';
 import { LibSQLStore } from '@mastra/libsql';
@@ -10,8 +9,7 @@ import { workflow03Agents } from './03-per-rule-per-sentence-delegation';
 import { workflow03 } from './03-per-rule-per-sentence-delegation/workflow';
 import { Observability } from '@mastra/observability';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const DB_PATH = resolve(__dirname, '../../mastra.db');
+const DB_PATH = resolve(process.cwd(), 'mastra.db');
 
 export const mastra = new Mastra({
   agents: {

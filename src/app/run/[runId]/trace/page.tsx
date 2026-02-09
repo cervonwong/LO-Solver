@@ -28,18 +28,25 @@ export default function TracePage({ params }: { params: Promise<{ runId: string 
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const processEvents = useCallback((events: StreamEvent[]) => {
+    // Key completedSteps by "stepId:iteration" so verify-improve iterations
+    // don't overwrite each other's durations
     const completedSteps = new Map<string, number>();
     const iterationSet = new Set<number>();
+    let trackIteration = 0;
 
     // First pass: gather step completion data and iterations
     for (const event of events) {
-      if (event.type === 'data-step-complete') {
-        const data = (event as StepCompleteEvent).data;
-        completedSteps.set(data.stepId, data.durationMs);
-      }
       if (event.type === 'data-iteration-update') {
         const data = (event as IterationUpdateEvent).data;
+        trackIteration = data.iteration;
         iterationSet.add(data.iteration);
+      }
+      if (event.type === 'data-step-complete') {
+        const data = (event as StepCompleteEvent).data;
+        const key = data.stepId === 'verify-improve'
+          ? `${data.stepId}:${trackIteration}`
+          : data.stepId;
+        completedSteps.set(key, data.durationMs);
       }
     }
 
@@ -54,7 +61,9 @@ export default function TracePage({ params }: { params: Promise<{ runId: string 
       }
       if (event.type === 'data-agent-reasoning') {
         const data = (event as AgentReasoningEvent).data;
-        const durationMs = completedSteps.get(data.stepId);
+        const isIterative = data.stepId === 'verify-improve';
+        const key = isIterative ? `${data.stepId}:${currentIteration}` : data.stepId;
+        const durationMs = completedSteps.get(key);
         newLanes.push({
           agentId: data.agentId,
           agentName: data.agentName,
@@ -63,8 +72,8 @@ export default function TracePage({ params }: { params: Promise<{ runId: string 
           reasoning: data.reasoning,
           timestamp: data.timestamp,
           durationMs,
-          iteration: data.stepId === 'verify-improve' ? currentIteration : undefined,
-          status: completedSteps.has(data.stepId) ? 'completed' : 'running',
+          iteration: isIterative ? currentIteration : undefined,
+          status: completedSteps.has(key) ? 'completed' : 'running',
         });
       }
     }

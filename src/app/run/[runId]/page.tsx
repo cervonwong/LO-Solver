@@ -29,8 +29,12 @@ export default function RunPage({ params }: { params: Promise<{ runId: string }>
   const onData = useCallback(
     (dataPart: { type: string; data?: unknown }) => {
       try {
+        const MAX_STORED_EVENTS = 500;
         const stored = JSON.parse(sessionStorage.getItem(`run-events-${runId}`) || '[]');
         stored.push(dataPart);
+        if (stored.length > MAX_STORED_EVENTS) {
+          stored.splice(0, stored.length - MAX_STORED_EVENTS);
+        }
         sessionStorage.setItem(`run-events-${runId}`, JSON.stringify(stored));
       } catch {
         // Ignore storage errors
