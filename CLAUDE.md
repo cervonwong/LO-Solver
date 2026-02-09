@@ -4,8 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Commands
 
-- `npm run dev` — Start Mastra dev server (hot-reload)
-- `npm run dev:new` — Clear database then start dev server
+- `npm run dev` — Start Next.js frontend and Mastra dev server concurrently
 - `npm run build` — Production build (outputs to `.mastra/output/`)
 - `npx tsc --noEmit` — Type-check without emitting (run before commits)
 

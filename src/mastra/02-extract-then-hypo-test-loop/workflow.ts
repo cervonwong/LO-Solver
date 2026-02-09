@@ -435,9 +435,7 @@ const hypothesisAndTestLoopStep = createStep({
     });
 
     const testerStartTime = new Date();
-    const testerResponse = await mastra
-      .getAgentById('wf02-rules-tester')
-      .generate(testerPrompt, {
+    const testerResponse = await mastra.getAgentById('wf02-rules-tester').generate(testerPrompt, {
       structuredOutput: {
         schema: rulesTestResultsSchema,
       },
