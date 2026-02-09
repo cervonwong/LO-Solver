@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useState, useCallback, use } from 'react';
+import { useEffect, useState, useCallback, useRef, use } from 'react';
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
 import { StepProgress } from '@/components/step-progress';
 import { ResultsPanel } from '@/components/results-panel';
 import type { ResultsPanelProps } from '@/components/results-panel';
+import { useRunContext } from '@/components/run-context';
 import Link from 'next/link';
 
 type WorkflowResult = NonNullable<ResultsPanelProps['result']>;
@@ -18,14 +19,15 @@ export default function RunPage({ params }: { params: Promise<{ runId: string }>
   const { runId } = use(params);
   const [stepStatuses, setStepStatuses] = useState<Record<string, StepStatus>>({});
   const [statusMessage, setStatusMessage] = useState('Waiting to start...');
+  const startedRef = useRef(false);
   const [started, setStarted] = useState(false);
   const [result, setResult] = useState<WorkflowResult | null>(null);
   const [rules, setRules] = useState<Rule[]>([]);
   const [vocabulary, setVocabulary] = useState<VocabularyEntry[]>([]);
+  const { setRunning, registerStopHandler } = useRunContext();
 
   const onData = useCallback(
     (dataPart: { type: string; data?: unknown }) => {
-      // Store all events in sessionStorage for the trace page
       try {
         const stored = JSON.parse(sessionStorage.getItem(`run-events-${runId}`) || '[]');
         stored.push(dataPart);
@@ -48,7 +50,7 @@ export default function RunPage({ params }: { params: Promise<{ runId: string }>
     [runId],
   );
 
-  const { messages, sendMessage, status, error } = useChat({
+  const { messages, sendMessage, status, error, stop } = useChat({
     transport: new DefaultChatTransport({
       api: '/api/solve',
       prepareSendMessagesRequest: ({ messages: msgs }) => {
@@ -61,18 +63,42 @@ export default function RunPage({ params }: { params: Promise<{ runId: string }>
     onData,
   });
 
-  // Start the workflow on mount
+  // Register stop handler with context so header nav can abort the stream
   useEffect(() => {
-    if (started) return;
+    registerStopHandler(() => stop());
+  }, [registerStopHandler, stop]);
+
+  // Track running state in context
+  useEffect(() => {
+    const running = started && (status === 'streaming' || status === 'submitted');
+    setRunning(running);
+    return () => setRunning(false);
+  }, [started, status, setRunning]);
+
+  // Warn on browser-level navigation (tab close, hard refresh)
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (started && (status === 'streaming' || status === 'submitted')) {
+        e.preventDefault();
+      }
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [started, status]);
+
+  // Start the workflow on mount (ref prevents double-fire in strict mode)
+  useEffect(() => {
+    if (startedRef.current) return;
     const problemText = sessionStorage.getItem(`run-${runId}`);
     if (!problemText) {
       setStatusMessage('');
       return;
     }
+    startedRef.current = true;
     setStarted(true);
     setStatusMessage('Starting pipeline...');
     sendMessage({ text: problemText });
-  }, [runId, started, sendMessage]);
+  }, [runId, sendMessage]);
 
   // Update status based on chat status
   useEffect(() => {
@@ -97,7 +123,7 @@ export default function RunPage({ params }: { params: Promise<{ runId: string }>
   // Extract workflow results from streaming events stored in sessionStorage
   useEffect(() => {
     if (status !== 'ready' || !started || messages.length <= 1) return;
-    if (result) return; // Already extracted
+    if (result) return;
 
     try {
       const stored = JSON.parse(sessionStorage.getItem(`run-events-${runId}`) || '[]') as Array<{
@@ -109,15 +135,12 @@ export default function RunPage({ params }: { params: Promise<{ runId: string }>
         if (!event.data || typeof event.data !== 'object') continue;
         const obj = event.data as Record<string, unknown>;
 
-        // Detect workflow result (has answers + success fields)
         if ('answers' in obj && 'success' in obj) {
           setResult(obj as unknown as WorkflowResult);
         }
-        // Detect rules array
         if ('rules' in obj && Array.isArray(obj.rules)) {
           setRules(obj.rules as Rule[]);
         }
-        // Detect vocabulary array
         if ('vocabulary' in obj && Array.isArray(obj.vocabulary)) {
           setVocabulary(obj.vocabulary as VocabularyEntry[]);
         }

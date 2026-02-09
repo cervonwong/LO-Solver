@@ -71,7 +71,7 @@ export default function Home() {
       </div>
 
       <Textarea
-        className="mt-4 min-h-[300px] font-mono text-sm"
+        className="mt-4 min-h-[300px] text-sm"
         placeholder="Paste your linguistics problem here..."
         value={problemText}
         onChange={(e) => setProblemText(e.target.value)}
