@@ -36,7 +36,7 @@ export function ResultsPane() {
     >
       <div className="flex h-full flex-col p-4">
         <div className="mb-3 flex items-center justify-between">
-          <span className="text-sm font-medium">Results</span>
+          <span className="text-sm font-medium">Solution</span>
           <Button variant="ghost" size="xs" onClick={() => setOpenPane(null)}>
             Close
           </Button>

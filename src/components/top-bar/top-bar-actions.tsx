@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Ellipsis, Sun, Moon, Monitor, Square, FileText, BookOpen, Trophy } from 'lucide-react';
+import { Ellipsis, Sun, Moon, Monitor, Square, FileText, BookOpen, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -99,18 +99,17 @@ export function TopBarActions() {
           Vocab
         </Button>
       )}
-      {(results !== null || runStatus === 'complete') && (
-        <Button
-          variant={openPane === 'results' ? 'default' : 'outline'}
-          size="xs"
-          onClick={() => setOpenPane(openPane === 'results' ? null : 'results')}
-        >
-          <Trophy className="mr-1 h-3 w-3" />
-          Results
-        </Button>
-      )}
+      <Button
+        variant={openPane === 'results' ? 'default' : 'outline'}
+        size="xs"
+        disabled={results === null && runStatus !== 'complete'}
+        onClick={() => setOpenPane(openPane === 'results' ? null : 'results')}
+      >
+        <Sparkles className="mr-1 h-3 w-3" />
+        Solution
+      </Button>
 
-      {/* Stop button (visible only when running) */}
+      {/* Stop button (visible when running) */}
       {runStatus === 'running' && (
         <Button variant="destructive" size="xs" onClick={() => { stopStream(); stopRun(); }}>
           <Square className="mr-1 h-3 w-3 fill-current" />

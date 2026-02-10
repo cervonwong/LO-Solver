@@ -13,8 +13,8 @@ function StepNodeComponent({ data }: StepNodeProps) {
   return (
     <div
       className={cn(
-        'flex items-center justify-center rounded-lg border-2 px-4 py-3',
-        'min-w-[220px] min-h-[60px]',
+        'flex items-center justify-center rounded-lg border-2 px-3 py-2',
+        'min-w-[160px] min-h-[40px]',
         'transition-colors duration-200',
         status === 'pending' && 'border-muted bg-muted/20 text-muted-foreground',
         status === 'running' && 'border-blue-500 bg-blue-500/10 text-blue-700 dark:text-blue-300 animate-pulse',

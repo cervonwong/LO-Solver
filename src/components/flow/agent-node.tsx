@@ -13,8 +13,8 @@ function AgentNodeComponent({ data }: AgentNodeProps) {
   return (
     <div
       className={cn(
-        'flex items-center gap-2 rounded-md border bg-background px-3 py-2',
-        'min-w-[180px] min-h-[44px] cursor-pointer',
+        'flex items-center gap-1.5 rounded-md border bg-background px-2 py-1.5',
+        'min-w-[140px] min-h-[34px] cursor-pointer',
         'transition-all duration-200',
         selected && 'ring-2 ring-primary',
       )}

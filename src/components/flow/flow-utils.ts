@@ -29,12 +29,12 @@ const PIPELINE_STEPS = [
 
 // --- Layout constants ---
 
-const STEP_NODE_WIDTH = 220;
-const STEP_Y_GAP = 120;
-const AGENT_NODE_WIDTH = 180;
-const AGENT_X_OFFSET = 40;
-const AGENT_Y_OFFSET = 70;
-const AGENT_Y_GAP = 54;
+const STEP_NODE_WIDTH = 160;
+const STEP_Y_GAP = 90;
+const AGENT_NODE_WIDTH = 140;
+const AGENT_X_OFFSET = 30;
+const AGENT_Y_OFFSET = 50;
+const AGENT_Y_GAP = 42;
 
 // --- Duration formatting ---
 
