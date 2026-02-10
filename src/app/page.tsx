@@ -3,6 +3,7 @@
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import { TopBar } from '@/components/top-bar/top-bar';
 import { WorkflowCanvas } from '@/components/flow/workflow-canvas';
+import { DetailPanel } from '@/components/detail/detail-panel';
 
 export default function Home() {
   return (
@@ -21,9 +22,7 @@ export default function Home() {
 
         {/* Detail Panel */}
         <ResizablePanel defaultSize={40} minSize={20}>
-          <div className="flex h-full items-center justify-center bg-muted/10 text-muted-foreground">
-            Detail Panel (Sprint 4)
-          </div>
+          <DetailPanel />
         </ResizablePanel>
       </ResizablePanelGroup>
     </div>
