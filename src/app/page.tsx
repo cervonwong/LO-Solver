@@ -4,6 +4,9 @@ import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/componen
 import { TopBar } from '@/components/top-bar/top-bar';
 import { WorkflowCanvas } from '@/components/flow/workflow-canvas';
 import { DetailPanel } from '@/components/detail/detail-panel';
+import { StructuredProblemPane } from '@/components/panes/structured-problem-pane';
+import { VocabularyPane } from '@/components/panes/vocabulary-pane';
+import { ResultsPane } from '@/components/panes/results-pane';
 
 export default function Home() {
   return (
@@ -25,6 +28,10 @@ export default function Home() {
           <DetailPanel />
         </ResizablePanel>
       </ResizablePanelGroup>
+
+      <StructuredProblemPane />
+      <VocabularyPane />
+      <ResultsPane />
     </div>
   );
 }

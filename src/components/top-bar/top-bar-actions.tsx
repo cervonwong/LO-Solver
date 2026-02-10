@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Ellipsis, Sun, Moon, Monitor, Square } from 'lucide-react';
+import { Ellipsis, Sun, Moon, Monitor, Square, FileText, BookOpen, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -43,6 +43,11 @@ function applyTheme(theme: Theme) {
 export function TopBarActions() {
   const runStatus = useWorkflowStore((s) => s.runStatus);
   const stopRun = useWorkflowStore((s) => s.stopRun);
+  const structuredProblem = useWorkflowStore((s) => s.structuredProblem);
+  const vocabulary = useWorkflowStore((s) => s.vocabulary);
+  const results = useWorkflowStore((s) => s.results);
+  const openPane = useWorkflowStore((s) => s.openPane);
+  const setOpenPane = useWorkflowStore((s) => s.setOpenPane);
 
   const [theme, setTheme] = useState<Theme>('system');
 
@@ -71,18 +76,43 @@ export function TopBarActions() {
 
   return (
     <div className="flex items-center gap-1.5">
+      {/* Pane toggle buttons */}
+      {structuredProblem !== null && (
+        <Button
+          variant={openPane === 'problem' ? 'default' : 'outline'}
+          size="xs"
+          onClick={() => setOpenPane(openPane === 'problem' ? null : 'problem')}
+        >
+          <FileText className="mr-1 h-3 w-3" />
+          Problem
+        </Button>
+      )}
+      {vocabulary.size > 0 && (
+        <Button
+          variant={openPane === 'vocabulary' ? 'default' : 'outline'}
+          size="xs"
+          onClick={() => setOpenPane(openPane === 'vocabulary' ? null : 'vocabulary')}
+        >
+          <BookOpen className="mr-1 h-3 w-3" />
+          Vocab
+        </Button>
+      )}
+      {(results !== null || runStatus === 'complete') && (
+        <Button
+          variant={openPane === 'results' ? 'default' : 'outline'}
+          size="xs"
+          onClick={() => setOpenPane(openPane === 'results' ? null : 'results')}
+        >
+          <Trophy className="mr-1 h-3 w-3" />
+          Results
+        </Button>
+      )}
+
       {/* Stop button (visible only when running) */}
       {runStatus === 'running' && (
         <Button variant="destructive" size="xs" onClick={stopRun}>
           <Square className="mr-1 h-3 w-3 fill-current" />
           Stop
-        </Button>
-      )}
-
-      {/* Results button (visible only when complete) */}
-      {runStatus === 'complete' && (
-        <Button variant="outline" size="xs" onClick={() => {}}>
-          Results
         </Button>
       )}
 

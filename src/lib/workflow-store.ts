@@ -47,10 +47,12 @@ export interface WorkflowStore {
   runStatus: 'idle' | 'running' | 'complete' | 'error';
   currentIteration: number;
   problemText: string;
+  openPane: 'problem' | 'vocabulary' | 'results' | null;
 
   // Actions
   addEvent: (event: WorkflowEvent) => void;
   setSelectedAgent: (agentId: string | null) => void;
+  setOpenPane: (pane: 'problem' | 'vocabulary' | 'results' | null) => void;
   startRun: (problemText: string) => void;
   completeRun: () => void;
   errorRun: () => void;
@@ -69,6 +71,7 @@ const initialState = {
   runStatus: 'idle' as const,
   currentIteration: 0,
   problemText: '',
+  openPane: null as 'problem' | 'vocabulary' | 'results' | null,
 };
 
 export const useWorkflowStore = create<WorkflowStore>()((set) => ({
@@ -124,6 +127,8 @@ export const useWorkflowStore = create<WorkflowStore>()((set) => ({
 
   setSelectedAgent: (agentId) => set({ selectedAgentId: agentId }),
 
+  setOpenPane: (pane) => set({ openPane: pane }),
+
   startRun: (problemText) =>
     set({
       ...initialState,
@@ -147,11 +152,13 @@ export const useWorkflowStore = create<WorkflowStore>()((set) => ({
       structuredProblem: null,
       results: null,
       currentIteration: 0,
+      openPane: null,
     }),
 
   reset: () =>
     set({
       ...initialState,
       vocabulary: new Map(),
+      openPane: null,
     }),
 }));
