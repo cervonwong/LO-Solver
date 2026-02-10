@@ -238,6 +238,16 @@ const extractionStep = createStep({
     const logFile = initialState.logFile;
 
     const step1StartTime = new Date();
+    await writer?.custom({
+      type: 'data-agent-start',
+      data: {
+        stepId: 'extract-structure',
+        agentId: 'wf03-structured-problem-extractor',
+        agentName: 'Problem Extractor',
+        model: 'gpt-5-mini',
+        timestamp: new Date().toISOString(),
+      },
+    });
     const response = await generateWithRetry(
       mastra.getAgentById('wf03-structured-problem-extractor'),
       {
@@ -251,6 +261,17 @@ const extractionStep = createStep({
       },
     );
 
+    await writer?.custom({
+      type: 'data-agent-complete',
+      data: {
+        stepId: 'extract-structure',
+        agentId: 'wf03-structured-problem-extractor',
+        agentName: 'Problem Extractor',
+        model: 'gpt-5-mini',
+        timestamp: new Date().toISOString(),
+        durationMs: Date.now() - step1StartTime.getTime(),
+      },
+    });
     await writer?.custom({
       type: 'data-agent-reasoning',
       data: {
@@ -362,6 +383,16 @@ const initialHypothesisStep = createStep({
       JSON.stringify({ vocabulary, structuredProblem });
 
     const hypothesizerStartTime = new Date();
+    await writer?.custom({
+      type: 'data-agent-start',
+      data: {
+        stepId: 'initial-hypothesis',
+        agentId: 'wf03-initial-hypothesizer',
+        agentName: 'Initial Hypothesizer',
+        model: 'gemini-3-flash',
+        timestamp: new Date().toISOString(),
+      },
+    });
     const hypothesizerResponse = await generateWithRetry(
       mastra.getAgentById('wf03-initial-hypothesizer'),
       {
@@ -370,6 +401,17 @@ const initialHypothesisStep = createStep({
       },
     );
 
+    await writer?.custom({
+      type: 'data-agent-complete',
+      data: {
+        stepId: 'initial-hypothesis',
+        agentId: 'wf03-initial-hypothesizer',
+        agentName: 'Initial Hypothesizer',
+        model: 'gemini-3-flash',
+        timestamp: new Date().toISOString(),
+        durationMs: Date.now() - hypothesizerStartTime.getTime(),
+      },
+    });
     await writer?.custom({
       type: 'data-agent-reasoning',
       data: {
@@ -406,6 +448,16 @@ const initialHypothesisStep = createStep({
       hypothesizerResponse.text;
 
     const extractorStartTime = new Date();
+    await writer?.custom({
+      type: 'data-agent-start',
+      data: {
+        stepId: 'initial-hypothesis',
+        agentId: 'wf03-initial-hypothesis-extractor',
+        agentName: 'Hypothesis Extractor',
+        model: 'gpt-5-mini',
+        timestamp: new Date().toISOString(),
+      },
+    });
     const extractorResponse = await generateWithRetry(
       mastra.getAgentById('wf03-initial-hypothesis-extractor'),
       {
@@ -419,6 +471,17 @@ const initialHypothesisStep = createStep({
       },
     );
 
+    await writer?.custom({
+      type: 'data-agent-complete',
+      data: {
+        stepId: 'initial-hypothesis',
+        agentId: 'wf03-initial-hypothesis-extractor',
+        agentName: 'Hypothesis Extractor',
+        model: 'gpt-5-mini',
+        timestamp: new Date().toISOString(),
+        durationMs: Date.now() - extractorStartTime.getTime(),
+      },
+    });
     await writer?.custom({
       type: 'data-agent-reasoning',
       data: {
@@ -557,6 +620,16 @@ const verifyImproveLoopStep = createStep({
 
     // Step 3a1: Call the Verifier Orchestrator Agent (natural language output)
     const orchestratorStartTime = new Date();
+    await writer?.custom({
+      type: 'data-agent-start',
+      data: {
+        stepId: 'verify-improve',
+        agentId: 'wf03-verifier-orchestrator',
+        agentName: 'Verifier Orchestrator',
+        model: 'gemini-3-flash',
+        timestamp: new Date().toISOString(),
+      },
+    });
     const orchestratorResponse = await generateWithRetry(
       mastra.getAgentById('wf03-verifier-orchestrator'),
       {
@@ -565,6 +638,17 @@ const verifyImproveLoopStep = createStep({
       },
     );
 
+    await writer?.custom({
+      type: 'data-agent-complete',
+      data: {
+        stepId: 'verify-improve',
+        agentId: 'wf03-verifier-orchestrator',
+        agentName: 'Verifier Orchestrator',
+        model: 'gemini-3-flash',
+        timestamp: new Date().toISOString(),
+        durationMs: Date.now() - orchestratorStartTime.getTime(),
+      },
+    });
     await writer?.custom({
       type: 'data-agent-reasoning',
       data: {
@@ -602,6 +686,16 @@ const verifyImproveLoopStep = createStep({
       orchestratorResponse.text;
 
     const verifierExtractorStartTime = new Date();
+    await writer?.custom({
+      type: 'data-agent-start',
+      data: {
+        stepId: 'verify-improve',
+        agentId: 'wf03-verifier-feedback-extractor',
+        agentName: 'Feedback Extractor',
+        model: 'gpt-5-mini',
+        timestamp: new Date().toISOString(),
+      },
+    });
     const verifierExtractorResponse = await generateWithRetry(
       mastra.getAgentById('wf03-verifier-feedback-extractor'),
       {
@@ -615,6 +709,17 @@ const verifyImproveLoopStep = createStep({
       },
     );
 
+    await writer?.custom({
+      type: 'data-agent-complete',
+      data: {
+        stepId: 'verify-improve',
+        agentId: 'wf03-verifier-feedback-extractor',
+        agentName: 'Feedback Extractor',
+        model: 'gpt-5-mini',
+        timestamp: new Date().toISOString(),
+        durationMs: Date.now() - verifierExtractorStartTime.getTime(),
+      },
+    });
     await writer?.custom({
       type: 'data-agent-reasoning',
       data: {
@@ -715,11 +820,32 @@ const verifyImproveLoopStep = createStep({
 
     // Step 3b1: Call the Rules Improver Agent (natural language output)
     const improverStartTime = new Date();
+    await writer?.custom({
+      type: 'data-agent-start',
+      data: {
+        stepId: 'verify-improve',
+        agentId: 'wf03-rules-improver',
+        agentName: 'Rules Improver',
+        model: 'gemini-3-flash',
+        timestamp: new Date().toISOString(),
+      },
+    });
     const improverResponse = await generateWithRetry(mastra.getAgentById('wf03-rules-improver'), {
       prompt: improverPrompt,
       options: { maxSteps: 100, requestContext },
     });
 
+    await writer?.custom({
+      type: 'data-agent-complete',
+      data: {
+        stepId: 'verify-improve',
+        agentId: 'wf03-rules-improver',
+        agentName: 'Rules Improver',
+        model: 'gemini-3-flash',
+        timestamp: new Date().toISOString(),
+        durationMs: Date.now() - improverStartTime.getTime(),
+      },
+    });
     await writer?.custom({
       type: 'data-agent-reasoning',
       data: {
@@ -757,6 +883,16 @@ const verifyImproveLoopStep = createStep({
       improverResponse.text;
 
     const extractorStartTime = new Date();
+    await writer?.custom({
+      type: 'data-agent-start',
+      data: {
+        stepId: 'verify-improve',
+        agentId: 'wf03-rules-improvement-extractor',
+        agentName: 'Improvement Extractor',
+        model: 'gpt-5-mini',
+        timestamp: new Date().toISOString(),
+      },
+    });
     const extractorResponse = await generateWithRetry(
       mastra.getAgentById('wf03-rules-improvement-extractor'),
       {
@@ -770,6 +906,17 @@ const verifyImproveLoopStep = createStep({
       },
     );
 
+    await writer?.custom({
+      type: 'data-agent-complete',
+      data: {
+        stepId: 'verify-improve',
+        agentId: 'wf03-rules-improvement-extractor',
+        agentName: 'Improvement Extractor',
+        model: 'gpt-5-mini',
+        timestamp: new Date().toISOString(),
+        durationMs: Date.now() - extractorStartTime.getTime(),
+      },
+    });
     await writer?.custom({
       type: 'data-agent-reasoning',
       data: {
@@ -894,6 +1041,16 @@ const answerQuestionsStep = createStep({
     });
 
     const answererStartTime = new Date();
+    await writer?.custom({
+      type: 'data-agent-start',
+      data: {
+        stepId: 'answer-questions',
+        agentId: 'wf03-question-answerer',
+        agentName: 'Question Answerer',
+        model: 'gemini-3-flash',
+        timestamp: new Date().toISOString(),
+      },
+    });
     const answererResponse = await generateWithRetry(
       mastra.getAgentById('wf03-question-answerer'),
       {
@@ -907,6 +1064,17 @@ const answerQuestionsStep = createStep({
       },
     );
 
+    await writer?.custom({
+      type: 'data-agent-complete',
+      data: {
+        stepId: 'answer-questions',
+        agentId: 'wf03-question-answerer',
+        agentName: 'Question Answerer',
+        model: 'gemini-3-flash',
+        timestamp: new Date().toISOString(),
+        durationMs: Date.now() - answererStartTime.getTime(),
+      },
+    });
     await writer?.custom({
       type: 'data-agent-reasoning',
       data: {

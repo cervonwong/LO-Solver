@@ -1,7 +1,7 @@
 # Dashboard Redesign — Single-Page Agent Visualization
 
 **Date:** 2026-02-09
-**Status:** In Progress (Sprints 1–3 complete)
+**Status:** In Progress (Sprints 1–5 complete)
 
 ## Goals
 
@@ -191,8 +191,20 @@ Events from `useChat` feed into the store. All components read reactively. Repla
 - `loop-edge.tsx` — animated bezier loop-back edge with iteration counter
 - `workflow-canvas.tsx` — React Flow wrapper with `ReactFlowProvider`, `ResizeObserver`-driven `fitView` for proper panel resize behavior
 
-### Sprint 4: Detail Panel (Pending)
-### Sprint 5: Collapsible Panes (Pending)
+### Sprint 4: Detail Panel (Complete)
+- `feed-utils.ts` — Temporal attribution logic (`getAgentFeedItems`) to assign tool calls and vocabulary events to agents, plus `formatTimestamp` helper
+- `agent-header.tsx` — Header bar with status dot, agent name, model badge, step badge, duration, close button
+- `reasoning-block.tsx` — Markdown-rendered reasoning text via `react-markdown`, proportional font
+- `tool-call-block.tsx` — Collapsible card with green/red left border, JSON input/output in monospace
+- `memory-op-badge.tsx` — Color-coded inline badges for vocabulary add/update/remove/clear operations
+- `feed-item.tsx` — Three-column layout (timestamp, typed icon, content) wrapper for feed entries
+- `detail-panel.tsx` — Main container: empty state placeholder, agent metadata derivation, chronological feed with auto-scroll
+### Sprint 5: Collapsible Panes (Complete)
+- `structured-problem-pane.tsx` — Dialog overlay showing context, dataset table, and questions list from Step 1 extraction
+- `vocabulary-pane.tsx` — Dialog overlay with live vocabulary table (Foreign Form, Meaning, Type) and entry count badge
+- `results-pane.tsx` — Dialog overlay showing answer cards and rules with color-coded status badges
+- Added `openPane` state and `setOpenPane` action to Zustand store for pane visibility management
+- Added pane toggle buttons (Problem, Vocab, Results) to top-bar-actions.tsx with conditional visibility and active state styling
 ### Sprint 6: Backend Events (Pending)
 ### Sprint 7: Integration & Polish (Pending)
 
