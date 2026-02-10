@@ -1,7 +1,7 @@
 # Dashboard Redesign — Single-Page Agent Visualization
 
 **Date:** 2026-02-09
-**Status:** In Progress (Sprints 1–6 complete)
+**Status:** Complete (Sprints 1–7)
 
 ## Goals
 
@@ -209,7 +209,12 @@ Events from `useChat` feed into the store. All components read reactively. Repla
 - Added 16 `writer.custom()` calls (8 `data-agent-start` + 8 `data-agent-complete`) around all `generateWithRetry` calls in workflow.ts
 - Events include stepId, agentId, agentName, model, timestamp, and durationMs (complete only)
 - Tool-call and vocabulary-update event emission deferred — tools lack writer access, needs architectural work
-### Sprint 7: Integration & Polish (Pending)
+### Sprint 7: Integration & Polish (Complete)
+- `use-workflow-stream.ts` — Custom hook wrapping `useChat` that pipes streaming `data-*` events into Zustand store's `addEvent`, tracks completion/error, and adds beforeunload guard
+- `workflow-stream-context.tsx` — React context provider exposing `solve`, `stop`, `status`, `error`, `runStatus` to child components
+- Wrapped `page.tsx` with `WorkflowStreamProvider`
+- Updated `problem-input.tsx` to use `solve()` from stream context instead of bare `startRun()`
+- Updated `top-bar-actions.tsx` stop button to call both `stopStream()` and `stopRun()`
 
 ### Deviations from Original Design
 - **No dagre/elkjs**: `@dagrejs/dagre` is CJS-only, incompatible with Next.js bundler. Manual layout used instead (fixed 4-step pipeline makes auto-layout unnecessary).
