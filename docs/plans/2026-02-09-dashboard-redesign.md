@@ -1,7 +1,7 @@
 # Dashboard Redesign — Single-Page Agent Visualization
 
 **Date:** 2026-02-09
-**Status:** In Progress (Sprints 1–5 complete)
+**Status:** In Progress (Sprints 1–6 complete)
 
 ## Goals
 
@@ -205,7 +205,10 @@ Events from `useChat` feed into the store. All components read reactively. Repla
 - `results-pane.tsx` — Dialog overlay showing answer cards and rules with color-coded status badges
 - Added `openPane` state and `setOpenPane` action to Zustand store for pane visibility management
 - Added pane toggle buttons (Problem, Vocab, Results) to top-bar-actions.tsx with conditional visibility and active state styling
-### Sprint 6: Backend Events (Pending)
+### Sprint 6: Backend Events (Complete)
+- Added 16 `writer.custom()` calls (8 `data-agent-start` + 8 `data-agent-complete`) around all `generateWithRetry` calls in workflow.ts
+- Events include stepId, agentId, agentName, model, timestamp, and durationMs (complete only)
+- Tool-call and vocabulary-update event emission deferred — tools lack writer access, needs architectural work
 ### Sprint 7: Integration & Polish (Pending)
 
 ### Deviations from Original Design

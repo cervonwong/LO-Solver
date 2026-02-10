@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useWorkflowStore } from '@/lib/workflow-store';
+import { useWorkflowStreamContext } from '@/lib/workflow-stream-context';
 
 type Theme = 'light' | 'dark' | 'system';
 const STORAGE_KEY = 'lo-solver-theme';
@@ -43,6 +44,7 @@ function applyTheme(theme: Theme) {
 export function TopBarActions() {
   const runStatus = useWorkflowStore((s) => s.runStatus);
   const stopRun = useWorkflowStore((s) => s.stopRun);
+  const { stop: stopStream } = useWorkflowStreamContext();
   const structuredProblem = useWorkflowStore((s) => s.structuredProblem);
   const vocabulary = useWorkflowStore((s) => s.vocabulary);
   const results = useWorkflowStore((s) => s.results);
@@ -110,7 +112,7 @@ export function TopBarActions() {
 
       {/* Stop button (visible only when running) */}
       {runStatus === 'running' && (
-        <Button variant="destructive" size="xs" onClick={stopRun}>
+        <Button variant="destructive" size="xs" onClick={() => { stopStream(); stopRun(); }}>
           <Square className="mr-1 h-3 w-3 fill-current" />
           Stop
         </Button>

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useWorkflowStore } from '@/lib/workflow-store';
+import { useWorkflowStreamContext } from '@/lib/workflow-stream-context';
 
 const EXAMPLE_PRESETS = [
   {
@@ -23,9 +24,9 @@ const EXAMPLE_PRESETS = [
 export function ProblemInput() {
   const problemText = useWorkflowStore((s) => s.problemText);
   const runStatus = useWorkflowStore((s) => s.runStatus);
-  const startRun = useWorkflowStore((s) => s.startRun);
   const stopRun = useWorkflowStore((s) => s.stopRun);
   const reset = useWorkflowStore((s) => s.reset);
+  const { solve } = useWorkflowStreamContext();
 
   const hasLoaded = problemText.trim().length > 0;
 
@@ -66,8 +67,8 @@ export function ProblemInput() {
   const handleSolve = useCallback(() => {
     if (!draft.trim()) return;
     closeDialog();
-    startRun(draft.trim());
-  }, [draft, closeDialog, startRun]);
+    solve(draft.trim());
+  }, [draft, closeDialog, solve]);
 
   const handleReset = useCallback(() => {
     stopRun();
