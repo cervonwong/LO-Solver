@@ -7,7 +7,7 @@ export const structuredProblemExtractorAgent = new Agent({
   id: 'wf03-structured-problem-extractor',
   name: '[03-01] Structured Problem Extractor Agent',
   instructions: STRUCTURED_PROBLEM_EXTRACTOR_INSTRUCTIONS,
-  model: openrouter('openai/gpt-5-mini'),
+  model: openrouter('moonshotai/kimi-k2.5'),
   tools: {},
   inputProcessors: [
     new UnicodeNormalizer({

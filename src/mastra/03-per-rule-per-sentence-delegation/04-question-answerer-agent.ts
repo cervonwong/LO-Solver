@@ -11,8 +11,7 @@ export const questionAnswererAgent = new Agent({
   id: 'wf03-question-answerer',
   name: '[03-04] Question Answerer Agent',
   instructions: QUESTION_ANSWERER_INSTRUCTIONS,
-  // model: openrouter('google/gemini-3-pro-preview'),
-  model: openrouter('google/gemini-3-flash-preview'),
+  model: openrouter('moonshotai/kimi-k2.5'),
   tools: {},
   inputProcessors: [
     new UnicodeNormalizer({

@@ -25,8 +25,7 @@ export const rulesImproverAgent = new Agent({
     role: 'system',
     content: instructions,
   },
-  // model: openrouter('google/gemini-3-pro-preview'),
-  model: openrouter('google/gemini-3-flash-preview'),
+  model: openrouter('moonshotai/kimi-k2.5'),
   tools: {
     ...vocabularyTools,
     // Testing tools renamed for simpler agent usage:

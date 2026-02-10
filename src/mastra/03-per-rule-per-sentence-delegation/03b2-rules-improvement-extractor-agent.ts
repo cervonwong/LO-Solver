@@ -10,7 +10,7 @@ export const rulesImprovementExtractorAgent = new Agent({
     role: 'system',
     content: RULES_IMPROVEMENT_EXTRACTOR_INSTRUCTIONS,
   },
-  model: openrouter('openai/gpt-5-mini'),
+  model: openrouter('moonshotai/kimi-k2.5'),
   tools: {},
   inputProcessors: [
     new UnicodeNormalizer({

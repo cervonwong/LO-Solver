@@ -10,7 +10,7 @@ export const initialHypothesisExtractorAgent = new Agent({
     role: 'system',
     content: INITIAL_HYPOTHESIS_EXTRACTOR_INSTRUCTIONS,
   },
-  model: openrouter('openai/gpt-5-mini'),
+  model: openrouter('moonshotai/kimi-k2.5'),
   tools: {},
   inputProcessors: [
     new UnicodeNormalizer({

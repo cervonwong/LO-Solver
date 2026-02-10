@@ -80,6 +80,6 @@ export const sentenceTesterAgent = new Agent({
   id: 'wf03-sentence-tester',
   name: '[03-3a-tool] Sentence Tester Agent',
   instructions: SENTENCE_TESTER_SYSTEM_PROMPT,
-  model: openrouter('openai/gpt-5-mini'),
+  model: openrouter('moonshotai/kimi-k2.5'),
   tools: {},
 });

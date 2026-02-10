@@ -13,8 +13,7 @@ export const verifierOrchestratorAgent = new Agent({
   id: 'wf03-verifier-orchestrator',
   name: '[03-3a] Verifier Orchestrator Agent',
   instructions: VERIFIER_ORCHESTRATOR_INSTRUCTIONS,
-  // model: openrouter('google/gemini-3-pro-preview'),
-  model: openrouter('google/gemini-3-flash-preview'),
+  model: openrouter('moonshotai/kimi-k2.5'),
   tools: {
     testRule: testRuleTool,
     testSentence: testSentenceTool,
