@@ -3,13 +3,10 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
+import { useModelMode } from '@/hooks/use-model-mode';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Button } from '@/components/ui/button';
 import { ProblemInput } from '@/components/problem-input';
 import { StepProgress, STEP_ORDER, type StepStatus } from '@/components/step-progress';
@@ -48,6 +45,7 @@ export default function SolverPage() {
   const [hasStarted, setHasStarted] = useState(false);
   const [inputOpen, setInputOpen] = useState(true);
   const hasSent = useRef(false);
+  const [modelMode] = useModelMode();
 
   const transport = useMemo(
     () =>
@@ -59,11 +57,12 @@ export default function SolverPage() {
               rawProblemText:
                 (messages[messages.length - 1]?.parts?.[0] as { text?: string } | undefined)
                   ?.text ?? '',
+              modelMode,
             },
           },
         }),
       }),
-    [],
+    [modelMode],
   );
 
   const { messages, sendMessage, status, setMessages } = useChat({ transport });
@@ -91,9 +90,10 @@ export default function SolverPage() {
   const allParts = assistantMessages.flatMap((m) => m.parts ?? []);
 
   // Extract the latest workflow data part
-  const workflowParts = allParts.filter(
-    (p) => 'type' in p && p.type === 'data-workflow',
-  ) as Array<{ type: string; data: WorkflowData }>;
+  const workflowParts = allParts.filter((p) => 'type' in p && p.type === 'data-workflow') as Array<{
+    type: string;
+    data: WorkflowData;
+  }>;
   const workflowData = workflowParts.at(-1)?.data;
   const workflowStatus = workflowData?.status;
   const steps = workflowData?.steps ?? {};
