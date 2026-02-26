@@ -1,7 +1,7 @@
 import { Agent } from '@mastra/core/agent';
 import { UnicodeNormalizer } from '@mastra/core/processors';
 import { VERIFIER_FEEDBACK_EXTRACTOR_INSTRUCTIONS } from './03a2-verifier-feedback-extractor-instructions';
-import { openrouter } from '../openrouter';
+import { openrouter, TESTING_MODEL } from '../openrouter';
 
 export const verifierFeedbackExtractorAgent = new Agent({
   id: 'wf03-verifier-feedback-extractor',
@@ -10,7 +10,10 @@ export const verifierFeedbackExtractorAgent = new Agent({
     role: 'system',
     content: VERIFIER_FEEDBACK_EXTRACTOR_INSTRUCTIONS,
   },
-  model: openrouter('openai/gpt-5-mini'),
+  model: ({ requestContext }) =>
+    openrouter(
+      requestContext?.get('model-mode') === 'production' ? 'openai/gpt-5-mini' : TESTING_MODEL,
+    ),
   tools: {},
   inputProcessors: [
     new UnicodeNormalizer({

@@ -1,7 +1,7 @@
 import { Agent } from '@mastra/core/agent';
 import { UnicodeNormalizer } from '@mastra/core/processors';
 import { VERIFIER_ORCHESTRATOR_INSTRUCTIONS } from './03a-verifier-orchestrator-instructions';
-import { openrouter } from '../openrouter';
+import { openrouter, TESTING_MODEL } from '../openrouter';
 import { testRuleTool } from './03a-rule-tester-tool';
 import { testSentenceTool } from './03a-sentence-tester-tool';
 
@@ -14,7 +14,12 @@ export const verifierOrchestratorAgent = new Agent({
   name: '[03-3a] Verifier Orchestrator Agent',
   instructions: VERIFIER_ORCHESTRATOR_INSTRUCTIONS,
   // model: openrouter('google/gemini-3-pro-preview'),
-  model: openrouter('google/gemini-3-flash-preview'),
+  model: ({ requestContext }) =>
+    openrouter(
+      requestContext?.get('model-mode') === 'production'
+        ? 'google/gemini-3-flash-preview'
+        : TESTING_MODEL,
+    ),
   tools: {
     testRule: testRuleTool,
     testSentence: testSentenceTool,
