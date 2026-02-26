@@ -1,3 +1,4 @@
+import type { ModelMode } from '../openrouter';
 import type { VocabularyEntry } from './vocabulary-tools';
 
 /**
@@ -35,4 +36,7 @@ export interface Workflow03RequestContext {
 
   /** Log file path for writing tool output */
   'log-file': string;
+
+  /** Model mode: 'testing' uses cheap model, 'production' uses per-agent models */
+  'model-mode': ModelMode;
 }

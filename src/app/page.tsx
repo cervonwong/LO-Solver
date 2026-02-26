@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
+import { useModelMode } from '@/hooks/use-model-mode';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -44,6 +45,7 @@ export default function SolverPage() {
   const [hasStarted, setHasStarted] = useState(false);
   const [inputOpen, setInputOpen] = useState(true);
   const hasSent = useRef(false);
+  const [modelMode] = useModelMode();
 
   const transport = useMemo(
     () =>
@@ -55,11 +57,12 @@ export default function SolverPage() {
               rawProblemText:
                 (messages[messages.length - 1]?.parts?.[0] as { text?: string } | undefined)
                   ?.text ?? '',
+              modelMode,
             },
           },
         }),
       }),
-    [],
+    [modelMode],
   );
 
   const { messages, sendMessage, status, setMessages } = useChat({ transport });

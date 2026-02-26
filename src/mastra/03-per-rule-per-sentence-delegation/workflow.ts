@@ -3,6 +3,7 @@ import { RequestContext } from '@mastra/core/request-context';
 import { z } from 'zod';
 import { vocabularyEntrySchema, type VocabularyEntry } from './vocabulary-tools';
 import type { Workflow03RequestContext } from './request-context-types';
+import type { ModelMode } from '../openrouter';
 import {
   type StepTiming,
   getLogFilePath,
@@ -40,6 +41,7 @@ export const workflowStateSchema = z.object({
   logFile: z.string().default(''), // Will be set in first step
   startTime: z.string().default(''), // Will be set in first step (ISO string)
   stepTimings: z.array(stepTimingSchema).default([]),
+  modelMode: z.enum(['testing', 'production']).default('testing'),
 });
 
 export type WorkflowState = z.infer<typeof workflowStateSchema>;
@@ -55,11 +57,13 @@ const initializeWorkflowState = (): WorkflowState => {
     logFile,
     startTime,
     stepTimings: [],
+    modelMode: 'testing' as const,
   };
 };
 
 const rawProblemInputSchema = z.object({
   rawProblemText: z.string(),
+  modelMode: z.enum(['testing', 'production']).default('testing'),
 });
 
 const structuredProblemDataSchema = z.object({
@@ -234,7 +238,9 @@ const extractionStep = createStep({
   execute: async ({ inputData, mastra, bail, state, setState, writer }) => {
     // Initialize workflow state at the start of the workflow
     const initialState = initializeWorkflowState();
-    await setState(initialState);
+    const modelMode = inputData.modelMode ?? 'testing';
+    const stateWithMode = { ...initialState, modelMode };
+    await setState(stateWithMode);
     const logFile = initialState.logFile;
 
     const stepId: StepId = 'extract-structure';
@@ -244,12 +250,15 @@ const extractionStep = createStep({
     });
 
     const step1StartTime = new Date();
+    const requestContext = new RequestContext<Workflow03RequestContext>();
+    requestContext.set('model-mode', modelMode as ModelMode);
     const response = await generateWithRetry(
       mastra.getAgentById('wf03-structured-problem-extractor'),
       {
         prompt: `${inputData.rawProblemText}`,
         options: {
           maxSteps: 100,
+          requestContext,
           structuredOutput: {
             schema: structuredProblemSchema,
           },
@@ -262,7 +271,7 @@ const extractionStep = createStep({
       'Structured Problem Extractor Agent',
       step1StartTime,
     );
-    await setState({ ...initialState, stepTimings: [...initialState.stepTimings, timing1] });
+    await setState({ ...stateWithMode, stepTimings: [...stateWithMode.stepTimings, timing1] });
     console.log(
       `[Step 1] Structured Problem Extractor Agent finished at ${timing1.endTime} (${timing1.durationMinutes} min).`,
     );
@@ -354,6 +363,7 @@ const initialHypothesisStep = createStep({
     requestContext.set('vocabulary-state', vocabularyState);
     requestContext.set('log-file', logFile);
     requestContext.set('structured-problem', structuredProblem);
+    requestContext.set('model-mode', state.modelMode as ModelMode);
 
     // Step 2a: Call the Initial Rules Hypothesizer Agent (natural language output)
     const vocabulary = Array.from(vocabularyState.values());
@@ -413,6 +423,7 @@ const initialHypothesisStep = createStep({
         prompt: extractorPrompt,
         options: {
           maxSteps: 100,
+          requestContext,
           structuredOutput: {
             schema: rulesSchema,
           },
@@ -545,6 +556,7 @@ const verifyImproveLoopStep = createStep({
     requestContext.set('structured-problem', structuredProblem);
     requestContext.set('current-rules', currentRules);
     requestContext.set('log-file', logFile);
+    requestContext.set('model-mode', state.modelMode as ModelMode);
 
     const vocabulary = Array.from(vocabularyState.values());
 
@@ -608,6 +620,7 @@ const verifyImproveLoopStep = createStep({
         prompt: verifierExtractorPrompt,
         options: {
           maxSteps: 100,
+          requestContext,
           structuredOutput: {
             schema: verifierFeedbackSchema,
           },
@@ -766,6 +779,7 @@ const verifyImproveLoopStep = createStep({
         prompt: extractorPrompt,
         options: {
           maxSteps: 100,
+          requestContext,
           structuredOutput: {
             schema: rulesSchema,
           },
@@ -883,12 +897,15 @@ const answerQuestionsStep = createStep({
     });
 
     const answererStartTime = new Date();
+    const requestContext = new RequestContext<Workflow03RequestContext>();
+    requestContext.set('model-mode', state.modelMode as ModelMode);
     const answererResponse = await generateWithRetry(
       mastra.getAgentById('wf03-question-answerer'),
       {
         prompt: answererPrompt,
         options: {
           maxSteps: 100,
+          requestContext,
           structuredOutput: {
             schema: questionsAnsweredSchema,
           },

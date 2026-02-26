@@ -9,6 +9,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run build` — Production build (outputs to `.mastra/output/`)
 - `npx tsc --noEmit` — Type-check without emitting (run before commits)
 
+Note: `npx tsc --noEmit` currently reports one pre-existing error: `src/app/layout.tsx: Cannot find module './globals.css'` — this is a CSS module without a type declaration and does not affect builds. Ignore it when checking for regressions.
+
 No test framework is configured. Evaluation uses `@mastra/evals` scorers at runtime.
 
 ## Architecture
@@ -30,6 +32,15 @@ Three evolutionary workflows live under `src/mastra/`, numbered by sophisticatio
 3. **Verify & Improve** (iterative loop) — Orchestrator tests each rule and sentence individually via tool calls to dedicated tester agents, then an improver agent revises failing rules
 4. **Answer** (Gemini 3 Flash) — Apply validated rules to translate questions
 
+### Frontend (Next.js)
+
+- `src/app/layout.tsx` — Root layout (server component), contains nav bar
+- `src/app/page.tsx` — Main solver page (client component), uses `useChat` with `DefaultChatTransport` to call `/api/solve`
+- `src/components/` — UI components (shadcn/ui primitives in `ui/`)
+- `src/hooks/` — React hooks
+- Request flow: page.tsx builds `inputData` in `prepareSendMessagesRequest` → POST to `/api/solve` → Mastra workflow receives it as `inputData`
+- shadcn/ui is configured; add components with `npx shadcn@latest add <name>`
+
 ### File Conventions in Each Workflow
 
 - `workflow.ts` — Workflow definition with steps
@@ -43,6 +54,7 @@ Three evolutionary workflows live under `src/mastra/`, numbered by sophisticatio
 **Two-agent chains**: Natural language reasoning agent → JSON extraction agent. The reasoner thinks freely, then a cheaper model extracts structured output. Used in Steps 2 and 3b.
 
 **RequestContext for shared state** (Workflow 03): Per-execution mutable state passed through `RequestContext`. Keys defined in `request-context-types.ts`, accessed via helpers in `request-context-helpers.ts`:
+
 - `vocabulary-state` — Mutable `Map<string, VocabularyEntry>` shared across all tools/agents
 - `structured-problem` — Immutable problem data
 - `current-rules` — Rule array updated each verification iteration

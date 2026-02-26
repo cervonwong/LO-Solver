@@ -1,5 +1,5 @@
 import { Agent } from '@mastra/core/agent';
-import { openrouter } from '../openrouter';
+import { openrouter, TESTING_MODEL } from '../openrouter';
 
 const SENTENCE_TESTER_SYSTEM_PROMPT = `
 You are a specialized linguistic sentence translator and validator. Your job is to attempt translating a SINGLE sentence using a given ruleset, identifying any ambiguities or issues.
@@ -80,6 +80,9 @@ export const sentenceTesterAgent = new Agent({
   id: 'wf03-sentence-tester',
   name: '[03-3a-tool] Sentence Tester Agent',
   instructions: SENTENCE_TESTER_SYSTEM_PROMPT,
-  model: openrouter('openai/gpt-5-mini'),
+  model: ({ requestContext }) =>
+    openrouter(
+      requestContext?.get('model-mode') === 'production' ? 'openai/gpt-5-mini' : TESTING_MODEL,
+    ),
   tools: {},
 });
