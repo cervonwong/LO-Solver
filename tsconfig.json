@@ -21,15 +21,10 @@
       }
     ],
     "paths": {
-      "@/*": [
-        "./src/*"
-      ]
+      "@/*": ["./src/*"],
+      "@examples/*": ["./examples/*"]
     },
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
-    ],
+    "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "noEmit": true,
     "resolveJsonModule": true
@@ -38,13 +33,9 @@
     "next-env.d.ts",
     "src/**/*.ts",
     "src/**/*.tsx",
+    "examples/**/*.ts",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts"
   ],
-  "exclude": [
-    "dist",
-    ".mastra",
-    "node_modules",
-    ".next"
-  ]
+  "exclude": ["dist", ".mastra", "node_modules", ".next"]
 }
