@@ -3,8 +3,14 @@
 import { useMemo } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { TraceEventCard } from '@/components/trace-event-card';
-import { groupEventsByStep, groupEventsByIteration, formatDuration } from '@/lib/trace-utils';
+import { TraceEventCard, ToolCallGroupCard } from '@/components/trace-event-card';
+import {
+  groupEventsByStep,
+  groupEventsByIteration,
+  groupEventsWithToolCalls,
+  isToolCallGroup,
+  formatDuration,
+} from '@/lib/trace-utils';
 import type { WorkflowTraceEvent } from '@/lib/workflow-events';
 
 interface DevTracePanelProps {
@@ -114,11 +120,17 @@ function EventList({ events }: { events: WorkflowTraceEvent[] }) {
     return <p className="text-xs text-muted-foreground">No events yet.</p>;
   }
 
+  const grouped = groupEventsWithToolCalls(events);
+
   return (
     <div className="flex flex-col gap-2">
-      {events.map((event, i) => (
-        <TraceEventCard key={i} event={event} />
-      ))}
+      {grouped.map((item, i) =>
+        isToolCallGroup(item) ? (
+          <ToolCallGroupCard key={i} group={item} />
+        ) : (
+          <TraceEventCard key={i} event={item} />
+        ),
+      )}
     </div>
   );
 }
