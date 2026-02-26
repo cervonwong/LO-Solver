@@ -5,6 +5,7 @@ import {
   getVocabularyArray,
   getCurrentRules,
   getLogFile,
+  emitToolTraceEvent,
   type ToolExecuteContext,
 } from './request-context-helpers';
 import { logRuleTestResult } from './logging-utils';
@@ -187,7 +188,7 @@ export const testRuleTool = createTool({
       ...(logFile !== undefined && { logFile }),
     });
 
-    await ctx.writer?.custom({
+    await emitToolTraceEvent(ctx?.requestContext, {
       type: 'data-tool-call',
       data: {
         stepId: 'verify-improve-rules-loop',
@@ -252,7 +253,7 @@ export const testRuleWithRulesetTool = createTool({
       ...(logFile !== undefined && { logFile }),
     });
 
-    await ctx.writer?.custom({
+    await emitToolTraceEvent(ctx?.requestContext, {
       type: 'data-tool-call',
       data: {
         stepId: 'verify-improve-rules-loop',
