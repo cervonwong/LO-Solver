@@ -4,6 +4,7 @@ import type { Workflow03RequestContext } from './request-context-types';
 import {
   getVocabularyState,
   getLogFile,
+  emitToolTraceEvent,
   type ToolExecuteContext,
 } from './request-context-helpers';
 import {
@@ -93,7 +94,7 @@ export const addVocabulary = createTool({
     logVocabularyAdded(logFile, addedEntries);
 
     // Emit trace event for vocabulary addition
-    await ctx.writer?.custom({
+    await emitToolTraceEvent(ctx?.requestContext, {
       type: 'data-vocabulary-update',
       data: {
         action: 'add',
@@ -158,7 +159,7 @@ export const updateVocabulary = createTool({
     logVocabularyUpdated(logFile, updatedEntries);
 
     // Emit trace event for vocabulary update
-    await ctx.writer?.custom({
+    await emitToolTraceEvent(ctx?.requestContext, {
       type: 'data-vocabulary-update',
       data: {
         action: 'update',
@@ -219,7 +220,7 @@ export const removeVocabulary = createTool({
     logVocabularyRemoved(logFile, removedForms);
 
     // Emit trace event for vocabulary removal
-    await ctx.writer?.custom({
+    await emitToolTraceEvent(ctx?.requestContext, {
       type: 'data-vocabulary-update',
       data: {
         action: 'remove',
@@ -262,7 +263,7 @@ export const clearVocabulary = createTool({
     logVocabularyCleared(logFile, removed);
 
     // Emit trace event for vocabulary clear
-    await ctx.writer?.custom({
+    await emitToolTraceEvent(ctx?.requestContext, {
       type: 'data-vocabulary-update',
       data: {
         action: 'clear',
