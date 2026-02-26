@@ -5,17 +5,13 @@ import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Button } from '@/components/ui/button';
 import { ProblemInput } from '@/components/problem-input';
 import { StepProgress, STEP_ORDER, type StepStatus } from '@/components/step-progress';
 import { ResultsPanel } from '@/components/results-panel';
 import { DevTracePanel } from '@/components/dev-trace-panel';
-import { EXAMPLE_PROBLEMS } from '@/lib/examples';
+import { EXAMPLE_PROBLEMS, getExampleLabel } from '@/lib/examples';
 import type { StepId, WorkflowTraceEvent } from '@/lib/workflow-events';
 
 const STEP_STATUS_MESSAGES: Record<StepId, string> = {
@@ -42,7 +38,7 @@ interface VocabUpdateData {
   totalCount: number;
 }
 
-const examples = EXAMPLE_PROBLEMS.map((e) => ({ id: e.id, label: e.label }));
+const examples = EXAMPLE_PROBLEMS.map((e) => ({ id: e.id, label: getExampleLabel(e) }));
 
 export default function SolverPage() {
   const [hasStarted, setHasStarted] = useState(false);
@@ -91,9 +87,10 @@ export default function SolverPage() {
   const allParts = assistantMessages.flatMap((m) => m.parts ?? []);
 
   // Extract the latest workflow data part
-  const workflowParts = allParts.filter(
-    (p) => 'type' in p && p.type === 'data-workflow',
-  ) as Array<{ type: string; data: WorkflowData }>;
+  const workflowParts = allParts.filter((p) => 'type' in p && p.type === 'data-workflow') as Array<{
+    type: string;
+    data: WorkflowData;
+  }>;
   const workflowData = workflowParts.at(-1)?.data;
   const workflowStatus = workflowData?.status;
   const steps = workflowData?.steps ?? {};
