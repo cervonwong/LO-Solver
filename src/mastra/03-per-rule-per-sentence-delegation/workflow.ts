@@ -562,6 +562,15 @@ const verifyImproveLoopStep = createStep({
 
     const vocabulary = Array.from(vocabularyState.values());
 
+    await emitTraceEvent(writer, {
+      type: 'data-verify-improve-phase',
+      data: {
+        iteration: iterationCount + 1,
+        phase: 'verify-start',
+        timestamp: new Date().toISOString(),
+      },
+    });
+
     // Note: vocabulary, structuredProblem, rules are passed in the prompt for the agent
     const orchestratorPrompt = JSON.stringify({
       vocabulary,
@@ -691,6 +700,15 @@ const verifyImproveLoopStep = createStep({
       },
     });
 
+    await emitTraceEvent(writer, {
+      type: 'data-verify-improve-phase',
+      data: {
+        iteration: iterationCount + 1,
+        phase: 'verify-complete',
+        timestamp: new Date().toISOString(),
+      },
+    });
+
     // If all rules pass, we're done - no need to improve
     if (verifierFeedback.conclusion === 'ALL_RULES_PASS') {
       await setState({ ...state, stepTimings: currentStepTimings });
@@ -718,6 +736,15 @@ const verifyImproveLoopStep = createStep({
     // This step chains two agents:
     // 1. Rules Improver Agent - outputs natural language with reasoning and alternatives
     // 2. Rules Improvement Extractor Agent - extracts JSON from the natural language output
+
+    await emitTraceEvent(writer, {
+      type: 'data-verify-improve-phase',
+      data: {
+        iteration: iterationCount + 1,
+        phase: 'improve-start',
+        timestamp: new Date().toISOString(),
+      },
+    });
 
     // Create improver agent with vocabulary tools
     const improverVocabulary = Array.from(vocabularyState.values());
@@ -849,6 +876,15 @@ const verifyImproveLoopStep = createStep({
       ...state,
       vocabulary: Object.fromEntries(vocabularyState),
       stepTimings: currentStepTimings,
+    });
+
+    await emitTraceEvent(writer, {
+      type: 'data-verify-improve-phase',
+      data: {
+        iteration: iterationCount + 1,
+        phase: 'improve-complete',
+        timestamp: new Date().toISOString(),
+      },
     });
 
     // Return the updated loop state with improved rules
