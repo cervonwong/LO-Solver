@@ -79,10 +79,20 @@ export interface IterationUpdateEvent {
   };
 }
 
+export interface VerifyImprovePhaseEvent {
+  type: 'data-verify-improve-phase';
+  data: {
+    iteration: number;
+    phase: 'verify-start' | 'verify-complete' | 'improve-start' | 'improve-complete';
+    timestamp: string;
+  };
+}
+
 export type WorkflowTraceEvent =
   | StepStartEvent
   | StepCompleteEvent
   | AgentReasoningEvent
   | ToolCallEvent
   | VocabularyUpdateEvent
-  | IterationUpdateEvent;
+  | IterationUpdateEvent
+  | VerifyImprovePhaseEvent;
