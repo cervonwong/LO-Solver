@@ -77,6 +77,65 @@ export function groupEventsByIteration(events: WorkflowTraceEvent[]): IterationG
   return iterations;
 }
 
+export interface ToolCallGroup {
+  toolName: string;
+  calls: Array<{
+    input: Record<string, unknown>;
+    result: Record<string, unknown>;
+    timestamp: string;
+  }>;
+}
+
+/**
+ * Group consecutive tool-call events by toolName.
+ * Non-tool-call events are returned as-is.
+ * Returns an array of either WorkflowTraceEvent or ToolCallGroup.
+ */
+export function groupEventsWithToolCalls(
+  events: WorkflowTraceEvent[],
+): Array<WorkflowTraceEvent | ToolCallGroup> {
+  const result: Array<WorkflowTraceEvent | ToolCallGroup> = [];
+  let currentGroup: ToolCallGroup | null = null;
+
+  for (const event of events) {
+    if (event.type === 'data-tool-call') {
+      if (currentGroup && currentGroup.toolName === event.data.toolName) {
+        currentGroup.calls.push({
+          input: event.data.input,
+          result: event.data.result,
+          timestamp: event.data.timestamp,
+        });
+      } else {
+        if (currentGroup) result.push(currentGroup);
+        currentGroup = {
+          toolName: event.data.toolName,
+          calls: [
+            {
+              input: event.data.input,
+              result: event.data.result,
+              timestamp: event.data.timestamp,
+            },
+          ],
+        };
+      }
+    } else {
+      if (currentGroup) {
+        result.push(currentGroup);
+        currentGroup = null;
+      }
+      result.push(event);
+    }
+  }
+
+  if (currentGroup) result.push(currentGroup);
+  return result;
+}
+
+/** Type guard to check if an item is a ToolCallGroup */
+export function isToolCallGroup(item: WorkflowTraceEvent | ToolCallGroup): item is ToolCallGroup {
+  return 'toolName' in item && 'calls' in item;
+}
+
 function getStepId(event: WorkflowTraceEvent): StepId | undefined {
   switch (event.type) {
     case 'data-step-start':
@@ -85,6 +144,7 @@ function getStepId(event: WorkflowTraceEvent): StepId | undefined {
     case 'data-tool-call':
       return event.data.stepId;
     case 'data-iteration-update':
+    case 'data-verify-improve-phase':
       return 'verify-improve-rules-loop';
     case 'data-vocabulary-update':
       return undefined;

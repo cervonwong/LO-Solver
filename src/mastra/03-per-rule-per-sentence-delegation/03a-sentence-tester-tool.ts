@@ -7,6 +7,7 @@ import {
   getVocabularyArray,
   getLogFile,
   normalizeTranslation,
+  emitToolTraceEvent,
   type ToolExecuteContext,
 } from './request-context-helpers';
 import { logSentenceTestResult } from './logging-utils';
@@ -219,7 +220,7 @@ export const testSentenceTool = createTool({
       ...(logFile !== undefined && { logFile }),
     });
 
-    await ctx.writer?.custom({
+    await emitToolTraceEvent(ctx?.requestContext, {
       type: 'data-tool-call',
       data: {
         stepId: 'verify-improve-rules-loop',
@@ -295,7 +296,7 @@ export const testSentenceWithRulesetTool = createTool({
       ...(logFile !== undefined && { logFile }),
     });
 
-    await ctx.writer?.custom({
+    await emitToolTraceEvent(ctx?.requestContext, {
       type: 'data-tool-call',
       data: {
         stepId: 'verify-improve-rules-loop',
