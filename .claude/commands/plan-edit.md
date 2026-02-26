@@ -1,3 +1,7 @@
+---
+description: Modify an existing implementation plan
+---
+
 # Edit Implementation Plan
 
 Modify an existing implementation plan.
@@ -5,6 +9,7 @@ Modify an existing implementation plan.
 ## Required Skills
 
 Before starting, invoke these skills:
+
 1. `brainstorming` - Refine changes through questioning
 2. `writing-plans` - Update plan structure
 

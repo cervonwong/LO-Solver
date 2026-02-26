@@ -1,3 +1,7 @@
+---
+description: Create a new implementation plan for a feature or task
+---
+
 # Create Implementation Plan
 
 Create a new implementation plan for a feature or task.
@@ -5,6 +9,7 @@ Create a new implementation plan for a feature or task.
 ## Required Skills
 
 Before starting, invoke these skills in order:
+
 1. `brainstorming` - Refine the idea through questioning
 2. `writing-plans` - Create detailed implementation plan
 

@@ -1,3 +1,7 @@
+---
+description: Review completed implementation against plan or requirements
+---
+
 # Review Implementation
 
 Review completed implementation against plan or requirements.
@@ -5,6 +9,7 @@ Review completed implementation against plan or requirements.
 ## Required Skills
 
 Before starting, invoke these skills:
+
 1. `requesting-code-review` - Dispatch code reviewer subagent
 2. `verification-before-completion` - Evidence before claims
 

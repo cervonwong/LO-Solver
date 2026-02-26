@@ -1,3 +1,7 @@
+---
+description: Execute an existing implementation plan using subagent delegation
+---
+
 # Execute Implementation Plan
 
 Execute an existing implementation plan using subagent delegation.
@@ -5,9 +9,11 @@ Execute an existing implementation plan using subagent delegation.
 ## Required Skills
 
 Before starting, invoke these skills:
+
 1. `executing-plans` - Batch execution with checkpoints
 
 During execution, also use:
+
 - `systematic-debugging` - If bugs encountered
 - `verification-before-completion` - Before claiming done
 
@@ -15,15 +21,16 @@ During execution, also use:
 
 **The main agent acts as orchestrator. Delegate everything to subagents:**
 
-| Task | Delegate? | Why |
-|------|-----------|-----|
-| Implementing each stage/task | Yes | Fresh context, focused scope |
-| Running tests | Yes | Subagent can iterate on failures |
-| Writing commits | Yes | Consistent commit messages |
-| Debugging failures | Yes | Isolated investigation |
-| Code review | Yes | Fresh perspective |
+| Task                         | Delegate? | Why                              |
+| ---------------------------- | --------- | -------------------------------- |
+| Implementing each stage/task | Yes       | Fresh context, focused scope     |
+| Running tests                | Yes       | Subagent can iterate on failures |
+| Writing commits              | Yes       | Consistent commit messages       |
+| Debugging failures           | Yes       | Isolated investigation           |
+| Code review                  | Yes       | Fresh perspective                |
 
 **Main agent responsibilities (do NOT delegate):**
+
 - Loading and parsing the plan
 - Deciding task order and batching
 - Reviewing subagent output before proceeding
@@ -31,12 +38,14 @@ During execution, also use:
 - Handling cross-stage context and rollback decisions
 
 **Why this pattern:**
+
 - Subagents get fresh context = no confusion between stages
 - Main agent maintains full project context across all stages
 - If subagent gets stuck, main agent can intervene with broader context
 - Clear separation: orchestration vs execution
 
 **Subagent prompts should include:**
+
 - Exact scope (which files, which changes)
 - Verification commands to run
 - What to report back (files changed, issues encountered, success/failure)
@@ -44,6 +53,7 @@ During execution, also use:
 ## Do NOT (Orchestrator Anti-Patterns)
 
 **Never do these directly as orchestrator:**
+
 - Run `git status`, `git diff`, or any git commands for committing
 - Write code or make file changes
 - Run tests or verification commands
@@ -68,9 +78,11 @@ During execution, also use:
 ## Updating main.md
 
 **When starting execution:**
+
 - Change plan status from "Pending" to "Active" in Current Plans table
 
 **When completing execution:**
+
 - Remove plan from "Current Plans" table
 - Add plan to "Completed Plans" section
 
