@@ -106,3 +106,19 @@ export function getLogFile(requestContext: RequestContextGetter): string | undef
 export function normalizeTranslation(s: string): string {
   return s.normalize('NFC').replace(/\s+/g, ' ').trim().replace(/\.+$/, '');
 }
+
+/**
+ * Emit a trace event from a tool via the step writer stored in requestContext.
+ * This bypasses the broken ctx.writer?.custom() path (Mastra does not pass
+ * outputWriter to tools when called from workflow steps).
+ */
+export async function emitToolTraceEvent(
+  requestContext: RequestContextGetter,
+  event: { type: string; data: Record<string, unknown> },
+): Promise<void> {
+  if (!requestContext) return;
+  const writer = requestContext.get('step-writer') as
+    | { write?: (data: unknown) => Promise<void> }
+    | undefined;
+  await writer?.write?.(event);
+}
