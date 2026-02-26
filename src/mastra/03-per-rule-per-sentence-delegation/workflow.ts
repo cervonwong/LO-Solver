@@ -364,6 +364,7 @@ const initialHypothesisStep = createStep({
     requestContext.set('log-file', logFile);
     requestContext.set('structured-problem', structuredProblem);
     requestContext.set('model-mode', state.modelMode as ModelMode);
+    requestContext.set('step-writer', writer);
 
     // Step 2a: Call the Initial Rules Hypothesizer Agent (natural language output)
     const vocabulary = Array.from(vocabularyState.values());
@@ -557,6 +558,7 @@ const verifyImproveLoopStep = createStep({
     requestContext.set('current-rules', currentRules);
     requestContext.set('log-file', logFile);
     requestContext.set('model-mode', state.modelMode as ModelMode);
+    requestContext.set('step-writer', writer);
 
     const vocabulary = Array.from(vocabularyState.values());
 
