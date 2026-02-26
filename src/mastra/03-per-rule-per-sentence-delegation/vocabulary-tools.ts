@@ -1,7 +1,11 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 import type { Workflow03RequestContext } from './request-context-types';
-import { getVocabularyState, getLogFile, type ToolExecuteContext } from './request-context-helpers';
+import {
+  getVocabularyState,
+  getLogFile,
+  type ToolExecuteContext,
+} from './request-context-helpers';
 import {
   logVocabularyAdded,
   logVocabularyUpdated,
@@ -88,6 +92,17 @@ export const addVocabulary = createTool({
     // Log added entries to file
     logVocabularyAdded(logFile, addedEntries);
 
+    // Emit trace event for vocabulary addition
+    await ctx.writer?.custom({
+      type: 'data-vocabulary-update',
+      data: {
+        action: 'add',
+        entries: addedEntries,
+        totalCount: vocabularyState.size,
+        timestamp: new Date().toISOString(),
+      },
+    });
+
     return {
       added,
       skipped,
@@ -142,6 +157,17 @@ export const updateVocabulary = createTool({
     // Log updated entries to file
     logVocabularyUpdated(logFile, updatedEntries);
 
+    // Emit trace event for vocabulary update
+    await ctx.writer?.custom({
+      type: 'data-vocabulary-update',
+      data: {
+        action: 'update',
+        entries: updatedEntries,
+        totalCount: vocabularyState.size,
+        timestamp: new Date().toISOString(),
+      },
+    });
+
     return {
       updated,
       skipped,
@@ -192,6 +218,17 @@ export const removeVocabulary = createTool({
     // Log removed entries to file
     logVocabularyRemoved(logFile, removedForms);
 
+    // Emit trace event for vocabulary removal
+    await ctx.writer?.custom({
+      type: 'data-vocabulary-update',
+      data: {
+        action: 'remove',
+        entries: removedForms.map((f) => ({ foreignForm: f, meaning: '', type: '', notes: '' })),
+        totalCount: vocabularyState.size,
+        timestamp: new Date().toISOString(),
+      },
+    });
+
     return {
       removed,
       notFound,
@@ -223,6 +260,17 @@ export const clearVocabulary = createTool({
 
     // Log cleared count to file
     logVocabularyCleared(logFile, removed);
+
+    // Emit trace event for vocabulary clear
+    await ctx.writer?.custom({
+      type: 'data-vocabulary-update',
+      data: {
+        action: 'clear',
+        entries: [],
+        totalCount: 0,
+        timestamp: new Date().toISOString(),
+      },
+    });
 
     return { removed };
   },

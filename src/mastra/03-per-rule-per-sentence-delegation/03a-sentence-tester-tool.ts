@@ -206,7 +206,7 @@ export const testSentenceTool = createTool({
     const vocabulary = getVocabularyArray(ctx?.requestContext);
     const logFile = getLogFile(ctx?.requestContext);
 
-    return executeSentenceTest({
+    const result = await executeSentenceTest({
       id,
       content,
       sourceLanguage,
@@ -218,6 +218,19 @@ export const testSentenceTool = createTool({
       mastra: ctx.mastra!,
       ...(logFile !== undefined && { logFile }),
     });
+
+    await ctx.writer?.custom({
+      type: 'data-tool-call',
+      data: {
+        stepId: 'verify-improve-rules-loop',
+        toolName: 'testSentence',
+        input: { id, content },
+        result: result as unknown as Record<string, unknown>,
+        timestamp: new Date().toISOString(),
+      },
+    });
+
+    return result;
   },
 });
 
@@ -269,7 +282,7 @@ export const testSentenceWithRulesetTool = createTool({
       ...(r.confidence !== undefined && { confidence: r.confidence }),
     }));
 
-    return executeSentenceTest({
+    const result = await executeSentenceTest({
       id,
       content,
       sourceLanguage,
@@ -281,5 +294,18 @@ export const testSentenceWithRulesetTool = createTool({
       mastra: ctx.mastra!,
       ...(logFile !== undefined && { logFile }),
     });
+
+    await ctx.writer?.custom({
+      type: 'data-tool-call',
+      data: {
+        stepId: 'verify-improve-rules-loop',
+        toolName: 'testSentenceWithRuleset',
+        input: { id, content, rulesetCount: ruleset.length },
+        result: result as unknown as Record<string, unknown>,
+        timestamp: new Date().toISOString(),
+      },
+    });
+
+    return result;
   },
 });
