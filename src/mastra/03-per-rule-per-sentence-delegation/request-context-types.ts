@@ -39,4 +39,7 @@ export interface Workflow03RequestContext {
 
   /** Model mode: 'testing' uses cheap model, 'production' uses per-agent models */
   'model-mode': ModelMode;
+
+  /** Step writer for emitting trace events from tools (bypasses broken ctx.writer) */
+  'step-writer': unknown;
 }
