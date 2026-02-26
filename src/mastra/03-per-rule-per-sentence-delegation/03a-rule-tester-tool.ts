@@ -178,7 +178,7 @@ export const testRuleTool = createTool({
     const allRules = getCurrentRules(ctx?.requestContext);
     const logFile = getLogFile(ctx?.requestContext);
 
-    return executeRuleTest({
+    const result = await executeRuleTest({
       rule: { title, description },
       allRules,
       structuredProblem,
@@ -186,6 +186,19 @@ export const testRuleTool = createTool({
       mastra: ctx.mastra!,
       ...(logFile !== undefined && { logFile }),
     });
+
+    await ctx.writer?.custom({
+      type: 'data-tool-call',
+      data: {
+        stepId: 'verify-improve-rules-loop',
+        toolName: 'testRule',
+        input: { title, description },
+        result: result as unknown as Record<string, unknown>,
+        timestamp: new Date().toISOString(),
+      },
+    });
+
+    return result;
   },
 });
 
@@ -226,7 +239,7 @@ export const testRuleWithRulesetTool = createTool({
       ...(r.confidence !== undefined && { confidence: r.confidence }),
     }));
 
-    return executeRuleTest({
+    const result = await executeRuleTest({
       rule: {
         title: rule.title,
         description: rule.description,
@@ -238,5 +251,18 @@ export const testRuleWithRulesetTool = createTool({
       mastra: ctx.mastra!,
       ...(logFile !== undefined && { logFile }),
     });
+
+    await ctx.writer?.custom({
+      type: 'data-tool-call',
+      data: {
+        stepId: 'verify-improve-rules-loop',
+        toolName: 'testRuleWithRuleset',
+        input: { rule: { title: rule.title }, rulesetCount: ruleset.length },
+        result: result as unknown as Record<string, unknown>,
+        timestamp: new Date().toISOString(),
+      },
+    });
+
+    return result;
   },
 });

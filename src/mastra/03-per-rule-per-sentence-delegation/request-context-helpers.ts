@@ -9,9 +9,10 @@ import type {
 } from './request-context-types';
 import type { VocabularyEntry } from './vocabulary-tools';
 import type { Mastra } from '@mastra/core/mastra';
+import type { ToolStream } from '@mastra/core/tools';
 
 /**
- * Type for the tool execute context that includes requestContext and mastra.
+ * Type for the tool execute context that includes requestContext, mastra, and writer.
  * Used with type assertion since Mastra's types may not include these yet.
  */
 export interface ToolExecuteContext {
@@ -19,6 +20,7 @@ export interface ToolExecuteContext {
     get: (key: keyof Workflow03RequestContext) => unknown;
   };
   mastra?: Mastra;
+  writer?: ToolStream;
 }
 
 // Type alias for the requestContext getter interface
