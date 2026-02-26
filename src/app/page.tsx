@@ -13,7 +13,7 @@ import { StepProgress, STEP_ORDER, type StepStatus } from '@/components/step-pro
 import { ResultsPanel } from '@/components/results-panel';
 import { DevTracePanel } from '@/components/dev-trace-panel';
 import { EXAMPLE_PROBLEMS, getExampleLabel } from '@/lib/examples';
-import type { StepId, WorkflowTraceEvent } from '@/lib/workflow-events';
+import type { StepId, WorkflowTraceEvent, VerifyImprovePhaseEvent } from '@/lib/workflow-events';
 
 const STEP_STATUS_MESSAGES: Record<StepId, string> = {
   'extract-structure': 'Extracting problem structure...',
@@ -181,6 +181,86 @@ export default function SolverPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allParts.length]);
 
+  // Derive loop state from verify-improve phase events
+  const loopState = useMemo(() => {
+    const phaseEvents = allParts.filter(
+      (p) => 'type' in p && (p as { type: string }).type === 'data-verify-improve-phase',
+    ) as unknown as VerifyImprovePhaseEvent[];
+
+    if (phaseEvents.length === 0) return undefined;
+
+    // Track completed iterations and current state
+    const completedIterations: Array<{
+      iteration: number;
+      conclusion: 'ALL_RULES_PASS' | 'NEEDS_IMPROVEMENT' | 'MAJOR_ISSUES';
+      hadImprovePhase: boolean;
+    }> = [];
+
+    let currentIteration = 1;
+    let currentPhase: 'verify' | 'improve' | 'complete' = 'verify';
+    let lastIterationHadImprove = false;
+
+    for (const event of phaseEvents) {
+      const { iteration, phase } = event.data;
+      currentIteration = iteration;
+
+      switch (phase) {
+        case 'verify-start':
+          currentPhase = 'verify';
+          lastIterationHadImprove = false;
+          break;
+        case 'verify-complete':
+          currentPhase = 'verify'; // Still in verify until improve starts
+          break;
+        case 'improve-start':
+          currentPhase = 'improve';
+          lastIterationHadImprove = true;
+          break;
+        case 'improve-complete':
+          currentPhase = 'complete';
+          // Find the iteration-update event to get conclusion
+          const iterUpdateEvents = allParts.filter(
+            (p) =>
+              'type' in p &&
+              (p as { type: string }).type === 'data-iteration-update' &&
+              (p as { data: { iteration: number } }).data.iteration === iteration,
+          ) as unknown as Array<{
+            data: { conclusion: 'ALL_RULES_PASS' | 'NEEDS_IMPROVEMENT' | 'MAJOR_ISSUES' };
+          }>;
+          const conclusion = iterUpdateEvents[0]?.data.conclusion ?? 'NEEDS_IMPROVEMENT';
+          completedIterations.push({
+            iteration,
+            conclusion,
+            hadImprovePhase: lastIterationHadImprove,
+          });
+          break;
+      }
+    }
+
+    // Check if verify completed without improve (ALL_RULES_PASS early exit)
+    const verifyStep = stepStatuses['verify-improve-rules-loop'];
+    if (verifyStep === 'success' && currentPhase === 'verify') {
+      const iterUpdateEvents = allParts.filter(
+        (p) =>
+          'type' in p &&
+          (p as { type: string }).type === 'data-iteration-update' &&
+          (p as { data: { iteration: number } }).data.iteration === currentIteration,
+      ) as unknown as Array<{
+        data: { conclusion: 'ALL_RULES_PASS' | 'NEEDS_IMPROVEMENT' | 'MAJOR_ISSUES' };
+      }>;
+      const conclusion = iterUpdateEvents[0]?.data.conclusion ?? 'ALL_RULES_PASS';
+      completedIterations.push({
+        iteration: currentIteration,
+        conclusion,
+        hadImprovePhase: false,
+      });
+      currentPhase = 'complete';
+    }
+
+    return { currentIteration, currentPhase, completedIterations };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allParts.length, stepStatuses]);
+
   return (
     <ResizablePanelGroup orientation="horizontal" className="h-full">
       <ResizablePanel defaultSize="35%" minSize="25%">
@@ -197,7 +277,7 @@ export default function SolverPage() {
             </Collapsible>
 
             {hasStarted && (
-              <StepProgress stepStatuses={stepStatuses} statusMessage={statusMessage} />
+              <StepProgress stepStatuses={stepStatuses} statusMessage={statusMessage} loopState={loopState} />
             )}
 
             {isFailed && (
