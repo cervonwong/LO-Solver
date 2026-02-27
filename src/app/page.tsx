@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
 import { useModelMode } from '@/hooks/use-model-mode';
@@ -184,6 +184,10 @@ export default function SolverPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allParts.length]);
 
+  // Auto-scroll refs and state for the trace panel
+  const traceEndRef = useRef<HTMLDivElement>(null);
+  const [isAtBottom, setIsAtBottom] = useState(true);
+
   // Collect trace events for the dev trace panel
   const traceEvents = useMemo(() => {
     return allParts.filter(
@@ -195,6 +199,25 @@ export default function SolverPage() {
     ) as unknown as WorkflowTraceEvent[];
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allParts.length]);
+
+  // IntersectionObserver to detect if user scrolled away from bottom
+  useEffect(() => {
+    const sentinel = traceEndRef.current;
+    if (!sentinel) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setIsAtBottom(entry?.isIntersecting ?? false),
+      { threshold: 0.1 },
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, []);
+
+  // Auto-scroll when new events arrive and user hasn't scrolled away
+  useEffect(() => {
+    if (isAtBottom && traceEndRef.current) {
+      traceEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [traceEvents.length, isAtBottom]);
 
   // Derive loop state from verify-improve phase events
   const loopState = useMemo(() => {
@@ -325,10 +348,19 @@ export default function SolverPage() {
       <ResizablePanel defaultSize="65%" minSize="30%">
         <ResizablePanelGroup orientation="vertical">
           {/* Trace panel */}
-          <ResizablePanel defaultSize="70%" minSize="30%">
+          <ResizablePanel defaultSize="70%" minSize="30%" className="relative">
             <ScrollArea className="h-full">
               <DevTracePanel events={traceEvents} isRunning={isRunning} />
+              <div ref={traceEndRef} className="h-px" />
             </ScrollArea>
+            {!isAtBottom && isRunning && (
+              <button
+                onClick={() => traceEndRef.current?.scrollIntoView({ behavior: 'smooth' })}
+                className="absolute bottom-3 left-1/2 z-10 -translate-x-1/2 rounded-full bg-status-active px-3 py-1 text-xs text-status-active-foreground shadow-md transition-opacity hover:opacity-90"
+              >
+                Jump to latest
+              </button>
+            )}
           </ResizablePanel>
 
           <ResizableHandle withHandle />
