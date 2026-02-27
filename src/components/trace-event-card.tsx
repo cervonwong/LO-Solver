@@ -2,11 +2,7 @@
 
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import type { WorkflowTraceEvent } from '@/lib/workflow-events';
 import { formatDuration } from '@/lib/trace-utils';
 import type { ToolCallGroup } from '@/lib/trace-utils';
@@ -115,23 +111,15 @@ export function TraceEventCard({ event }: TraceEventCardProps) {
             VOCAB
           </Badge>
           <span>
-            {event.data.action}: {event.data.entries.length} entries (total:{' '}
-            {event.data.totalCount})
+            {event.data.action}: {event.data.entries.length} entries (total: {event.data.totalCount}
+            )
           </span>
         </div>
       );
 
     case 'data-verify-improve-phase':
-      return (
-        <div className="flex items-center gap-2 py-1 text-xs text-muted-foreground">
-          <Badge variant="outline" className="text-[10px]">
-            {event.data.phase.includes('verify') ? 'VERIFY' : 'IMPROVE'}
-          </Badge>
-          <span>
-            Iter {event.data.iteration}: {formatPhase(event.data.phase)}
-          </span>
-        </div>
-      );
+      // Phase events are structural markers consumed by grouping logic; not rendered
+      return null;
   }
 }
 
@@ -145,21 +133,6 @@ function formatConclusion(conclusion: string): string {
       return 'Major issues found';
     default:
       return conclusion;
-  }
-}
-
-function formatPhase(phase: string): string {
-  switch (phase) {
-    case 'verify-start':
-      return 'Verification started';
-    case 'verify-complete':
-      return 'Verification complete';
-    case 'improve-start':
-      return 'Improvement started';
-    case 'improve-complete':
-      return 'Improvement complete';
-    default:
-      return phase;
   }
 }
 
