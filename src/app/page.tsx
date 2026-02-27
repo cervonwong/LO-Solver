@@ -7,8 +7,9 @@ import { useModelMode } from '@/hooks/use-model-mode';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Button } from '@/components/ui/button';
 import { ProblemInput } from '@/components/problem-input';
+import { LexMascot } from '@/components/lex-mascot';
+import { BlueprintCard } from '@/components/blueprint-card';
 import { StepProgress, type StepStatus, type ProgressStep } from '@/components/step-progress';
 import { ResultsPanel } from '@/components/results-panel';
 import { DevTracePanel } from '@/components/dev-trace-panel';
@@ -312,15 +313,19 @@ export default function SolverPage() {
       <ResizablePanel defaultSize="35%" minSize="25%">
         <ScrollArea className="h-full">
           <div className="flex flex-col gap-6 p-6">
-            <Collapsible open={inputOpen} onOpenChange={setInputOpen}>
-              <CollapsibleTrigger className="flex w-full items-center justify-between rounded border border-border px-3 py-2 text-left text-sm font-medium hover:bg-accent">
-                Problem Input
-                <span className="text-xs text-muted-foreground">{inputOpen ? '▲' : '▼'}</span>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="animate-collapsible pt-4">
-                <ProblemInput examples={examples} onSolve={handleSolve} disabled={isRunning} />
-              </CollapsibleContent>
-            </Collapsible>
+            <LexMascot />
+
+            <BlueprintCard>
+              <Collapsible open={inputOpen} onOpenChange={setInputOpen}>
+                <CollapsibleTrigger className="flex w-full items-center justify-between py-1 text-left font-heading text-base text-foreground hover:text-accent">
+                  Problem Input
+                  <span className="text-xs text-accent">{inputOpen ? '\u25B2' : '\u25BC'}</span>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="animate-collapsible pt-4">
+                  <ProblemInput examples={examples} onSolve={handleSolve} disabled={isRunning} />
+                </CollapsibleContent>
+              </Collapsible>
+            </BlueprintCard>
 
             {hasStarted && (
               <StepProgress
@@ -331,8 +336,11 @@ export default function SolverPage() {
             )}
 
             {isFailed && (
-              <div className="rounded border border-destructive p-4 text-sm text-destructive">
-                The workflow encountered an error. Check Mastra Studio for details.
+              <div className="border border-destructive p-4 text-sm text-destructive">
+                <span className="stamp-btn-secondary pointer-events-none mb-2 inline-block border-destructive text-xs text-destructive">
+                  REVISION REQUIRED
+                </span>
+                <p>The workflow encountered an error. Check Mastra Studio for details.</p>
               </div>
             )}
 
@@ -341,9 +349,9 @@ export default function SolverPage() {
             )}
 
             {(isComplete || isFailed) && !isRunning && (
-              <Button variant="outline" onClick={handleReset} className="w-fit text-xs">
-                New problem
-              </Button>
+              <button onClick={handleReset} className="stamp-btn-secondary w-fit text-sm">
+                New Problem
+              </button>
             )}
           </div>
         </ScrollArea>
