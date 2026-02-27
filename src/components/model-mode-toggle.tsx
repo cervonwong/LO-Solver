@@ -8,14 +8,14 @@ export function ModelModeToggle() {
 
   return (
     <div className="flex items-center gap-2 text-sm">
-      <span className={mode === 'testing' ? 'text-foreground' : 'text-muted-foreground'}>
+      <span className={mode === 'testing' ? 'text-accent' : 'text-muted-foreground'}>
         Testing ($)
       </span>
       <Switch
         checked={mode === 'production'}
         onCheckedChange={(checked) => setMode(checked ? 'production' : 'testing')}
       />
-      <span className={mode === 'production' ? 'text-foreground' : 'text-muted-foreground'}>
+      <span className={mode === 'production' ? 'text-accent' : 'text-muted-foreground'}>
         Production ($$$)
       </span>
     </div>
