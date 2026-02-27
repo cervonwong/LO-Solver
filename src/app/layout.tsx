@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className="h-full">
-      <body className="flex h-full flex-col bg-background font-mono text-foreground antialiased">
+      <body className="flex h-full flex-col bg-background font-sans text-foreground antialiased">
         <nav className="flex shrink-0 items-center justify-between border-b border-border px-6 py-3">
           <span className="text-lg font-bold tracking-tight">LO-Solver</span>
           <ModelModeToggle />
