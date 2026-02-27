@@ -1,20 +1,12 @@
 'use client';
 
-import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
 interface Answer {
   questionId: string;
@@ -30,17 +22,9 @@ interface Rule {
   confidence: 'HIGH' | 'MEDIUM' | 'LOW';
 }
 
-interface VocabEntry {
-  foreignForm: string;
-  meaning: string;
-  type: string;
-  notes: string;
-}
-
 interface ResultsPanelProps {
   output: Record<string, unknown>;
   rules?: Rule[];
-  vocabulary?: VocabEntry[];
 }
 
 const CONFIDENCE_VARIANT: Record<string, 'default' | 'secondary' | 'outline' | 'destructive'> = {
@@ -49,22 +33,28 @@ const CONFIDENCE_VARIANT: Record<string, 'default' | 'secondary' | 'outline' | '
   LOW: 'outline',
 };
 
-export function ResultsPanel({ output, rules, vocabulary }: ResultsPanelProps) {
+export function ResultsPanel({ output, rules }: ResultsPanelProps) {
   const answers = (output.answers as Answer[] | null) ?? [];
 
   return (
-    <div className="flex w-full flex-col gap-6">
-      <AnswersSection answers={answers} />
-      {rules && rules.length > 0 && <RulesSection rules={rules} />}
-      {vocabulary && vocabulary.length > 0 && <VocabularySection vocabulary={vocabulary} />}
-    </div>
+    <Tabs defaultValue="answers" className="w-full">
+      <TabsList>
+        <TabsTrigger value="answers">Answers</TabsTrigger>
+        <TabsTrigger value="rules">Rules</TabsTrigger>
+      </TabsList>
+      <TabsContent value="answers">
+        <AnswersSection answers={answers} />
+      </TabsContent>
+      <TabsContent value="rules">
+        {rules && rules.length > 0 && <RulesSection rules={rules} />}
+      </TabsContent>
+    </Tabs>
   );
 }
 
 function AnswersSection({ answers }: { answers: Answer[] }) {
   return (
     <section>
-      <h2 className="mb-3 text-lg font-bold">Answers</h2>
       {answers.length === 0 ? (
         <p className="text-sm text-muted-foreground">No answers generated.</p>
       ) : (
@@ -77,7 +67,7 @@ function AnswersSection({ answers }: { answers: Answer[] }) {
                 </span>
                 <Badge variant={CONFIDENCE_VARIANT[a.confidence]}>{a.confidence}</Badge>
               </CollapsibleTrigger>
-              <CollapsibleContent className="border-x border-b border-border px-3 py-2 text-xs text-muted-foreground">
+              <CollapsibleContent className="animate-collapsible border-x border-b border-border px-3 py-2 text-xs text-muted-foreground">
                 <p className="mb-1 whitespace-pre-wrap">{a.workingSteps}</p>
                 <p className="italic">{a.confidenceReasoning}</p>
               </CollapsibleContent>
@@ -92,7 +82,6 @@ function AnswersSection({ answers }: { answers: Answer[] }) {
 function RulesSection({ rules }: { rules: Rule[] }) {
   return (
     <section>
-      <h2 className="mb-3 text-lg font-bold">Rules ({rules.length})</h2>
       <div className="flex flex-col gap-2">
         {rules.map((r) => (
           <Collapsible key={r.title}>
@@ -100,53 +89,12 @@ function RulesSection({ rules }: { rules: Rule[] }) {
               <span>{r.title}</span>
               <Badge variant={CONFIDENCE_VARIANT[r.confidence]}>{r.confidence}</Badge>
             </CollapsibleTrigger>
-            <CollapsibleContent className="border-x border-b border-border px-3 py-2 text-xs text-muted-foreground whitespace-pre-wrap">
+            <CollapsibleContent className="animate-collapsible border-x border-b border-border px-3 py-2 text-xs text-muted-foreground whitespace-pre-wrap">
               {r.description}
             </CollapsibleContent>
           </Collapsible>
         ))}
       </div>
-    </section>
-  );
-}
-
-function VocabularySection({ vocabulary }: { vocabulary: VocabEntry[] }) {
-  const [showAll, setShowAll] = useState(false);
-  const displayed = showAll ? vocabulary : vocabulary.slice(0, 20);
-
-  return (
-    <section>
-      <h2 className="mb-3 text-lg font-bold">Vocabulary ({vocabulary.length} entries)</h2>
-      <div className="rounded border border-border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="text-xs">Form</TableHead>
-              <TableHead className="text-xs">Meaning</TableHead>
-              <TableHead className="text-xs">Type</TableHead>
-              <TableHead className="text-xs">Notes</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {displayed.map((v) => (
-              <TableRow key={v.foreignForm}>
-                <TableCell className="font-mono text-xs">{v.foreignForm}</TableCell>
-                <TableCell className="text-xs">{v.meaning}</TableCell>
-                <TableCell className="text-xs">{v.type}</TableCell>
-                <TableCell className="text-xs text-muted-foreground">{v.notes}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-      {vocabulary.length > 20 && !showAll && (
-        <button
-          onClick={() => setShowAll(true)}
-          className="mt-2 text-xs text-muted-foreground underline hover:text-foreground"
-        >
-          Show all {vocabulary.length} entries
-        </button>
-      )}
     </section>
   );
 }

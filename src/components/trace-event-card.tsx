@@ -10,6 +10,11 @@ import {
 import type { WorkflowTraceEvent } from '@/lib/workflow-events';
 import { formatDuration } from '@/lib/trace-utils';
 import type { ToolCallGroup } from '@/lib/trace-utils';
+import { Streamdown } from 'streamdown';
+import { code } from '@streamdown/code';
+
+const jsonMarkdown = (label: string, data: unknown) =>
+  `**${label}:**\n\`\`\`json\n${JSON.stringify(data, null, 2)}\n\`\`\``;
 
 interface TraceEventCardProps {
   event: WorkflowTraceEvent;
@@ -21,8 +26,8 @@ export function TraceEventCard({ event }: TraceEventCardProps) {
   switch (event.type) {
     case 'data-step-start':
       return (
-        <div className="flex items-center gap-2 py-1 text-xs text-muted-foreground">
-          <Badge variant="outline" className="text-[10px]">
+        <div className="animate-fade-in border-l-3 border-l-status-active flex items-center gap-2 py-1 text-xs text-muted-foreground">
+          <Badge variant="outline" className="bg-status-active-muted text-status-active text-[10px]">
             START
           </Badge>
           <span>Step started</span>
@@ -31,8 +36,11 @@ export function TraceEventCard({ event }: TraceEventCardProps) {
 
     case 'data-step-complete':
       return (
-        <div className="flex items-center gap-2 py-1 text-xs text-muted-foreground">
-          <Badge variant="outline" className="text-[10px]">
+        <div className="animate-fade-in border-l-3 border-l-status-success flex items-center gap-2 py-1 text-xs text-muted-foreground">
+          <Badge
+            variant="outline"
+            className="bg-status-success-muted text-status-success text-[10px]"
+          >
             DONE
           </Badge>
           <span>Step completed in {formatDuration(event.data.durationMs)}</span>
@@ -42,9 +50,12 @@ export function TraceEventCard({ event }: TraceEventCardProps) {
     case 'data-agent-reasoning':
       return (
         <Collapsible open={open} onOpenChange={setOpen}>
-          <CollapsibleTrigger className="flex w-full items-center justify-between rounded border border-border px-3 py-2 text-left text-xs hover:bg-accent">
+          <CollapsibleTrigger className="animate-fade-in border-l-3 border-l-trace-agent flex w-full items-center justify-between rounded border border-border px-3 py-2 text-left text-xs hover:bg-accent">
             <span className="flex items-center gap-2">
-              <Badge variant="secondary" className="text-[10px]">
+              <Badge
+                variant="secondary"
+                className="bg-trace-agent-muted text-trace-agent text-[10px]"
+              >
                 AGENT
               </Badge>
               <span className="font-medium">{event.data.agentName}</span>
@@ -52,10 +63,8 @@ export function TraceEventCard({ event }: TraceEventCardProps) {
             </span>
             <span className="text-muted-foreground">{formatDuration(event.data.durationMs)}</span>
           </CollapsibleTrigger>
-          <CollapsibleContent className="border-x border-b border-border px-3 py-2">
-            <p className="whitespace-pre-wrap text-xs text-muted-foreground">
-              {event.data.reasoning}
-            </p>
+          <CollapsibleContent className="animate-collapsible border-x border-b border-border px-3 py-2">
+            <Streamdown plugins={{ code }}>{event.data.reasoning}</Streamdown>
           </CollapsibleContent>
         </Collapsible>
       );
@@ -63,29 +72,26 @@ export function TraceEventCard({ event }: TraceEventCardProps) {
     case 'data-tool-call':
       return (
         <Collapsible open={open} onOpenChange={setOpen}>
-          <CollapsibleTrigger className="flex w-full items-center justify-between rounded border border-border px-3 py-2 text-left text-xs hover:bg-accent">
+          <CollapsibleTrigger className="animate-fade-in border-l-3 border-l-trace-tool flex w-full items-center justify-between rounded border border-border px-3 py-2 text-left text-xs hover:bg-accent">
             <span className="flex items-center gap-2">
-              <Badge variant="default" className="text-[10px]">
+              <Badge
+                variant="default"
+                className="bg-trace-tool-muted text-trace-tool text-[10px]"
+              >
                 TOOL
               </Badge>
               <span className="font-medium">{event.data.toolName}</span>
             </span>
             <span className="text-muted-foreground">{open ? '▲' : '▼'}</span>
           </CollapsibleTrigger>
-          <CollapsibleContent className="border-x border-b border-border px-3 py-2">
+          <CollapsibleContent className="animate-collapsible border-x border-b border-border px-3 py-2">
             <div className="flex flex-col gap-2">
-              <div>
-                <p className="mb-1 text-[10px] font-medium text-muted-foreground">Input</p>
-                <pre className="overflow-x-auto rounded bg-muted p-2 text-[10px]">
-                  {JSON.stringify(event.data.input, null, 2)}
-                </pre>
-              </div>
-              <div>
-                <p className="mb-1 text-[10px] font-medium text-muted-foreground">Result</p>
-                <pre className="overflow-x-auto rounded bg-muted p-2 text-[10px]">
-                  {JSON.stringify(event.data.result, null, 2)}
-                </pre>
-              </div>
+              <Streamdown plugins={{ code }}>
+                {jsonMarkdown('Input', event.data.input)}
+              </Streamdown>
+              <Streamdown plugins={{ code }}>
+                {jsonMarkdown('Result', event.data.result)}
+              </Streamdown>
             </div>
           </CollapsibleContent>
         </Collapsible>
@@ -93,10 +99,10 @@ export function TraceEventCard({ event }: TraceEventCardProps) {
 
     case 'data-iteration-update':
       return (
-        <div className="flex items-center gap-2 rounded border border-border px-3 py-2 text-xs">
+        <div className="animate-fade-in border-l-3 border-l-status-warning flex items-center gap-2 rounded border border-border px-3 py-2 text-xs">
           <Badge
-            variant={event.data.conclusion === 'ALL_RULES_PASS' ? 'default' : 'secondary'}
-            className="text-[10px]"
+            variant="secondary"
+            className="bg-status-warning-muted text-status-warning text-[10px]"
           >
             ITER {event.data.iteration}
           </Badge>
@@ -110,8 +116,11 @@ export function TraceEventCard({ event }: TraceEventCardProps) {
 
     case 'data-vocabulary-update':
       return (
-        <div className="flex items-center gap-2 py-1 text-xs text-muted-foreground">
-          <Badge variant="outline" className="text-[10px]">
+        <div className="animate-fade-in border-l-3 border-l-trace-vocab flex items-center gap-2 py-1 text-xs text-muted-foreground">
+          <Badge
+            variant="outline"
+            className="bg-trace-vocab-muted text-trace-vocab text-[10px]"
+          >
             VOCAB
           </Badge>
           <span>
@@ -123,8 +132,11 @@ export function TraceEventCard({ event }: TraceEventCardProps) {
 
     case 'data-verify-improve-phase':
       return (
-        <div className="flex items-center gap-2 py-1 text-xs text-muted-foreground">
-          <Badge variant="outline" className="text-[10px]">
+        <div className="animate-fade-in border-l-3 border-l-status-warning flex items-center gap-2 py-1 pl-2 text-xs text-muted-foreground">
+          <Badge
+            variant="outline"
+            className="bg-status-warning-muted text-status-warning text-[10px]"
+          >
             {event.data.phase.includes('verify') ? 'VERIFY' : 'IMPROVE'}
           </Badge>
           <span>
@@ -172,9 +184,9 @@ export function ToolCallGroupCard({ group }: ToolCallGroupCardProps) {
 
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
-      <CollapsibleTrigger className="flex w-full items-center justify-between rounded border border-border px-3 py-2 text-left text-xs hover:bg-accent">
+      <CollapsibleTrigger className="animate-fade-in border-l-3 border-l-trace-tool flex w-full items-center justify-between rounded border border-border px-3 py-2 text-left text-xs hover:bg-accent">
         <span className="flex items-center gap-2">
-          <Badge variant="default" className="text-[10px]">
+          <Badge variant="default" className="bg-trace-tool-muted text-trace-tool text-[10px]">
             TOOL
           </Badge>
           <span className="font-medium">{group.toolName}</span>
@@ -184,7 +196,7 @@ export function ToolCallGroupCard({ group }: ToolCallGroupCardProps) {
         </span>
         <span className="text-muted-foreground">{open ? '\u25B2' : '\u25BC'}</span>
       </CollapsibleTrigger>
-      <CollapsibleContent className="border-x border-b border-border">
+      <CollapsibleContent className="animate-collapsible border-x border-b border-border">
         <div className="flex flex-col divide-y divide-border">
           {group.calls.map((call, i) => (
             <ToolCallDetail key={i} index={i + 1} call={call} />
@@ -210,20 +222,14 @@ function ToolCallDetail({
         <span className="text-muted-foreground">Call #{index}</span>
         <span className="text-muted-foreground">{open ? '\u25B2' : '\u25BC'}</span>
       </CollapsibleTrigger>
-      <CollapsibleContent className="px-3 py-2">
+      <CollapsibleContent className="animate-collapsible px-3 py-2">
         <div className="flex flex-col gap-2">
-          <div>
-            <p className="mb-1 text-[10px] font-medium text-muted-foreground">Input</p>
-            <pre className="overflow-x-auto rounded bg-muted p-2 text-[10px]">
-              {JSON.stringify(call.input, null, 2)}
-            </pre>
-          </div>
-          <div>
-            <p className="mb-1 text-[10px] font-medium text-muted-foreground">Result</p>
-            <pre className="overflow-x-auto rounded bg-muted p-2 text-[10px]">
-              {JSON.stringify(call.result, null, 2)}
-            </pre>
-          </div>
+          <Streamdown plugins={{ code }}>
+            {jsonMarkdown('Input', call.input)}
+          </Streamdown>
+          <Streamdown plugins={{ code }}>
+            {jsonMarkdown('Result', call.result)}
+          </Streamdown>
         </div>
       </CollapsibleContent>
     </Collapsible>

@@ -11,6 +11,8 @@ import {
   isToolCallGroup,
   formatDuration,
 } from '@/lib/trace-utils';
+import { ActivityIndicator } from '@/components/activity-indicator';
+import { SkeletonTrace } from '@/components/skeleton-trace';
 import type { WorkflowTraceEvent } from '@/lib/workflow-events';
 
 interface DevTracePanelProps {
@@ -21,12 +23,18 @@ interface DevTracePanelProps {
 export function DevTracePanel({ events, isRunning }: DevTracePanelProps) {
   const stepGroups = useMemo(() => groupEventsByStep(events), [events]);
 
+  if (events.length === 0 && isRunning) {
+    return <SkeletonTrace />;
+  }
+
   if (events.length === 0 && !isRunning) {
     return <EmptyState />;
   }
 
   return (
     <div className="flex flex-col gap-4 p-4">
+      <ActivityIndicator events={events} isRunning={isRunning} />
+
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-bold text-muted-foreground">Dev Trace</h2>
         <span className="text-xs text-muted-foreground">

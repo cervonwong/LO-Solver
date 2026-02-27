@@ -106,16 +106,18 @@ function StepCircle({
   return (
     <div
       className={cn(
-        'flex items-center justify-center rounded-full border',
+        'flex items-center justify-center rounded-full border transition-all duration-300',
         isSmall ? 'h-6 w-6 text-[10px]' : 'h-8 w-8 text-xs',
-        status === 'running' && 'animate-pulse border-foreground bg-foreground text-background',
-        status === 'success' && 'border-foreground bg-foreground text-background',
-        status === 'failed' && 'border-destructive bg-destructive text-background',
-        status === 'pending' && 'border-border text-muted-foreground',
+        status === 'running' &&
+          'animate-pulse border-status-active bg-status-active text-status-active-foreground',
+        status === 'success' &&
+          'border-status-success bg-status-success text-status-success-foreground',
+        status === 'failed' && 'border-destructive bg-destructive text-destructive-foreground',
+        status === 'pending' && 'border-border bg-muted text-muted-foreground',
       )}
     >
       {status === 'success' ? (
-        <span>&#10003;</span>
+        <span className="animate-checkmark-scale">&#10003;</span>
       ) : status === 'failed' ? (
         <span>&#10007;</span>
       ) : (
@@ -126,18 +128,27 @@ function StepCircle({
 }
 
 function Connector({
-  active,
+  fromStatus,
+  toStatus,
   variant = 'normal',
 }: {
-  active: boolean;
+  fromStatus: StepStatus;
+  toStatus: StepStatus;
   variant?: 'normal' | 'sub';
 }) {
+  const bothComplete = fromStatus === 'success' && toStatus === 'success';
+  const completedToRunning = fromStatus === 'success' && toStatus === 'running';
+  const hasActivity = fromStatus === 'success' || fromStatus === 'running';
+
   return (
     <div
       className={cn(
-        'h-px flex-1',
+        'h-px flex-1 transition-colors duration-300',
         variant === 'sub' ? 'mx-0.5 min-w-2' : 'mx-1 min-w-3',
-        active ? 'bg-foreground' : 'bg-border',
+        bothComplete && 'bg-status-success',
+        completedToRunning && 'bg-gradient-to-r from-status-success to-status-active',
+        !bothComplete && !completedToRunning && hasActivity && 'bg-foreground',
+        !hasActivity && 'bg-border',
       )}
     />
   );
@@ -154,13 +165,15 @@ export function StepProgress({ stepStatuses, statusMessage, loopState }: StepPro
         {STEP_ORDER.map((stepId, i) => {
           const status = stepStatuses[stepId];
           const isVerifyImprove = stepId === 'verify-improve-rules-loop';
+          const prevStepId = i > 0 ? STEP_ORDER[i - 1]! : undefined;
+          const prevStatus = prevStepId ? stepStatuses[prevStepId] : 'pending';
 
           // For verify-improve with sub-steps, render the sub-step cluster
           if (isVerifyImprove && hasSubSteps && subSteps.length > 0) {
             return (
               <div key={stepId} className="flex items-center">
                 {/* Connector from previous step */}
-                <Connector active={status !== 'pending'} />
+                <Connector fromStatus={prevStatus} toStatus={status} />
 
                 {/* Sub-step cluster */}
                 <div className="flex flex-col items-center gap-1">
@@ -169,7 +182,8 @@ export function StepProgress({ stepStatuses, statusMessage, loopState }: StepPro
                       <div key={sub.id} className="flex items-center">
                         {si > 0 && (
                           <Connector
-                            active={sub.status === 'running' || sub.status === 'success'}
+                            fromStatus={subSteps[si - 1]!.status}
+                            toStatus={sub.status}
                             variant="sub"
                           />
                         )}
@@ -191,7 +205,10 @@ export function StepProgress({ stepStatuses, statusMessage, loopState }: StepPro
                 </div>
 
                 {/* Connector to next step */}
-                <Connector active={status === 'success'} />
+                <Connector
+                  fromStatus={status}
+                  toStatus={stepStatuses[STEP_ORDER[i + 1]!] ?? 'pending'}
+                />
               </div>
             );
           }
@@ -199,12 +216,10 @@ export function StepProgress({ stepStatuses, statusMessage, loopState }: StepPro
           // Normal step rendering
           return (
             <div key={stepId} className="flex items-center">
-              {i > 0 && !isVerifyImprove && (
-                <Connector active={status === 'success' || status === 'running'} />
-              )}
+              {i > 0 && !isVerifyImprove && <Connector fromStatus={prevStatus} toStatus={status} />}
               {/* Skip connector for verify-improve when no sub-steps (it's rendered in the cluster) */}
               {i > 0 && isVerifyImprove && !hasSubSteps && (
-                <Connector active={status === 'success' || status === 'running'} />
+                <Connector fromStatus={prevStatus} toStatus={status} />
               )}
               <div className="flex flex-col items-center gap-1">
                 <StepCircle status={status} label={i + 1} />
