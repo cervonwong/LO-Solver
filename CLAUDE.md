@@ -83,6 +83,8 @@ Three evolutionary workflows live under `src/mastra/`, numbered by sophisticatio
 - Imperative mood ("Add feature" not "Added feature")
 - Capitalise first letter
 - No conventional commits prefix (no `feat:`, `fix(scope):`, etc.)
+- For small, self-contained changes: commit and push proactively without asking
+- For large or multi-step changes: proactively ask whether to commit and push
 
 ## Environment
 

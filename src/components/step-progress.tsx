@@ -19,15 +19,17 @@ function StepCircle({ status, label }: { status: StepStatus; label: string | num
   return (
     <div
       className={cn(
-        'flex h-8 w-8 items-center justify-center rounded-full border text-xs',
-        status === 'running' && 'animate-pulse border-foreground bg-foreground text-background',
-        status === 'success' && 'border-foreground bg-foreground text-background',
-        status === 'failed' && 'border-destructive bg-destructive text-background',
-        status === 'pending' && 'border-border text-muted-foreground',
+        'flex h-8 w-8 items-center justify-center rounded-full border text-xs transition-all duration-300',
+        status === 'running' &&
+          'animate-pulse border-status-active bg-status-active text-status-active-foreground',
+        status === 'success' &&
+          'border-status-success bg-status-success text-status-success-foreground',
+        status === 'failed' && 'border-destructive bg-destructive text-destructive-foreground',
+        status === 'pending' && 'border-border bg-muted text-muted-foreground',
       )}
     >
       {status === 'success' ? (
-        <span>&#10003;</span>
+        <span className="animate-checkmark-scale">&#10003;</span>
       ) : status === 'failed' ? (
         <span>&#10007;</span>
       ) : (
@@ -37,8 +39,22 @@ function StepCircle({ status, label }: { status: StepStatus; label: string | num
   );
 }
 
-function Connector({ active }: { active: boolean }) {
-  return <div className={cn('mx-1 h-px min-w-3 flex-1', active ? 'bg-foreground' : 'bg-border')} />;
+function Connector({ fromStatus, toStatus }: { fromStatus: StepStatus; toStatus: StepStatus }) {
+  const bothComplete = fromStatus === 'success' && toStatus === 'success';
+  const completedToRunning = fromStatus === 'success' && toStatus === 'running';
+  const hasActivity = fromStatus === 'success' || fromStatus === 'running';
+
+  return (
+    <div
+      className={cn(
+        'mx-1 h-px min-w-3 flex-1 transition-colors duration-300',
+        bothComplete && 'bg-status-success',
+        completedToRunning && 'bg-gradient-to-r from-status-success to-status-active',
+        !bothComplete && !completedToRunning && hasActivity && 'bg-foreground',
+        !hasActivity && 'bg-border',
+      )}
+    />
+  );
 }
 
 export function StepProgress({ steps, statusMessage, onStepClick }: StepProgressProps) {
@@ -53,7 +69,7 @@ export function StepProgress({ steps, statusMessage, onStepClick }: StepProgress
             role={onStepClick ? 'button' : undefined}
             style={onStepClick ? { cursor: 'pointer' } : undefined}
           >
-            {i > 0 && <Connector active={step.status === 'success' || step.status === 'running'} />}
+            {i > 0 && <Connector fromStatus={steps[i - 1]!.status} toStatus={step.status} />}
             <div className="flex flex-col items-center gap-1">
               <StepCircle status={step.status} label={i + 1} />
               <span

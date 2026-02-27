@@ -12,4 +12,4 @@ export const openrouter = createOpenRouter({
 export type ModelMode = 'testing' | 'production';
 
 /** Cheap model used by all agents in testing mode. */
-export const TESTING_MODEL = 'amazon/nova-micro-v1';
+export const TESTING_MODEL = 'openai/gpt-oss-120b';
