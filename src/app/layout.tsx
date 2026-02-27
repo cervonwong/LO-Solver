@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import 'streamdown/styles.css';
 import { ModelModeToggle } from '@/components/model-mode-toggle';
 import { ThemeToggle } from '@/components/theme-toggle';
 
