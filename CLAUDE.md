@@ -86,5 +86,5 @@ Three evolutionary workflows live under `src/mastra/`, numbered by sophisticatio
 ## Environment
 
 - Node.js >= 22.13.0
-- `.env` requires `OPENROUTER_API_KEY`; optional `LOG_DIRECTORY`
+- `.env` requires `OPENROUTER_API_KEY`; optional `LOG_DIRECTORY`. In a git worktree, copy `.env` from the main working tree (usually `../../.env`)
 - Example prompts/data live in `examples/`
