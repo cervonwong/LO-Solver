@@ -36,27 +36,27 @@ export function VocabularyPanel({ vocabulary, mutationSummary, isRunning }: Voca
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-2">
+      <div className="frosted flex shrink-0 items-center justify-between border-b border-border px-4 py-2">
         <div className="flex items-center gap-2">
-          <h3 className="text-sm font-semibold">Vocabulary</h3>
-          <Badge variant="secondary" className="text-xs">
+          <h3 className="font-heading text-sm text-foreground">Vocabulary</h3>
+          <span className="dimension">
             {vocabulary.length} {vocabulary.length === 1 ? 'entry' : 'entries'}
-          </Badge>
+          </span>
         </div>
         {hasActivity && (
           <div className="flex items-center gap-1.5">
             {mutationSummary.added > 0 && (
-              <Badge className="bg-status-success-muted text-status-success text-xs">
+              <Badge variant="outline" className="border-foreground text-foreground text-xs">
                 +{mutationSummary.added} added
               </Badge>
             )}
             {mutationSummary.updated > 0 && (
-              <Badge className="bg-status-warning-muted text-status-warning text-xs">
+              <Badge variant="outline" className="border-status-warning text-status-warning text-xs">
                 {mutationSummary.updated} updated
               </Badge>
             )}
             {mutationSummary.removed > 0 && (
-              <Badge className="bg-destructive/10 text-destructive text-xs">
+              <Badge variant="outline" className="border-destructive text-destructive text-xs">
                 {mutationSummary.removed} removed
               </Badge>
             )}
@@ -74,16 +74,16 @@ export function VocabularyPanel({ vocabulary, mutationSummary, isRunning }: Voca
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="text-xs">Form</TableHead>
-                <TableHead className="text-xs">Meaning</TableHead>
-                <TableHead className="text-xs">Type</TableHead>
-                <TableHead className="text-xs">Notes</TableHead>
+                <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Form</TableHead>
+                <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Meaning</TableHead>
+                <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Type</TableHead>
+                <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Notes</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {vocabulary.map((entry) => (
                 <TableRow key={entry.foreignForm} className="animate-slide-in-row">
-                  <TableCell className="font-mono text-sm">{entry.foreignForm}</TableCell>
+                  <TableCell className="text-sm">{entry.foreignForm}</TableCell>
                   <TableCell className="text-sm">{entry.meaning}</TableCell>
                   <TableCell className="text-xs text-muted-foreground">
                     {entry.type ?? '—'}
