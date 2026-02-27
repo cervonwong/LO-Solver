@@ -15,11 +15,16 @@
 | [2026-02-27-backend-refactoring-design](./2026-02-27-backend-refactoring-design.md)               | Done   | Design doc for backend type safety and workflow.ts split                   |
 | [2026-02-27-backend-refactoring-plan](./2026-02-27-backend-refactoring-plan.md)                   | Done   | StepWriter typing, emit consolidation, schema extraction, ruleSchema       |
 | [2026-02-27-sub-agent-timeout-fix](./2026-02-27-sub-agent-timeout-fix.md)                         | Done   | Fix missing requestContext, Promise.race leak, add requestContextSchema    |
+| [2026-02-26-progress-bar-and-tool-streaming-design](./2026-02-26-progress-bar-and-tool-streaming-design.md) | Done | Progress bar loop expansion and real-time tool call streaming design    |
+| [2026-02-26-progress-bar-and-tool-streaming-plan](./2026-02-26-progress-bar-and-tool-streaming-plan.md)     | Done | Fix tool-call event dropping, expand progress bar, group tool calls    |
+| [2026-02-26-polished-pipeline-monitor-design](./2026-02-26-polished-pipeline-monitor-design.md)   | Done   | Design doc for polished three-panel pipeline monitor                       |
+| [2026-02-26-polished-pipeline-monitor-plan](./2026-02-26-polished-pipeline-monitor-plan.md)       | Done   | Polished pipeline monitor (superseded by cyanotype theme)                  |
+| [2026-02-27-cyanotype-blueprint-theme-design](./2026-02-27-cyanotype-blueprint-theme-design.md)   | Done   | Cyanotype blueprint visual redesign with crosshair cards, stamp buttons    |
+| [2026-02-27-cyanotype-blueprint-theme-plan](./2026-02-27-cyanotype-blueprint-theme-plan.md)       | Done   | 17-task implementation plan for Cyanotype blueprint theme                  |
 
 ## Current Plans
 
-| Plan                                                                                                      | Status  | Description                                                             |
-| --------------------------------------------------------------------------------------------------------- | ------- | ----------------------------------------------------------------------- |
-| [2026-02-26-polished-pipeline-monitor-plan](./2026-02-26-polished-pipeline-monitor-plan.md)               | Active  | Polished three-panel pipeline monitor with dark mode and rich rendering |
-| [2026-02-27-separate-verify-improve-blocks-design](./2026-02-27-separate-verify-improve-blocks-design.md) | Pending | Split verify-improve into separate UI blocks with dynamic progress bar  |
-| [2026-02-27-separate-verify-improve-blocks-plan](./2026-02-27-separate-verify-improve-blocks-plan.md)     | Pending | Implementation plan for separate verify/improve blocks                  |
+| Plan                                                                                                      | Status  | Description                                                            |
+| --------------------------------------------------------------------------------------------------------- | ------- | ---------------------------------------------------------------------- |
+| [2026-02-27-separate-verify-improve-blocks-design](./2026-02-27-separate-verify-improve-blocks-design.md) | Pending | Split verify-improve into separate UI blocks with dynamic progress bar |
+| [2026-02-27-separate-verify-improve-blocks-plan](./2026-02-27-separate-verify-improve-blocks-plan.md)     | Pending | Implementation plan for separate verify/improve blocks                 |
