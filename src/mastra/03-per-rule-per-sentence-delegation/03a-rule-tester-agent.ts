@@ -1,4 +1,5 @@
 import { Agent } from '@mastra/core/agent';
+import { z } from 'zod';
 import { openrouter, TESTING_MODEL } from '../openrouter';
 
 const RULE_TESTER_SYSTEM_PROMPT = `
@@ -55,4 +56,7 @@ export const ruleTesterAgent = new Agent({
       requestContext?.get('model-mode') === 'production' ? 'openai/gpt-5-mini' : TESTING_MODEL,
     ),
   tools: {},
+  requestContextSchema: z.object({
+    'model-mode': z.enum(['testing', 'production']),
+  }),
 });
