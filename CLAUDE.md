@@ -47,6 +47,7 @@ Three evolutionary workflows live under `src/mastra/`, numbered by sophisticatio
 ### File Conventions in Each Workflow
 
 - `workflow.ts` — Workflow definition with steps
+- `workflow-schemas.ts` — Zod schemas and types shared across workflow steps and tools
 - `*-agent.ts` — Agent definition (one per file)
 - `*-instructions.ts` — System prompt for the corresponding agent
 - `*-tool.ts` — Tool definitions used by agents
