@@ -139,7 +139,7 @@
 /* Frosted glass panel — surface-1 elevation */
 .frosted {
   background: var(--surface-1);
-  backdrop-filter: blur(6px);
+  backdrop-filter: blur(2px);
 }
 
 /* Crosshair card — major containers, surface-1 elevation */
@@ -147,7 +147,7 @@
   position: relative;
   border: 1px solid var(--border-strong);
   background: var(--surface-1);
-  backdrop-filter: blur(6px);
+  backdrop-filter: blur(2px);
   padding: 15px;
 }
 

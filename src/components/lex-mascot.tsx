@@ -19,7 +19,7 @@ export function LexMascot() {
         </svg>
       </div>
 
-      {/* SVG tail */}
+      {/* SVG tail — fill with no stroke, then draw only the two visible edges */}
       <svg
         width="12"
         height="24"
@@ -27,14 +27,14 @@ export function LexMascot() {
         className="mt-3 shrink-0"
         style={{ marginRight: '-1px' }}
       >
-        <polygon
-          points="0,12 12,0 12,24"
-          style={{ fill: 'var(--surface-1)', stroke: 'var(--border-strong)' }}
+        <polygon points="0,12 12,0 12,24" style={{ fill: 'var(--surface-1)' }} stroke="none" />
+        <polyline
+          points="12,0 0,12 12,24"
+          fill="none"
+          style={{ stroke: 'var(--border-strong)' }}
           strokeWidth="1"
           strokeLinejoin="round"
         />
-        {/* Hide the right edge so it merges with the bubble border */}
-        <line x1="12" y1="0" x2="12" y2="24" style={{ stroke: 'var(--surface-1)' }} strokeWidth="2" />
       </svg>
 
       {/* Speech bubble with backdrop blur */}
