@@ -371,9 +371,9 @@ export default function SolverPage() {
             {!isAtBottom && isRunning && (
               <button
                 onClick={() => traceEndRef.current?.scrollIntoView({ behavior: 'smooth' })}
-                className="absolute bottom-3 left-1/2 z-10 -translate-x-1/2 rounded-full bg-status-active px-3 py-1 text-xs text-status-active-foreground shadow-md transition-opacity hover:opacity-90"
+                className="absolute bottom-3 left-1/2 z-10 -translate-x-1/2 border border-accent bg-background/80 px-3 py-1 text-xs uppercase tracking-wider text-accent transition-opacity hover:bg-muted"
               >
-                Jump to latest
+                Jump to latest &#8595;
               </button>
             )}
           </ResizablePanel>
