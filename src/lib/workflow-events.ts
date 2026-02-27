@@ -4,12 +4,23 @@ export type StepId =
   | 'verify-improve-rules-loop'
   | 'answer-questions';
 
+export type UIStepId = StepId | `verify-${number}` | `improve-${number}`;
+
 export const STEP_LABELS: Record<StepId, string> = {
   'extract-structure': 'Extract',
   'initial-hypothesis': 'Hypothesize',
   'verify-improve-rules-loop': 'Verify / Improve',
   'answer-questions': 'Answer',
 };
+
+export function getUIStepLabel(id: UIStepId): string {
+  if (id in STEP_LABELS) return STEP_LABELS[id as StepId];
+  const verifyMatch = id.match(/^verify-(\d+)$/);
+  if (verifyMatch) return `Verify ${verifyMatch[1]}`;
+  const improveMatch = id.match(/^improve-(\d+)$/);
+  if (improveMatch) return `Improve ${improveMatch[1]}`;
+  return id;
+}
 
 export interface StepStartEvent {
   type: 'data-step-start';
