@@ -132,7 +132,7 @@ export function TraceEventCard({ event }: TraceEventCardProps) {
 
     case 'data-verify-improve-phase':
       return (
-        <div className="animate-fade-in border-l-3 border-l-status-warning flex items-center gap-2 py-1 text-xs text-muted-foreground">
+        <div className="animate-fade-in border-l-3 border-l-status-warning flex items-center gap-2 py-1 pl-2 text-xs text-muted-foreground">
           <Badge
             variant="outline"
             className="bg-status-warning-muted text-status-warning text-[10px]"

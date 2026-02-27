@@ -30,6 +30,17 @@ function applyTheme(): void {
   document.documentElement.classList.toggle('dark', resolved === 'dark');
 }
 
+// Snapshot encodes both raw preference and resolved theme so React re-renders
+// when either changes (e.g. switching between "light" and "system" that both
+// resolve to light).
+function getSnapshot(): string {
+  return `${getStoredTheme()}:${getResolvedTheme()}`;
+}
+
+function getServerSnapshot(): string {
+  return `${DEFAULT_THEME}:light`;
+}
+
 function subscribe(callback: () => void): () => void {
   const handleStorage = () => {
     applyTheme();
@@ -42,7 +53,6 @@ function subscribe(callback: () => void): () => void {
   };
   window.addEventListener('storage', handleStorage);
   mql.addEventListener('change', handleMediaChange);
-  // Apply on mount
   applyTheme();
   return () => {
     window.removeEventListener('storage', handleStorage);
@@ -50,26 +60,20 @@ function subscribe(callback: () => void): () => void {
   };
 }
 
-function getSnapshot(): ResolvedTheme {
-  return getResolvedTheme();
-}
-
-function getServerSnapshot(): ResolvedTheme {
-  return 'light';
-}
-
 export function useTheme(): {
   theme: Theme;
   resolvedTheme: ResolvedTheme;
   setTheme: (theme: Theme) => void;
 } {
-  const resolvedTheme = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  const snapshot = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  const [theme, resolvedTheme] = snapshot.split(':') as [Theme, ResolvedTheme];
 
   const setTheme = useCallback((newTheme: Theme) => {
     localStorage.setItem(STORAGE_KEY, newTheme);
     applyTheme();
+    // Notify subscribers in the same tab (native storage events only fire cross-tab)
     window.dispatchEvent(new StorageEvent('storage', { key: STORAGE_KEY }));
   }, []);
 
-  return { theme: getStoredTheme(), resolvedTheme, setTheme };
+  return { theme, resolvedTheme, setTheme };
 }

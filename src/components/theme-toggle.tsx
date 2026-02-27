@@ -2,23 +2,42 @@
 
 import { useTheme } from '@/hooks/use-theme';
 import { Button } from '@/components/ui/button';
-import { SunIcon, MoonIcon, MonitorIcon } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { SunMoonIcon, SunIcon, MoonIcon, MonitorIcon } from 'lucide-react';
 
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
 
-  const cycleTheme = () => {
-    const next = theme === 'system' ? 'light' : theme === 'light' ? 'dark' : 'system';
-    setTheme(next);
-  };
-
-  const Icon = theme === 'system' ? MonitorIcon : theme === 'light' ? SunIcon : MoonIcon;
-  const label = theme === 'system' ? 'System' : theme === 'light' ? 'Light' : 'Dark';
-
   return (
-    <Button variant="ghost" size="sm" onClick={cycleTheme} className="gap-1.5">
-      <Icon className="h-4 w-4" />
-      <span className="text-xs text-muted-foreground">{label}</span>
-    </Button>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" size="icon" className="h-8 w-8">
+          <SunMoonIcon className="h-4 w-4" />
+          <span className="sr-only">Toggle theme</span>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuRadioGroup value={theme} onValueChange={(v) => setTheme(v as 'light' | 'dark' | 'system')}>
+          <DropdownMenuRadioItem value="light">
+            <SunIcon className="mr-2 h-4 w-4" />
+            Light
+          </DropdownMenuRadioItem>
+          <DropdownMenuRadioItem value="dark">
+            <MoonIcon className="mr-2 h-4 w-4" />
+            Dark
+          </DropdownMenuRadioItem>
+          <DropdownMenuRadioItem value="system">
+            <MonitorIcon className="mr-2 h-4 w-4" />
+            System
+          </DropdownMenuRadioItem>
+        </DropdownMenuRadioGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
