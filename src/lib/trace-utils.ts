@@ -1,80 +1,12 @@
-import type { WorkflowTraceEvent, StepId } from './workflow-events';
-import { STEP_LABELS } from './workflow-events';
+import type { WorkflowTraceEvent, StepId, UIStepId } from './workflow-events';
+import { getUIStepLabel } from './workflow-events';
 
 export interface StepGroup {
-  stepId: StepId;
+  stepId: UIStepId;
   label: string;
   startTime: string | undefined;
   durationMs: number | undefined;
   events: WorkflowTraceEvent[];
-}
-
-export interface IterationGroup {
-  iteration: number;
-  conclusion: string | undefined;
-  events: WorkflowTraceEvent[];
-}
-
-/** Group events by their stepId. Events without stepId are excluded. */
-export function groupEventsByStep(events: WorkflowTraceEvent[]): StepGroup[] {
-  const stepMap = new Map<StepId, StepGroup>();
-  const order: StepId[] = [];
-
-  for (const event of events) {
-    const stepId = getStepId(event);
-    if (!stepId) continue;
-
-    let group = stepMap.get(stepId);
-    if (!group) {
-      group = {
-        stepId,
-        label: STEP_LABELS[stepId],
-        startTime: undefined,
-        durationMs: undefined,
-        events: [],
-      };
-      stepMap.set(stepId, group);
-      order.push(stepId);
-    }
-
-    if (event.type === 'data-step-start') {
-      group.startTime = event.data.timestamp;
-    } else if (event.type === 'data-step-complete') {
-      group.durationMs = event.data.durationMs;
-    }
-
-    group.events.push(event);
-  }
-
-  return order.map((id) => stepMap.get(id)!);
-}
-
-/** Extract iterations from a verify-improve step group. */
-export function groupEventsByIteration(events: WorkflowTraceEvent[]): IterationGroup[] {
-  const iterations: IterationGroup[] = [];
-  let current: IterationGroup = { iteration: 1, conclusion: undefined, events: [] };
-
-  for (const event of events) {
-    if (event.type === 'data-iteration-update') {
-      current.conclusion = event.data.conclusion;
-      current.events.push(event);
-      iterations.push(current);
-      current = {
-        iteration: event.data.iteration + 1,
-        conclusion: undefined,
-        events: [],
-      };
-    } else {
-      current.events.push(event);
-    }
-  }
-
-  // Push remaining events as an in-progress iteration
-  if (current.events.length > 0) {
-    iterations.push(current);
-  }
-
-  return iterations;
 }
 
 export interface ToolCallGroup {
@@ -84,6 +16,97 @@ export interface ToolCallGroup {
     result: Record<string, unknown>;
     timestamp: string;
   }>;
+}
+
+/** Group events by their stepId, splitting verify-improve events into separate phase groups. */
+export function groupEventsByStep(events: WorkflowTraceEvent[]): StepGroup[] {
+  const nonLoopMap = new Map<StepId, StepGroup>();
+  const nonLoopOrder: StepId[] = [];
+  const loopGroups: StepGroup[] = [];
+  let currentLoopGroup: StepGroup | null = null;
+
+  for (const event of events) {
+    const rawStepId = getRawStepId(event);
+    if (!rawStepId) continue;
+
+    if (rawStepId !== 'verify-improve-rules-loop') {
+      // Non-loop event: group by StepId as before
+      let group = nonLoopMap.get(rawStepId);
+      if (!group) {
+        group = {
+          stepId: rawStepId,
+          label: getUIStepLabel(rawStepId),
+          startTime: undefined,
+          durationMs: undefined,
+          events: [],
+        };
+        nonLoopMap.set(rawStepId, group);
+        nonLoopOrder.push(rawStepId);
+      }
+      if (event.type === 'data-step-start') group.startTime = event.data.timestamp;
+      else if (event.type === 'data-step-complete') group.durationMs = event.data.durationMs;
+      group.events.push(event);
+      continue;
+    }
+
+    // Loop event: split by phase boundaries
+    if (event.type === 'data-verify-improve-phase') {
+      const { iteration, phase } = event.data;
+      if (phase === 'verify-start') {
+        currentLoopGroup = {
+          stepId: `verify-${iteration}` as UIStepId,
+          label: getUIStepLabel(`verify-${iteration}` as UIStepId),
+          startTime: event.data.timestamp,
+          durationMs: undefined,
+          events: [],
+        };
+        loopGroups.push(currentLoopGroup);
+      } else if (phase === 'improve-start') {
+        currentLoopGroup = {
+          stepId: `improve-${iteration}` as UIStepId,
+          label: getUIStepLabel(`improve-${iteration}` as UIStepId),
+          startTime: event.data.timestamp,
+          durationMs: undefined,
+          events: [],
+        };
+        loopGroups.push(currentLoopGroup);
+      } else if (phase === 'verify-complete' || phase === 'improve-complete') {
+        if (currentLoopGroup) {
+          // Compute duration from start to complete
+          const startMs = currentLoopGroup.startTime
+            ? new Date(currentLoopGroup.startTime).getTime()
+            : 0;
+          const endMs = new Date(event.data.timestamp).getTime();
+          if (startMs > 0) currentLoopGroup.durationMs = endMs - startMs;
+        }
+      }
+      // Phase events are structural markers -- don't add to events array
+      continue;
+    }
+
+    // Non-phase loop event: add to current group
+    if (event.type === 'data-step-start' || event.type === 'data-step-complete') {
+      // Step-level start/complete are for the overall loop step -- skip
+      continue;
+    }
+    if (currentLoopGroup) {
+      currentLoopGroup.events.push(event);
+    }
+  }
+
+  // Assemble: non-loop steps in order, with loop groups inserted after 'initial-hypothesis'
+  const result: StepGroup[] = [];
+  for (const stepId of nonLoopOrder) {
+    result.push(nonLoopMap.get(stepId)!);
+    if (stepId === 'initial-hypothesis') {
+      result.push(...loopGroups);
+    }
+  }
+  // If initial-hypothesis hasn't appeared yet but we have loop groups, append them
+  if (!nonLoopOrder.includes('initial-hypothesis') && loopGroups.length > 0) {
+    result.push(...loopGroups);
+  }
+  return result;
 }
 
 /**
@@ -136,7 +159,7 @@ export function isToolCallGroup(item: WorkflowTraceEvent | ToolCallGroup): item 
   return 'toolName' in item && 'calls' in item;
 }
 
-function getStepId(event: WorkflowTraceEvent): StepId | undefined {
+function getRawStepId(event: WorkflowTraceEvent): StepId | undefined {
   switch (event.type) {
     case 'data-step-start':
     case 'data-step-complete':
