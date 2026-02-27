@@ -1,6 +1,6 @@
 export function LexMascot() {
   return (
-    <div className="flex items-start gap-0">
+    <div className="flex items-start">
       {/* Duck placeholder — blueprint-line style square */}
       <div className="flex h-[60px] w-[60px] shrink-0 items-center justify-center border border-foreground">
         <svg
@@ -19,24 +19,33 @@ export function LexMascot() {
         </svg>
       </div>
 
-      {/* Speech bubble as single SVG with embedded foreignObject for text */}
-      <svg viewBox="0 0 400 80" className="h-auto w-full max-w-md" xmlns="http://www.w3.org/2000/svg">
-        {/* Tail pointing left */}
-        <polygon points="0,30 12,24 12,36" fill="rgba(0,40,80,0.6)" stroke="rgba(255,255,255,0.8)" strokeWidth="1" strokeLinejoin="round" />
-        {/* Bubble rectangle */}
-        <rect x="12" y="4" width="384" height="72" rx="0" fill="rgba(0,40,80,0.6)" stroke="rgba(255,255,255,0.8)" strokeWidth="1" />
-        {/* Cover the tail-to-rect seam */}
-        <line x1="12" y1="25" x2="12" y2="36" stroke="rgba(0,40,80,0.6)" strokeWidth="2" />
-        <foreignObject x="24" y="10" width="360" height="60">
-          <p
-            style={{ fontFamily: 'var(--font-heading)', fontSize: '14px', lineHeight: '1.5', color: 'rgba(255,255,255,0.85)', margin: 0 }}
-          >
-            I&apos;m Lex, the Linguistics Olympiad Problem solving duck!{' '}
-            <span style={{ color: '#00ffff' }}>Copy and paste</span> a LO Problem below or try one
-            of my examples!
-          </p>
-        </foreignObject>
+      {/* SVG tail */}
+      <svg
+        width="12"
+        height="24"
+        viewBox="0 0 12 24"
+        className="mt-3 shrink-0"
+        style={{ marginRight: '-1px' }}
+      >
+        <polygon
+          points="0,12 12,0 12,24"
+          fill="rgba(255,255,255,0.06)"
+          stroke="rgba(255,255,255,0.8)"
+          strokeWidth="1"
+          strokeLinejoin="round"
+        />
+        {/* Hide the right edge so it merges with the bubble border */}
+        <line x1="12" y1="0" x2="12" y2="24" stroke="rgba(255,255,255,0.06)" strokeWidth="2" />
       </svg>
+
+      {/* Speech bubble with backdrop blur */}
+      <div className="frosted border border-foreground px-4 py-3">
+        <p className="font-heading text-base leading-relaxed">
+          I&apos;m Lex, the Linguistics Olympiad Problem solving duck!{' '}
+          <span className="text-accent">Copy and paste</span> a LO Problem below or try one of my
+          examples!
+        </p>
+      </div>
     </div>
   );
 }
