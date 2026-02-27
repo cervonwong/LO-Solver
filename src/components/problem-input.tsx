@@ -63,7 +63,7 @@ export function ProblemInput({ examples, onSolve, disabled }: ProblemInputProps)
               role="combobox"
               aria-expanded={comboOpen}
               disabled={isDisabled}
-              className="flex h-8 items-center justify-between gap-1 border border-border bg-transparent px-2 text-xs text-foreground hover:bg-muted disabled:opacity-50"
+              className="flex h-8 items-center justify-between gap-1 border border-border bg-surface-2 px-2 text-xs text-foreground hover:bg-surface-3 disabled:opacity-50"
             >
               {selectedExample
                 ? examples.find((ex) => ex.id === selectedExample)?.label ?? 'Select...'
@@ -105,7 +105,7 @@ export function ProblemInput({ examples, onSolve, disabled }: ProblemInputProps)
           value={problemText}
           onChange={(e) => setProblemText(e.target.value)}
           placeholder="Paste a linguistics problem here..."
-          className="min-h-[200px] resize-y border-[rgba(255,255,255,0.3)] bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:border-accent focus:shadow-[0_0_8px_rgba(0,255,255,0.2)]"
+          className="min-h-[200px] resize-y border-border bg-surface-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-accent focus:shadow-[0_0_8px_rgba(0,255,255,0.2)]"
           disabled={isDisabled}
         />
         {/* Plotter loading overlay */}

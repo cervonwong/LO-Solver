@@ -49,7 +49,7 @@ export function TraceEventCard({ event }: TraceEventCardProps) {
     case 'data-agent-reasoning':
       return (
         <Collapsible open={open} onOpenChange={setOpen}>
-          <CollapsibleTrigger className="animate-fade-in border-l-2 border-l-trace-agent flex w-full items-center justify-between border border-[rgba(255,255,255,0.15)] px-3 py-2 text-left text-xs hover:bg-muted">
+          <CollapsibleTrigger className="animate-fade-in border-l-2 border-l-trace-agent flex w-full items-center justify-between border border-border-subtle bg-surface-2 px-3 py-2 text-left text-xs hover:bg-surface-3">
             <span className="flex items-center gap-2">
               <Badge
                 variant="secondary"
@@ -62,7 +62,7 @@ export function TraceEventCard({ event }: TraceEventCardProps) {
             </span>
             <span className="text-muted-foreground">{formatDuration(event.data.durationMs)}</span>
           </CollapsibleTrigger>
-          <CollapsibleContent className="animate-collapsible border-x border-b border-[rgba(255,255,255,0.15)] px-3 py-2">
+          <CollapsibleContent className="animate-collapsible border-x border-b border-border-subtle bg-surface-2 px-3 py-2">
             <Streamdown plugins={{ code }}>{event.data.reasoning}</Streamdown>
           </CollapsibleContent>
         </Collapsible>
@@ -71,7 +71,7 @@ export function TraceEventCard({ event }: TraceEventCardProps) {
     case 'data-tool-call':
       return (
         <Collapsible open={open} onOpenChange={setOpen}>
-          <CollapsibleTrigger className="animate-fade-in border-l-2 border-l-trace-tool flex w-full items-center justify-between border border-[rgba(255,255,255,0.15)] px-3 py-2 text-left text-xs hover:bg-muted">
+          <CollapsibleTrigger className="animate-fade-in border-l-2 border-l-trace-tool flex w-full items-center justify-between border border-border-subtle bg-surface-2 px-3 py-2 text-left text-xs hover:bg-surface-3">
             <span className="flex items-center gap-2">
               <Badge variant="default" className="border-trace-tool text-trace-tool bg-transparent text-[10px]">
                 TOOL
@@ -80,7 +80,7 @@ export function TraceEventCard({ event }: TraceEventCardProps) {
             </span>
             <span className="text-muted-foreground">{open ? '▲' : '▼'}</span>
           </CollapsibleTrigger>
-          <CollapsibleContent className="animate-collapsible border-x border-b border-[rgba(255,255,255,0.15)] px-3 py-2">
+          <CollapsibleContent className="animate-collapsible border-x border-b border-border-subtle bg-surface-2 px-3 py-2">
             <div className="flex flex-col gap-2">
               <Streamdown plugins={{ code }}>{jsonMarkdown('Input', event.data.input)}</Streamdown>
               <Streamdown plugins={{ code }}>
@@ -93,7 +93,7 @@ export function TraceEventCard({ event }: TraceEventCardProps) {
 
     case 'data-iteration-update':
       return (
-        <div className="animate-fade-in border-l-2 border-l-status-warning flex items-center gap-2 border border-[rgba(255,255,255,0.15)] px-3 py-2 text-xs">
+        <div className="animate-fade-in border-l-2 border-l-status-warning flex items-center gap-2 border border-border-subtle bg-surface-2 px-3 py-2 text-xs">
           <Badge
             variant="secondary"
             className="border-status-warning text-status-warning bg-transparent text-[10px]"
@@ -149,7 +149,7 @@ export function ToolCallGroupCard({ group }: ToolCallGroupCardProps) {
 
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
-      <CollapsibleTrigger className="animate-fade-in border-l-2 border-l-trace-tool flex w-full items-center justify-between border border-[rgba(255,255,255,0.15)] px-3 py-2 text-left text-xs hover:bg-muted">
+      <CollapsibleTrigger className="animate-fade-in border-l-2 border-l-trace-tool flex w-full items-center justify-between border border-border-subtle bg-surface-2 px-3 py-2 text-left text-xs hover:bg-surface-3">
         <span className="flex items-center gap-2">
           <Badge variant="default" className="border-trace-tool text-trace-tool bg-transparent text-[10px]">
             TOOL
@@ -161,7 +161,7 @@ export function ToolCallGroupCard({ group }: ToolCallGroupCardProps) {
         </span>
         <span className="text-muted-foreground">{open ? '\u25B2' : '\u25BC'}</span>
       </CollapsibleTrigger>
-      <CollapsibleContent className="animate-collapsible border-x border-b border-[rgba(255,255,255,0.15)]">
+      <CollapsibleContent className="animate-collapsible border-x border-b border-border-subtle">
         <div className="flex flex-col divide-y divide-border">
           {group.calls.map((call, i) => (
             <ToolCallDetail key={i} index={i + 1} call={call} />

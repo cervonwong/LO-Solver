@@ -23,7 +23,7 @@ function StepCircle({ status, label }: { status: StepStatus; label: string | num
         status === 'running' && 'border-accent text-accent shadow-[0_0_6px_rgba(0,255,255,0.4)]',
         status === 'success' && 'border-foreground bg-foreground text-background',
         status === 'failed' && 'border-destructive text-destructive',
-        status === 'pending' && 'border-[rgba(255,255,255,0.3)] text-muted-foreground',
+        status === 'pending' && 'border-border text-muted-foreground',
       )}
     >
       {status === 'success' ? (
@@ -49,7 +49,7 @@ function Connector({ fromStatus, toStatus }: { fromStatus: StepStatus; toStatus:
         bothComplete && 'bg-[rgba(255,255,255,0.6)]',
         completedToRunning && 'bg-accent',
         !bothComplete && !completedToRunning && hasActivity && 'bg-foreground',
-        !hasActivity && 'border-t border-dashed border-[rgba(255,255,255,0.15)]',
+        !hasActivity && 'border-t border-dashed border-border-subtle',
       )}
     />
   );

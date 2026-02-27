@@ -29,17 +29,16 @@ export function LexMascot() {
       >
         <polygon
           points="0,12 12,0 12,24"
-          fill="rgba(255,255,255,0.06)"
-          stroke="rgba(255,255,255,0.8)"
+          style={{ fill: 'var(--surface-1)', stroke: 'var(--border-strong)' }}
           strokeWidth="1"
           strokeLinejoin="round"
         />
         {/* Hide the right edge so it merges with the bubble border */}
-        <line x1="12" y1="0" x2="12" y2="24" stroke="rgba(255,255,255,0.06)" strokeWidth="2" />
+        <line x1="12" y1="0" x2="12" y2="24" style={{ stroke: 'var(--surface-1)' }} strokeWidth="2" />
       </svg>
 
       {/* Speech bubble with backdrop blur */}
-      <div className="frosted border border-foreground px-4 py-3">
+      <div className="frosted border border-border-strong px-4 py-3">
         <p className="font-heading text-base leading-relaxed">
           I&apos;m Lex, the Linguistics Olympiad Problem solving duck!{' '}
           <span className="text-accent">Copy and paste</span> a LO Problem below or try one of my

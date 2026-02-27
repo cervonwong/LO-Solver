@@ -2,7 +2,7 @@ export function SkeletonTrace() {
   return (
     <div className="flex flex-col gap-4 p-4">
       {[0, 1, 2].map((i) => (
-        <div key={i} className="border border-[rgba(255,255,255,0.15)] p-3">
+        <div key={i} className="border border-border-subtle p-3">
           <svg
             width="100%"
             height="20"

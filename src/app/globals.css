@@ -51,6 +51,11 @@
   --color-trace-tool-muted: var(--trace-tool-muted);
   --color-trace-vocab: var(--trace-vocab);
   --color-trace-vocab-muted: var(--trace-vocab-muted);
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-border-subtle: var(--border-subtle);
+  --color-border-strong: var(--border-strong);
 }
 
 :root {
@@ -100,6 +105,15 @@
   --chart-3: #ffd700;
   --chart-4: #cc99ff;
   --chart-5: #66cccc;
+
+  /* Surface elevation — each layer adds white to separate from parent */
+  --surface-1: rgba(255, 255, 255, 0.04);
+  --surface-2: rgba(255, 255, 255, 0.08);
+  --surface-3: rgba(255, 255, 255, 0.14);
+
+  /* Border strengths */
+  --border-subtle: rgba(255, 255, 255, 0.12);
+  --border-strong: rgba(255, 255, 255, 0.8);
 }
 
 @layer base {
@@ -122,18 +136,18 @@
    BLUEPRINT COMPONENTS
    ============================================ */
 
-/* Frosted glass panel */
+/* Frosted glass panel — surface-1 elevation */
 .frosted {
-  background: rgba(255, 255, 255, 0.06);
-  backdrop-filter: blur(12px);
+  background: var(--surface-1);
+  backdrop-filter: blur(6px);
 }
 
-/* Crosshair card — major containers only */
+/* Crosshair card — major containers, surface-1 elevation */
 .blueprint-card {
   position: relative;
-  border: 1px solid rgba(255, 255, 255, 0.8);
-  background: rgba(255, 255, 255, 0.06);
-  backdrop-filter: blur(12px);
+  border: 1px solid var(--border-strong);
+  background: var(--surface-1);
+  backdrop-filter: blur(6px);
   padding: 15px;
 }
 
@@ -150,8 +164,8 @@
   bottom: -5px;
   left: 0;
   right: 0;
-  border-left: 1px solid rgba(255, 255, 255, 0.8);
-  border-right: 1px solid rgba(255, 255, 255, 0.8);
+  border-left: 1px solid var(--border-strong);
+  border-right: 1px solid var(--border-strong);
 }
 
 /* Horizontal crosshair extensions */
@@ -160,8 +174,8 @@
   right: -5px;
   top: 0;
   bottom: 0;
-  border-top: 1px solid rgba(255, 255, 255, 0.8);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.8);
+  border-top: 1px solid var(--border-strong);
+  border-bottom: 1px solid var(--border-strong);
 }
 
 /* Stamp button (primary red) */
@@ -204,8 +218,8 @@
 .stamp-btn-secondary {
   font-family: var(--font-heading);
   background: transparent;
-  color: rgba(255, 255, 255, 0.8);
-  border: 1px solid rgba(255, 255, 255, 0.8);
+  color: var(--foreground);
+  border: 1px solid var(--foreground);
   padding: 8px 20px;
   font-size: 1rem;
   text-transform: uppercase;
@@ -214,7 +228,7 @@
 }
 
 .stamp-btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--muted);
 }
 
 .stamp-btn-secondary:active {
@@ -343,8 +357,8 @@
 
 /* Ensure markdown rendered by Streamdown inherits blueprint colors */
 .streamdown pre {
-  background: rgba(0, 40, 80, 0.6) !important;
-  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  background: var(--surface-3) !important;
+  border: 1px solid var(--border) !important;
 }
 
 .streamdown code {
