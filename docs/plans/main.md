@@ -28,3 +28,4 @@
 | --------------------------------------------------------------------------------------------------------- | ------- | ---------------------------------------------------------------------- |
 | [2026-02-27-separate-verify-improve-blocks-design](./2026-02-27-separate-verify-improve-blocks-design.md) | Pending | Split verify-improve into separate UI blocks with dynamic progress bar |
 | [2026-02-27-separate-verify-improve-blocks-plan](./2026-02-27-separate-verify-improve-blocks-plan.md)     | Pending | Implementation plan for separate verify/improve blocks                 |
+| [2026-02-27-linguini-dataset-integration-design](./2026-02-27-linguini-dataset-integration-design.md)     | Pending | Integrate Linguini IOL dataset as sister examples with picker support  |
