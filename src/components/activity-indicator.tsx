@@ -1,8 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Badge } from '@/components/ui/badge';
 import type { WorkflowTraceEvent } from '@/lib/workflow-events';
+
+function formatElapsed(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
 
 interface ActivityIndicatorProps {
   events: WorkflowTraceEvent[];
@@ -36,11 +41,14 @@ export function ActivityIndicator({ events, isRunning }: ActivityIndicatorProps)
         : 0;
 
     return (
-      <div className="flex items-center gap-2 border-b border-border px-4 py-2">
-        <span className="h-2 w-2 rounded-full bg-status-success" />
-        <span className="text-sm text-muted-foreground">
-          Completed {totalMs > 0 ? `in ${Math.round(totalMs / 1000)}s` : ''}
-        </span>
+      <div className="frosted flex items-center gap-2 border-b border-border px-4 py-2">
+        <span className="text-sm text-foreground">&gt;</span>
+        <span className="text-xs uppercase tracking-wider text-foreground">Complete</span>
+        {totalMs > 0 && (
+          <span className="ml-auto text-xs text-accent">
+            T+{formatElapsed(Math.round(totalMs / 1000))}
+          </span>
+        )}
       </div>
     );
   }
@@ -60,11 +68,13 @@ export function ActivityIndicator({ events, isRunning }: ActivityIndicatorProps)
       : null;
 
   return (
-    <div className="flex items-center gap-2 border-b border-border bg-status-active-muted px-4 py-2">
-      <span className="h-2 w-2 animate-pulse rounded-full bg-status-active" />
-      <span className="text-sm font-medium">{agentName ?? 'Starting...'}</span>
+    <div className="frosted flex items-center gap-2 border-b border-border px-4 py-2">
+      <span className="animate-blink text-sm text-accent">&gt;</span>
+      <span className="text-xs uppercase tracking-wider text-accent">
+        ACTIVE: {agentName ?? 'Starting...'}
+      </span>
       {model && <span className="text-xs text-muted-foreground">{model}</span>}
-      <span className="ml-auto text-xs tabular-nums text-muted-foreground">{elapsed}s</span>
+      <span className="ml-auto text-xs tabular-nums text-accent">T+{formatElapsed(elapsed)}</span>
     </div>
   );
 }
