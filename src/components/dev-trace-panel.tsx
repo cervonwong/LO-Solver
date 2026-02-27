@@ -1,7 +1,6 @@
 'use client';
 
 import { useMemo } from 'react';
-import { Badge } from '@/components/ui/badge';
 import { TraceEventCard, ToolCallGroupCard } from '@/components/trace-event-card';
 import {
   groupEventsByStep,
@@ -35,7 +34,7 @@ export function DevTracePanel({ events, isRunning }: DevTracePanelProps) {
       <ActivityIndicator events={events} isRunning={isRunning} />
 
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-bold text-muted-foreground">Dev Trace</h2>
+        <h2 className="font-heading text-lg text-foreground">Dev Trace</h2>
         <span className="text-xs text-muted-foreground">
           {isRunning ? `Streaming... (${events.length} events)` : `${events.length} events`}
         </span>
@@ -61,19 +60,13 @@ function StepSection({ group, isRunning }: StepSectionProps) {
   );
 
   return (
-    <section id={`trace-${group.stepId}`} className="rounded border border-border">
+    <section id={`trace-${group.stepId}`} className="frosted border border-border">
       <div className="flex items-center justify-between border-b border-border px-3 py-2">
-        <span className="flex items-center gap-2 text-sm font-medium">
+        <span className="flex items-center gap-2 font-heading text-sm text-foreground">
           {group.label}
-          {isActive && isRunning && (
-            <Badge variant="secondary" className="animate-pulse text-[10px]">
-              Running
-            </Badge>
-          )}
+          {isActive && isRunning && <span className="animate-blink text-accent">&gt;</span>}
           {group.durationMs !== undefined && (
-            <Badge variant="outline" className="text-[10px]">
-              {formatDuration(group.durationMs)}
-            </Badge>
+            <span className="dimension">{formatDuration(group.durationMs)}</span>
           )}
         </span>
         <span className="text-xs text-muted-foreground">{contentEvents.length} events</span>
@@ -109,17 +102,14 @@ function EventList({ events }: { events: WorkflowTraceEvent[] }) {
 function EmptyState() {
   return (
     <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
-      <span className="text-4xl">&#9881;</span>
-      <div className="flex max-w-xs flex-col gap-2">
-        <p className="text-sm font-medium text-muted-foreground">No active run</p>
-        <p className="text-xs text-muted-foreground">
-          Paste a Rosetta Stone problem in the input on the left and click Solve to watch the
-          pipeline work through it step by step.
-        </p>
-        <p className="text-xs text-muted-foreground">
-          Try one of the example problems to get started.
-        </p>
-      </div>
+      {/* Crosshair reticle */}
+      <svg width="60" height="60" viewBox="0 0 60 60" className="text-accent">
+        <line x1="30" y1="0" x2="30" y2="60" stroke="currentColor" strokeWidth="0.5" />
+        <line x1="0" y1="30" x2="60" y2="30" stroke="currentColor" strokeWidth="0.5" />
+        <circle cx="30" cy="30" r="15" fill="none" stroke="currentColor" strokeWidth="0.5" />
+        <circle cx="30" cy="30" r="2" fill="currentColor" />
+      </svg>
+      <p className="text-xs uppercase tracking-widest text-muted-foreground">Awaiting Input</p>
     </div>
   );
 }
