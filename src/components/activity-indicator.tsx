@@ -41,7 +41,7 @@ export function ActivityIndicator({ events, isRunning }: ActivityIndicatorProps)
         : 0;
 
     return (
-      <div className="frosted flex items-center gap-2 border-b border-border px-4 py-2">
+      <div className="frosted flex items-center gap-2 border border-border px-4 py-2">
         <span className="text-sm text-foreground">&gt;</span>
         <span className="text-xs uppercase tracking-wider text-foreground">Complete</span>
         {totalMs > 0 && (
@@ -68,7 +68,7 @@ export function ActivityIndicator({ events, isRunning }: ActivityIndicatorProps)
       : null;
 
   return (
-    <div className="frosted flex items-center gap-2 border-b border-border px-4 py-2">
+    <div className="frosted flex items-center gap-2 border border-border px-4 py-2">
       <span className="animate-blink text-sm text-accent">&gt;</span>
       <span className="text-xs uppercase tracking-wider text-accent">
         ACTIVE: {agentName ?? 'Starting...'}

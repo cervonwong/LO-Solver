@@ -26,7 +26,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`h-full ${notoSans.variable} ${architectsDaughter.variable}`}>
       <body className="flex h-full flex-col bg-background font-sans text-foreground antialiased">
-        <nav className="frosted flex shrink-0 items-center justify-end border-b border-border px-6 py-3">
+        <nav className="frosted flex shrink-0 items-center justify-end border border-border px-6 py-3">
           <ModelModeToggle />
         </nav>
         <main className="min-h-0 flex-1">{children}</main>

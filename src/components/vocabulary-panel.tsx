@@ -35,7 +35,7 @@ export function VocabularyPanel({ vocabulary, mutationSummary, isRunning }: Voca
     mutationSummary.added > 0 || mutationSummary.updated > 0 || mutationSummary.removed > 0;
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="frosted flex h-full flex-col">
       <div className="frosted flex shrink-0 items-center justify-between border-b border-border px-4 py-2">
         <div className="flex items-center gap-2">
           <h3 className="font-heading text-sm text-foreground">Vocabulary</h3>
