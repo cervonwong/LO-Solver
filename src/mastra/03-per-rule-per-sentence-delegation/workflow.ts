@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { vocabularyEntrySchema, type VocabularyEntry } from './vocabulary-tools';
 import type { Workflow03RequestContext } from './request-context-types';
 import type { ModelMode } from '../openrouter';
+import { activeModelId } from '../openrouter';
 import {
   type StepTiming,
   getLogFilePath,
@@ -281,7 +282,7 @@ const extractionStep = createStep({
       data: {
         stepId,
         agentName: 'Structured Problem Extractor',
-        model: 'gpt-5-mini',
+        model: activeModelId(modelMode, 'openai/gpt-5-mini'),
         reasoning: response.text || '',
         durationMs: Math.round(timing1.durationMinutes * 60_000),
         timestamp: new Date().toISOString(),
@@ -396,7 +397,7 @@ const initialHypothesisStep = createStep({
       data: {
         stepId,
         agentName: 'Initial Hypothesizer',
-        model: 'gemini-3-flash',
+        model: activeModelId(state.modelMode, 'google/gemini-3-flash-preview'),
         reasoning: hypothesizerResponse.text || '',
         durationMs: Math.round(hypothesizerTiming.durationMinutes * 60_000),
         timestamp: new Date().toISOString(),
@@ -446,7 +447,7 @@ const initialHypothesisStep = createStep({
       data: {
         stepId,
         agentName: 'Initial Hypothesis Extractor',
-        model: 'gpt-5-mini',
+        model: activeModelId(state.modelMode, 'openai/gpt-5-mini'),
         reasoning: extractorResponse.text || '',
         durationMs: Math.round(extractorTiming.durationMinutes * 60_000),
         timestamp: new Date().toISOString(),
@@ -603,7 +604,7 @@ const verifyImproveLoopStep = createStep({
       data: {
         stepId,
         agentName: `Verifier Orchestrator (Iter ${iterationCount + 1})`,
-        model: 'gemini-3-flash',
+        model: activeModelId(state.modelMode as ModelMode, 'google/gemini-3-flash-preview'),
         reasoning: orchestratorResponse.text || '',
         durationMs: Math.round(orchestratorTiming.durationMinutes * 60_000),
         timestamp: new Date().toISOString(),
@@ -654,7 +655,7 @@ const verifyImproveLoopStep = createStep({
       data: {
         stepId,
         agentName: `Verifier Feedback Extractor (Iter ${iterationCount + 1})`,
-        model: 'gpt-5-mini',
+        model: activeModelId(state.modelMode as ModelMode, 'openai/gpt-5-mini'),
         reasoning: verifierExtractorResponse.text || '',
         durationMs: Math.round(verifierExtractorTiming.durationMinutes * 60_000),
         timestamp: new Date().toISOString(),
@@ -780,7 +781,7 @@ const verifyImproveLoopStep = createStep({
       data: {
         stepId,
         agentName: `Rules Improver (Iter ${iterationCount + 1})`,
-        model: 'gemini-3-flash',
+        model: activeModelId(state.modelMode as ModelMode, 'google/gemini-3-flash-preview'),
         reasoning: improverResponse.text || '',
         durationMs: Math.round(improverTiming.durationMinutes * 60_000),
         timestamp: new Date().toISOString(),
@@ -831,7 +832,7 @@ const verifyImproveLoopStep = createStep({
       data: {
         stepId,
         agentName: `Rules Improvement Extractor (Iter ${iterationCount + 1})`,
-        model: 'gpt-5-mini',
+        model: activeModelId(state.modelMode as ModelMode, 'openai/gpt-5-mini'),
         reasoning: extractorResponse.text || '',
         durationMs: Math.round(extractorTiming.durationMinutes * 60_000),
         timestamp: new Date().toISOString(),
@@ -962,7 +963,7 @@ const answerQuestionsStep = createStep({
       data: {
         stepId,
         agentName: 'Question Answerer',
-        model: 'gemini-3-flash',
+        model: activeModelId(state.modelMode as ModelMode, 'google/gemini-3-flash-preview'),
         reasoning: answererResponse.text || '',
         durationMs: Math.round(answererTiming.durationMinutes * 60_000),
         timestamp: new Date().toISOString(),

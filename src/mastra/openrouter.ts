@@ -13,3 +13,8 @@ export type ModelMode = 'testing' | 'production';
 
 /** Cheap model used by all agents in testing mode. */
 export const TESTING_MODEL = 'alibaba/tongyi-deepresearch-30b-a3b';
+
+/** Returns the actual model ID being used given the current mode and the production model. */
+export function activeModelId(mode: ModelMode, productionModel: string): string {
+  return mode === 'production' ? productionModel : TESTING_MODEL;
+}
