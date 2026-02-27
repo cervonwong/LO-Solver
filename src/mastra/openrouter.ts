@@ -12,7 +12,7 @@ export const openrouter = createOpenRouter({
 export type ModelMode = 'testing' | 'production';
 
 /** Cheap model used by all agents in testing mode. */
-export const TESTING_MODEL = 'alibaba/tongyi-deepresearch-30b-a3b';
+export const TESTING_MODEL = 'openai/gpt-oss-120b';
 
 /** Returns the actual model ID being used given the current mode and the production model. */
 export function activeModelId(mode: ModelMode, productionModel: string): string {
