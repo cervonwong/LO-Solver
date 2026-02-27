@@ -11,7 +11,7 @@ import {
   type ToolExecuteContext,
 } from './request-context-helpers';
 import { logSentenceTestResult } from './logging-utils';
-import { ruleSchema } from './03a-rule-tester-tool';
+import { ruleSchema } from './workflow-schemas';
 import type { Rule } from './request-context-types';
 import type { VocabularyEntry } from './vocabulary-tools';
 import type { Mastra } from '@mastra/core/mastra';

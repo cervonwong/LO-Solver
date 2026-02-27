@@ -84,21 +84,24 @@ export const structuredProblemSchema = z.object({
     .describe('The extracted problem data. Null if success is false.'),
 });
 
-const rulesArraySchema = z.array(
-  z.object({
-    title: z
-      .string()
-      .describe(
-        'A short title that groups or organises the rule (e.g. "Sentence syntax", "Verb agreement", "Noun cases")',
-      ),
-    description: z
-      .string()
-      .describe('A detailed description of the rule, such as grammar patterns or phonetic changes'),
-    confidence: z
-      .enum(['HIGH', 'MEDIUM', 'LOW'])
-      .describe('Confidence level for this rule based on evidence strength'),
-  }),
-);
+export const ruleSchema = z.object({
+  title: z
+    .string()
+    .describe(
+      'A short title that groups or organises the rule (e.g. "Sentence syntax", "Verb agreement", "Noun cases")',
+    ),
+  description: z
+    .string()
+    .describe('A detailed description of the rule, such as grammar patterns or phonetic changes'),
+  confidence: z
+    .enum(['HIGH', 'MEDIUM', 'LOW'])
+    .optional()
+    .describe('Confidence level for this rule based on evidence strength'),
+});
+
+export type Rule = z.infer<typeof ruleSchema>;
+
+const rulesArraySchema = z.array(ruleSchema);
 
 // Note: vocabularyEntrySchema is imported from vocabulary-tools.ts
 const vocabularyArraySchema = z.array(vocabularyEntrySchema);

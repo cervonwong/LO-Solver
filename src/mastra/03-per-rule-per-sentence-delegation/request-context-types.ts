@@ -11,14 +11,8 @@ export interface StructuredProblemData {
   questions: { id: string; type: string; input: string }[];
 }
 
-/**
- * A linguistic rule with confidence level.
- */
-export interface Rule {
-  title: string;
-  description: string;
-  confidence?: 'HIGH' | 'MEDIUM' | 'LOW';
-}
+import type { Rule } from './workflow-schemas';
+export type { Rule } from './workflow-schemas';
 
 /** Type for the workflow step writer used to emit trace events. */
 export type StepWriter = { write?: (data: unknown) => Promise<void> };

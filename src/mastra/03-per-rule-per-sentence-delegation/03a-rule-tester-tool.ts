@@ -14,19 +14,11 @@ import type { VocabularyEntry } from './vocabulary-tools';
 import type { Mastra } from '@mastra/core/mastra';
 import { RequestContext } from '@mastra/core/request-context';
 import { generateWithRetry } from './agent-utils';
+import { ruleSchema } from './workflow-schemas';
 
 // ============================================================================
 // Shared Schemas
 // ============================================================================
-
-export const ruleSchema = z.object({
-  title: z.string().describe('A short title that groups or organises the rule'),
-  description: z.string().describe('A detailed description of the rule'),
-  confidence: z
-    .enum(['HIGH', 'MEDIUM', 'LOW'])
-    .optional()
-    .describe('Confidence level for this rule'),
-});
 
 const ruleTestSuccessSchema = z.object({
   success: z.literal(true),
