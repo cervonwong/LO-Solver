@@ -5,31 +5,51 @@ interface GenerateWithRetryOptions<TOptions> {
   options?: TOptions;
   timeoutMs?: number; // Default: 600,000 (10 minutes)
   maxRetries?: number; // Default: 2 (3 total attempts)
+  abortSignal?: AbortSignal; // Caller-provided abort signal
 }
 
 /**
  * Wrapper around Agent.generate with timeout and retry logic.
  *
- * - Timeout: Aborts the request if it takes longer than timeoutMs
+ * - Timeout: Aborts the request via AbortController if it takes longer than timeoutMs
  * - Retries: Retries up to maxRetries times on transient errors
+ * - AbortSignal: Accepts optional caller signal; merged with internal timeout signal
+ *   via AbortSignal.any() so either can cancel the operation
  *
- * @throws After all retries are exhausted
+ * @throws After all retries are exhausted, or if the caller signal aborts
  */
 export async function generateWithRetry<TOptions extends Parameters<Agent['generate']>[1]>(
   agent: Agent,
-  { prompt, options, timeoutMs = 600_000, maxRetries = 2 }: GenerateWithRetryOptions<TOptions>,
+  {
+    prompt,
+    options,
+    timeoutMs = 600_000,
+    maxRetries = 2,
+    abortSignal: callerSignal,
+  }: GenerateWithRetryOptions<TOptions>,
 ): Promise<Awaited<ReturnType<Agent['generate']>>> {
   let lastError: Error | undefined;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    try {
-      // Create a timeout promise that rejects after timeoutMs
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error(`Timeout after ${timeoutMs}ms`)), timeoutMs);
-      });
+    // If the caller has already aborted, don't start another attempt
+    callerSignal?.throwIfAborted();
 
-      // Race between the generate call and the timeout
-      const result = await Promise.race([agent.generate(prompt, options), timeoutPromise]);
+    const timeoutController = new AbortController();
+    const timeoutId = setTimeout(() => timeoutController.abort(), timeoutMs);
+
+    // Merge caller signal (if any) with our timeout signal
+    const mergedSignal = callerSignal
+      ? AbortSignal.any([callerSignal, timeoutController.signal])
+      : timeoutController.signal;
+
+    try {
+      const result = await agent.generate(prompt, {
+        ...options,
+        abortSignal: mergedSignal,
+      } as TOptions);
+
+      // Clean up timeout on success
+      clearTimeout(timeoutId);
 
       // Check for empty response - this should trigger a retry
       // When structuredOutput is provided, check result.object; otherwise check result.text
@@ -37,12 +57,10 @@ export async function generateWithRetry<TOptions extends Parameters<Agent['gener
         options && typeof options === 'object' && 'structuredOutput' in options;
 
       if (hasStructuredOutput) {
-        // For structured output, check if object is null/undefined
         if (result.object === null || result.object === undefined) {
           throw new Error('Empty response from model');
         }
       } else {
-        // For text output, check if text is empty
         if (!result.text || result.text.trim() === '') {
           throw new Error('Empty response from model');
         }
@@ -50,7 +68,19 @@ export async function generateWithRetry<TOptions extends Parameters<Agent['gener
 
       return result;
     } catch (error) {
+      clearTimeout(timeoutId);
+
       lastError = error instanceof Error ? error : new Error(String(error));
+
+      // If the caller aborted, don't retry — propagate immediately
+      if (callerSignal?.aborted) {
+        throw lastError;
+      }
+
+      // Normalize abort errors from timeout into a timeout message
+      if (timeoutController.signal.aborted && lastError.name === 'AbortError') {
+        lastError = new Error(`Timeout after ${timeoutMs}ms`);
+      }
 
       // Check if this is a retryable error
       const isRetryable =
@@ -76,8 +106,18 @@ export async function generateWithRetry<TOptions extends Parameters<Agent['gener
           `Retrying in ${delayMs / 1000} seconds... (${maxRetries - attempt} retries remaining)`,
       );
 
-      // Wait before retrying
-      await new Promise((resolve) => setTimeout(resolve, delayMs));
+      // Wait before retrying (also respect caller abort during backoff)
+      await new Promise<void>((resolve, reject) => {
+        const backoffTimeout = setTimeout(resolve, delayMs);
+        callerSignal?.addEventListener(
+          'abort',
+          () => {
+            clearTimeout(backoffTimeout);
+            reject(callerSignal.reason);
+          },
+          { once: true },
+        );
+      });
     }
   }
 
