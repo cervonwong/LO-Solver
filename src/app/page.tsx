@@ -310,7 +310,7 @@ export default function SolverPage() {
                 Problem Input
                 <span className="text-xs text-muted-foreground">{inputOpen ? '▲' : '▼'}</span>
               </CollapsibleTrigger>
-              <CollapsibleContent className="pt-4">
+              <CollapsibleContent className="animate-collapsible pt-4">
                 <ProblemInput examples={examples} onSolve={handleSolve} disabled={isRunning} />
               </CollapsibleContent>
             </Collapsible>

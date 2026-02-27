@@ -67,7 +67,7 @@ function AnswersSection({ answers }: { answers: Answer[] }) {
                 </span>
                 <Badge variant={CONFIDENCE_VARIANT[a.confidence]}>{a.confidence}</Badge>
               </CollapsibleTrigger>
-              <CollapsibleContent className="border-x border-b border-border px-3 py-2 text-xs text-muted-foreground">
+              <CollapsibleContent className="animate-collapsible border-x border-b border-border px-3 py-2 text-xs text-muted-foreground">
                 <p className="mb-1 whitespace-pre-wrap">{a.workingSteps}</p>
                 <p className="italic">{a.confidenceReasoning}</p>
               </CollapsibleContent>
@@ -89,7 +89,7 @@ function RulesSection({ rules }: { rules: Rule[] }) {
               <span>{r.title}</span>
               <Badge variant={CONFIDENCE_VARIANT[r.confidence]}>{r.confidence}</Badge>
             </CollapsibleTrigger>
-            <CollapsibleContent className="border-x border-b border-border px-3 py-2 text-xs text-muted-foreground whitespace-pre-wrap">
+            <CollapsibleContent className="animate-collapsible border-x border-b border-border px-3 py-2 text-xs text-muted-foreground whitespace-pre-wrap">
               {r.description}
             </CollapsibleContent>
           </Collapsible>
