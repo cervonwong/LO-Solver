@@ -15,15 +15,8 @@ import {
   logValidationError,
 } from './logging-utils';
 import { generateWithRetry } from './agent-utils';
+import { emitTraceEvent } from './request-context-helpers';
 import type { StepId } from '@/lib/workflow-events';
-
-// Emit a custom trace event via the workflow step writer
-async function emitTraceEvent(
-  writer: { write?: (data: unknown) => Promise<void> } | undefined,
-  event: { type: string; data: Record<string, unknown> },
-) {
-  await writer?.write?.(event);
-}
 
 const MAX_VERIFY_IMPROVE_ITERATIONS = 4;
 

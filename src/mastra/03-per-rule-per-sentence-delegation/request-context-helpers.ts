@@ -6,6 +6,7 @@ import type {
   Workflow03RequestContext,
   StructuredProblemData,
   Rule,
+  StepWriter,
 } from './request-context-types';
 import type { VocabularyEntry } from './vocabulary-tools';
 import type { Mastra } from '@mastra/core/mastra';
@@ -108,6 +109,17 @@ export function normalizeTranslation(s: string): string {
 }
 
 /**
+ * Emit a trace event directly via a step writer.
+ * Used in workflow steps where the writer is available directly.
+ */
+export async function emitTraceEvent(
+  writer: StepWriter | undefined,
+  event: { type: string; data: Record<string, unknown> },
+): Promise<void> {
+  await writer?.write?.(event);
+}
+
+/**
  * Emit a trace event from a tool via the step writer stored in requestContext.
  * This bypasses the broken ctx.writer?.custom() path (Mastra does not pass
  * outputWriter to tools when called from workflow steps).
@@ -117,8 +129,6 @@ export async function emitToolTraceEvent(
   event: { type: string; data: Record<string, unknown> },
 ): Promise<void> {
   if (!requestContext) return;
-  const writer = requestContext.get('step-writer') as
-    | { write?: (data: unknown) => Promise<void> }
-    | undefined;
-  await writer?.write?.(event);
+  const writer = requestContext.get('step-writer') as StepWriter | undefined;
+  await emitTraceEvent(writer, event);
 }
