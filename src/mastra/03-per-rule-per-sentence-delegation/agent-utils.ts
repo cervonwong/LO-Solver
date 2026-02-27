@@ -79,7 +79,7 @@ export async function generateWithRetry<TOptions extends Parameters<Agent['gener
 
       // Normalize abort errors from timeout into a timeout message
       if (timeoutController.signal.aborted && lastError.name === 'AbortError') {
-        lastError = new Error(`Timeout after ${timeoutMs}ms`);
+        lastError = new Error(`Timeout after ${timeoutMs}ms`, { cause: lastError });
       }
 
       // Check if this is a retryable error
@@ -108,15 +108,15 @@ export async function generateWithRetry<TOptions extends Parameters<Agent['gener
 
       // Wait before retrying (also respect caller abort during backoff)
       await new Promise<void>((resolve, reject) => {
-        const backoffTimeout = setTimeout(resolve, delayMs);
-        callerSignal?.addEventListener(
-          'abort',
-          () => {
-            clearTimeout(backoffTimeout);
-            reject(callerSignal.reason);
-          },
-          { once: true },
-        );
+        const onAbort = () => {
+          clearTimeout(backoffTimeout);
+          reject(callerSignal!.reason);
+        };
+        const backoffTimeout = setTimeout(() => {
+          callerSignal?.removeEventListener('abort', onAbort);
+          resolve();
+        }, delayMs);
+        callerSignal?.addEventListener('abort', onAbort, { once: true });
       });
     }
   }
