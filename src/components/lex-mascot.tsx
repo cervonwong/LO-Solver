@@ -1,23 +1,15 @@
+import Image from 'next/image';
+
 export function LexMascot() {
   return (
     <div className="flex items-start">
-      {/* Duck placeholder — blueprint-line style square */}
-      <div className="flex h-[60px] w-[60px] shrink-0 items-center justify-center border border-foreground">
-        <svg
-          width="40"
-          height="40"
-          viewBox="0 0 40 40"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1"
-          className="text-foreground"
-        >
-          <circle cx="16" cy="12" r="8" />
-          <ellipse cx="20" cy="28" rx="14" ry="10" />
-          <path d="M24 12 L30 10 L28 14" />
-          <circle cx="14" cy="10" r="1.5" fill="currentColor" />
-        </svg>
-      </div>
+      <Image
+        src="/lex-mascot.png"
+        alt="Lex the duck mascot"
+        width={60}
+        height={60}
+        className="shrink-0"
+      />
 
       {/* SVG tail — fill with no stroke, then draw only the two visible edges */}
       <svg
