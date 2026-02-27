@@ -11,10 +11,13 @@ interface GenerateWithRetryOptions<TOptions> {
 /**
  * Wrapper around Agent.generate with timeout and retry logic.
  *
- * - Timeout: Aborts the request via AbortController if it takes longer than timeoutMs
- * - Retries: Retries up to maxRetries times on transient errors
- * - AbortSignal: Accepts optional caller signal; merged with internal timeout signal
- *   via AbortSignal.any() so either can cancel the operation
+ * Uses a two-layer timeout strategy:
+ * 1. AbortSignal passed to agent.generate() for cooperative cancellation
+ * 2. Promise.race as a hard fallback — guarantees timeout even if the agent
+ *    doesn't respect the abort signal (e.g., during multi-step tool loops)
+ *
+ * When the hard timeout fires, it also aborts the controller so the agent
+ * gets a cancellation signal for eventual cleanup.
  *
  * @throws After all retries are exhausted, or if the caller signal aborts
  */
@@ -35,21 +38,37 @@ export async function generateWithRetry<TOptions extends Parameters<Agent['gener
     callerSignal?.throwIfAborted();
 
     const timeoutController = new AbortController();
-    const timeoutId = setTimeout(() => timeoutController.abort(), timeoutMs);
 
     // Merge caller signal (if any) with our timeout signal
     const mergedSignal = callerSignal
       ? AbortSignal.any([callerSignal, timeoutController.signal])
       : timeoutController.signal;
 
+    // Hard timeout promise — guarantees we don't hang even if the agent
+    // ignores the abort signal (e.g., stuck in a multi-step tool loop)
+    let hardTimeoutId: ReturnType<typeof setTimeout>;
+    const hardTimeoutPromise = new Promise<never>((_, reject) => {
+      hardTimeoutId = setTimeout(() => {
+        // Also signal the abort controller so the agent gets eventual cleanup
+        timeoutController.abort();
+        reject(new Error(`Timeout after ${timeoutMs}ms`));
+      }, timeoutMs);
+    });
+
     try {
-      const result = await agent.generate(prompt, {
-        ...options,
-        abortSignal: mergedSignal,
-      } as TOptions);
+      // Race between the generate call and the hard timeout.
+      // The abortSignal provides cooperative cancellation; the race provides
+      // a guaranteed fallback if abort isn't respected.
+      const result = await Promise.race([
+        agent.generate(prompt, {
+          ...options,
+          abortSignal: mergedSignal,
+        } as TOptions),
+        hardTimeoutPromise,
+      ]);
 
       // Clean up timeout on success
-      clearTimeout(timeoutId);
+      clearTimeout(hardTimeoutId!);
 
       // Check for empty response - this should trigger a retry
       // When structuredOutput is provided, check result.object; otherwise check result.text
@@ -68,18 +87,17 @@ export async function generateWithRetry<TOptions extends Parameters<Agent['gener
 
       return result;
     } catch (error) {
-      clearTimeout(timeoutId);
+      clearTimeout(hardTimeoutId!);
+      // Ensure abort is signaled for cleanup of any in-flight agent work
+      if (!timeoutController.signal.aborted) {
+        timeoutController.abort();
+      }
 
       lastError = error instanceof Error ? error : new Error(String(error));
 
       // If the caller aborted, don't retry — propagate immediately
       if (callerSignal?.aborted) {
         throw lastError;
-      }
-
-      // Normalize abort errors from timeout into a timeout message
-      if (timeoutController.signal.aborted && lastError.name === 'AbortError') {
-        lastError = new Error(`Timeout after ${timeoutMs}ms`, { cause: lastError });
       }
 
       // Check if this is a retryable error
@@ -98,7 +116,7 @@ export async function generateWithRetry<TOptions extends Parameters<Agent['gener
         throw lastError;
       }
 
-      // Calculate delay with exponential backoff (5s, 10s, 15s)
+      // Calculate delay with linear backoff (5s, 10s, 15s)
       const delayMs = 5000 * (attempt + 1);
 
       console.warn(
