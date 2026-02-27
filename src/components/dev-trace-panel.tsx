@@ -12,6 +12,7 @@ import {
   formatDuration,
 } from '@/lib/trace-utils';
 import { ActivityIndicator } from '@/components/activity-indicator';
+import { SkeletonTrace } from '@/components/skeleton-trace';
 import type { WorkflowTraceEvent } from '@/lib/workflow-events';
 
 interface DevTracePanelProps {
@@ -21,6 +22,10 @@ interface DevTracePanelProps {
 
 export function DevTracePanel({ events, isRunning }: DevTracePanelProps) {
   const stepGroups = useMemo(() => groupEventsByStep(events), [events]);
+
+  if (events.length === 0 && isRunning) {
+    return <SkeletonTrace />;
+  }
 
   if (events.length === 0 && !isRunning) {
     return <EmptyState />;
