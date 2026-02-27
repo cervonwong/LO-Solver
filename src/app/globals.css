@@ -44,6 +44,21 @@
     --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-ring: var(--sidebar-ring);
+    --color-status-active: var(--status-active);
+    --color-status-active-foreground: var(--status-active-foreground);
+    --color-status-active-muted: var(--status-active-muted);
+    --color-status-success: var(--status-success);
+    --color-status-success-foreground: var(--status-success-foreground);
+    --color-status-success-muted: var(--status-success-muted);
+    --color-status-warning: var(--status-warning);
+    --color-status-warning-foreground: var(--status-warning-foreground);
+    --color-status-warning-muted: var(--status-warning-muted);
+    --color-trace-agent: var(--trace-agent);
+    --color-trace-agent-muted: var(--trace-agent-muted);
+    --color-trace-tool: var(--trace-tool);
+    --color-trace-tool-muted: var(--trace-tool-muted);
+    --color-trace-vocab: var(--trace-vocab);
+    --color-trace-vocab-muted: var(--trace-vocab-muted);
 }
 
 :root {
@@ -66,6 +81,23 @@
     --border: oklch(0.922 0 0);
     --input: oklch(0.922 0 0);
     --ring: oklch(0.708 0 0);
+    /* Semantic status colors */
+    --status-active: oklch(0.55 0.18 250);
+    --status-active-foreground: oklch(0.985 0 0);
+    --status-active-muted: oklch(0.55 0.18 250 / 10%);
+    --status-success: oklch(0.55 0.18 145);
+    --status-success-foreground: oklch(0.985 0 0);
+    --status-success-muted: oklch(0.55 0.18 145 / 10%);
+    --status-warning: oklch(0.65 0.18 75);
+    --status-warning-foreground: oklch(0.145 0 0);
+    --status-warning-muted: oklch(0.65 0.18 75 / 10%);
+    /* Trace event type colors */
+    --trace-agent: oklch(0.55 0.15 300);
+    --trace-agent-muted: oklch(0.55 0.15 300 / 10%);
+    --trace-tool: oklch(0.55 0.15 200);
+    --trace-tool-muted: oklch(0.55 0.15 200 / 10%);
+    --trace-vocab: oklch(0.55 0.15 175);
+    --trace-vocab-muted: oklch(0.55 0.15 175 / 10%);
     --chart-1: oklch(0.646 0.222 41.116);
     --chart-2: oklch(0.6 0.118 184.704);
     --chart-3: oklch(0.398 0.07 227.392);
@@ -100,6 +132,23 @@
     --border: oklch(1 0 0 / 10%);
     --input: oklch(1 0 0 / 15%);
     --ring: oklch(0.556 0 0);
+    /* Semantic status colors - dark mode (lighter) */
+    --status-active: oklch(0.65 0.18 250);
+    --status-active-foreground: oklch(0.145 0 0);
+    --status-active-muted: oklch(0.55 0.18 250 / 15%);
+    --status-success: oklch(0.65 0.18 145);
+    --status-success-foreground: oklch(0.145 0 0);
+    --status-success-muted: oklch(0.55 0.18 145 / 15%);
+    --status-warning: oklch(0.75 0.18 75);
+    --status-warning-foreground: oklch(0.145 0 0);
+    --status-warning-muted: oklch(0.65 0.18 75 / 15%);
+    /* Trace event type colors - dark mode */
+    --trace-agent: oklch(0.7 0.15 300);
+    --trace-agent-muted: oklch(0.55 0.15 300 / 15%);
+    --trace-tool: oklch(0.7 0.15 200);
+    --trace-tool-muted: oklch(0.55 0.15 200 / 15%);
+    --trace-vocab: oklch(0.7 0.15 175);
+    --trace-vocab-muted: oklch(0.55 0.15 175 / 15%);
     --chart-1: oklch(0.488 0.243 264.376);
     --chart-2: oklch(0.696 0.17 162.48);
     --chart-3: oklch(0.769 0.188 70.08);
