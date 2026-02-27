@@ -19,13 +19,11 @@ function StepCircle({ status, label }: { status: StepStatus; label: string | num
   return (
     <div
       className={cn(
-        'flex h-8 w-8 items-center justify-center rounded-full border text-xs transition-all duration-300',
-        status === 'running' &&
-          'animate-pulse border-status-active bg-status-active text-status-active-foreground',
-        status === 'success' &&
-          'border-status-success bg-status-success text-status-success-foreground',
-        status === 'failed' && 'border-destructive bg-destructive text-destructive-foreground',
-        status === 'pending' && 'border-border bg-muted text-muted-foreground',
+        'flex h-8 w-8 items-center justify-center border text-xs font-medium transition-all duration-300',
+        status === 'running' && 'border-accent text-accent shadow-[0_0_6px_rgba(0,255,255,0.4)]',
+        status === 'success' && 'border-foreground bg-foreground text-background',
+        status === 'failed' && 'border-destructive text-destructive',
+        status === 'pending' && 'border-[rgba(255,255,255,0.3)] text-muted-foreground',
       )}
     >
       {status === 'success' ? (
@@ -48,10 +46,10 @@ function Connector({ fromStatus, toStatus }: { fromStatus: StepStatus; toStatus:
     <div
       className={cn(
         'mx-1 h-px min-w-3 flex-1 transition-colors duration-300',
-        bothComplete && 'bg-status-success',
-        completedToRunning && 'bg-gradient-to-r from-status-success to-status-active',
+        bothComplete && 'bg-[rgba(255,255,255,0.6)]',
+        completedToRunning && 'bg-accent',
         !bothComplete && !completedToRunning && hasActivity && 'bg-foreground',
-        !hasActivity && 'bg-border',
+        !hasActivity && 'border-t border-dashed border-[rgba(255,255,255,0.15)]',
       )}
     />
   );
@@ -74,8 +72,8 @@ export function StepProgress({ steps, statusMessage, onStepClick }: StepProgress
               <StepCircle status={step.status} label={i + 1} />
               <span
                 className={cn(
-                  'whitespace-nowrap text-xs',
-                  step.status === 'running' && 'font-bold text-foreground',
+                  'whitespace-nowrap text-xs uppercase tracking-wider',
+                  step.status === 'running' && 'font-bold text-accent',
                   step.status === 'success' && 'text-foreground',
                   step.status === 'failed' && 'text-destructive',
                   step.status === 'pending' && 'text-muted-foreground',
