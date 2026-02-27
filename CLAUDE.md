@@ -42,6 +42,7 @@ Three evolutionary workflows live under `src/mastra/`, numbered by sophisticatio
 - shadcn/ui is configured; add components with `npx shadcn@latest add <name>`
 - `StepProgress`, `DevTracePanel`, `TraceEventCard` — Pipeline progress and real-time trace UI components
 - Event types defined in `src/lib/workflow-events.ts` (`WorkflowTraceEvent` union); parsing/grouping logic in `src/lib/trace-utils.ts`
+- `UIStepId` extends backend `StepId` with `verify-${N}` and `improve-${N}` patterns, derived from `data-verify-improve-phase` boundary events. `getUIStepLabel()` produces display labels. The progress bar and trace panel use `UIStepId`; the backend continues to use `StepId`.
 
 ### File Conventions in Each Workflow
 
