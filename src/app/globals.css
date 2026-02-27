@@ -172,3 +172,105 @@
     @apply bg-background text-foreground;
     }
 }
+
+/* Animation keyframes */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-in-row {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes highlight-flash {
+  0% {
+    background-color: var(--trace-vocab-muted);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+@keyframes checkmark-scale {
+  0% {
+    transform: scale(0.8);
+  }
+  50% {
+    transform: scale(1.15);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes progress-fill {
+  from {
+    width: 0%;
+  }
+  to {
+    width: 100%;
+  }
+}
+
+/* Utility classes for animations */
+.animate-fade-in {
+  animation: fade-in 200ms ease-out both;
+}
+
+.animate-slide-in-row {
+  animation: slide-in-row 250ms ease-out both;
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, var(--muted) 25%, var(--accent) 50%, var(--muted) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+.animate-highlight-flash {
+  animation: highlight-flash 500ms ease-out both;
+}
+
+.animate-checkmark-scale {
+  animation: checkmark-scale 300ms ease-out both;
+}
+
+/* Collapsible animation using grid-rows technique */
+[data-state='open'].animate-collapsible {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows 150ms ease-out;
+}
+
+[data-state='closed'].animate-collapsible {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 150ms ease-out;
+}
+
+.animate-collapsible > * {
+  overflow: hidden;
+}
