@@ -1,16 +1,15 @@
 'use client';
 
 import { useMemo } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { TraceEventCard, ToolCallGroupCard } from '@/components/trace-event-card';
 import {
   groupEventsByStep,
-  groupEventsByIteration,
   groupEventsWithToolCalls,
   isToolCallGroup,
   formatDuration,
 } from '@/lib/trace-utils';
+import type { StepGroup } from '@/lib/trace-utils';
 import type { WorkflowTraceEvent } from '@/lib/workflow-events';
 
 interface DevTracePanelProps {
@@ -42,21 +41,19 @@ export function DevTracePanel({ events, isRunning }: DevTracePanelProps) {
 }
 
 interface StepSectionProps {
-  group: ReturnType<typeof groupEventsByStep>[number];
+  group: StepGroup;
   isRunning: boolean;
 }
 
 function StepSection({ group, isRunning }: StepSectionProps) {
-  const isVerifyImprove = group.stepId === 'verify-improve-rules-loop';
   const isActive = group.durationMs === undefined && group.startTime !== undefined;
 
-  // Filter out step-start/step-complete for cleaner display
   const contentEvents = group.events.filter(
     (e) => e.type !== 'data-step-start' && e.type !== 'data-step-complete',
   );
 
   return (
-    <section className="rounded border border-border">
+    <section id={`trace-${group.stepId}`} className="rounded border border-border">
       <div className="flex items-center justify-between border-b border-border px-3 py-2">
         <span className="flex items-center gap-2 text-sm font-medium">
           {group.label}
@@ -75,43 +72,9 @@ function StepSection({ group, isRunning }: StepSectionProps) {
       </div>
 
       <div className="p-3">
-        {isVerifyImprove ? (
-          <IterationTabs events={contentEvents} />
-        ) : (
-          <EventList events={contentEvents} />
-        )}
+        <EventList events={contentEvents} />
       </div>
     </section>
-  );
-}
-
-function IterationTabs({ events }: { events: WorkflowTraceEvent[] }) {
-  const iterations = useMemo(() => groupEventsByIteration(events), [events]);
-
-  if (iterations.length === 0) {
-    return <p className="text-xs text-muted-foreground">Waiting for events...</p>;
-  }
-
-  if (iterations.length === 1) {
-    return <EventList events={iterations[0]!.events} />;
-  }
-
-  return (
-    <Tabs defaultValue="1">
-      <TabsList>
-        {iterations.map((iter) => (
-          <TabsTrigger key={iter.iteration} value={String(iter.iteration)} className="text-xs">
-            Iter {iter.iteration}
-            {iter.conclusion === 'ALL_RULES_PASS' && ' \u2713'}
-          </TabsTrigger>
-        ))}
-      </TabsList>
-      {iterations.map((iter) => (
-        <TabsContent key={iter.iteration} value={String(iter.iteration)}>
-          <EventList events={iter.events} />
-        </TabsContent>
-      ))}
-    </Tabs>
   );
 }
 
