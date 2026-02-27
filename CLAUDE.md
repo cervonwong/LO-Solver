@@ -4,9 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Commands
 
-- `npm run dev` — Start Mastra dev server (hot-reload)
+- `npm run dev` — Starts Next.js (port 3000, Turbopack) and Mastra dev server (port 4111, includes Mastra Studio) concurrently. `dev:next` / `dev:mastra` run them independently.
 - `npm run dev:new` — Clear database then start dev server
-- `npm run build` — Production build (outputs to `.mastra/output/`)
+- `npm run build` — Next.js production build
 - `npx tsc --noEmit` — Type-check without emitting (run before commits)
 
 Note: `npx tsc --noEmit` currently reports one pre-existing error: `src/app/layout.tsx: Cannot find module './globals.css'` — this is a CSS module without a type declaration and does not affect builds. Ignore it when checking for regressions.
@@ -40,6 +40,8 @@ Three evolutionary workflows live under `src/mastra/`, numbered by sophisticatio
 - `src/hooks/` — React hooks
 - Request flow: page.tsx builds `inputData` in `prepareSendMessagesRequest` → POST to `/api/solve` → Mastra workflow receives it as `inputData`
 - shadcn/ui is configured; add components with `npx shadcn@latest add <name>`
+- `StepProgress`, `DevTracePanel`, `TraceEventCard` — Pipeline progress and real-time trace UI components
+- Event types defined in `src/lib/workflow-events.ts` (`WorkflowTraceEvent` union); parsing/grouping logic in `src/lib/trace-utils.ts`
 
 ### File Conventions in Each Workflow
 
@@ -51,20 +53,17 @@ Three evolutionary workflows live under `src/mastra/`, numbered by sophisticatio
 
 ### Key Patterns
 
-**Two-agent chains**: Natural language reasoning agent → JSON extraction agent. The reasoner thinks freely, then a cheaper model extracts structured output. Used in Steps 2 and 3b.
+**Two-agent chains**: Natural language reasoning agent → JSON extraction agent. Used in Steps 2 and 3b.
 
-**RequestContext for shared state** (Workflow 03): Per-execution mutable state passed through `RequestContext`. Keys defined in `request-context-types.ts`, accessed via helpers in `request-context-helpers.ts`:
-
-- `vocabulary-state` — Mutable `Map<string, VocabularyEntry>` shared across all tools/agents
-- `structured-problem` — Immutable problem data
-- `current-rules` — Rule array updated each verification iteration
-- `log-file` — Path for execution logging
+**RequestContext for shared state** (Workflow 03): Per-execution mutable state passed through `RequestContext`. Keys defined in `request-context-types.ts` (source of truth), accessed via helpers in `request-context-helpers.ts`.
 
 **Vocabulary tools**: Five tools (`vocabulary-tools.ts`) that read/write the vocabulary Map in RequestContext. Agents with vocabulary access get these tools plus a prompt fragment from `vocabulary-tools-prompt.ts`.
 
 **generateWithRetry** (`agent-utils.ts`): Wrapper around `Agent.generate()` with 10-minute timeout, up to 2 retries with exponential backoff. Used for all LLM calls in workflow steps.
 
-**Execution logging**: Markdown logs written to `{LOG_DIRECTORY}/workflow-0N_*.md` via `logging-utils.ts`. Timestamps in GMT+8.
+**Execution logging**: Markdown logs written to `{LOG_DIRECTORY}/workflow-0N_*.md` via `logging-utils.ts`.
+
+**Event streaming to frontend**: Workflow steps emit typed events via `writer.write()` on the step's `ToolStream`. **Caution:** `ctx.writer?.custom()` inside tools is a silent no-op when agents run inside workflow steps. To emit events from tools, use the step writer passed via `step-writer` in RequestContext and the `emitToolTraceEvent` helper in `request-context-helpers.ts`.
 
 ## Conventions
 
