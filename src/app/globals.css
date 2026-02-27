@@ -3,8 +3,6 @@
 @import 'shadcn/tailwind.css';
 @source "../node_modules/streamdown/dist/*.js";
 
-@custom-variant dark (&:is(.dark *));
-
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -13,6 +11,8 @@
   --radius-2xl: calc(var(--radius) + 8px);
   --radius-3xl: calc(var(--radius) + 12px);
   --radius-4xl: calc(var(--radius) + 16px);
+  --font-sans: var(--font-noto-sans, 'Noto Sans', sans-serif);
+  --font-heading: var(--font-architects-daughter, 'Architects Daughter', cursive);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -36,14 +36,6 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
   --color-status-active: var(--status-active);
   --color-status-active-foreground: var(--status-active-foreground);
   --color-status-active-muted: var(--status-active-muted);
@@ -62,106 +54,52 @@
 }
 
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  /* Semantic status colors */
-  --status-active: oklch(0.55 0.18 250);
-  --status-active-foreground: oklch(0.985 0 0);
-  --status-active-muted: oklch(0.55 0.18 250 / 10%);
-  --status-success: oklch(0.55 0.18 145);
-  --status-success-foreground: oklch(0.985 0 0);
-  --status-success-muted: oklch(0.55 0.18 145 / 10%);
-  --status-warning: oklch(0.65 0.18 75);
-  --status-warning-foreground: oklch(0.145 0 0);
-  --status-warning-muted: oklch(0.65 0.18 75 / 10%);
-  /* Trace event type colors */
-  --trace-agent: oklch(0.55 0.15 300);
-  --trace-agent-muted: oklch(0.55 0.15 300 / 10%);
-  --trace-tool: oklch(0.55 0.15 200);
-  --trace-tool-muted: oklch(0.55 0.15 200 / 10%);
-  --trace-vocab: oklch(0.55 0.15 175);
-  --trace-vocab-muted: oklch(0.55 0.15 175 / 10%);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-}
+  --radius: 0;
 
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  /* Semantic status colors - dark mode (lighter) */
-  --status-active: oklch(0.65 0.18 250);
-  --status-active-foreground: oklch(0.145 0 0);
-  --status-active-muted: oklch(0.55 0.18 250 / 15%);
-  --status-success: oklch(0.65 0.18 145);
-  --status-success-foreground: oklch(0.145 0 0);
-  --status-success-muted: oklch(0.55 0.18 145 / 15%);
-  --status-warning: oklch(0.75 0.18 75);
-  --status-warning-foreground: oklch(0.145 0 0);
-  --status-warning-muted: oklch(0.65 0.18 75 / 15%);
-  /* Trace event type colors - dark mode */
-  --trace-agent: oklch(0.7 0.15 300);
-  --trace-agent-muted: oklch(0.55 0.15 300 / 15%);
-  --trace-tool: oklch(0.7 0.15 200);
-  --trace-tool-muted: oklch(0.55 0.15 200 / 15%);
-  --trace-vocab: oklch(0.7 0.15 175);
-  --trace-vocab-muted: oklch(0.55 0.15 175 / 15%);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  /* Blueprint Cyanotype palette */
+  --background: #003366;
+  --foreground: rgba(255, 255, 255, 0.8);
+  --card: rgba(0, 40, 80, 0.6);
+  --card-foreground: rgba(255, 255, 255, 0.85);
+  --popover: rgba(0, 40, 80, 0.9);
+  --popover-foreground: rgba(255, 255, 255, 0.85);
+  --primary: #ff3333;
+  --primary-foreground: #ffffff;
+  --secondary: rgba(255, 255, 255, 0.1);
+  --secondary-foreground: rgba(255, 255, 255, 0.8);
+  --muted: rgba(255, 255, 255, 0.08);
+  --muted-foreground: rgba(255, 255, 255, 0.5);
+  --accent: #00ffff;
+  --accent-foreground: #003366;
+  --destructive: #ff3333;
+  --border: rgba(255, 255, 255, 0.2);
+  --input: rgba(255, 255, 255, 0.15);
+  --ring: #00ffff;
+
+  /* Status colors — blueprint adapted */
+  --status-active: #00ffff;
+  --status-active-foreground: #003366;
+  --status-active-muted: rgba(0, 255, 255, 0.1);
+  --status-success: rgba(255, 255, 255, 0.8);
+  --status-success-foreground: #003366;
+  --status-success-muted: rgba(255, 255, 255, 0.1);
+  --status-warning: #ffd700;
+  --status-warning-foreground: #003366;
+  --status-warning-muted: rgba(255, 215, 0, 0.1);
+
+  /* Trace event colors */
+  --trace-agent: #cc99ff;
+  --trace-agent-muted: rgba(204, 153, 255, 0.1);
+  --trace-tool: #66cccc;
+  --trace-tool-muted: rgba(102, 204, 204, 0.1);
+  --trace-vocab: #66ccaa;
+  --trace-vocab-muted: rgba(102, 204, 170, 0.1);
+
+  --chart-1: #00ffff;
+  --chart-2: #ff3333;
+  --chart-3: #ffd700;
+  --chart-4: #cc99ff;
+  --chart-5: #66cccc;
 }
 
 @layer base {
@@ -170,10 +108,129 @@
   }
   body {
     @apply bg-background text-foreground;
+    /* Blueprint grid background */
+    background-image:
+      linear-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+    background-size: 20px 20px;
+    background-attachment: fixed;
+    padding: 20px;
   }
 }
 
-/* Animation keyframes */
+/* ============================================
+   BLUEPRINT COMPONENTS
+   ============================================ */
+
+/* Frosted glass panel */
+.frosted {
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(12px);
+}
+
+/* Crosshair card — major containers only */
+.blueprint-card {
+  position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(12px);
+  padding: 15px;
+}
+
+.blueprint-card::before,
+.blueprint-card::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+}
+
+/* Vertical crosshair extensions */
+.blueprint-card::before {
+  top: -5px;
+  bottom: -5px;
+  left: 0;
+  right: 0;
+  border-left: 1px solid rgba(255, 255, 255, 0.8);
+  border-right: 1px solid rgba(255, 255, 255, 0.8);
+}
+
+/* Horizontal crosshair extensions */
+.blueprint-card::after {
+  left: -5px;
+  right: -5px;
+  top: 0;
+  bottom: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.8);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.8);
+}
+
+/* Stamp button (primary red) */
+.stamp-btn {
+  font-family: var(--font-heading);
+  background: transparent;
+  color: #ff3333;
+  border: 3px solid #ff3333;
+  padding: 8px 20px;
+  font-size: 1.1rem;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  transform: rotate(-2deg);
+}
+
+.stamp-btn:hover {
+  background: rgba(255, 51, 51, 0.1);
+}
+
+.stamp-btn:active {
+  transform: scale(0.92) rotate(-1deg);
+  filter: blur(0.6px);
+  box-shadow: 0 0 10px rgba(255, 51, 51, 0.4);
+}
+
+.stamp-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: rotate(-2deg);
+}
+
+.stamp-btn:disabled:active {
+  transform: rotate(-2deg);
+  filter: none;
+  box-shadow: none;
+}
+
+/* Stamp button (secondary white) */
+.stamp-btn-secondary {
+  font-family: var(--font-heading);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  padding: 8px 20px;
+  font-size: 1rem;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.stamp-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.stamp-btn-secondary:active {
+  transform: scale(0.95);
+}
+
+/* Dimension/coordinate text */
+.dimension {
+  color: #00ffff;
+  font-size: 0.75rem;
+}
+
+/* ============================================
+   ANIMATION KEYFRAMES
+   ============================================ */
+
 @keyframes fade-in {
   from {
     opacity: 0;
@@ -196,18 +253,9 @@
   }
 }
 
-@keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
-}
-
 @keyframes highlight-flash {
   0% {
-    background-color: var(--trace-vocab-muted);
+    background-color: rgba(0, 255, 255, 0.15);
   }
   100% {
     background-color: transparent;
@@ -226,12 +274,22 @@
   }
 }
 
-@keyframes progress-fill {
+@keyframes blink-cursor {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+@keyframes plotter-draw {
   from {
-    width: 0%;
+    stroke-dashoffset: 1000;
   }
   to {
-    width: 100%;
+    stroke-dashoffset: 0;
   }
 }
 
@@ -244,18 +302,22 @@
   animation: slide-in-row 250ms ease-out both;
 }
 
-.animate-shimmer {
-  background: linear-gradient(90deg, var(--muted) 25%, var(--accent) 50%, var(--muted) 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s ease-in-out infinite;
-}
-
 .animate-highlight-flash {
   animation: highlight-flash 500ms ease-out both;
 }
 
 .animate-checkmark-scale {
   animation: checkmark-scale 300ms ease-out both;
+}
+
+.animate-blink {
+  animation: blink-cursor 1s step-end infinite;
+}
+
+.animate-plotter {
+  stroke-dasharray: 1000;
+  stroke-dashoffset: 1000;
+  animation: plotter-draw 1s ease-out forwards;
 }
 
 /* Collapsible animation using grid-rows technique */
@@ -273,4 +335,18 @@
 
 .animate-collapsible > * {
   overflow: hidden;
+}
+
+/* ============================================
+   STREAMDOWN OVERRIDES
+   ============================================ */
+
+/* Ensure markdown rendered by Streamdown inherits blueprint colors */
+.streamdown pre {
+  background: rgba(0, 40, 80, 0.6) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+
+.streamdown code {
+  color: #00ffff !important;
 }
