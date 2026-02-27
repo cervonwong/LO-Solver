@@ -20,6 +20,9 @@ export interface Rule {
   confidence?: 'HIGH' | 'MEDIUM' | 'LOW';
 }
 
+/** Type for the workflow step writer used to emit trace events. */
+export type StepWriter = { write?: (data: unknown) => Promise<void> };
+
 /**
  * Request Context type for Workflow 03.
  * All agents and tools access runtime data via this context.
@@ -41,5 +44,5 @@ export interface Workflow03RequestContext {
   'model-mode': ModelMode;
 
   /** Step writer for emitting trace events from tools (bypasses broken ctx.writer) */
-  'step-writer': unknown;
+  'step-writer': StepWriter;
 }
