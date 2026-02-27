@@ -15,6 +15,11 @@
 
 ## Current Plans
 
-| Plan                                                                                        | Status | Description                                                             |
-| ------------------------------------------------------------------------------------------- | ------ | ----------------------------------------------------------------------- |
-| [2026-02-26-polished-pipeline-monitor-plan](./2026-02-26-polished-pipeline-monitor-plan.md) | Active | Polished three-panel pipeline monitor with dark mode and rich rendering |
+| Plan                                                                                                      | Status  | Description                                                             |
+| --------------------------------------------------------------------------------------------------------- | ------- | ----------------------------------------------------------------------- |
+| [2026-02-26-polished-pipeline-monitor-plan](./2026-02-26-polished-pipeline-monitor-plan.md)               | Active  | Polished three-panel pipeline monitor with dark mode and rich rendering |
+| [2026-02-27-separate-verify-improve-blocks-design](./2026-02-27-separate-verify-improve-blocks-design.md) | Pending | Split verify-improve into separate UI blocks with dynamic progress bar  |
+| [2026-02-27-separate-verify-improve-blocks-plan](./2026-02-27-separate-verify-improve-blocks-plan.md)     | Pending | Implementation plan for separate verify/improve blocks                  |
+| [2026-02-27-backend-refactoring-design](./2026-02-27-backend-refactoring-design.md)                       | Active  | Design doc for backend type safety and workflow.ts split                |
+| [2026-02-27-backend-refactoring-plan](./2026-02-27-backend-refactoring-plan.md)                           | Active  | StepWriter typing, emit consolidation, schema extraction, ruleSchema    |
+| [2026-02-27-sub-agent-timeout-fix](./2026-02-27-sub-agent-timeout-fix.md)                                 | Done    | Fix missing requestContext, Promise.race leak, add requestContextSchema |
