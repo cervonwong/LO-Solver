@@ -12,6 +12,7 @@ import { ProblemInput } from '@/components/problem-input';
 import { StepProgress, STEP_ORDER, type StepStatus } from '@/components/step-progress';
 import { ResultsPanel } from '@/components/results-panel';
 import { DevTracePanel } from '@/components/dev-trace-panel';
+import { VocabularyPanel } from '@/components/vocabulary-panel';
 import { EXAMPLE_PROBLEMS, getExampleLabel } from '@/lib/examples';
 import type { StepId, WorkflowTraceEvent, VerifyImprovePhaseEvent } from '@/lib/workflow-events';
 
@@ -169,6 +170,20 @@ export default function SolverPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vocabParts.length]);
 
+  const mutationSummary = useMemo(() => {
+    const summary = { added: 0, updated: 0, removed: 0 };
+    for (const part of allParts) {
+      if ('type' in part && part.type === 'data-vocabulary-update') {
+        const data = (part as { type: string; data: VocabUpdateData }).data;
+        if (data.action === 'add') summary.added += data.entries?.length ?? 1;
+        else if (data.action === 'update') summary.updated += data.entries?.length ?? 1;
+        else if (data.action === 'remove') summary.removed += data.entries?.length ?? 1;
+      }
+    }
+    return summary;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allParts.length]);
+
   // Collect trace events for the dev trace panel
   const traceEvents = useMemo(() => {
     return allParts.filter(
@@ -263,6 +278,7 @@ export default function SolverPage() {
 
   return (
     <ResizablePanelGroup orientation="horizontal" className="h-full">
+      {/* Left panel: Input + Results */}
       <ResizablePanel defaultSize="35%" minSize="25%">
         <ScrollArea className="h-full">
           <div className="flex flex-col gap-6 p-6">
@@ -277,7 +293,11 @@ export default function SolverPage() {
             </Collapsible>
 
             {hasStarted && (
-              <StepProgress stepStatuses={stepStatuses} statusMessage={statusMessage} loopState={loopState} />
+              <StepProgress
+                stepStatuses={stepStatuses}
+                statusMessage={statusMessage}
+                loopState={loopState}
+              />
             )}
 
             {isFailed && (
@@ -287,7 +307,7 @@ export default function SolverPage() {
             )}
 
             {isComplete && answerStepOutput && (
-              <ResultsPanel output={answerStepOutput} rules={rules} vocabulary={vocabulary} />
+              <ResultsPanel output={answerStepOutput} rules={rules} />
             )}
 
             {(isComplete || isFailed) && !isRunning && (
@@ -301,10 +321,27 @@ export default function SolverPage() {
 
       <ResizableHandle withHandle />
 
+      {/* Right panel: Trace (top) + Vocabulary (bottom) */}
       <ResizablePanel defaultSize="65%" minSize="30%">
-        <ScrollArea className="h-full">
-          <DevTracePanel events={traceEvents} isRunning={isRunning} />
-        </ScrollArea>
+        <ResizablePanelGroup orientation="vertical">
+          {/* Trace panel */}
+          <ResizablePanel defaultSize="70%" minSize="30%">
+            <ScrollArea className="h-full">
+              <DevTracePanel events={traceEvents} isRunning={isRunning} />
+            </ScrollArea>
+          </ResizablePanel>
+
+          <ResizableHandle withHandle />
+
+          {/* Vocabulary panel */}
+          <ResizablePanel defaultSize="30%" minSize="15%">
+            <VocabularyPanel
+              vocabulary={vocabulary}
+              mutationSummary={mutationSummary}
+              isRunning={isRunning}
+            />
+          </ResizablePanel>
+        </ResizablePanelGroup>
       </ResizablePanel>
     </ResizablePanelGroup>
   );
