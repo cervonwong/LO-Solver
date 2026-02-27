@@ -1,7 +1,20 @@
 # Implementation Plans
 
+## Completed Plans
+
+| Plan                                                                                              | Status | Description                                                                |
+| ------------------------------------------------------------------------------------------------- | ------ | -------------------------------------------------------------------------- |
+| [2026-02-26-mastra-v1-migration](./2026-02-26-mastra-v1-migration.md)                             | Done   | Upgrade Mastra packages from beta to stable v1                             |
+| [2026-02-08-nextjs-frontend-design](./2026-02-08-nextjs-frontend-design.md)                       | Done   | Next.js frontend design doc — user view + dev trace for Workflow 03        |
+| [2026-02-26-single-page-layout-redesign](./2026-02-26-single-page-layout-redesign.md)             | Done   | Design doc for two-column resizable single-page layout                     |
+| [2026-02-26-single-page-layout-implementation](./2026-02-26-single-page-layout-implementation.md) | Done   | Merge two-page flow into single-page resizable two-column layout           |
+| [2026-02-26-dev-trace-and-polish](./2026-02-26-dev-trace-and-polish.md)                           | Done   | Dev trace panel with step groups, iteration tabs, and event cards          |
+| [2026-02-26-examples-registry-refactor](./2026-02-26-examples-registry-refactor.md)               | Done   | Make examples/index.ts the single source of truth for example metadata     |
+| [2026-02-26-model-mode-toggle-design](./2026-02-26-model-mode-toggle-design.md)                   | Done   | Design doc for testing/production model toggle                             |
+| [2026-02-26-model-mode-toggle-plan](./2026-02-26-model-mode-toggle-plan.md)                       | Done   | UI toggle to switch all agents between cheap testing and production models |
+
 ## Current Plans
 
-| Plan | Status | Description |
-|------|--------|-------------|
-| [2026-02-08-nextjs-frontend-design](./2026-02-08-nextjs-frontend-design.md) | Pending | Next.js frontend with user view + dev trace swimlanes for Workflow 03 |
+| Plan                                                                                        | Status | Description                                                             |
+| ------------------------------------------------------------------------------------------- | ------ | ----------------------------------------------------------------------- |
+| [2026-02-26-polished-pipeline-monitor-plan](./2026-02-26-polished-pipeline-monitor-plan.md) | Active | Polished three-panel pipeline monitor with dark mode and rich rendering |
