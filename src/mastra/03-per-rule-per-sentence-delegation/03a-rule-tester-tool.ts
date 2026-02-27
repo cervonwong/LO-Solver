@@ -12,6 +12,7 @@ import { logRuleTestResult } from './logging-utils';
 import type { StructuredProblemData, Rule } from './request-context-types';
 import type { VocabularyEntry } from './vocabulary-tools';
 import type { Mastra } from '@mastra/core/mastra';
+import { RequestContext } from '@mastra/core/request-context';
 import { generateWithRetry } from './agent-utils';
 
 // ============================================================================
@@ -70,6 +71,7 @@ interface ExecuteRuleTestParams {
   vocabulary: VocabularyEntry[];
   mastra: Mastra;
   logFile?: string;
+  requestContext?: RequestContext;
 }
 
 /**
@@ -83,6 +85,7 @@ async function executeRuleTest({
   vocabulary,
   mastra,
   logFile,
+  requestContext,
 }: ExecuteRuleTestParams): Promise<z.infer<typeof ruleTestResultSchema>> {
   // Format all rules, highlighting the one being tested
   const formattedRules = allRules
@@ -130,6 +133,7 @@ ${JSON.stringify(structuredProblem.questions, null, 2)}
       prompt,
       options: {
         maxSteps: 100,
+        ...(requestContext && { requestContext }),
         structuredOutput: {
           schema: ruleTestSuccessSchema,
         },
@@ -186,6 +190,7 @@ export const testRuleTool = createTool({
       vocabulary,
       mastra: ctx.mastra!,
       ...(logFile !== undefined && { logFile }),
+      ...(ctx.requestContext && { requestContext: ctx.requestContext as RequestContext }),
     });
 
     await emitToolTraceEvent(ctx?.requestContext, {
@@ -251,6 +256,7 @@ export const testRuleWithRulesetTool = createTool({
       vocabulary,
       mastra: ctx.mastra!,
       ...(logFile !== undefined && { logFile }),
+      ...(ctx.requestContext && { requestContext: ctx.requestContext as RequestContext }),
     });
 
     await emitToolTraceEvent(ctx?.requestContext, {

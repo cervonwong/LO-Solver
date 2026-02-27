@@ -15,6 +15,7 @@ import { ruleSchema } from './03a-rule-tester-tool';
 import type { Rule } from './request-context-types';
 import type { VocabularyEntry } from './vocabulary-tools';
 import type { Mastra } from '@mastra/core/mastra';
+import { RequestContext } from '@mastra/core/request-context';
 import { generateWithRetry } from './agent-utils';
 
 // ============================================================================
@@ -86,6 +87,7 @@ interface ExecuteSentenceTestParams {
   vocabulary: VocabularyEntry[];
   mastra: Mastra;
   logFile?: string;
+  requestContext?: RequestContext;
 }
 
 /**
@@ -103,6 +105,7 @@ async function executeSentenceTest({
   vocabulary,
   mastra,
   logFile,
+  requestContext,
 }: ExecuteSentenceTestParams): Promise<z.infer<typeof sentenceTestResultSchema>> {
   // Phase 1: Blind Translation - agent does NOT see expected translation
   const prompt = `
@@ -131,6 +134,7 @@ Attempt to translate this sentence step by step using the rules and vocabulary a
       prompt,
       options: {
         maxSteps: 100,
+        ...(requestContext && { requestContext }),
         structuredOutput: {
           schema: agentResponseSchema,
         },
@@ -218,6 +222,7 @@ export const testSentenceTool = createTool({
       vocabulary,
       mastra: ctx.mastra!,
       ...(logFile !== undefined && { logFile }),
+      ...(ctx.requestContext && { requestContext: ctx.requestContext as RequestContext }),
     });
 
     await emitToolTraceEvent(ctx?.requestContext, {
@@ -294,6 +299,7 @@ export const testSentenceWithRulesetTool = createTool({
       vocabulary,
       mastra: ctx.mastra!,
       ...(logFile !== undefined && { logFile }),
+      ...(ctx.requestContext && { requestContext: ctx.requestContext as RequestContext }),
     });
 
     await emitToolTraceEvent(ctx?.requestContext, {
