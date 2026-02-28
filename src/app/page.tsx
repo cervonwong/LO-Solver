@@ -360,11 +360,20 @@ function SolverPageInner() {
           <div className="flex flex-col gap-6 p-6">
             <LexMascot />
 
-            <BlueprintCard>
+            <BlueprintCard className={inputOpen ? '' : 'pb-2'}>
               <Collapsible open={inputOpen} onOpenChange={setInputOpen}>
                 <CollapsibleTrigger className="flex w-full items-center justify-between py-1 text-left font-heading text-base text-foreground hover:text-accent">
                   Problem Input
-                  <span className="text-xs text-accent">{inputOpen ? '\u25B2' : '\u25BC'}</span>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    height="16"
+                    viewBox="0 -960 960 960"
+                    width="16"
+                    fill="currentColor"
+                    className={`shrink-0 text-accent transition-transform duration-200 ${inputOpen ? 'rotate-180' : ''}`}
+                  >
+                    <path d="M480-371.69 267.69-584 296-612.31l184 184 184-184L692.31-584 480-371.69Z" />
+                  </svg>
                 </CollapsibleTrigger>
                 <CollapsibleContent forceMount className="animate-collapsible pt-4 data-[state=closed]:hidden">
                   <ProblemInput
