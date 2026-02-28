@@ -14,7 +14,6 @@ import { StepProgress, type StepStatus, type ProgressStep } from '@/components/s
 import { ResultsPanel } from '@/components/results-panel';
 import { DevTracePanel } from '@/components/dev-trace-panel';
 import { VocabularyPanel } from '@/components/vocabulary-panel';
-import { EXAMPLE_PROBLEMS, getExampleLabel } from '@/lib/examples';
 import { getUIStepLabel, type UIStepId } from '@/lib/workflow-events';
 import type { StepId, WorkflowTraceEvent, VerifyImprovePhaseEvent } from '@/lib/workflow-events';
 
@@ -35,13 +34,19 @@ interface VocabUpdateData {
   totalCount: number;
 }
 
-const examples = EXAMPLE_PROBLEMS.map((e) => ({ id: e.id, label: getExampleLabel(e) }));
-
 export default function SolverPage() {
+  const [examples, setExamples] = useState<Array<{ id: string; label: string }>>([]);
   const [hasStarted, setHasStarted] = useState(false);
   const [inputOpen, setInputOpen] = useState(true);
   const hasSent = useRef(false);
   const [modelMode] = useModelMode();
+
+  useEffect(() => {
+    fetch('/api/examples')
+      .then((res) => res.json())
+      .then((data) => setExamples(data.examples))
+      .catch(() => {});
+  }, []);
 
   const transport = useMemo(
     () =>
