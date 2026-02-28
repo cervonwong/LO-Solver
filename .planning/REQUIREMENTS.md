@@ -56,28 +56,28 @@
 
 | Requirement | Phase | Status |
 | --- | --- | --- |
-| CLEAN-01 | — | Pending |
-| CLEAN-02 | — | Pending |
-| CLEAN-03 | — | Pending |
-| CLEAN-04 | — | Pending |
-| EVAL-01 | — | Pending |
-| EVAL-02 | — | Pending |
-| EVAL-03 | — | Pending |
-| EVAL-04 | — | Pending |
-| EVAL-05 | — | Pending |
-| EVAL-06 | — | Pending |
-| WORK-01 | — | Pending |
-| WORK-02 | — | Pending |
-| WORK-03 | — | Pending |
-| WORK-04 | — | Pending |
-| WORK-05 | — | Pending |
-| WORK-06 | — | Pending |
-| UI-01 | — | Pending |
-| UI-02 | — | Pending |
-| UI-03 | — | Pending |
-| UI-04 | — | Pending |
-| UI-05 | — | Pending |
-| UI-06 | — | Pending |
+| CLEAN-01 | Phase 1: Legacy Cleanup | Pending |
+| CLEAN-02 | Phase 1: Legacy Cleanup | Pending |
+| CLEAN-03 | Phase 1: Legacy Cleanup | Pending |
+| CLEAN-04 | Phase 1: Legacy Cleanup | Pending |
+| EVAL-01 | Phase 2: Evaluation Foundation | Pending |
+| EVAL-02 | Phase 3: Evaluation Expansion | Pending |
+| EVAL-03 | Phase 3: Evaluation Expansion | Pending |
+| EVAL-04 | Phase 3: Evaluation Expansion | Pending |
+| EVAL-05 | Phase 2: Evaluation Foundation | Pending |
+| EVAL-06 | Phase 2: Evaluation Foundation | Pending |
+| WORK-01 | Phase 4: Multi-Perspective Hypothesis Generation | Pending |
+| WORK-02 | Phase 4: Multi-Perspective Hypothesis Generation | Pending |
+| WORK-03 | Phase 4: Multi-Perspective Hypothesis Generation | Pending |
+| WORK-04 | Phase 4: Multi-Perspective Hypothesis Generation | Pending |
+| WORK-05 | Phase 5: Verification Loop Improvements | Pending |
+| WORK-06 | Phase 5: Verification Loop Improvements | Pending |
+| UI-01 | Phase 6: UI Event System & Rules Panel | Pending |
+| UI-02 | Phase 6: UI Event System & Rules Panel | Pending |
+| UI-03 | Phase 7: Hierarchical Trace Display & Results | Pending |
+| UI-04 | Phase 7: Hierarchical Trace Display & Results | Pending |
+| UI-05 | Phase 7: Hierarchical Trace Display & Results | Pending |
+| UI-06 | Phase 6: UI Event System & Rules Panel | Pending |
 
 ---
 
