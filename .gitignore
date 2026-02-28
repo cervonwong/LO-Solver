@@ -8,4 +8,5 @@ dist
 *.db 
 *.db-* 
 logs/ 
+*.tsbuildinfo
 .worktrees/
