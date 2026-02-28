@@ -1,3 +1,7 @@
+import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, resolve } from 'path';
+
 export interface ExampleProblemMeta {
   id: string;
   language: string;
@@ -44,3 +48,77 @@ export const EXAMPLE_PROBLEMS: ExampleProblemMeta[] = [
     solutionUrl: 'https://onling.org/contests/student-2024/files/solutions.pdf',
   },
 ];
+
+/** A single JSONL entry from the Linguini dataset. */
+export interface LinguiniEntry {
+  id: string;
+  context: string;
+  query: string;
+  answer: string[] | string[][] | string;
+  explanation: string;
+  work_lang: string;
+  task_lang: string[];
+  task_type: string;
+  eval_type: string;
+  iol_year: number;
+  iol_question_number: number;
+  iol_question_title: string;
+  iol_url: string;
+  iol_location: string;
+}
+
+/** A grouped Linguini question (1+ sub-parts sharing the same IOL question). */
+export interface LinguiniQuestion {
+  id: string; // e.g. "iol-2023-1"
+  year: number;
+  questionNumber: number;
+  title: string;
+  url: string;
+  location: string;
+  parts: LinguiniEntry[];
+}
+
+/** Load and group Linguini dataset entries by question. */
+export function loadLinguiniQuestions(): LinguiniQuestion[] {
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = dirname(__filename);
+  const filePath = resolve(__dirname, 'linguini', 'dataset_enriched.jsonl');
+  const raw = readFileSync(filePath, 'utf-8');
+  const entries: LinguiniEntry[] = raw
+    .split('\n')
+    .filter((line) => line.trim())
+    .map((line) => JSON.parse(line) as LinguiniEntry);
+
+  const grouped = new Map<string, LinguiniQuestion>();
+  for (const entry of entries) {
+    const key = `iol-${entry.iol_year}-${entry.iol_question_number}`;
+    if (!grouped.has(key)) {
+      grouped.set(key, {
+        id: key,
+        year: entry.iol_year,
+        questionNumber: entry.iol_question_number,
+        title: entry.iol_question_title,
+        url: entry.iol_url,
+        location: entry.iol_location,
+        parts: [],
+      });
+    }
+    grouped.get(key)!.parts.push(entry);
+  }
+
+  return Array.from(grouped.values()).sort(
+    (a, b) => a.year - b.year || a.questionNumber - b.questionNumber,
+  );
+}
+
+/** Build the problem text for a Linguini question (context + all sub-part queries). */
+export function buildLinguiniProblemText(question: LinguiniQuestion): string {
+  // All parts share the same context; queries differ
+  const firstPart = question.parts[0];
+  if (!firstPart) {
+    return '';
+  }
+  const context = firstPart.context;
+  const queries = question.parts.map((p) => p.query);
+  return `${context}\n\n${queries.join('\n\n')}`;
+}
