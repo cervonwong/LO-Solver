@@ -10,6 +10,7 @@ import {
   formatDuration,
 } from '@/lib/trace-utils';
 import type { StepGroup } from '@/lib/trace-utils';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ActivityIndicator } from '@/components/activity-indicator';
 import { SkeletonTrace } from '@/components/skeleton-trace';
 import type { WorkflowTraceEvent } from '@/lib/workflow-events';
@@ -51,8 +52,24 @@ interface StepSectionProps {
   isRunning: boolean;
 }
 
+function ChevronIcon({ open }: { open: boolean }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      height="16"
+      viewBox="0 -960 960 960"
+      width="16"
+      fill="currentColor"
+      className={`shrink-0 text-muted-foreground transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+    >
+      <path d="M480-371.69 267.69-584 296-612.31l184 184 184-184L692.31-584 480-371.69Z" />
+    </svg>
+  );
+}
+
 function StepSection({ group, isRunning }: StepSectionProps) {
   const isActive = group.durationMs === undefined && group.startTime !== undefined;
+  const [open, setOpen] = useState(true);
 
   const contentEvents = group.events.filter(
     (e) => e.type !== 'data-step-start' && e.type !== 'data-step-complete',
@@ -79,49 +96,54 @@ function StepSection({ group, isRunning }: StepSectionProps) {
   };
 
   return (
-    <section id={`trace-${group.stepId}`} className="frosted border border-border">
-      <div className="flex items-center justify-between border-b border-border px-3 py-2">
-        <span className="flex items-center gap-2 font-heading text-sm text-foreground">
-          {group.label}
-          {isActive && isRunning && (
-            <Image
-              src="/lex-mascot.png"
-              alt=""
-              width={16}
-              height={16}
-              className="animate-spin-duck shrink-0"
-            />
-          )}
-          {group.durationMs !== undefined && (
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              height="16"
-              viewBox="0 -960 960 960"
-              width="16"
-              fill="currentColor"
-              className="animate-checkmark-scale shrink-0 text-accent"
-            >
-              <path d="M382-267.69 183.23-466.46 211.77-495 382-324.77 748.23-691l28.54 28.54L382-267.69Z" />
-            </svg>
-          )}
-        </span>
-        <span className="flex items-center gap-3 font-sans">
-          <span className="text-xs text-muted-foreground">{contentEvents.length} events</span>
-          {isActive && isRunning && (
-            <span className="text-xs tabular-nums text-accent">{formatTimer(elapsed)}</span>
-          )}
-          {group.durationMs !== undefined && (
-            <span className="text-xs tabular-nums text-accent">
-              {formatDuration(group.durationMs)}
-            </span>
-          )}
-        </span>
-      </div>
+    <Collapsible open={open} onOpenChange={setOpen} asChild>
+      <section id={`trace-${group.stepId}`} className="frosted border border-border">
+        <CollapsibleTrigger className="flex w-full items-center justify-between border-b border-border px-3 py-2 text-left hover:bg-surface-2">
+          <span className="flex items-center gap-2 font-heading text-sm text-foreground">
+            {group.label}
+            {isActive && isRunning && (
+              <Image
+                src="/lex-mascot.png"
+                alt=""
+                width={16}
+                height={16}
+                className="animate-spin-duck shrink-0"
+              />
+            )}
+            {group.durationMs !== undefined && (
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                height="16"
+                viewBox="0 -960 960 960"
+                width="16"
+                fill="currentColor"
+                className="animate-checkmark-scale shrink-0 text-accent"
+              >
+                <path d="M382-267.69 183.23-466.46 211.77-495 382-324.77 748.23-691l28.54 28.54L382-267.69Z" />
+              </svg>
+            )}
+          </span>
+          <span className="flex items-center gap-3 font-sans">
+            <span className="text-xs text-muted-foreground">{contentEvents.length} events</span>
+            {isActive && isRunning && (
+              <span className="text-xs tabular-nums text-accent">{formatTimer(elapsed)}</span>
+            )}
+            {group.durationMs !== undefined && (
+              <span className="text-xs tabular-nums text-accent">
+                {formatDuration(group.durationMs)}
+              </span>
+            )}
+            <ChevronIcon open={open} />
+          </span>
+        </CollapsibleTrigger>
 
-      <div className="p-3">
-        <EventList events={contentEvents} />
-      </div>
-    </section>
+        <CollapsibleContent forceMount className="data-[state=closed]:hidden">
+          <div className="p-3">
+            <EventList events={contentEvents} />
+          </div>
+        </CollapsibleContent>
+      </section>
+    </Collapsible>
   );
 }
 
