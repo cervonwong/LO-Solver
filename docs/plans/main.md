@@ -30,3 +30,4 @@
 | Plan                                                                                                      | Status  | Description                                                            |
 | --------------------------------------------------------------------------------------------------------- | ------- | ---------------------------------------------------------------------- |
 | [2026-02-27-separate-verify-improve-blocks-plan](./2026-02-27-separate-verify-improve-blocks-plan.md)     | Pending | Implementation plan for separate verify/improve blocks                 |
+| [2026-02-28-dynamic-duck-messages-design](./2026-02-28-dynamic-duck-messages-design.md)                   | Pending | Dynamic speech bubble messages for Lex based on solver state           |
