@@ -9,6 +9,6 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 
-  const text = example.type === 'linguini' ? readLinguiniProblem(id) : readExampleProblem(id);
+  const text = example.type === 'iol' ? readLinguiniProblem(id) : readExampleProblem(id);
   return NextResponse.json({ text });
 }
