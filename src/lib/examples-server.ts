@@ -35,8 +35,8 @@ export function readLinguiniProblem(id: string): string {
 }
 
 /** Get all example picker options (hand-curated + Linguini). */
-export function getAllExampleOptions(): Array<{ id: string; label: string }> {
-  const curated = EXAMPLE_PROBLEMS.map((e) => ({ id: e.id, label: getExampleLabel(e) }));
-  const linguini = getLinguiniQuestions().map((q) => ({ id: q.id, label: getLinguiniLabel(q) }));
+export function getAllExampleOptions(): Array<{ id: string; label: string; type: 'curated' | 'linguini' }> {
+  const curated = EXAMPLE_PROBLEMS.map((e) => ({ id: e.id, label: getExampleLabel(e), type: 'curated' as const }));
+  const linguini = getLinguiniQuestions().map((q) => ({ id: q.id, label: getLinguiniLabel(q), type: 'linguini' as const }));
   return [...curated, ...linguini];
 }
