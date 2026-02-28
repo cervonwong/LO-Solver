@@ -4,8 +4,7 @@ export { EXAMPLE_PROBLEMS, type ExampleProblemMeta };
 
 /** Derive the UI display label from example metadata. */
 export function getExampleLabel(e: ExampleProblemMeta): string {
-  const year = e.problemUrl.match(/\d{4}/)?.[0] ?? '';
-  return `${e.language} (${e.source} ${year})`;
+  return `${e.source} ${e.year} #${e.questionNumber} \u2014 ${e.language}`;
 }
 
 /** Derive the UI display label for a Linguini question. */

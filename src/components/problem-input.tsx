@@ -17,6 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 interface ExampleOption {
   id: string;
   label: string;
+  type: string;
 }
 
 interface ProblemInputProps {
@@ -51,6 +52,21 @@ export function ProblemInput({ examples, onSolve, disabled }: ProblemInputProps)
     onSolve(trimmed);
   }
 
+  // Group examples by type for sectioned display
+  const grouped = examples.reduce<Record<string, ExampleOption[]>>((acc, ex) => {
+    const group = ex.type || 'other';
+    if (!acc[group]) acc[group] = [];
+    acc[group].push(ex);
+    return acc;
+  }, {});
+
+  const groupLabels: Record<string, string> = {
+    uklo: 'UKLO',
+    onling: 'Onling',
+    iol: 'IOL',
+  };
+  const groupOrder = ['uklo', 'onling', 'iol'];
+
   const isDisabled = disabled || loading;
 
   return (
@@ -76,24 +92,28 @@ export function ProblemInput({ examples, onSolve, disabled }: ProblemInputProps)
               <CommandInput placeholder="Search examples..." className="h-8 text-xs" />
               <CommandList>
                 <CommandEmpty>No example found.</CommandEmpty>
-                <CommandGroup>
-                  {examples.map((ex) => (
-                    <CommandItem
-                      key={ex.id}
-                      value={ex.label}
-                      onSelect={() => handleExampleSelect(ex.id)}
-                      className="text-xs"
-                    >
-                      <Check
-                        className={cn(
-                          'mr-2 h-3 w-3',
-                          selectedExample === ex.id ? 'opacity-100' : 'opacity-0',
-                        )}
-                      />
-                      {ex.label}
-                    </CommandItem>
+                {groupOrder
+                  .filter((g) => grouped[g]?.length)
+                  .map((group) => (
+                    <CommandGroup key={group} heading={groupLabels[group] || group}>
+                      {grouped[group]!.map((ex) => (
+                        <CommandItem
+                          key={ex.id}
+                          value={ex.label}
+                          onSelect={() => handleExampleSelect(ex.id)}
+                          className="text-xs"
+                        >
+                          <Check
+                            className={cn(
+                              'mr-2 h-3 w-3',
+                              selectedExample === ex.id ? 'opacity-100' : 'opacity-0',
+                            )}
+                          />
+                          {ex.label}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
                   ))}
-                </CommandGroup>
               </CommandList>
             </Command>
           </PopoverContent>

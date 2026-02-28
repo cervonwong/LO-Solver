@@ -35,7 +35,7 @@ interface VocabUpdateData {
 }
 
 export default function SolverPage() {
-  const [examples, setExamples] = useState<Array<{ id: string; label: string }>>([]);
+  const [examples, setExamples] = useState<Array<{ id: string; label: string; type: string }>>([]);
   const [hasStarted, setHasStarted] = useState(false);
   const [inputOpen, setInputOpen] = useState(true);
   const hasSent = useRef(false);
