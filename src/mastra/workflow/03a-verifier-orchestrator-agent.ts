@@ -10,8 +10,8 @@ import { testSentenceTool } from './03a-sentence-tester-tool';
  * Uses static tester tools that read context from requestContext.
  */
 export const verifierOrchestratorAgent = new Agent({
-  id: 'wf03-verifier-orchestrator',
-  name: '[03-3a] Verifier Orchestrator Agent',
+  id: 'verifier-orchestrator',
+  name: '[Step 3] Verifier Orchestrator Agent',
   instructions: VERIFIER_ORCHESTRATOR_INSTRUCTIONS,
   // model: openrouter('google/gemini-3-pro-preview'),
   model: ({ requestContext }) =>

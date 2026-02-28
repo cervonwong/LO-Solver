@@ -12,22 +12,22 @@ import { vocabularyTools } from './vocabulary-tools';
 import { testRuleTool, testRuleWithRulesetTool } from './03a-rule-tester-tool';
 import { testSentenceTool, testSentenceWithRulesetTool } from './03a-sentence-tester-tool';
 
-// All agents for workflow 03, registered for observability
-export const workflow03Agents = {
-  wf03_structuredProblemExtractorAgent: structuredProblemExtractorAgent,
-  wf03_initialHypothesizerAgent: initialHypothesizerAgent,
-  wf03_initialHypothesisExtractorAgent: initialHypothesisExtractorAgent,
-  wf03_rulesImproverAgent: rulesImproverAgent,
-  wf03_rulesImprovementExtractorAgent: rulesImprovementExtractorAgent,
-  wf03_verifierOrchestratorAgent: verifierOrchestratorAgent,
-  wf03_verifierFeedbackExtractorAgent: verifierFeedbackExtractorAgent,
-  wf03_ruleTesterAgent: ruleTesterAgent,
-  wf03_sentenceTesterAgent: sentenceTesterAgent,
-  wf03_questionAnswererAgent: questionAnswererAgent,
+// All agents for the solver workflow, registered for observability
+export const workflowAgents = {
+  structuredProblemExtractorAgent,
+  initialHypothesizerAgent,
+  initialHypothesisExtractorAgent,
+  rulesImproverAgent,
+  rulesImprovementExtractorAgent,
+  verifierOrchestratorAgent,
+  verifierFeedbackExtractorAgent,
+  ruleTesterAgent,
+  sentenceTesterAgent,
+  questionAnswererAgent,
 };
 
-// All tools for workflow 03, for reference
-export const workflow03Tools = {
+// All tools for the solver workflow, for reference
+export const workflowTools = {
   ...vocabularyTools,
   testRule: testRuleTool,
   testSentence: testSentenceTool,

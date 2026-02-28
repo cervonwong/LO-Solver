@@ -1,6 +1,6 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
-import type { Workflow03RequestContext } from './request-context-types';
+import type { WorkflowRequestContext } from './request-context-types';
 import {
   getVocabularyState,
   getLogFile,

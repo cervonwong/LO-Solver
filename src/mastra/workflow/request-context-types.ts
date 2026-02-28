@@ -18,10 +18,10 @@ export type { Rule } from './workflow-schemas';
 export type StepWriter = { write?: (data: unknown) => Promise<void> };
 
 /**
- * Request Context type for Workflow 03.
+ * Request Context type for the solver workflow.
  * All agents and tools access runtime data via this context.
  */
-export interface Workflow03RequestContext {
+export interface WorkflowRequestContext {
   /** Vocabulary state (mutable Map for vocabulary management) */
   'vocabulary-state': Map<string, VocabularyEntry>;
 

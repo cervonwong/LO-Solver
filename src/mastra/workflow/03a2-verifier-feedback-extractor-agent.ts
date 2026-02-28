@@ -4,8 +4,8 @@ import { VERIFIER_FEEDBACK_EXTRACTOR_INSTRUCTIONS } from './03a2-verifier-feedba
 import { openrouter, TESTING_MODEL } from '../openrouter';
 
 export const verifierFeedbackExtractorAgent = new Agent({
-  id: 'wf03-verifier-feedback-extractor',
-  name: '[03-3a2] Verifier Feedback Extractor Agent',
+  id: 'verifier-feedback-extractor',
+  name: '[Step 3] Verifier Feedback Extractor Agent',
   instructions: {
     role: 'system',
     content: VERIFIER_FEEDBACK_EXTRACTOR_INSTRUCTIONS,

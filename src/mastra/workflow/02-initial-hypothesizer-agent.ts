@@ -19,8 +19,8 @@ const instructions = INITIAL_HYPOTHESIZER_INSTRUCTIONS.replace(
  * Has access to testing tools to validate rules before committing.
  */
 export const initialHypothesizerAgent = new Agent({
-  id: 'wf03-initial-hypothesizer',
-  name: '[03-02] Initial Hypothesizer Agent',
+  id: 'initial-hypothesizer',
+  name: '[Step 2] Initial Hypothesizer Agent',
   instructions: {
     role: 'system',
     content: instructions,

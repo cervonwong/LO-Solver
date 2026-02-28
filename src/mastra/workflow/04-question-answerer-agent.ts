@@ -8,8 +8,8 @@ import { openrouter, TESTING_MODEL } from '../openrouter';
  * Vocabulary is passed in the prompt (read-only), no tools needed.
  */
 export const questionAnswererAgent = new Agent({
-  id: 'wf03-question-answerer',
-  name: '[03-04] Question Answerer Agent',
+  id: 'question-answerer',
+  name: '[Step 4] Question Answerer Agent',
   instructions: QUESTION_ANSWERER_INSTRUCTIONS,
   // model: openrouter('google/gemini-3-pro-preview'),
   model: ({ requestContext }) =>

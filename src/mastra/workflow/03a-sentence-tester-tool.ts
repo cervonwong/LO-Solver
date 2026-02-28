@@ -130,7 +130,7 @@ Attempt to translate this sentence step by step using the rules and vocabulary a
 `.trim();
 
   try {
-    const result = await generateWithRetry(mastra.getAgentById('wf03-sentence-tester'), {
+    const result = await generateWithRetry(mastra.getAgentById('sentence-tester'), {
       prompt,
       options: {
         maxSteps: 100,

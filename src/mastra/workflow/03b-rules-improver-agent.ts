@@ -19,8 +19,8 @@ const instructions = RULES_IMPROVER_INSTRUCTIONS.replace(
  * Has access to testing tools to validate revised rules before committing.
  */
 export const rulesImproverAgent = new Agent({
-  id: 'wf03-rules-improver',
-  name: '[03-3b] Rules Improver Agent',
+  id: 'rules-improver',
+  name: '[Step 3] Rules Improver Agent',
   instructions: {
     role: 'system',
     content: instructions,

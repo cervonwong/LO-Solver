@@ -4,9 +4,9 @@
 
 ### Cleanup (CLEAN)
 
-- [ ] **CLEAN-01**: All Workflow 01 files removed from `src/mastra/01-one-agent/`
-- [ ] **CLEAN-02**: All Workflow 02 files removed from `src/mastra/02-extract-then-hypo-test-loop/`
-- [ ] **CLEAN-03**: All references to Workflow 01/02 agents, tools, and schemas removed from `src/mastra/index.ts` and any shared files
+- [ ] **CLEAN-01**: All legacy workflow files removed from `src/mastra/`
+- [ ] **CLEAN-02**: Directory structure consolidated to `src/mastra/workflow/`
+- [ ] **CLEAN-03**: All references to legacy workflow agents, tools, and schemas removed from `src/mastra/index.ts` and any shared files
 - [ ] **CLEAN-04**: Project compiles cleanly with `npx tsc --noEmit` after cleanup (only pre-existing CSS module error remains)
 
 ### Evaluation Harness (EVAL)

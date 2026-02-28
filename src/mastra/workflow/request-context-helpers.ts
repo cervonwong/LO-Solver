@@ -1,9 +1,9 @@
 /**
- * Shared helpers for accessing Workflow03RequestContext in tools.
+ * Shared helpers for accessing WorkflowRequestContext in tools.
  * Centralizes type definitions and context accessor functions to avoid duplication.
  */
 import type {
-  Workflow03RequestContext,
+  WorkflowRequestContext,
   StructuredProblemData,
   Rule,
   StepWriter,
@@ -18,14 +18,14 @@ import type { ToolStream } from '@mastra/core/tools';
  */
 export interface ToolExecuteContext {
   requestContext?: {
-    get: (key: keyof Workflow03RequestContext) => unknown;
+    get: (key: keyof WorkflowRequestContext) => unknown;
   };
   mastra?: Mastra;
   writer?: ToolStream;
 }
 
 // Type alias for the requestContext getter interface
-type RequestContextGetter = { get: (key: keyof Workflow03RequestContext) => unknown } | undefined;
+type RequestContextGetter = { get: (key: keyof WorkflowRequestContext) => unknown } | undefined;
 
 /**
  * Helper to get vocabulary state from request context.

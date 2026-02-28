@@ -78,8 +78,8 @@ You will receive:
  * Performs BLIND translation - never sees the expected answer to avoid bias.
  */
 export const sentenceTesterAgent = new Agent({
-  id: 'wf03-sentence-tester',
-  name: '[03-3a-tool] Sentence Tester Agent',
+  id: 'sentence-tester',
+  name: '[Step 3] Sentence Tester Agent',
   instructions: SENTENCE_TESTER_SYSTEM_PROMPT,
   model: ({ requestContext }) =>
     openrouter(

@@ -8,7 +8,7 @@ export async function POST(req: Request) {
   const params = await req.json();
   const stream = await handleWorkflowStream({
     mastra,
-    workflowId: '03-per-rule-per-sentence-delegation-workflow',
+    workflowId: 'solver-workflow',
     params,
   });
   return createUIMessageStreamResponse({ stream });

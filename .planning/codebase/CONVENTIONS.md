@@ -26,10 +26,10 @@
 - **API routes:** Next.js App Router convention (`src/app/api/{path}/route.ts`).
 
 ### Agent IDs
-- Pattern: `wf{N}-{descriptor}` (e.g., `wf03-initial-hypothesizer`, `wf03-rule-tester`).
+- Pattern: `{descriptor}` (e.g., `initial-hypothesizer`, `rule-tester`).
 
 ### Agent Display Names
-- Pattern: `[{workflow}-{step}] Name` (e.g., `[03-01] Structured Problem Extractor Agent`, `[03-3a-tool] Rule Tester Agent`).
+- Pattern: `[Step N] Name` (e.g., `[Step 1] Structured Problem Extractor Agent`, `[Step 3a-tool] Rule Tester Agent`).
 
 ### Functions
 - camelCase for all functions and methods (e.g., `generateWithRetry`, `getVocabularyState`, `emitToolTraceEvent`).
@@ -71,9 +71,7 @@ src/
   hooks/           # React hooks
   lib/             # Shared utilities, types, helpers
   mastra/          # Mastra AI orchestration (agents, workflows, tools)
-    01-one-agent/              # Workflow 01
-    02-extract-then-hypo-test-loop/  # Workflow 02
-    03-per-rule-per-sentence-delegation/  # Workflow 03 (active)
+    workflow/                  # Workflow (agents, tools, schemas, utilities)
     index.ts       # Mastra instance configuration
     openrouter.ts  # OpenRouter provider setup
 examples/          # Problem data and Linguini dataset
@@ -88,8 +86,8 @@ examples/          # Problem data and Linguini dataset
 
 ### Export Patterns
 - Named exports everywhere, aggregated via `index.ts` barrel files per workflow directory.
-- Agents exported as `const` from individual files, collected into a record object in `index.ts` (e.g., `workflow03Agents`).
-- Tools exported individually and also collected into a record object (e.g., `workflow03Tools`, `vocabularyTools`).
+- Agents exported as `const` from individual files, collected into a record object in `index.ts` (e.g., `workflowAgents`).
+- Tools exported individually and also collected into a record object (e.g., `workflowTools`, `vocabularyTools`).
 
 ### Two-Agent Chain Pattern
 Steps 2 and 3b use a consistent two-agent chain:
@@ -97,7 +95,7 @@ Steps 2 and 3b use a consistent two-agent chain:
 2. An **extraction agent** (e.g., GPT-5-mini) parses the natural language into structured JSON via `structuredOutput`.
 
 ### RequestContext Pattern
-Per-execution mutable state is shared via `RequestContext<Workflow03RequestContext>`. Keys are defined in `request-context-types.ts` (source of truth). Helper functions in `request-context-helpers.ts` provide typed access with null-safety checks (throw if missing).
+Per-execution mutable state is shared via `RequestContext<WorkflowRequestContext>`. Keys are defined in `request-context-types.ts` (source of truth). Helper functions in `request-context-helpers.ts` provide typed access with null-safety checks (throw if missing).
 
 ## Comments & Documentation
 

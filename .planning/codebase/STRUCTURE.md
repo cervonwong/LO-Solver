@@ -34,14 +34,14 @@ LO-Solver/
   - `index.ts` -- Mastra instance creation; registers all agents, workflows, storage, logging, observability
   - `openrouter.ts` -- OpenRouter provider instance, model mode types, `activeModelId()` helper
 
-### `src/mastra/03-per-rule-per-sentence-delegation/` -- Active Workflow
+### `src/mastra/workflow/` -- Workflow
 
-- **Purpose**: The active workflow (Workflow 03) implementing the per-rule, per-sentence delegation pipeline. Contains 10 agents, tools, schemas, and utilities.
+- **Purpose**: The workflow implementing the per-rule, per-sentence delegation pipeline. Contains 10 agents, tools, schemas, and utilities.
 - **Key files**:
   - `workflow.ts` -- Workflow definition with 4 steps: extract, hypothesize, verify-improve loop, answer
   - `workflow-schemas.ts` -- All Zod schemas and types shared across steps (input/output/state schemas)
   - `index.ts` -- Re-exports all agents and tools for registration in `src/mastra/index.ts`
-  - `request-context-types.ts` -- TypeScript interface for `Workflow03RequestContext` (source of truth for context keys)
+  - `request-context-types.ts` -- TypeScript interface for `WorkflowRequestContext` (source of truth for context keys)
   - `request-context-helpers.ts` -- Typed accessor functions for RequestContext data, `emitTraceEvent`/`emitToolTraceEvent` helpers
   - `vocabulary-tools.ts` -- Five CRUD tools for vocabulary management (get, add, update, remove, clear)
   - `vocabulary-tools-prompt.ts` -- Shared instruction fragment injected into agents with vocabulary access
@@ -50,23 +50,6 @@ LO-Solver/
   - `shared-memory.ts` -- UUID generation for workflow run identification
   - Agent files (see File Naming Conventions below)
 
-### `src/mastra/01-one-agent/` -- Legacy Workflow 01
-
-- **Purpose**: Single-agent solver (commented out in `index.ts`). Kept for reference.
-- **Key files**:
-  - `one-agent-solver-agent.ts` -- Single agent definition
-  - `one-agent-solver-instructions.ts` -- System prompt
-  - `one-agent-solver-scorers.ts` -- Evaluation scorers
-  - `index.ts` -- Re-exports
-
-### `src/mastra/02-extract-then-hypo-test-loop/` -- Legacy Workflow 02
-
-- **Purpose**: Extract-then-hypothesize-test loop workflow (commented out in `index.ts`). Kept for reference.
-- **Key files**:
-  - `workflow.ts` -- Multi-step workflow with up to 5 iterations
-  - Agent and instruction files for 4 agents
-  - `index.ts` -- Re-exports
-
 ### `src/app/` -- Next.js App Router
 
 - **Purpose**: Pages and API routes for the web application.
@@ -74,7 +57,7 @@ LO-Solver/
   - `layout.tsx` -- Root layout (server component), provides nav bar with model mode toggle, fonts, global CSS
   - `page.tsx` -- Main solver page (client component), contains all solver UI logic: `useChat`, progress tracking, event processing, vocabulary accumulation, resizable panels
   - `globals.css` -- Tailwind CSS configuration and custom styles
-  - `api/solve/route.ts` -- POST endpoint that invokes Workflow 03 via `handleWorkflowStream`
+  - `api/solve/route.ts` -- POST endpoint that invokes the workflow via `handleWorkflowStream`
   - `api/examples/route.ts` -- GET endpoint listing all example problems
   - `api/examples/[id]/route.ts` -- GET endpoint returning a specific example's text content
 
@@ -138,7 +121,7 @@ LO-Solver/
 
 ## File Naming Conventions
 
-### Agent files in Workflow 03 (`src/mastra/03-per-rule-per-sentence-delegation/`)
+### Agent files (`src/mastra/workflow/`)
 
 - `{NN}-{descriptor}-agent.ts` -- Agent definition (one agent per file)
   - `NN` = step number in the workflow pipeline (01, 02, 03a, 03b, 04)
@@ -163,8 +146,8 @@ LO-Solver/
 
 ### Agent IDs and display names
 
-- Agent ID format: `wf{N}-{descriptor}` (e.g., `wf03-initial-hypothesizer`)
-- Agent display name format: `[{workflow}-{step}] Name` (e.g., `[03-02] Initial Hypothesizer Agent`)
+- Agent ID format: `{descriptor}` (e.g., `initial-hypothesizer`)
+- Agent display name format: `[Step N] Name` (e.g., `[Step 2] Initial Hypothesizer Agent`)
 
 ## Entry Points
 
@@ -175,7 +158,7 @@ LO-Solver/
 - `src/app/api/examples/route.ts` -- GET handler listing available example problems.
 - `src/app/api/examples/[id]/route.ts` -- GET handler returning a specific example's raw text.
 - `examples/index.ts` -- Example problem metadata and Linguini dataset loading. Used by the examples API routes.
-- `src/mastra/03-per-rule-per-sentence-delegation/workflow.ts` -- Workflow 03 definition. The main AI pipeline, defining the step chain: extract -> hypothesize -> verify-improve loop -> answer.
+- `src/mastra/workflow/workflow.ts` -- Workflow definition. The main AI pipeline, defining the step chain: extract -> hypothesize -> verify-improve loop -> answer.
 - `package.json` scripts:
   - `npm run dev` -- Starts Next.js (port 3000, Turbopack) and Mastra dev server (port 4111, includes Mastra Studio) concurrently
   - `npm run build` -- Next.js production build

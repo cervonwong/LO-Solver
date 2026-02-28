@@ -1,7 +1,7 @@
 import { createStep, createWorkflow } from '@mastra/core/workflows';
 import { RequestContext } from '@mastra/core/request-context';
 import { type VocabularyEntry } from './vocabulary-tools';
-import type { Workflow03RequestContext } from './request-context-types';
+import type { WorkflowRequestContext } from './request-context-types';
 import type { ModelMode } from '../openrouter';
 import { activeModelId } from '../openrouter';
 import {
@@ -52,10 +52,10 @@ const extractionStep = createStep({
     });
 
     const step1StartTime = new Date();
-    const requestContext = new RequestContext<Workflow03RequestContext>();
+    const requestContext = new RequestContext<WorkflowRequestContext>();
     requestContext.set('model-mode', modelMode as ModelMode);
     const response = await generateWithRetry(
-      mastra.getAgentById('wf03-structured-problem-extractor'),
+      mastra.getAgentById('structured-problem-extractor'),
       {
         prompt: `${inputData.rawProblemText}`,
         options: {
@@ -155,7 +155,7 @@ const initialHypothesisStep = createStep({
     const vocabularyState = new Map(Object.entries(state.vocabulary));
 
     // Create RequestContext with vocabulary state and structured problem for the agent
-    const requestContext = new RequestContext<Workflow03RequestContext>();
+    const requestContext = new RequestContext<WorkflowRequestContext>();
     requestContext.set('vocabulary-state', vocabularyState);
     requestContext.set('log-file', logFile);
     requestContext.set('structured-problem', structuredProblem);
@@ -171,7 +171,7 @@ const initialHypothesisStep = createStep({
 
     const hypothesizerStartTime = new Date();
     const hypothesizerResponse = await generateWithRetry(
-      mastra.getAgentById('wf03-initial-hypothesizer'),
+      mastra.getAgentById('initial-hypothesizer'),
       {
         prompt: hypothesizerPrompt,
         options: { maxSteps: 100, requestContext },
@@ -215,7 +215,7 @@ const initialHypothesisStep = createStep({
 
     const extractorStartTime = new Date();
     const extractorResponse = await generateWithRetry(
-      mastra.getAgentById('wf03-initial-hypothesis-extractor'),
+      mastra.getAgentById('initial-hypothesis-extractor'),
       {
         prompt: extractorPrompt,
         options: {
@@ -348,7 +348,7 @@ const verifyImproveLoopStep = createStep({
     // 2. Verifier Feedback Extractor Agent - extracts JSON from the natural language output
 
     // Create RequestContext with all context needed by tools
-    const requestContext = new RequestContext<Workflow03RequestContext>();
+    const requestContext = new RequestContext<WorkflowRequestContext>();
     requestContext.set('vocabulary-state', vocabularyState);
     requestContext.set('structured-problem', structuredProblem);
     requestContext.set('current-rules', currentRules);
@@ -377,7 +377,7 @@ const verifyImproveLoopStep = createStep({
     // Step 3a1: Call the Verifier Orchestrator Agent (natural language output)
     const orchestratorStartTime = new Date();
     const orchestratorResponse = await generateWithRetry(
-      mastra.getAgentById('wf03-verifier-orchestrator'),
+      mastra.getAgentById('verifier-orchestrator'),
       {
         prompt: orchestratorPrompt,
         options: { maxSteps: 100, requestContext },
@@ -422,7 +422,7 @@ const verifyImproveLoopStep = createStep({
 
     const verifierExtractorStartTime = new Date();
     const verifierExtractorResponse = await generateWithRetry(
-      mastra.getAgentById('wf03-verifier-feedback-extractor'),
+      mastra.getAgentById('verifier-feedback-extractor'),
       {
         prompt: verifierExtractorPrompt,
         options: {
@@ -556,7 +556,7 @@ const verifyImproveLoopStep = createStep({
 
     // Step 3b1: Call the Rules Improver Agent (natural language output)
     const improverStartTime = new Date();
-    const improverResponse = await generateWithRetry(mastra.getAgentById('wf03-rules-improver'), {
+    const improverResponse = await generateWithRetry(mastra.getAgentById('rules-improver'), {
       prompt: improverPrompt,
       options: { maxSteps: 100, requestContext },
     });
@@ -599,7 +599,7 @@ const verifyImproveLoopStep = createStep({
 
     const extractorStartTime = new Date();
     const extractorResponse = await generateWithRetry(
-      mastra.getAgentById('wf03-rules-improvement-extractor'),
+      mastra.getAgentById('rules-improvement-extractor'),
       {
         prompt: extractorPrompt,
         options: {
@@ -724,10 +724,10 @@ const answerQuestionsStep = createStep({
     });
 
     const answererStartTime = new Date();
-    const requestContext = new RequestContext<Workflow03RequestContext>();
+    const requestContext = new RequestContext<WorkflowRequestContext>();
     requestContext.set('model-mode', state.modelMode as ModelMode);
     const answererResponse = await generateWithRetry(
-      mastra.getAgentById('wf03-question-answerer'),
+      mastra.getAgentById('question-answerer'),
       {
         prompt: answererPrompt,
         options: {
@@ -805,8 +805,8 @@ const answerQuestionsStep = createStep({
   },
 });
 
-export const workflow03 = createWorkflow({
-  id: '03-per-rule-per-sentence-delegation-workflow',
+export const solverWorkflow = createWorkflow({
+  id: 'solver-workflow',
   inputSchema: rawProblemInputSchema,
   outputSchema: questionsAnsweredSchema,
   stateSchema: workflowStateSchema,

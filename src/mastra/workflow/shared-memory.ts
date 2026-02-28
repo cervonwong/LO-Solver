@@ -4,7 +4,7 @@ import * as crypto from 'crypto';
 export function generateWorkflowIds(): { threadId: string; resourceId: string } {
   const runId = crypto.randomUUID();
   return {
-    threadId: `wf03-thread-${runId}`,
-    resourceId: `wf03-resource-${runId}`,
+    threadId: `thread-${runId}`,
+    resourceId: `resource-${runId}`,
   };
 }

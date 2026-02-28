@@ -2,7 +2,7 @@
 
 ## Overview
 
-LO-Solver is an AI-powered system for solving Linguistics Olympiad Rosetta Stone problems. It uses a Next.js frontend paired with a Mastra AI agent orchestration backend. The core solving logic lives in a multi-step workflow (Workflow 03) that coordinates 10 specialized LLM agents through an evolutionary pipeline: extracting structure from raw problem text, hypothesizing linguistic rules, iteratively verifying and improving those rules, and finally applying validated rules to answer translation questions.
+LO-Solver is an AI-powered system for solving Linguistics Olympiad Rosetta Stone problems. It uses a Next.js frontend paired with a Mastra AI agent orchestration backend. The core solving logic lives in a multi-step workflow that coordinates 10 specialized LLM agents through an evolutionary pipeline: extracting structure from raw problem text, hypothesizing linguistic rules, iteratively verifying and improving those rules, and finally applying validated rules to answer translation questions.
 
 All LLM calls are routed through OpenRouter, which provides access to multiple model providers (OpenAI GPT-5-mini for extraction/testing, Google Gemini 3 Flash for reasoning). A "model mode" toggle allows switching between production models and a cheap testing model for development. The frontend streams real-time trace events from the workflow, rendering agent reasoning, tool calls, and vocabulary mutations as they happen.
 
@@ -10,11 +10,11 @@ All LLM calls are routed through OpenRouter, which provides access to multiple m
 
 - **Two-agent chains**: A natural-language reasoning agent produces verbose analysis, then a JSON extraction agent parses it into structured output. Used in Steps 2 (hypothesize) and 3b (improve). This separates creative reasoning from structured data extraction, allowing each agent to use the model best suited to its task.
 
-- **RequestContext for shared state**: Per-execution mutable state passed through Mastra's `RequestContext<Workflow03RequestContext>`. Keys are defined in `request-context-types.ts` (the single source of truth) and accessed via typed helpers in `request-context-helpers.ts`. This provides vocabulary, rules, problem data, log file path, model mode, and the step writer to agents and tools without threading parameters through every function signature.
+- **RequestContext for shared state**: Per-execution mutable state passed through Mastra's `RequestContext<WorkflowRequestContext>`. Keys are defined in `request-context-types.ts` (the single source of truth) and accessed via typed helpers in `request-context-helpers.ts`. This provides vocabulary, rules, problem data, log file path, model mode, and the step writer to agents and tools without threading parameters through every function signature.
 
 - **Vocabulary tools as mutable shared state**: Five CRUD tools (`getVocabulary`, `addVocabulary`, `updateVocabulary`, `removeVocabulary`, `clearVocabulary`) read and write a `Map<string, VocabularyEntry>` stored in RequestContext. Agents that can modify vocabulary receive these tools plus a shared instruction fragment from `vocabulary-tools-prompt.ts`.
 
-- **Tools wrapping sub-agents**: The `testRule` and `testSentence` tools are Mastra tools that internally call dedicated tester agents (`wf03-rule-tester`, `wf03-sentence-tester`) via `mastra.getAgentById()`. This allows the orchestrator agent to invoke per-rule and per-sentence testing through standard tool calls, while each test runs as an independent LLM call.
+- **Tools wrapping sub-agents**: The `testRule` and `testSentence` tools are Mastra tools that internally call dedicated tester agents (`rule-tester`, `sentence-tester`) via `mastra.getAgentById()`. This allows the orchestrator agent to invoke per-rule and per-sentence testing through standard tool calls, while each test runs as an independent LLM call.
 
 - **Dual tool variants (committed vs. draft)**: Rule and sentence tester tools come in two variants -- one reads the committed ruleset from RequestContext (`testRule`, `testSentence`), the other accepts a ruleset as a parameter (`testRuleWithRuleset`, `testSentenceWithRuleset`). Hypothesizer and improver agents use the "with ruleset" variants to test draft rules before committing.
 
@@ -40,18 +40,18 @@ User pastes problem text
         |
         v
 [POST /api/solve]
-  handleWorkflowStream -> Mastra workflow 03
+  handleWorkflowStream -> Mastra workflow
         |
         v
 [Step 1: Extract Structure]
-  Agent: wf03-structured-problem-extractor (GPT-5-mini)
+  Agent: structured-problem-extractor (GPT-5-mini)
   Input:  rawProblemText (string)
   Output: { context, dataset[], questions[] }
         |
         v
 [Step 2: Initial Hypothesis]
-  Agent chain: wf03-initial-hypothesizer (Gemini 3 Flash)
-               -> wf03-initial-hypothesis-extractor (GPT-5-mini)
+  Agent chain: initial-hypothesizer (Gemini 3 Flash)
+               -> initial-hypothesis-extractor (GPT-5-mini)
   Tools: vocabulary CRUD, testRuleWithRuleset, testSentenceWithRuleset
   Input:  structuredProblem + empty vocabulary
   Output: { rules[], vocabulary (via RequestContext) }
@@ -59,16 +59,16 @@ User pastes problem text
         v
 [Step 3: Verify-Improve Loop (up to 4 iterations)]
   3a. Verify:
-      Agent chain: wf03-verifier-orchestrator (Gemini 3 Flash)
-                   -> wf03-verifier-feedback-extractor (GPT-5-mini)
-      Tools: testRule (-> wf03-rule-tester), testSentence (-> wf03-sentence-tester)
+      Agent chain: verifier-orchestrator (Gemini 3 Flash)
+                   -> verifier-feedback-extractor (GPT-5-mini)
+      Tools: testRule (-> rule-tester), testSentence (-> sentence-tester)
       Output: { conclusion, errantRules[], errantSentences[], issues[] }
 
       If conclusion == ALL_RULES_PASS -> skip to Step 4
 
   3b. Improve:
-      Agent chain: wf03-rules-improver (Gemini 3 Flash)
-                   -> wf03-rules-improvement-extractor (GPT-5-mini)
+      Agent chain: rules-improver (Gemini 3 Flash)
+                   -> rules-improvement-extractor (GPT-5-mini)
       Tools: vocabulary CRUD, testRuleWithRuleset, testSentenceWithRuleset
       Output: { revisedRules[], updated vocabulary }
 
@@ -76,7 +76,7 @@ User pastes problem text
         |
         v
 [Step 4: Answer Questions]
-  Agent: wf03-question-answerer (Gemini 3 Flash)
+  Agent: question-answerer (Gemini 3 Flash)
   Input:  structuredProblem + validated rules + vocabulary
   Output: { answers[{ questionId, answer, workingSteps, confidence }] }
         |
@@ -92,7 +92,7 @@ User pastes problem text
 
 ### Backend (Mastra)
 
-- **Mastra instance** (`src/mastra/index.ts`): Central registry for agents, workflows, scorers, storage, logging, and observability. All agents are registered here for discoverability via `mastra.getAgentById()`.
+- **Mastra instance** (`src/mastra/index.ts`): Central registry for agents, workflows, storage, logging, and observability. All agents are registered here for discoverability via `mastra.getAgentById()`.
 
 - **Workflow -> Steps**: The workflow chains steps using `.then()` and `.dountil()`. Steps communicate through typed input/output schemas (Zod) and shared workflow state.
 
@@ -138,7 +138,7 @@ Managed by Mastra's workflow state system via `setState()`/`state`. Persisted in
 
 ### RequestContext (per execution, in-memory)
 
-A `RequestContext<Workflow03RequestContext>` instance created at the start of each step. Contains:
+A `RequestContext<WorkflowRequestContext>` instance created at the start of each step. Contains:
 
 - `vocabulary-state`: Mutable `Map<string, VocabularyEntry>` -- the live vocabulary
 - `structured-problem`: Immutable parsed problem data

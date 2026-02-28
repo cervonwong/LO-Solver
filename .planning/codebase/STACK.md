@@ -12,7 +12,7 @@
 |---------|---------|---------|
 | `@mastra/core` | ^1.8.0 | AI agent orchestration framework: agents, workflows, tools, request contexts |
 | `@mastra/ai-sdk` | ^1.1.0 | Bridge between Mastra workflows and Vercel AI SDK streaming |
-| `@mastra/evals` | ^1.1.2 | Evaluation scorers (completeness scorer used in Workflow 01) |
+| `@mastra/evals` | ^1.1.2 | Evaluation scorers for automated workflow assessment |
 | `@mastra/libsql` | ^1.6.2 | LibSQL/SQLite storage adapter for Mastra (local `mastra.db` file) |
 | `@mastra/loggers` | ^1.0.2 | PinoLogger integration for structured logging |
 | `@mastra/memory` | ^1.5.2 | Agent memory module (listed as external package in Next.js config) |

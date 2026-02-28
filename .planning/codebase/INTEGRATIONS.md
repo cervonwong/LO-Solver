@@ -4,8 +4,8 @@
 | Service | Purpose | Config Location |
 |---------|---------|-----------------|
 | OpenRouter | Multi-model LLM gateway -- routes requests to OpenAI, Google, and other providers via a single API key | `src/mastra/openrouter.ts` (provider instance), `.env` (`OPENROUTER_API_KEY`) |
-| OpenAI GPT-5-mini (via OpenRouter) | Extraction and structured output agents: problem extractor (Step 1), hypothesis extractor (Step 2b), feedback extractor (Step 3a2), improvement extractor (Step 3b2) | Agent files in `src/mastra/03-per-rule-per-sentence-delegation/` |
-| Google Gemini 3 Flash (via OpenRouter) | Reasoning agents: initial hypothesizer (Step 2a), verifier orchestrator (Step 3a1), rules improver (Step 3b1), question answerer (Step 4) | Agent files in `src/mastra/03-per-rule-per-sentence-delegation/` |
+| OpenAI GPT-5-mini (via OpenRouter) | Extraction and structured output agents: problem extractor (Step 1), hypothesis extractor (Step 2b), feedback extractor (Step 3a2), improvement extractor (Step 3b2) | Agent files in `src/mastra/workflow/` |
+| Google Gemini 3 Flash (via OpenRouter) | Reasoning agents: initial hypothesizer (Step 2a), verifier orchestrator (Step 3a1), rules improver (Step 3b1), question answerer (Step 4) | Agent files in `src/mastra/workflow/` |
 | OpenAI GPT-OSS-120B (via OpenRouter) | Cheap model used by all agents in "testing" mode (toggled via frontend UI) | `src/mastra/openrouter.ts` (`TESTING_MODEL` constant) |
 | Mastra Studio | Dev-time dashboard for inspecting agents, workflows, and execution traces (served at port 4111 by `mastra dev`) | `mastra` CLI dev dependency |
 
@@ -27,9 +27,9 @@
 ### Markdown Execution Logs
 - **Engine**: Plain filesystem writes (`fs.writeFileSync` / `fs.appendFileSync`)
 - **Location**: `LOG_DIRECTORY` env var or `{cwd}/logs/` by default
-- **Naming**: `workflow-03_{YYYY-MM-DD_HH-MM-SS}.md` (timestamp in GMT+8)
+- **Naming**: `workflow_{YYYY-MM-DD_HH-MM-SS}.md` (timestamp in GMT+8)
 - **Purpose**: Detailed per-execution logs including agent reasoning output, structured JSON results, validation errors, vocabulary changes, and timing summaries
-- **Config**: `src/mastra/03-per-rule-per-sentence-delegation/logging-utils.ts`
+- **Config**: `src/mastra/workflow/logging-utils.ts`
 - **Note**: Treated as ephemeral -- `.gitignore` excludes `logs/`
 
 ### Example Problem Data
@@ -39,7 +39,7 @@
 
 ### In-Memory State (Per-Execution)
 - **Vocabulary Map**: `Map<string, VocabularyEntry>` passed through `RequestContext` across workflow steps and tools; serialized to workflow state as a plain object between steps
-- **RequestContext**: Mastra's `RequestContext<Workflow03RequestContext>` carries per-execution mutable state (vocabulary, structured problem, current rules, log file path, model mode, step writer) -- defined in `src/mastra/03-per-rule-per-sentence-delegation/request-context-types.ts`
+- **RequestContext**: Mastra's `RequestContext<WorkflowRequestContext>` carries per-execution mutable state (vocabulary, structured problem, current rules, log file path, model mode, step writer) -- defined in `src/mastra/workflow/request-context-types.ts`
 
 ## Streaming & Communication
 

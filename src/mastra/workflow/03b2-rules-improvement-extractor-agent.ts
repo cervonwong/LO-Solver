@@ -1,14 +1,14 @@
 import { Agent } from '@mastra/core/agent';
 import { UnicodeNormalizer } from '@mastra/core/processors';
-import { INITIAL_HYPOTHESIS_EXTRACTOR_INSTRUCTIONS } from './02a-initial-hypothesis-extractor-instructions';
+import { RULES_IMPROVEMENT_EXTRACTOR_INSTRUCTIONS } from './03b2-rules-improvement-extractor-instructions';
 import { openrouter, TESTING_MODEL } from '../openrouter';
 
-export const initialHypothesisExtractorAgent = new Agent({
-  id: 'wf03-initial-hypothesis-extractor',
-  name: '[03-02a] Initial Hypothesis Extractor Agent',
+export const rulesImprovementExtractorAgent = new Agent({
+  id: 'rules-improvement-extractor',
+  name: '[Step 3] Rules Improvement Extractor Agent',
   instructions: {
     role: 'system',
-    content: INITIAL_HYPOTHESIS_EXTRACTOR_INSTRUCTIONS,
+    content: RULES_IMPROVEMENT_EXTRACTOR_INSTRUCTIONS,
   },
   model: ({ requestContext }) =>
     openrouter(

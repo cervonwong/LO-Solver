@@ -2,29 +2,29 @@
 
 ## What This Is
 
-LO-Solver is an AI-powered system for solving Linguistics Olympiad Rosetta Stone problems. It uses a Next.js frontend with a Mastra AI agent orchestration backend. The core solving logic lives in a multi-step evolutionary workflow (Workflow 03) that coordinates specialized LLM agents to extract structure, hypothesize linguistic rules, verify/improve those rules, and answer translation questions.
+LO-Solver is an AI-powered system for solving Linguistics Olympiad Rosetta Stone problems. It uses a Next.js frontend with a Mastra AI agent orchestration backend. The core solving logic lives in a multi-step workflow that coordinates specialized LLM agents to extract structure, hypothesize linguistic rules, verify/improve those rules, and answer translation questions.
 
 This milestone focuses on making the agentic workflow genuinely outperform zero-shot LLMs, building the evaluation infrastructure to prove it, cleaning up legacy code, and improving the UI's observability of agent reasoning.
 
 ## Core Value
 
-The ONE thing that must work: **the agentic workflow must produce measurably better results than zero-shotting the same LLMs without orchestration.** Currently, Workflow 03 achieves ~75% accuracy — which is the same as zero-shot. The goal is near-100% accuracy on most problems.
+The ONE thing that must work: **the agentic workflow must produce measurably better results than zero-shotting the same LLMs without orchestration.** Currently, the workflow achieves ~75% accuracy — which is the same as zero-shot. The goal is near-100% accuracy on most problems.
 
 ## Problem Statement
 
-- Workflow 03 doesn't add value over zero-shot LLMs — the multi-agent pipeline produces the same accuracy
+- The workflow doesn't add value over zero-shot LLMs — the multi-agent pipeline produces the same accuracy
 - Rule generation (Step 2) is weak — rules are often too vague, hallucinated, or miss key patterns
 - Verification loop (Step 3) is ineffective — doesn't reliably catch and fix bad rules
 - No systematic evaluation — accuracy is judged manually, making it impossible to measure improvements
-- Legacy Workflows 01 and 02 are dead code cluttering the codebase
+- Legacy workflow code has been cleaned up
 - UI trace display doesn't show agent-tool hierarchy (tools and agents shown flat, not nested)
 - Rules aren't visible in the UI during processing (only vocabulary is shown)
 
 ## Target Outcome
 
 1. Automated evaluation harness that scores workflow output against ground truth
-2. Workflow 03 improvements informed by eval data — better rules, better verification
-3. Clean codebase with only Workflow 03 (01 and 02 fully removed)
+2. Workflow improvements informed by eval data — better rules, better verification
+3. Clean codebase with a single workflow
 4. UI that shows rules alongside vocabulary, hierarchical agent/tool traces, and better result display
 5. Expanded question bank for testing (future phase — agent-assisted extraction from PDFs/websites)
 
@@ -42,8 +42,7 @@ The ONE thing that must work: **the agentic workflow must produce measurably bet
 - **Models**: GPT-5-mini (extraction), Gemini 3 Flash (reasoning), GPT-OSS-120B (testing)
 - **Storage**: LibSQL for Mastra state, markdown logs for execution traces
 - **Frontend**: React 19, shadcn/ui, resizable panels, AI SDK streaming
-- **Active workflow**: `src/mastra/03-per-rule-per-sentence-delegation/`
-- **Legacy workflows**: `src/mastra/01-one-agent/`, `src/mastra/02-extract-then-hypo-test-loop/`
+- **Workflow**: `src/mastra/workflow/`
 - **Existing ground truth**: Some problems have known answers (Linguini dataset, hand-curated examples)
 
 ## Requirements
@@ -62,8 +61,8 @@ The ONE thing that must work: **the agentic workflow must produce measurably bet
 ### Active
 
 - [ ] Automated evaluation harness scoring workflow output against ground truth
-- [ ] Full cleanup of Workflow 01 and 02 (files, imports, index.ts references)
-- [ ] Improved rule generation in Workflow 03
+- [ ] Full cleanup of legacy workflow code (files, imports, index.ts references)
+- [ ] Improved rule generation in the workflow
 - [ ] Effective verification loop that catches and fixes bad rules
 - [ ] Rules displayed in UI alongside vocabulary (tabbed panel)
 - [ ] Hierarchical agent/tool event display in trace panel
@@ -82,7 +81,7 @@ The ONE thing that must work: **the agentic workflow must produce measurably bet
 
 | Decision | Rationale | Outcome |
 | --- | --- | --- |
-| Iterate on Workflow 03 (not start fresh) | Core architecture is sound; issues are in prompt quality, rule generation, and verification logic | Decided |
+| Iterate on the workflow (not start fresh) | Core architecture is sound; issues are in prompt quality, rule generation, and verification logic | Decided |
 | Eval harness before workflow changes | Can't improve what you can't measure; need automated scoring to guide iterations | Decided |
 | Full cleanup of old workflows | Dead code adds confusion; only one workflow should exist | Decided |
 | Consult Mastra docs for new features | Use MCP or web docs to learn about evals, workflow features before implementing | Decided |

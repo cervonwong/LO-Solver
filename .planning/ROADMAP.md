@@ -3,14 +3,14 @@
 ## Milestone: Prove the Agentic Advantage
 
 ### Phase 1: Legacy Cleanup
-**Goal:** Remove dead Workflow 01 and 02 code so the codebase contains only the active Workflow 03.
+**Goal:** Remove dead legacy workflow code so the codebase contains only the active workflow.
 **Requirements:** CLEAN-01, CLEAN-02, CLEAN-03, CLEAN-04
 
 **Success Criteria:**
-1. Directories `src/mastra/01-one-agent/` and `src/mastra/02-extract-then-hypo-test-loop/` no longer exist
-2. `src/mastra/index.ts` contains no imports or references to Workflow 01 or 02 agents, tools, or schemas
+1. Legacy workflow directories no longer exist
+2. `src/mastra/index.ts` contains no imports or references to legacy workflow agents, tools, or schemas
 3. `npx tsc --noEmit` passes with only the pre-existing CSS module error
-4. `npm run dev` starts successfully and a problem can be solved end-to-end with Workflow 03
+4. `npm run dev` starts successfully and a problem can be solved end-to-end with the workflow
 
 ---
 
@@ -19,7 +19,7 @@
 **Requirements:** EVAL-01, EVAL-05, EVAL-06
 
 **Success Criteria:**
-1. User can invoke an eval run that executes Workflow 03 against a set of problems with known answers and receives an accuracy percentage
+1. User can invoke an eval run that executes the workflow against a set of problems with known answers and receives an accuracy percentage
 2. Eval implementation uses `@mastra/evals` framework patterns (confirmed by consulting Mastra docs during implementation)
 3. Eval results are persisted to storage so previous runs can be retrieved and compared
 4. At least 3 ground-truth problems are configured and produce scored results

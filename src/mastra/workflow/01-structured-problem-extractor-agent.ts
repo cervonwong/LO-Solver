@@ -4,8 +4,8 @@ import { STRUCTURED_PROBLEM_EXTRACTOR_INSTRUCTIONS } from './01-structured-probl
 import { openrouter, TESTING_MODEL } from '../openrouter';
 
 export const structuredProblemExtractorAgent = new Agent({
-  id: 'wf03-structured-problem-extractor',
-  name: '[03-01] Structured Problem Extractor Agent',
+  id: 'structured-problem-extractor',
+  name: '[Step 1] Structured Problem Extractor Agent',
   instructions: STRUCTURED_PROBLEM_EXTRACTOR_INSTRUCTIONS,
   model: ({ requestContext }) =>
     openrouter(

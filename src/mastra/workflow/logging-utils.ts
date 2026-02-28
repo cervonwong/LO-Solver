@@ -1,5 +1,5 @@
 /**
- * Logging utilities for Workflow 03.
+ * Logging utilities for the solver workflow.
  * Centralizes all file-based logging operations.
  */
 import * as fs from 'fs';
@@ -29,7 +29,7 @@ export const getLogFilePath = (): string => {
   const minutes = String(gmt8.getUTCMinutes()).padStart(2, '0');
   const seconds = String(gmt8.getUTCSeconds()).padStart(2, '0');
   const timestamp = `${year}-${month}-${day}_${hours}-${minutes}-${seconds}`;
-  return path.join(getLogDirectory(), `workflow-03_${timestamp}.md`);
+  return path.join(getLogDirectory(), `workflow_${timestamp}.md`);
 };
 
 // Format time in GMT+8

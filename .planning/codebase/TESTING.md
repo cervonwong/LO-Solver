@@ -24,13 +24,12 @@
 
 ### Runtime Evaluation (Not Unit Tests)
 The project uses `@mastra/evals` for runtime evaluation scoring rather than traditional test frameworks:
-- `src/mastra/01-one-agent/one-agent-solver-scorers.ts` defines a `completenessScorer` using `createCompletenessScorer()` from `@mastra/evals/scorers/prebuilt`.
-- These scorers are registered in the Mastra instance (currently commented out in `src/mastra/index.ts`).
+- The `@mastra/evals` package provides runtime evaluation scoring capabilities (e.g., `createCompletenessScorer()`).
 - Scorers evaluate LLM output quality at runtime, not in a CI/test pipeline.
 
 ### Manual/Runtime Verification
 - **Console logging:** Tagged log messages (`[VOCAB:ADD]`, `[Step 3a1]`, `[generateWithRetry]`) are emitted during workflow execution for manual inspection.
-- **Markdown execution logs:** Each workflow run writes a detailed Markdown log to `{LOG_DIRECTORY}/workflow-03_*.md` containing agent outputs, reasoning, validation errors, vocabulary changes, and timing summaries.
+- **Markdown execution logs:** Each workflow run writes a detailed Markdown log to `{LOG_DIRECTORY}/workflow_*.md` containing agent outputs, reasoning, validation errors, vocabulary changes, and timing summaries.
 - **Zod schema validation:** Every LLM response is validated against Zod schemas at runtime. Failures are logged and cause workflow steps to bail with descriptive error messages.
 - **Model mode toggle:** A "testing" mode uses a cheaper model (`openai/gpt-oss-120b`) for development iteration, while "production" mode uses the intended models (GPT-5-mini, Gemini 3 Flash).
 - **Example problems:** The `examples/` directory contains hand-curated Linguistics Olympiad problems (with known solutions) plus the Linguini JSONL dataset. These serve as manual test cases for verifying solver behavior.
@@ -56,11 +55,11 @@ The project uses `@mastra/evals` for runtime evaluation scoring rather than trad
    ```
 
 2. **Start with utility function tests.** High-value, low-effort targets:
-   - `src/mastra/03-per-rule-per-sentence-delegation/agent-utils.ts` -- test retry logic, timeout behavior, empty response detection.
+   - `src/mastra/workflow/agent-utils.ts` -- test retry logic, timeout behavior, empty response detection.
    - `src/lib/trace-utils.ts` -- test `groupEventsByStep()`, `groupEventsWithToolCalls()`, `formatDuration()`, `isToolCallGroup()`.
    - `src/lib/workflow-events.ts` -- test `getUIStepLabel()` for all step ID patterns.
-   - `src/mastra/03-per-rule-per-sentence-delegation/request-context-helpers.ts` -- test `normalizeTranslation()`, context accessor error cases.
-   - `src/mastra/03-per-rule-per-sentence-delegation/logging-utils.ts` -- test `formatTimeGMT8()`, `recordStepTiming()`, `formatReasoning()`.
+   - `src/mastra/workflow/request-context-helpers.ts` -- test `normalizeTranslation()`, context accessor error cases.
+   - `src/mastra/workflow/logging-utils.ts` -- test `formatTimeGMT8()`, `recordStepTiming()`, `formatReasoning()`.
 
 3. **Add schema validation tests.** Verify that Zod schemas in `workflow-schemas.ts` correctly parse valid data and reject invalid data. These are critical for the LLM output validation pipeline.
 

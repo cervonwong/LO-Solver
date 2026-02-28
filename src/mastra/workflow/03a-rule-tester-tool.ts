@@ -121,7 +121,7 @@ ${JSON.stringify(structuredProblem.questions, null, 2)}
 `.trim();
 
   try {
-    const result = await generateWithRetry(mastra.getAgentById('wf03-rule-tester'), {
+    const result = await generateWithRetry(mastra.getAgentById('rule-tester'), {
       prompt,
       options: {
         maxSteps: 100,

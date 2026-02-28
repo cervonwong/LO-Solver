@@ -1,11 +1,8 @@
 import { Mastra } from '@mastra/core/mastra';
 import { PinoLogger } from '@mastra/loggers';
 import { LibSQLStore } from '@mastra/libsql';
-import { oneAgentSolverAgents, oneAgentSolverScorers } from './01-one-agent';
-import { extractThenHypoTestLoopWorkflowAgents } from './02-extract-then-hypo-test-loop';
-import { extractThenHypoTestLoopWorkflow } from './02-extract-then-hypo-test-loop/workflow';
-import { workflow03Agents } from './03-per-rule-per-sentence-delegation';
-import { workflow03 } from './03-per-rule-per-sentence-delegation/workflow';
+import { workflowAgents } from './workflow';
+import { solverWorkflow } from './workflow/workflow';
 import { Observability } from '@mastra/observability';
 import { resolve } from 'node:path';
 
@@ -13,16 +10,10 @@ const dbPath = resolve(process.cwd(), 'mastra.db');
 
 export const mastra = new Mastra({
   agents: {
-    // ...oneAgentSolverAgents,
-    // ...extractThenHypoTestLoopWorkflowAgents,
-    ...workflow03Agents,
-  },
-  scorers: {
-    // ...oneAgentSolverScorers,
+    ...workflowAgents,
   },
   workflows: {
-    // extractThenHypoTestLoopWorkflow,
-    workflow03,
+    solverWorkflow,
   },
   storage: new LibSQLStore({
     id: 'mastra-storage',

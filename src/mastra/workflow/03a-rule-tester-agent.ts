@@ -48,8 +48,8 @@ The rule being tested will be **highlighted** with >>> markers.
  * Receives full ruleset context but focuses on validating the highlighted rule.
  */
 export const ruleTesterAgent = new Agent({
-  id: 'wf03-rule-tester',
-  name: '[03-3a-tool] Rule Tester Agent',
+  id: 'rule-tester',
+  name: '[Step 3] Rule Tester Agent',
   instructions: RULE_TESTER_SYSTEM_PROMPT,
   model: ({ requestContext }) =>
     openrouter(

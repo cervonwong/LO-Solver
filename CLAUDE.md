@@ -17,15 +17,11 @@ No test framework is configured. Evaluation uses `@mastra/evals` scorers at runt
 
 LO-Solver uses **Mastra** (AI agent orchestration) to solve Linguistics Olympiad Rosetta Stone problems. Multiple LLMs are accessed via **OpenRouter** (`src/mastra/openrouter.ts`).
 
-### Workflows
+### Solver Workflow
 
-Three evolutionary workflows live under `src/mastra/`, numbered by sophistication. **Workflow 03 is the active one** (others are commented out in `src/mastra/index.ts`):
+The solver workflow lives at `src/mastra/workflow/`. It uses per-rule and per-sentence testing with orchestrated feedback loops (4 steps, verification loop of up to 4 iterations).
 
-1. **01-one-agent/** — Single agent solves entire problem
-2. **02-extract-then-hypo-test-loop/** — Extract → Hypothesize → Test loop (up to 5 iterations)
-3. **03-per-rule-per-sentence-delegation/** — Per-rule and per-sentence testing with orchestrated feedback loops (4 steps, verification loop of up to 4 iterations)
-
-### Workflow 03 Pipeline
+### Pipeline
 
 1. **Extract** (GPT-5-mini) — Parse raw problem into structured context/dataset/questions
 2. **Hypothesize** (Gemini 3 Flash → GPT-5-mini extractor) — Generate linguistic rules + vocabulary
@@ -44,7 +40,7 @@ Three evolutionary workflows live under `src/mastra/`, numbered by sophisticatio
 - Event types defined in `src/lib/workflow-events.ts` (`WorkflowTraceEvent` union); parsing/grouping logic in `src/lib/trace-utils.ts`
 - `UIStepId` extends backend `StepId` with `verify-${N}` and `improve-${N}` patterns, derived from `data-verify-improve-phase` boundary events. `getUIStepLabel()` produces display labels. The progress bar and trace panel use `UIStepId`; the backend continues to use `StepId`.
 
-### File Conventions in Each Workflow
+### File Conventions
 
 - `workflow.ts` — Workflow definition with steps
 - `workflow-schemas.ts` — Zod schemas and types shared across workflow steps and tools
@@ -57,20 +53,20 @@ Three evolutionary workflows live under `src/mastra/`, numbered by sophisticatio
 
 **Two-agent chains**: Natural language reasoning agent → JSON extraction agent. Used in Steps 2 and 3b.
 
-**RequestContext for shared state** (Workflow 03): Per-execution mutable state passed through `RequestContext`. Keys defined in `request-context-types.ts` (source of truth), accessed via helpers in `request-context-helpers.ts`.
+**RequestContext for shared state**: Per-execution mutable state passed through `RequestContext`. Keys defined in `request-context-types.ts` (source of truth), accessed via helpers in `request-context-helpers.ts`.
 
 **Vocabulary tools**: Five tools (`vocabulary-tools.ts`) that read/write the vocabulary Map in RequestContext. Agents with vocabulary access get these tools plus a prompt fragment from `vocabulary-tools-prompt.ts`.
 
 **generateWithRetry** (`agent-utils.ts`): Wrapper around `Agent.generate()` with 10-minute timeout, up to 2 retries with exponential backoff. Used for all LLM calls in workflow steps.
 
-**Execution logging**: Markdown logs written to `{LOG_DIRECTORY}/workflow-0N_*.md` via `logging-utils.ts`.
+**Execution logging**: Markdown logs written to `{LOG_DIRECTORY}/workflow_*.md` via `logging-utils.ts`.
 
 **Event streaming to frontend**: Workflow steps emit typed events via `writer.write()` on the step's `ToolStream`. **Caution:** `ctx.writer?.custom()` inside tools is a silent no-op when agents run inside workflow steps. To emit events from tools, use the step writer passed via `step-writer` in RequestContext and the `emitToolTraceEvent` helper in `request-context-helpers.ts`.
 
 ## Conventions
 
-- Agent IDs: `wf{N}-{descriptor}` (e.g., `wf03-initial-hypothesizer`)
-- Agent display names: `[{workflow}-{step}] Name` (e.g., `[03-02] Initial Hypothesizer Agent`)
+- Agent IDs: `{descriptor}` (e.g., `initial-hypothesizer`)
+- Agent display names: `[Step N] Name` (e.g., `[Step 2] Initial Hypothesizer Agent`)
 - All agents use `UnicodeNormalizer` input processor
 - Models chosen per agent: GPT-5-mini for extraction/testing, Gemini 3 Flash for reasoning
 - Do not run npm scripts automatically; verify with `npx tsc --noEmit` after code changes

@@ -1,4 +1,4 @@
-# Workflow 03: Per-Rule-Per-Sentence Delegation
+# Per-Rule-Per-Sentence Delegation Workflow
 
 A multi-agent workflow for solving linguistic analysis problems through an iterative hypothesis-verification loop.
 
@@ -123,7 +123,7 @@ Tools access shared state (vocabulary, rules, problem data) via `RequestContext`
 ## File Structure
 
 ```
-03-per-rule-per-sentence-delegation/
+workflow/
 ├── workflow.ts                           # Main workflow definition
 ├── index.ts                              # Agent/tool exports
 ├── request-context-helpers.ts            # RequestContext utilities
