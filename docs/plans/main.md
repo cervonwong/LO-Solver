@@ -37,3 +37,4 @@
 | [2026-02-28-ui-polish-and-duck-mascots-design](./2026-02-28-ui-polish-and-duck-mascots-design.md)       | Pending | UI polish: spinning ducks, compact trace, font tweaks, input persistence |
 | [2026-02-28-ui-polish-and-duck-mascots-plan](./2026-02-28-ui-polish-and-duck-mascots-plan.md)           | Pending | 6-task implementation plan for UI polish and duck mascots                 |
 | [2026-02-28-gsd-installation-design](./2026-02-28-gsd-installation-design.md)                           | Pending | Install GSD framework, replace plan commands, preserve statusline         |
+| [2026-02-28-gsd-installation-plan](./2026-02-28-gsd-installation-plan.md)                               | Pending | 8-task implementation plan for GSD installation                           |
