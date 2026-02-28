@@ -366,7 +366,7 @@ function SolverPageInner() {
                   Problem Input
                   <span className="text-xs text-accent">{inputOpen ? '\u25B2' : '\u25BC'}</span>
                 </CollapsibleTrigger>
-                <CollapsibleContent className="animate-collapsible pt-4">
+                <CollapsibleContent forceMount className="animate-collapsible pt-4 data-[state=closed]:hidden">
                   <ProblemInput
                     examples={examples}
                     onSolve={handleSolve}
