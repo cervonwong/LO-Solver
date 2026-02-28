@@ -141,7 +141,7 @@ export function ProblemInput({ examples, onSolve, disabled }: ProblemInputProps)
                 fontSize="14"
                 className="animate-plotter"
               >
-                LOADING SCHEMATIC...
+                Loading example...
               </text>
             </svg>
           </div>
@@ -151,7 +151,7 @@ export function ProblemInput({ examples, onSolve, disabled }: ProblemInputProps)
       <button
         onClick={handleSubmit}
         disabled={!problemText.trim() || isDisabled}
-        className="stamp-btn w-fit"
+        className="stamp-btn-accent w-fit"
       >
         {disabled ? 'Solving...' : 'Solve'}
       </button>

@@ -29,8 +29,8 @@ export function LexMascot() {
         />
       </svg>
 
-      {/* Speech bubble with backdrop blur */}
-      <div className="frosted border border-border-strong px-4 py-3">
+      {/* Speech bubble with backdrop blur — no left border so the triangle connects seamlessly */}
+      <div className="frosted border-y border-r border-border-strong px-4 py-3">
         <p className="font-heading text-base leading-relaxed">
           I&apos;m Lex, the Linguistics Olympiad Problem solving duck!{' '}
           <span className="text-accent">Copy and paste</span> a LO Problem below or try one of my

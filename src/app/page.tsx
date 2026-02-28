@@ -342,9 +342,9 @@ export default function SolverPage() {
 
             {isFailed && (
               <div className="border border-destructive p-4 text-sm text-destructive">
-                <span className="stamp-btn-secondary pointer-events-none mb-2 inline-block border-destructive text-xs text-destructive">
-                  REVISION REQUIRED
-                </span>
+                <p className="mb-2 text-xs font-bold uppercase tracking-wider text-destructive">
+                  Error encountered.
+                </p>
                 <p>The workflow encountered an error. Check Mastra Studio for details.</p>
               </div>
             )}
