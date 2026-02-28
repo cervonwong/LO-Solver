@@ -375,15 +375,17 @@ function SolverPageInner() {
                     <path d="M480-371.69 267.69-584 296-612.31l184 184 184-184L692.31-584 480-371.69Z" />
                   </svg>
                 </CollapsibleTrigger>
-                <CollapsibleContent forceMount className="animate-collapsible pt-4 data-[state=closed]:hidden">
-                  <ProblemInput
-                    examples={examples}
-                    onSolve={handleSolve}
-                    disabled={isRunning}
-                    onTextChange={(hasText) => {
-                      if (!hasStarted) setMascotState(hasText ? 'ready' : 'idle');
-                    }}
-                  />
+                <CollapsibleContent forceMount className="animate-collapsible">
+                  <div className="pt-4">
+                    <ProblemInput
+                      examples={examples}
+                      onSolve={handleSolve}
+                      disabled={isRunning}
+                      onTextChange={(hasText) => {
+                        if (!hasStarted) setMascotState(hasText ? 'ready' : 'idle');
+                      }}
+                    />
+                  </div>
                 </CollapsibleContent>
               </Collapsible>
             </BlueprintCard>
