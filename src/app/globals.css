@@ -62,7 +62,7 @@
   --radius: 0;
 
   /* Blueprint Cyanotype palette */
-  --background: #003366;
+  --background: #002b57;
   --foreground: rgba(255, 255, 255, 0.8);
   --card: rgba(0, 40, 80, 0.6);
   --card-foreground: rgba(255, 255, 255, 0.85);
@@ -122,14 +122,36 @@
   }
   body {
     @apply bg-background text-foreground;
-    /* Blueprint grid background */
+    position: relative;
+    padding: 20px;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image: url('/paper-texture.jpg');
+    background-size: 1024px 1024px;
+    background-repeat: repeat;
+    opacity: 0.12;
+    mix-blend-mode: screen;
+  }
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
     background-image:
       linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
       linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
     background-size: 20px 20px;
-    background-attachment: fixed;
-    padding: 20px;
-    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  }
+  body > * {
+    position: relative;
+    z-index: 1;
   }
 }
 
