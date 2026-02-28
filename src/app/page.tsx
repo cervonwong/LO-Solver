@@ -393,33 +393,70 @@ function SolverPageInner() {
             </BlueprintCard>
 
             {hasStarted && (
-              <StepProgress
-                steps={progressSteps}
-                statusMessage={statusMessage}
-                onStepClick={handleStepClick}
-              />
-            )}
-
-            {isFailed && (
-              <div className="border border-destructive p-4 text-sm text-destructive">
-                <p className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-destructive">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    height="16"
-                    viewBox="0 -960 960 960"
-                    width="16"
-                    fill="currentColor"
-                  >
-                    <path d="M497.35-308.81q7.27-7.27 7.27-17.34 0-10.08-7.27-17.35-7.27-7.27-17.35-7.27-10.08 0-17.35 7.27-7.27 7.27-7.27 17.35 0 10.07 7.27 17.34t17.35 7.27q10.08 0 17.35-7.27ZM460-433.85h40v-240h-40v240ZM480.13-120q-74.67 0-140.41-28.34-65.73-28.34-114.36-76.92-48.63-48.58-76.99-114.26Q120-405.19 120-479.87q0-74.67 28.34-140.41 28.34-65.73 76.92-114.36 48.58-48.63 114.26-76.99Q405.19-840 479.87-840q74.67 0 140.41 28.34 65.73 28.34 114.36 76.92 48.63 48.58 76.99 114.26Q840-554.81 840-480.13q0 74.67-28.34 140.41-28.34 65.73-76.92 114.36-48.58 48.63-114.26 76.99Q554.81-120 480.13-120Zm-.13-40q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z" />
-                  </svg>
-                  Error encountered.
-                </p>
-                <p>The workflow encountered an error. Check Mastra Studio for details.</p>
-              </div>
+              <BlueprintCard>
+                <Collapsible defaultOpen>
+                  <CollapsibleTrigger className="flex w-full items-center justify-between py-1 text-left font-heading text-base text-foreground hover:text-accent">
+                    Progress
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      height="16"
+                      viewBox="0 -960 960 960"
+                      width="16"
+                      fill="currentColor"
+                      className="shrink-0 text-accent transition-transform duration-200 [[data-state=open]>&]:rotate-180"
+                    >
+                      <path d="M480-371.69 267.69-584 296-612.31l184 184 184-184L692.31-584 480-371.69Z" />
+                    </svg>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="pt-4">
+                    <StepProgress
+                      steps={progressSteps}
+                      statusMessage={statusMessage}
+                      onStepClick={handleStepClick}
+                    />
+                    {isFailed && (
+                      <div className="mt-4 border border-destructive p-4 text-sm text-destructive">
+                        <p className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-destructive">
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            height="16"
+                            viewBox="0 -960 960 960"
+                            width="16"
+                            fill="currentColor"
+                          >
+                            <path d="M497.35-308.81q7.27-7.27 7.27-17.34 0-10.08-7.27-17.35-7.27-7.27-17.35-7.27-10.08 0-17.35 7.27-7.27 7.27-7.27 17.35 0 10.07 7.27 17.34t17.35 7.27q10.08 0 17.35-7.27ZM460-433.85h40v-240h-40v240ZM480.13-120q-74.67 0-140.41-28.34-65.73-28.34-114.36-76.92-48.63-48.58-76.99-114.26Q120-405.19 120-479.87q0-74.67 28.34-140.41 28.34-65.73 76.92-114.36 48.58-48.63 114.26-76.99Q405.19-840 479.87-840q74.67 0 140.41 28.34 65.73 28.34 114.36 76.92 48.63 48.58 76.99 114.26Q840-554.81 840-480.13q0 74.67-28.34 140.41-28.34 65.73-76.92 114.36-48.58 48.63-114.26 76.99Q554.81-120 480.13-120Zm-.13-40q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z" />
+                          </svg>
+                          Error encountered.
+                        </p>
+                        <p>The workflow encountered an error. Check Mastra Studio for details.</p>
+                      </div>
+                    )}
+                  </CollapsibleContent>
+                </Collapsible>
+              </BlueprintCard>
             )}
 
             {isComplete && answerStepOutput && (
-              <ResultsPanel output={answerStepOutput} rules={rules} />
+              <BlueprintCard>
+                <Collapsible defaultOpen>
+                  <CollapsibleTrigger className="flex w-full items-center justify-between py-1 text-left font-heading text-base text-foreground hover:text-accent">
+                    Results
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      height="16"
+                      viewBox="0 -960 960 960"
+                      width="16"
+                      fill="currentColor"
+                      className="shrink-0 text-accent transition-transform duration-200 [[data-state=open]>&]:rotate-180"
+                    >
+                      <path d="M480-371.69 267.69-584 296-612.31l184 184 184-184L692.31-584 480-371.69Z" />
+                    </svg>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="pt-4">
+                    <ResultsPanel output={answerStepOutput} rules={rules} />
+                  </CollapsibleContent>
+                </Collapsible>
+              </BlueprintCard>
             )}
 
             {(isComplete || isFailed) && !isRunning && (
