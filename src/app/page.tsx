@@ -75,6 +75,7 @@ function SolverPageInner() {
   const [examples, setExamples] = useState<Array<{ id: string; label: string; type: string }>>([]);
   const [hasStarted, setHasStarted] = useState(false);
   const [inputOpen, setInputOpen] = useState(true);
+  const [problemText, setProblemText] = useState('');
   const hasSent = useRef(false);
   const [modelMode] = useModelMode();
 
@@ -256,6 +257,7 @@ function SolverPageInner() {
     hasSent.current = false;
     setHasStarted(false);
     setInputOpen(true);
+    setProblemText('');
     setMessages([]);
     setMascotState('idle');
   }, [setMessages, setMascotState]);
@@ -375,17 +377,17 @@ function SolverPageInner() {
                     <path d="M480-371.69 267.69-584 296-612.31l184 184 184-184L692.31-584 480-371.69Z" />
                   </svg>
                 </CollapsibleTrigger>
-                <CollapsibleContent forceMount className="animate-collapsible">
-                  <div className="pt-4">
-                    <ProblemInput
-                      examples={examples}
-                      onSolve={handleSolve}
-                      disabled={isRunning}
-                      onTextChange={(hasText) => {
-                        if (!hasStarted) setMascotState(hasText ? 'ready' : 'idle');
-                      }}
-                    />
-                  </div>
+                <CollapsibleContent className="pt-4">
+                  <ProblemInput
+                    examples={examples}
+                    onSolve={handleSolve}
+                    disabled={isRunning}
+                    value={problemText}
+                    onValueChange={setProblemText}
+                    onTextChange={(hasText) => {
+                      if (!hasStarted) setMascotState(hasText ? 'ready' : 'idle');
+                    }}
+                  />
                 </CollapsibleContent>
               </Collapsible>
             </BlueprintCard>

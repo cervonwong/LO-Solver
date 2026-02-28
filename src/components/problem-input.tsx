@@ -25,10 +25,18 @@ interface ProblemInputProps {
   onSolve: (text: string) => void;
   disabled?: boolean | undefined;
   onTextChange?: (hasText: boolean) => void;
+  value: string;
+  onValueChange: (value: string) => void;
 }
 
-export function ProblemInput({ examples, onSolve, disabled, onTextChange }: ProblemInputProps) {
-  const [problemText, setProblemText] = useState('');
+export function ProblemInput({
+  examples,
+  onSolve,
+  disabled,
+  onTextChange,
+  value: problemText,
+  onValueChange: setProblemText,
+}: ProblemInputProps) {
   const [loading, setLoading] = useState(false);
   const [comboOpen, setComboOpen] = useState(false);
   const [selectedExample, setSelectedExample] = useState('');
