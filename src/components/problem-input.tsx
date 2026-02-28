@@ -24,9 +24,10 @@ interface ProblemInputProps {
   examples: ExampleOption[];
   onSolve: (text: string) => void;
   disabled?: boolean | undefined;
+  onTextChange?: (hasText: boolean) => void;
 }
 
-export function ProblemInput({ examples, onSolve, disabled }: ProblemInputProps) {
+export function ProblemInput({ examples, onSolve, disabled, onTextChange }: ProblemInputProps) {
   const [problemText, setProblemText] = useState('');
   const [loading, setLoading] = useState(false);
   const [comboOpen, setComboOpen] = useState(false);
@@ -41,6 +42,7 @@ export function ProblemInput({ examples, onSolve, disabled }: ProblemInputProps)
       if (!res.ok) throw new Error('Failed to load example');
       const { text } = await res.json();
       setProblemText(text);
+      onTextChange?.(!!text.trim());
     } finally {
       setLoading(false);
     }
@@ -123,7 +125,10 @@ export function ProblemInput({ examples, onSolve, disabled }: ProblemInputProps)
       <div className="relative">
         <Textarea
           value={problemText}
-          onChange={(e) => setProblemText(e.target.value)}
+          onChange={(e) => {
+            setProblemText(e.target.value);
+            onTextChange?.(!!e.target.value.trim());
+          }}
           placeholder="Paste a linguistics problem here..."
           className="min-h-[200px] resize-y border-border bg-surface-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-accent focus:shadow-[0_0_8px_rgba(0,255,255,0.2)]"
           disabled={isDisabled}

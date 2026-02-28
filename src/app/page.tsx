@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
+import { MascotProvider, useMascotState } from '@/contexts/mascot-context';
 import { useModelMode } from '@/hooks/use-model-mode';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -34,7 +35,41 @@ interface VocabUpdateData {
   totalCount: number;
 }
 
+function useMascotSync({
+  hasStarted,
+  isComplete,
+  isFailed,
+  isRunning,
+}: {
+  hasStarted: boolean;
+  isComplete: boolean;
+  isFailed: boolean;
+  isRunning: boolean;
+}) {
+  const { setMascotState } = useMascotState();
+
+  useEffect(() => {
+    if (isFailed) {
+      setMascotState('error');
+    } else if (isComplete) {
+      setMascotState('solved');
+    } else if (isRunning || hasStarted) {
+      setMascotState('solving');
+    }
+  }, [hasStarted, isComplete, isFailed, isRunning, setMascotState]);
+
+  return setMascotState;
+}
+
 export default function SolverPage() {
+  return (
+    <MascotProvider>
+      <SolverPageInner />
+    </MascotProvider>
+  );
+}
+
+function SolverPageInner() {
   const [examples, setExamples] = useState<Array<{ id: string; label: string; type: string }>>([]);
   const [hasStarted, setHasStarted] = useState(false);
   const [inputOpen, setInputOpen] = useState(true);
@@ -78,13 +113,6 @@ export default function SolverPage() {
     },
     [sendMessage],
   );
-
-  const handleReset = useCallback(() => {
-    hasSent.current = false;
-    setHasStarted(false);
-    setInputOpen(true);
-    setMessages([]);
-  }, [setMessages]);
 
   // Collect all data parts from assistant messages
   const assistantMessages = messages.filter((m) => m.role === 'assistant');
@@ -220,6 +248,16 @@ export default function SolverPage() {
   const isComplete = workflowStatus === 'success';
   const isFailed = workflowStatus === 'failed' || workflowStatus === 'bailed';
   const isRunning = status === 'submitted' || status === 'streaming';
+  const setMascotState = useMascotSync({ hasStarted, isComplete, isFailed, isRunning });
+
+  const handleReset = useCallback(() => {
+    hasSent.current = false;
+    setHasStarted(false);
+    setInputOpen(true);
+    setMessages([]);
+    setMascotState('idle');
+  }, [setMessages, setMascotState]);
+
   const answerStepOutput = steps['answer-questions']?.output;
   const verifyStepOutput = steps['verify-improve-rules-loop']?.output;
   const rules =
@@ -327,7 +365,14 @@ export default function SolverPage() {
                   <span className="text-xs text-accent">{inputOpen ? '\u25B2' : '\u25BC'}</span>
                 </CollapsibleTrigger>
                 <CollapsibleContent className="animate-collapsible pt-4">
-                  <ProblemInput examples={examples} onSolve={handleSolve} disabled={isRunning} />
+                  <ProblemInput
+                    examples={examples}
+                    onSolve={handleSolve}
+                    disabled={isRunning}
+                    onTextChange={(hasText) => {
+                      if (!hasStarted) setMascotState(hasText ? 'ready' : 'idle');
+                    }}
+                  />
                 </CollapsibleContent>
               </Collapsible>
             </BlueprintCard>
