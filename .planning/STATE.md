@@ -1,13 +1,13 @@
 # Project State
 
 ## Current Phase
-Phase 1: Legacy Cleanup — Not Started
+Phase 2: Evaluation Foundation — Complete
 
 ## Phase Status
 | Phase | Name | Status |
 |-------|------|--------|
-| 1 | Legacy Cleanup | Not Started |
-| 2 | Evaluation Foundation | Not Started |
+| 1 | Legacy Cleanup | Complete |
+| 2 | Evaluation Foundation | Complete |
 | 3 | Evaluation Expansion | Not Started |
 | 4 | Multi-Perspective Hypothesis Generation | Not Started |
 | 5 | Verification Loop Improvements | Not Started |
@@ -25,6 +25,8 @@ Phase 1: Legacy Cleanup — Not Started
 |------|-------|--------|-------|
 | 2026-02-28 | — | Project initialized | Roadmap created |
 | 2026-02-28 | Quick | UI polish fixes | 3 fixes: crosshair, alignment, spacing |
+| 2026-02-28 | 1 | Complete | Legacy cleanup done (commit 5566e71) |
+| 2026-02-28 | 2 | Complete | Eval foundation: problems, scorer, storage, runner. Workflow instability in testing mode noted but deferred — production models expected to work. |
 
 ---
 _Last updated: 2026-02-28_

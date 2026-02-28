@@ -8,7 +8,8 @@
     "dev:next": "next dev --turbopack",
     "dev:mastra": "mastra dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "eval": "npx tsx --env-file=.env src/evals/run.ts"
   },
   "keywords": [],
   "author": "",

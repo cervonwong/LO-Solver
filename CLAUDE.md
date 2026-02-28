@@ -63,6 +63,19 @@ The solver workflow lives at `src/mastra/workflow/`. It uses per-rule and per-se
 
 **Event streaming to frontend**: Workflow steps emit typed events via `writer.write()` on the step's `ToolStream`. **Caution:** `ctx.writer?.custom()` inside tools is a silent no-op when agents run inside workflow steps. To emit events from tools, use the step writer passed via `step-writer` in RequestContext and the `emitToolTraceEvent` helper in `request-context-helpers.ts`.
 
+### Evaluation System
+
+- `npm run eval` — Run evaluation against ground-truth problems
+- `npm run eval -- --mode testing|production` — Choose model mode (default: testing)
+- `npm run eval -- --concurrency N` — Parallel problem execution (default: 1)
+- `npm run eval -- --problem <id>` — Run a single problem by ID
+- Results stored as JSON in `evals/results/` (gitignored)
+- Custom scorer uses `createScorer` from `@mastra/core/evals` (preprocess → generateScore → generateReason pipeline)
+- `src/evals/problems.ts` — Ground-truth problem definitions from Linguini dataset
+- `src/evals/translation-scorer.ts` — Translation accuracy scorer
+- `src/evals/storage.ts` — Result persistence (JSON files)
+- `src/evals/run.ts` — CLI entry point
+
 ## Conventions
 
 - Agent IDs: `{descriptor}` (e.g., `initial-hypothesizer`)
