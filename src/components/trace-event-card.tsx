@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import type { WorkflowTraceEvent } from '@/lib/workflow-events';
@@ -8,6 +9,21 @@ import { formatDuration } from '@/lib/trace-utils';
 import type { ToolCallGroup } from '@/lib/trace-utils';
 import { Streamdown } from 'streamdown';
 import { code } from '@streamdown/code';
+
+function ChevronIcon({ open }: { open: boolean }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      height="16"
+      viewBox="0 -960 960 960"
+      width="16"
+      fill="currentColor"
+      className={`shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+    >
+      <path d="M480-371.69 267.69-584 296-612.31l184 184 184-184L692.31-584 480-371.69Z" />
+    </svg>
+  );
+}
 
 const jsonMarkdown = (label: string, data: unknown) =>
   `**${label}:**\n\`\`\`json\n${JSON.stringify(data, null, 2)}\n\`\`\``;
@@ -49,18 +65,22 @@ export function TraceEventCard({ event }: TraceEventCardProps) {
     case 'data-agent-reasoning':
       return (
         <Collapsible open={open} onOpenChange={setOpen}>
-          <CollapsibleTrigger className="animate-fade-in border-l-2 border-l-trace-agent flex w-full items-center justify-between border border-border-subtle bg-surface-2 px-3 py-2 text-left text-xs hover:bg-surface-3">
+          <CollapsibleTrigger className="animate-fade-in border-l-2 border-l-trace-agent flex w-full items-center justify-between border border-border-subtle bg-surface-2 px-3 py-1.5 text-left text-xs hover:bg-surface-3">
             <span className="flex items-center gap-2">
-              <Badge
-                variant="secondary"
-                className="border-trace-agent text-trace-agent bg-transparent text-[10px]"
-              >
-                AGENT
-              </Badge>
+              <Image
+                src="/lex-mascot.png"
+                alt=""
+                width={16}
+                height={16}
+                className="shrink-0"
+              />
               <span className="font-medium">{event.data.agentName}</span>
               <span className="text-muted-foreground">({event.data.model})</span>
             </span>
-            <span className="text-muted-foreground">{formatDuration(event.data.durationMs)}</span>
+            <span className="flex items-center gap-2">
+              <span className="text-muted-foreground">{formatDuration(event.data.durationMs)}</span>
+              <ChevronIcon open={open} />
+            </span>
           </CollapsibleTrigger>
           <CollapsibleContent className="animate-collapsible border-x border-b border-border-subtle bg-surface-2 px-3 py-2">
             <Streamdown plugins={{ code }}>{event.data.reasoning}</Streamdown>
@@ -71,14 +91,14 @@ export function TraceEventCard({ event }: TraceEventCardProps) {
     case 'data-tool-call':
       return (
         <Collapsible open={open} onOpenChange={setOpen}>
-          <CollapsibleTrigger className="animate-fade-in border-l-2 border-l-trace-tool flex w-full items-center justify-between border border-border-subtle bg-surface-2 px-3 py-2 text-left text-xs hover:bg-surface-3">
+          <CollapsibleTrigger className="animate-fade-in border-l-2 border-l-trace-tool flex w-full items-center justify-between border border-border-subtle bg-surface-2 px-3 py-1.5 text-left text-xs hover:bg-surface-3">
             <span className="flex items-center gap-2">
               <Badge variant="default" className="border-trace-tool text-trace-tool bg-transparent text-[10px]">
                 TOOL
               </Badge>
               <span className="font-medium">{event.data.toolName}</span>
             </span>
-            <span className="text-muted-foreground">{open ? '▲' : '▼'}</span>
+            <ChevronIcon open={open} />
           </CollapsibleTrigger>
           <CollapsibleContent className="animate-collapsible border-x border-b border-border-subtle bg-surface-2 px-3 py-2">
             <div className="flex flex-col gap-2">
@@ -149,7 +169,7 @@ export function ToolCallGroupCard({ group }: ToolCallGroupCardProps) {
 
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
-      <CollapsibleTrigger className="animate-fade-in border-l-2 border-l-trace-tool flex w-full items-center justify-between border border-border-subtle bg-surface-2 px-3 py-2 text-left text-xs hover:bg-surface-3">
+      <CollapsibleTrigger className="animate-fade-in border-l-2 border-l-trace-tool flex w-full items-center justify-between border border-border-subtle bg-surface-2 px-3 py-1.5 text-left text-xs hover:bg-surface-3">
         <span className="flex items-center gap-2">
           <Badge variant="default" className="border-trace-tool text-trace-tool bg-transparent text-[10px]">
             TOOL
@@ -159,7 +179,7 @@ export function ToolCallGroupCard({ group }: ToolCallGroupCardProps) {
             x{group.calls.length}
           </Badge>
         </span>
-        <span className="text-muted-foreground">{open ? '\u25B2' : '\u25BC'}</span>
+        <ChevronIcon open={open} />
       </CollapsibleTrigger>
       <CollapsibleContent className="animate-collapsible border-x border-b border-border-subtle">
         <div className="flex flex-col divide-y divide-border">
@@ -185,7 +205,7 @@ function ToolCallDetail({
     <Collapsible open={open} onOpenChange={setOpen}>
       <CollapsibleTrigger className="flex w-full items-center justify-between px-3 py-1.5 text-left text-[10px] hover:bg-muted">
         <span className="text-muted-foreground">Call #{index}</span>
-        <span className="text-muted-foreground">{open ? '\u25B2' : '\u25BC'}</span>
+        <ChevronIcon open={open} />
       </CollapsibleTrigger>
       <CollapsibleContent className="animate-collapsible px-3 py-2">
         <div className="flex flex-col gap-2">

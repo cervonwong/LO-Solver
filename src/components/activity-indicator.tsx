@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
 import type { WorkflowTraceEvent } from '@/lib/workflow-events';
 
 function formatElapsed(seconds: number): string {
@@ -42,7 +43,7 @@ export function ActivityIndicator({ events, isRunning }: ActivityIndicatorProps)
 
     return (
       <div className="frosted flex items-center gap-2 border border-border px-4 py-2">
-        <span className="text-sm text-foreground">&gt;</span>
+        <Image src="/lex-mascot.png" alt="" width={16} height={16} className="shrink-0" />
         <span className="text-xs uppercase tracking-wider text-foreground">Complete</span>
         {totalMs > 0 && (
           <span className="ml-auto text-xs text-accent">
@@ -69,11 +70,17 @@ export function ActivityIndicator({ events, isRunning }: ActivityIndicatorProps)
 
   return (
     <div className="frosted flex items-center gap-2 border border-border px-4 py-2">
-      <span className="animate-blink text-sm text-accent">&gt;</span>
+      <Image
+        src="/lex-mascot.png"
+        alt=""
+        width={16}
+        height={16}
+        className="animate-spin-duck shrink-0"
+      />
       <span className="text-xs uppercase tracking-wider text-accent">
-        ACTIVE: {agentName ?? 'Starting...'}
+        RUNNING: {agentName ?? 'Starting...'}
       </span>
-      {model && <span className="text-xs text-muted-foreground">{model}</span>}
+      {model && <span className="text-xs text-muted-foreground">({model})</span>}
       <span className="ml-auto text-xs tabular-nums text-accent">T+{formatElapsed(elapsed)}</span>
     </div>
   );
