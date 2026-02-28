@@ -21,12 +21,12 @@
 | [2026-02-26-polished-pipeline-monitor-plan](./2026-02-26-polished-pipeline-monitor-plan.md)       | Done   | Polished pipeline monitor (superseded by cyanotype theme)                  |
 | [2026-02-27-cyanotype-blueprint-theme-design](./2026-02-27-cyanotype-blueprint-theme-design.md)   | Done   | Cyanotype blueprint visual redesign with crosshair cards, stamp buttons    |
 | [2026-02-27-cyanotype-blueprint-theme-plan](./2026-02-27-cyanotype-blueprint-theme-plan.md)       | Done   | 17-task implementation plan for Cyanotype blueprint theme                  |
+| [2026-02-27-separate-verify-improve-blocks-design](./2026-02-27-separate-verify-improve-blocks-design.md) | Done   | Split verify-improve into separate UI blocks with dynamic progress bar |
+| [2026-02-27-linguini-dataset-integration-design](./2026-02-27-linguini-dataset-integration-design.md)     | Done   | Integrate Linguini IOL dataset as sister examples with picker support  |
+| [2026-02-27-linguini-dataset-integration-plan](./2026-02-27-linguini-dataset-integration-plan.md)         | Done   | 6-task implementation plan for Linguini dataset integration            |
 
 ## Current Plans
 
 | Plan                                                                                                      | Status  | Description                                                            |
 | --------------------------------------------------------------------------------------------------------- | ------- | ---------------------------------------------------------------------- |
-| [2026-02-27-separate-verify-improve-blocks-design](./2026-02-27-separate-verify-improve-blocks-design.md) | Pending | Split verify-improve into separate UI blocks with dynamic progress bar |
 | [2026-02-27-separate-verify-improve-blocks-plan](./2026-02-27-separate-verify-improve-blocks-plan.md)     | Pending | Implementation plan for separate verify/improve blocks                 |
-| [2026-02-27-linguini-dataset-integration-design](./2026-02-27-linguini-dataset-integration-design.md)     | Pending | Integrate Linguini IOL dataset as sister examples with picker support  |
-| [2026-02-27-linguini-dataset-integration-plan](./2026-02-27-linguini-dataset-integration-plan.md)         | Pending | 6-task implementation plan for Linguini dataset integration            |
