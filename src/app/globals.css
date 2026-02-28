@@ -178,6 +178,39 @@
   border-bottom: 1px solid var(--border-strong);
 }
 
+/* Speech bubble — frosted panel with crosshair corners */
+.speech-bubble {
+  position: relative;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-1);
+  backdrop-filter: blur(2px);
+}
+
+.speech-bubble::before,
+.speech-bubble::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+}
+
+.speech-bubble::before {
+  top: -5px;
+  bottom: -5px;
+  left: 0;
+  right: 0;
+  border-left: 1px solid var(--border-strong);
+  border-right: 1px solid var(--border-strong);
+}
+
+.speech-bubble::after {
+  left: -5px;
+  right: -5px;
+  top: 0;
+  bottom: 0;
+  border-top: 1px solid var(--border-strong);
+  border-bottom: 1px solid var(--border-strong);
+}
+
 /* Stamp button (primary red) */
 .stamp-btn {
   font-family: var(--font-heading);
@@ -211,6 +244,41 @@
 .stamp-btn:disabled:active {
   transform: rotate(-2deg);
   filter: none;
+  box-shadow: none;
+}
+
+/* Stamp button (accent cyan with glow) */
+.stamp-btn-accent {
+  font-family: var(--font-heading);
+  background: transparent;
+  color: var(--accent);
+  border: 2px solid var(--accent);
+  padding: 8px 20px;
+  font-size: 1.1rem;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  box-shadow: 0 0 8px rgba(0, 255, 255, 0.3);
+}
+
+.stamp-btn-accent:hover {
+  background: rgba(0, 255, 255, 0.08);
+  box-shadow: 0 0 16px rgba(0, 255, 255, 0.4);
+}
+
+.stamp-btn-accent:active {
+  transform: scale(0.92);
+  box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+}
+
+.stamp-btn-accent:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.stamp-btn-accent:disabled:active {
+  transform: none;
   box-shadow: none;
 }
 
