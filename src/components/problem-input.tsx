@@ -133,8 +133,9 @@ export function ProblemInput({ examples, onSolve, disabled }: ProblemInputProps)
           <div className="absolute inset-0 flex items-center justify-center border border-border bg-background/80">
             <svg width="200" height="20" viewBox="0 0 200 20" className="text-foreground">
               <text
-                x="0"
+                x="100"
                 y="15"
+                textAnchor="middle"
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="0.5"
