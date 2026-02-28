@@ -402,6 +402,19 @@
   animation: plotter-draw 1s ease-out forwards;
 }
 
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin-duck {
+  animation: spin-slow 2s linear infinite;
+}
+
 /* Collapsible animation using grid-rows technique */
 [data-state='open'].animate-collapsible {
   display: grid;
@@ -422,6 +435,20 @@
 /* ============================================
    STREAMDOWN OVERRIDES
    ============================================ */
+
+.streamdown {
+  font-size: 0.75rem;
+  line-height: 1.25rem;
+}
+
+.streamdown h1,
+.streamdown h2,
+.streamdown h3,
+.streamdown h4,
+.streamdown h5,
+.streamdown h6 {
+  font-size: 0.8125rem;
+}
 
 /* Ensure markdown rendered by Streamdown inherits blueprint colors */
 .streamdown pre {
