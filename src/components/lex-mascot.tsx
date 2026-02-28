@@ -1,6 +1,30 @@
+'use client';
+
 import Image from 'next/image';
+import { useMascotState, type MascotState } from '@/contexts/mascot-context';
+
+const MESSAGES: Record<MascotState, { text: string; accent?: string }[]> = {
+  idle: [
+    { text: "I'm Lex, the Linguistics Olympiad Problem solving duck! " },
+    { text: 'Copy and paste', accent: 'true' },
+    { text: ' a LO Problem below or try one of my examples!' },
+  ],
+  ready: [
+    { text: "Ooh, that's a juicy one! Hit " },
+    { text: 'Solve', accent: 'true' },
+    { text: " whenever you're ready and I'll get quacking!" },
+  ],
+  solving: [{ text: 'Quack-ulating... my finest duck brains are on it!' }],
+  solved: [{ text: "Duck yeah! The answer's all wrapped up. How'd I do?" }],
+  error: [
+    { text: 'Oh no, I ruffled my feathers on that one... Try again or paste a different problem!' },
+  ],
+};
 
 export function LexMascot() {
+  const { mascotState } = useMascotState();
+  const segments = MESSAGES[mascotState];
+
   return (
     <div className="flex items-start">
       <Image
@@ -32,9 +56,15 @@ export function LexMascot() {
       {/* Speech bubble with crosshair corner extensions */}
       <div className="speech-bubble px-4 py-3">
         <p className="font-heading text-base leading-relaxed">
-          I&apos;m Lex, the Linguistics Olympiad Problem solving duck!{' '}
-          <span className="text-accent">Copy and paste</span> a LO Problem below or try one of my
-          examples!
+          {segments.map((seg, i) =>
+            seg.accent ? (
+              <span key={i} className="text-accent">
+                {seg.text}
+              </span>
+            ) : (
+              <span key={i}>{seg.text}</span>
+            ),
+          )}
         </p>
       </div>
     </div>
