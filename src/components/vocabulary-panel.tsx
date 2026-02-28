@@ -65,7 +65,7 @@ export function VocabularyPanel({ vocabulary, mutationSummary, isRunning }: Voca
       </div>
       <ScrollArea className="min-h-0 flex-1">
         {vocabulary.length === 0 ? (
-          <div className="flex items-center justify-center p-8 text-sm text-muted-foreground">
+          <div className="absolute inset-0 flex items-center justify-center text-sm text-muted-foreground opacity-50">
             {isRunning
               ? 'Vocabulary entries will appear here as the solver discovers them...'
               : 'No vocabulary entries yet.'}

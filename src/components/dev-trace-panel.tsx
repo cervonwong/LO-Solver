@@ -101,7 +101,7 @@ function EventList({ events }: { events: WorkflowTraceEvent[] }) {
 
 function EmptyState() {
   return (
-    <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 text-center">
+    <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 text-center opacity-50">
       {/* Crosshair reticle */}
       <svg width="60" height="60" viewBox="0 0 60 60" className="text-accent">
         <line x1="30" y1="0" x2="30" y2="60" stroke="currentColor" strokeWidth="0.5" />
@@ -109,7 +109,7 @@ function EmptyState() {
         <circle cx="30" cy="30" r="15" fill="none" stroke="currentColor" strokeWidth="0.5" />
         <circle cx="30" cy="30" r="2" fill="currentColor" />
       </svg>
-      <p className="text-xs tracking-widest text-muted-foreground">awaiting input.</p>
+      <p className="text-sm text-muted-foreground">Awaiting input.</p>
     </div>
   );
 }
