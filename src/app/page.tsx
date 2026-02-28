@@ -357,10 +357,10 @@ function SolverPageInner() {
       {/* Left panel: Input + Results */}
       <ResizablePanel defaultSize="35%" minSize="25%">
         <ScrollArea className="h-full">
-          <div className="flex flex-col gap-6 p-6">
+          <div className="flex flex-col gap-6 py-6 pr-6">
             <LexMascot />
 
-            <BlueprintCard className={inputOpen ? '' : 'pb-2'}>
+            <BlueprintCard>
               <Collapsible open={inputOpen} onOpenChange={setInputOpen}>
                 <CollapsibleTrigger className="flex w-full items-center justify-between py-1 text-left font-heading text-base text-foreground hover:text-accent">
                   Problem Input
