@@ -34,11 +34,9 @@ export function DevTracePanel({ events, isRunning }: DevTracePanelProps) {
     <div className="flex flex-col gap-4 p-4">
       <ActivityIndicator events={events} isRunning={isRunning} />
 
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between border-b-4 border-double border-border pb-2">
         <h2 className="font-heading text-lg text-foreground">Lex&apos;s Solving Process</h2>
-        <span className="text-xs text-muted-foreground">
-          {isRunning ? `Streaming... (${events.length} events)` : `${events.length} events`}
-        </span>
+        <span className="text-xs text-muted-foreground">{events.length} events</span>
       </div>
 
       {stepGroups.map((group) => (
