@@ -35,3 +35,4 @@
 | [2026-02-28-ui-polish-and-duck-mascots-design](./2026-02-28-ui-polish-and-duck-mascots-design.md)       | Pending | UI polish: spinning ducks, compact trace, font tweaks, input persistence |
 | [2026-02-28-ui-polish-and-duck-mascots-plan](./2026-02-28-ui-polish-and-duck-mascots-plan.md)           | Pending | 6-task implementation plan for UI polish and duck mascots                 |
 | [2026-02-28-mastra-package-upgrade-design](./2026-02-28-mastra-package-upgrade-design.md)               | Pending | Upgrade Mastra packages to latest stable versions                        |
+| [2026-02-28-mastra-package-upgrade-plan](./2026-02-28-mastra-package-upgrade-plan.md)                   | Pending | 4-task implementation plan for Mastra package upgrade                    |
