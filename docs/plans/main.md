@@ -24,6 +24,8 @@
 | [2026-02-27-separate-verify-improve-blocks-design](./2026-02-27-separate-verify-improve-blocks-design.md) | Done   | Split verify-improve into separate UI blocks with dynamic progress bar |
 | [2026-02-27-linguini-dataset-integration-design](./2026-02-27-linguini-dataset-integration-design.md)     | Done   | Integrate Linguini IOL dataset as sister examples with picker support  |
 | [2026-02-27-linguini-dataset-integration-plan](./2026-02-27-linguini-dataset-integration-plan.md)         | Done   | 6-task implementation plan for Linguini dataset integration            |
+| [2026-02-28-mastra-package-upgrade-design](./2026-02-28-mastra-package-upgrade-design.md)               | Done   | Upgrade Mastra packages to latest stable versions                        |
+| [2026-02-28-mastra-package-upgrade-plan](./2026-02-28-mastra-package-upgrade-plan.md)                   | Done   | 4-task implementation plan for Mastra package upgrade                    |
 
 ## Current Plans
 
@@ -34,5 +36,4 @@
 | [2026-02-28-dynamic-duck-messages-plan](./2026-02-28-dynamic-duck-messages-plan.md)                       | Pending | Implementation plan for dynamic duck messages                          |
 | [2026-02-28-ui-polish-and-duck-mascots-design](./2026-02-28-ui-polish-and-duck-mascots-design.md)       | Pending | UI polish: spinning ducks, compact trace, font tweaks, input persistence |
 | [2026-02-28-ui-polish-and-duck-mascots-plan](./2026-02-28-ui-polish-and-duck-mascots-plan.md)           | Pending | 6-task implementation plan for UI polish and duck mascots                 |
-| [2026-02-28-mastra-package-upgrade-design](./2026-02-28-mastra-package-upgrade-design.md)               | Pending | Upgrade Mastra packages to latest stable versions                        |
-| [2026-02-28-mastra-package-upgrade-plan](./2026-02-28-mastra-package-upgrade-plan.md)                   | Pending | 4-task implementation plan for Mastra package upgrade                    |
+| [2026-02-28-gsd-installation-design](./2026-02-28-gsd-installation-design.md)                           | Pending | Install GSD framework, replace plan commands, preserve statusline         |
