@@ -139,7 +139,7 @@ function StepSection({ group, isRunning }: StepSectionProps) {
 
         <CollapsibleContent forceMount className="data-[state=closed]:hidden">
           <div className="p-3">
-            <EventList events={contentEvents} />
+            <EventList events={contentEvents} isStepActive={isActive && isRunning} />
           </div>
         </CollapsibleContent>
       </section>
@@ -147,7 +147,13 @@ function StepSection({ group, isRunning }: StepSectionProps) {
   );
 }
 
-function EventList({ events }: { events: WorkflowTraceEvent[] }) {
+function EventList({
+  events,
+  isStepActive,
+}: {
+  events: WorkflowTraceEvent[];
+  isStepActive: boolean;
+}) {
   if (events.length === 0) {
     return <p className="animate-pulse text-xs text-muted-foreground">Agent thinking...</p>;
   }
@@ -162,6 +168,9 @@ function EventList({ events }: { events: WorkflowTraceEvent[] }) {
         ) : (
           <TraceEventCard key={i} event={item} />
         ),
+      )}
+      {isStepActive && (
+        <p className="animate-pulse py-1 text-xs text-muted-foreground">Agent thinking...</p>
       )}
     </div>
   );
