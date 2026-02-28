@@ -94,6 +94,18 @@ function StepSection({ group, isRunning }: StepSectionProps) {
               className="animate-spin-duck shrink-0"
             />
           )}
+          {group.durationMs !== undefined && (
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              height="16"
+              viewBox="0 -960 960 960"
+              width="16"
+              fill="currentColor"
+              className="animate-checkmark-scale shrink-0 text-accent"
+            >
+              <path d="M382-267.69 183.23-466.46 211.77-495 382-324.77 748.23-691l28.54 28.54L382-267.69Z" />
+            </svg>
+          )}
         </span>
         <span className="flex items-center gap-3 font-sans">
           <span className="text-xs text-muted-foreground">{contentEvents.length} events</span>
@@ -117,7 +129,7 @@ function StepSection({ group, isRunning }: StepSectionProps) {
 
 function EventList({ events }: { events: WorkflowTraceEvent[] }) {
   if (events.length === 0) {
-    return <p className="text-xs text-muted-foreground">No events yet.</p>;
+    return <p className="animate-pulse text-xs text-muted-foreground">Agent thinking...</p>;
   }
 
   const grouped = groupEventsWithToolCalls(events);
