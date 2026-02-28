@@ -10,3 +10,11 @@ dist
 logs/ 
 *.tsbuildinfo
 .worktrees/
+
+# GSD hooks and runtime (installed per-developer via npx get-shit-done-cc)
+.claude/hooks/
+.claude/agents/gsd-*.md
+.claude/get-shit-done/
+.claude/package.json
+.claude/gsd-file-manifest.json
+.opencode/

@@ -26,15 +26,15 @@
 | [2026-02-27-linguini-dataset-integration-plan](./2026-02-27-linguini-dataset-integration-plan.md)         | Done   | 6-task implementation plan for Linguini dataset integration            |
 | [2026-02-28-mastra-package-upgrade-design](./2026-02-28-mastra-package-upgrade-design.md)               | Done   | Upgrade Mastra packages to latest stable versions                        |
 | [2026-02-28-mastra-package-upgrade-plan](./2026-02-28-mastra-package-upgrade-plan.md)                   | Done   | 4-task implementation plan for Mastra package upgrade                    |
+| [2026-02-27-separate-verify-improve-blocks-plan](./2026-02-27-separate-verify-improve-blocks-plan.md)     | Done | Implementation plan for separate verify/improve blocks                 |
+| [2026-02-28-dynamic-duck-messages-design](./2026-02-28-dynamic-duck-messages-design.md)                   | Done | Dynamic speech bubble messages for Lex based on solver state           |
+| [2026-02-28-dynamic-duck-messages-plan](./2026-02-28-dynamic-duck-messages-plan.md)                       | Done | Implementation plan for dynamic duck messages                          |
+| [2026-02-28-ui-polish-and-duck-mascots-design](./2026-02-28-ui-polish-and-duck-mascots-design.md)       | Done | UI polish: spinning ducks, compact trace, font tweaks, input persistence |
+| [2026-02-28-ui-polish-and-duck-mascots-plan](./2026-02-28-ui-polish-and-duck-mascots-plan.md)           | Done | 6-task implementation plan for UI polish and duck mascots                 |
+| [2026-02-28-gsd-installation-design](./2026-02-28-gsd-installation-design.md)                           | Done | Install GSD framework, replace plan commands, preserve statusline         |
+| [2026-02-28-gsd-installation-plan](./2026-02-28-gsd-installation-plan.md)                               | Done | 8-task implementation plan for GSD installation                           |
 
 ## Current Plans
 
 | Plan                                                                                                      | Status  | Description                                                            |
 | --------------------------------------------------------------------------------------------------------- | ------- | ---------------------------------------------------------------------- |
-| [2026-02-27-separate-verify-improve-blocks-plan](./2026-02-27-separate-verify-improve-blocks-plan.md)     | Pending | Implementation plan for separate verify/improve blocks                 |
-| [2026-02-28-dynamic-duck-messages-design](./2026-02-28-dynamic-duck-messages-design.md)                   | Pending | Dynamic speech bubble messages for Lex based on solver state           |
-| [2026-02-28-dynamic-duck-messages-plan](./2026-02-28-dynamic-duck-messages-plan.md)                       | Pending | Implementation plan for dynamic duck messages                          |
-| [2026-02-28-ui-polish-and-duck-mascots-design](./2026-02-28-ui-polish-and-duck-mascots-design.md)       | Pending | UI polish: spinning ducks, compact trace, font tweaks, input persistence |
-| [2026-02-28-ui-polish-and-duck-mascots-plan](./2026-02-28-ui-polish-and-duck-mascots-plan.md)           | Pending | 6-task implementation plan for UI polish and duck mascots                 |
-| [2026-02-28-gsd-installation-design](./2026-02-28-gsd-installation-design.md)                           | Pending | Install GSD framework, replace plan commands, preserve statusline         |
-| [2026-02-28-gsd-installation-plan](./2026-02-28-gsd-installation-plan.md)                               | Pending | 8-task implementation plan for GSD installation                           |
