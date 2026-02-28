@@ -55,6 +55,8 @@ function useMascotSync({
       setMascotState('solved');
     } else if (isRunning || hasStarted) {
       setMascotState('solving');
+    } else {
+      setMascotState('idle');
     }
   }, [hasStarted, isComplete, isFailed, isRunning, setMascotState]);
 
