@@ -32,3 +32,4 @@
 | [2026-02-27-separate-verify-improve-blocks-plan](./2026-02-27-separate-verify-improve-blocks-plan.md)     | Pending | Implementation plan for separate verify/improve blocks                 |
 | [2026-02-28-dynamic-duck-messages-design](./2026-02-28-dynamic-duck-messages-design.md)                   | Pending | Dynamic speech bubble messages for Lex based on solver state           |
 | [2026-02-28-dynamic-duck-messages-plan](./2026-02-28-dynamic-duck-messages-plan.md)                       | Pending | Implementation plan for dynamic duck messages                          |
+| [2026-02-28-ui-polish-and-duck-mascots-design](./2026-02-28-ui-polish-and-duck-mascots-design.md)       | Pending | UI polish: spinning ducks, compact trace, font tweaks, input persistence |
