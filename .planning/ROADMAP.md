@@ -2,7 +2,7 @@
 
 ## Milestone: Prove the Agentic Advantage
 
-### Phase 1: Legacy Cleanup
+### Phase 1: Legacy Cleanup — Complete
 **Goal:** Remove dead legacy workflow code so the codebase contains only the active workflow.
 **Requirements:** CLEAN-01, CLEAN-02, CLEAN-03, CLEAN-04
 
@@ -14,7 +14,7 @@
 
 ---
 
-### Phase 2: Evaluation Foundation
+### Phase 2: Evaluation Foundation — Complete
 **Goal:** Build the core automated evaluation harness that scores workflow output against ground-truth answers, using Mastra's eval framework where applicable.
 **Requirements:** EVAL-01, EVAL-05, EVAL-06
 
@@ -87,4 +87,4 @@
 
 ---
 
-_7 phases. 22 v1 requirements mapped. Question bank expansion deferred to v2._
+_7 phases. 22 v1 requirements mapped. Phases 1-2 complete. Question bank expansion deferred to v2._

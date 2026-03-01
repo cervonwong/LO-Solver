@@ -1,22 +1,25 @@
-# Requirements
+# Requirements: LO-Solver
+
+**Defined:** 2026-02-28
+**Core Value:** The agentic workflow must produce measurably better results than zero-shotting the same LLMs without orchestration.
 
 ## v1 Requirements
 
-### Cleanup (CLEAN)
+### Cleanup (CLEAN) — Complete
 
-- [ ] **CLEAN-01**: All legacy workflow files removed from `src/mastra/`
-- [ ] **CLEAN-02**: Directory structure consolidated to `src/mastra/workflow/`
-- [ ] **CLEAN-03**: All references to legacy workflow agents, tools, and schemas removed from `src/mastra/index.ts` and any shared files
-- [ ] **CLEAN-04**: Project compiles cleanly with `npx tsc --noEmit` after cleanup (only pre-existing CSS module error remains)
+- [x] **CLEAN-01**: All legacy workflow files removed from `src/mastra/`
+- [x] **CLEAN-02**: Directory structure consolidated to `src/mastra/workflow/`
+- [x] **CLEAN-03**: All references to legacy workflow agents, tools, and schemas removed from `src/mastra/index.ts` and any shared files
+- [x] **CLEAN-04**: Project compiles cleanly with `npx tsc --noEmit` after cleanup (only pre-existing CSS module error remains)
 
 ### Evaluation Harness (EVAL)
 
-- [ ] **EVAL-01**: User can run automated scoring that executes the workflow against problems with known ground-truth answers and computes accuracy (percentage of correct translations)
+- [x] **EVAL-01**: User can run automated scoring that executes the workflow against problems with known ground-truth answers and computes accuracy (percentage of correct translations)
 - [ ] **EVAL-02**: User can run comparison mode that scores zero-shot LLM output vs. agentic workflow output on the same problems, showing the delta
 - [ ] **EVAL-03**: User can evaluate intermediate outputs — rule quality (do generated rules correctly predict sentence translations?) and extraction quality (is the problem correctly parsed?)
 - [ ] **EVAL-04**: User can view eval results in the UI — accuracy scores, per-problem breakdowns, pass/fail per question
-- [ ] **EVAL-05**: Eval harness uses Mastra's `@mastra/evals` framework where applicable (consult Mastra docs for eval patterns)
-- [ ] **EVAL-06**: Eval results are persisted so users can track accuracy over time across workflow changes
+- [x] **EVAL-05**: Eval harness uses Mastra's `@mastra/evals` framework where applicable (consult Mastra docs for eval patterns)
+- [x] **EVAL-06**: Eval results are persisted so users can track accuracy over time across workflow changes
 
 ### Workflow Improvements (WORK)
 
@@ -46,26 +49,28 @@
 
 ## Out of Scope
 
-- Framework migration — Mastra/Next.js stack is settled
-- Multi-user support / authentication — single-user dev tool
-- Deployment / hosting — development-only
-- Building a general-purpose linguistics tool — Rosetta Stone problems only
-- Real-time collaboration features
+| Feature | Reason |
+|---------|--------|
+| Framework migration | Mastra/Next.js stack is settled |
+| General-purpose linguistics tool | Solves Rosetta Stone problems only |
+| Multi-user support / authentication | Single-user dev tool |
+| Deployment / hosting | Development-only for now |
+| Real-time collaboration | Single-user tool |
 
 ## Traceability
 
 | Requirement | Phase | Status |
-| --- | --- | --- |
-| CLEAN-01 | Phase 1: Legacy Cleanup | Pending |
-| CLEAN-02 | Phase 1: Legacy Cleanup | Pending |
-| CLEAN-03 | Phase 1: Legacy Cleanup | Pending |
-| CLEAN-04 | Phase 1: Legacy Cleanup | Pending |
-| EVAL-01 | Phase 2: Evaluation Foundation | Pending |
+|-------------|-------|--------|
+| CLEAN-01 | Phase 1: Legacy Cleanup | Complete |
+| CLEAN-02 | Phase 1: Legacy Cleanup | Complete |
+| CLEAN-03 | Phase 1: Legacy Cleanup | Complete |
+| CLEAN-04 | Phase 1: Legacy Cleanup | Complete |
+| EVAL-01 | Phase 2: Evaluation Foundation | Complete |
+| EVAL-05 | Phase 2: Evaluation Foundation | Complete |
+| EVAL-06 | Phase 2: Evaluation Foundation | Complete |
 | EVAL-02 | Phase 3: Evaluation Expansion | Pending |
 | EVAL-03 | Phase 3: Evaluation Expansion | Pending |
 | EVAL-04 | Phase 3: Evaluation Expansion | Pending |
-| EVAL-05 | Phase 2: Evaluation Foundation | Pending |
-| EVAL-06 | Phase 2: Evaluation Foundation | Pending |
 | WORK-01 | Phase 4: Multi-Perspective Hypothesis Generation | Pending |
 | WORK-02 | Phase 4: Multi-Perspective Hypothesis Generation | Pending |
 | WORK-03 | Phase 4: Multi-Perspective Hypothesis Generation | Pending |
@@ -74,11 +79,16 @@
 | WORK-06 | Phase 5: Verification Loop Improvements | Pending |
 | UI-01 | Phase 6: UI Event System & Rules Panel | Pending |
 | UI-02 | Phase 6: UI Event System & Rules Panel | Pending |
+| UI-06 | Phase 6: UI Event System & Rules Panel | Pending |
 | UI-03 | Phase 7: Hierarchical Trace Display & Results | Pending |
 | UI-04 | Phase 7: Hierarchical Trace Display & Results | Pending |
 | UI-05 | Phase 7: Hierarchical Trace Display & Results | Pending |
-| UI-06 | Phase 6: UI Event System & Rules Panel | Pending |
+
+**Coverage:**
+- v1 requirements: 22 total
+- Mapped to phases: 22
+- Unmapped: 0 ✓
 
 ---
-
-_22 requirements across 4 categories. 5 requirements deferred to v2._
+*Requirements defined: 2026-02-28*
+*Last updated: 2026-03-01 after milestone v1.0 formalization*
