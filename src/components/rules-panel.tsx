@@ -94,7 +94,7 @@ export function RulesPanel({ rules, activityEvents, isRunning }: RulesPanelProps
   };
 
   return (
-    <div className="frosted flex h-full flex-col">
+    <div className="frosted flex h-full min-h-[120px] flex-col">
       <div className="frosted flex shrink-0 items-center justify-between border-b border-border px-4 py-2">
         <div className="flex items-center gap-2">
           <svg

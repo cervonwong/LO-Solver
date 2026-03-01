@@ -676,7 +676,7 @@ function SolverPageInner() {
       <ResizablePanel defaultSize="65%" minSize="30%">
         <ResizablePanelGroup orientation="vertical">
           {/* Trace panel */}
-          <ResizablePanel defaultSize="50%" minSize="20%" className="relative">
+          <ResizablePanel defaultSize="50%" minSize="20%" className="relative min-h-[120px]">
             <ScrollArea className="h-full">
               <DevTracePanel events={traceEvents} isRunning={isRunning} />
               <div ref={traceEndRef} className="h-px" />
@@ -696,7 +696,7 @@ function SolverPageInner() {
               <ResizableHandle withHandle />
 
               {/* Vocabulary panel */}
-              <ResizablePanel defaultSize="25%" minSize="5%" collapsible collapsedSize="0%">
+              <ResizablePanel defaultSize="25%" minSize="10%">
                 <VocabularyPanel
                   vocabulary={vocabulary}
                   activityEvents={vocabActivityEvents}
@@ -707,7 +707,7 @@ function SolverPageInner() {
               <ResizableHandle withHandle />
 
               {/* Rules panel */}
-              <ResizablePanel defaultSize="25%" minSize="5%" collapsible collapsedSize="0%">
+              <ResizablePanel defaultSize="25%" minSize="10%">
                 <RulesPanel
                   rules={rulesWithTestStatus}
                   activityEvents={rulesActivityEvents}
