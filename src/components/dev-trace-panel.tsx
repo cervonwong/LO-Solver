@@ -154,11 +154,14 @@ function EventList({
   events: WorkflowTraceEvent[];
   isStepActive: boolean;
 }) {
-  if (events.length === 0) {
+  // Filter out ephemeral text chunk events (real-time streaming, not trace entries)
+  const displayEvents = events.filter((e) => e.type !== 'data-agent-text-chunk');
+
+  if (displayEvents.length === 0) {
     return <p className="animate-pulse text-xs text-muted-foreground">Agent thinking...</p>;
   }
 
-  const grouped = groupEventsWithToolCalls(events);
+  const grouped = groupEventsWithToolCalls(displayEvents);
 
   return (
     <div className="flex flex-col gap-1">

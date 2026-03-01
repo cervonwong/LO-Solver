@@ -21,7 +21,13 @@ export function ActivityIndicator({ events, isRunning }: ActivityIndicatorProps)
   // Find the most recent agent or tool event to show what's active
   const latestActivity = [...events]
     .reverse()
-    .find((e) => e.type === 'data-agent-reasoning' || e.type === 'data-tool-call');
+    .find(
+      (e) =>
+        e.type === 'data-agent-start' ||
+        e.type === 'data-agent-end' ||
+        e.type === 'data-agent-reasoning' ||
+        e.type === 'data-tool-call',
+    );
 
   // Timer: count seconds since the latest activity started
   useEffect(() => {
@@ -57,16 +63,20 @@ export function ActivityIndicator({ events, isRunning }: ActivityIndicatorProps)
   if (!isRunning) return null;
 
   const agentName =
-    latestActivity?.type === 'data-agent-reasoning'
+    latestActivity?.type === 'data-agent-start' || latestActivity?.type === 'data-agent-end'
       ? (latestActivity.data as { agentName?: string }).agentName
-      : latestActivity?.type === 'data-tool-call'
-        ? (latestActivity.data as { toolName?: string }).toolName
-        : null;
+      : latestActivity?.type === 'data-agent-reasoning'
+        ? (latestActivity.data as { agentName?: string }).agentName
+        : latestActivity?.type === 'data-tool-call'
+          ? (latestActivity.data as { toolName?: string }).toolName
+          : null;
 
   const model =
-    latestActivity?.type === 'data-agent-reasoning'
+    latestActivity?.type === 'data-agent-start'
       ? (latestActivity.data as { model?: string }).model
-      : null;
+      : latestActivity?.type === 'data-agent-reasoning'
+        ? (latestActivity.data as { model?: string }).model
+        : null;
 
   return (
     <div className="frosted flex items-center gap-2 border border-border px-4 py-2">

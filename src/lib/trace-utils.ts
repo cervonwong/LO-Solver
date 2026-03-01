@@ -206,9 +206,15 @@ function getRawStepId(event: WorkflowTraceEvent): StepId | undefined {
     case 'data-agent-reasoning':
     case 'data-tool-call':
       return event.data.stepId;
+    case 'data-agent-start':
+    case 'data-agent-end':
+      return event.data.stepId;
     case 'data-iteration-update':
     case 'data-verify-improve-phase':
       return 'multi-perspective-hypothesis';
+    case 'data-agent-text-chunk':
+    case 'data-rule-test-result':
+      return undefined; // Ephemeral events; not grouped by step
     case 'data-vocabulary-update':
     case 'data-rules-update':
     case 'data-perspective-start':

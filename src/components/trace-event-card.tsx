@@ -62,7 +62,56 @@ export function TraceEventCard({ event }: TraceEventCardProps) {
         </div>
       );
 
+    case 'data-agent-start':
+      return (
+        <div className="animate-fade-in border-l-2 border-l-trace-agent flex items-center gap-2 border border-border-subtle bg-surface-2 px-3 py-1.5 text-xs">
+          <Image
+            src="/lex-mascot.png"
+            alt=""
+            width={16}
+            height={16}
+            className="shrink-0"
+          />
+          <span className="font-medium">{event.data.agentName}</span>
+          <span className="text-muted-foreground">({event.data.model})</span>
+          <span className="ml-auto text-[10px] text-muted-foreground truncate max-w-[200px]">
+            {event.data.task.slice(0, 100)}
+          </span>
+        </div>
+      );
+
+    case 'data-agent-end':
+      return (
+        <Collapsible open={open} onOpenChange={setOpen}>
+          <CollapsibleTrigger className="animate-fade-in border-l-2 border-l-trace-agent flex w-full items-center justify-between border border-border-subtle bg-surface-2 px-3 py-1.5 text-left text-xs hover:bg-surface-3">
+            <span className="flex items-center gap-2">
+              <Image
+                src="/lex-mascot.png"
+                alt=""
+                width={16}
+                height={16}
+                className="shrink-0"
+              />
+              <span className="font-medium">{event.data.agentName}</span>
+              {event.data.totalAttempts > 1 && (
+                <Badge variant="outline" className="text-[10px]">
+                  Attempt {event.data.attempt}/{event.data.totalAttempts}
+                </Badge>
+              )}
+            </span>
+            <span className="flex items-center gap-2">
+              <span className="text-muted-foreground">{formatDuration(event.data.durationMs)}</span>
+              <ChevronIcon open={open} />
+            </span>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="animate-collapsible border-x border-b border-border-subtle bg-surface-2 px-3 py-2">
+            <Streamdown plugins={{ code }}>{event.data.reasoning}</Streamdown>
+          </CollapsibleContent>
+        </Collapsible>
+      );
+
     case 'data-agent-reasoning':
+      // Deprecated: kept for backward compatibility with old event data
       return (
         <Collapsible open={open} onOpenChange={setOpen}>
           <CollapsibleTrigger className="animate-fade-in border-l-2 border-l-trace-agent flex w-full items-center justify-between border border-border-subtle bg-surface-2 px-3 py-1.5 text-left text-xs hover:bg-surface-3">
@@ -86,6 +135,23 @@ export function TraceEventCard({ event }: TraceEventCardProps) {
             <Streamdown plugins={{ code }}>{event.data.reasoning}</Streamdown>
           </CollapsibleContent>
         </Collapsible>
+      );
+
+    case 'data-agent-text-chunk':
+      // Ephemeral streaming events; filtered out by EventList, no render needed
+      return null;
+
+    case 'data-rule-test-result':
+      return (
+        <div className={`animate-fade-in border-l-2 ${event.data.passed ? 'border-l-status-success' : 'border-l-status-error'} flex items-center gap-2 py-1 text-xs text-muted-foreground`}>
+          <Badge
+            variant="outline"
+            className={`${event.data.passed ? 'border-status-success text-status-success' : 'border-status-error text-status-error'} bg-transparent text-[10px]`}
+          >
+            {event.data.passed ? 'PASS' : 'FAIL'}
+          </Badge>
+          <span>{event.data.ruleTitle}</span>
+        </div>
       );
 
     case 'data-tool-call':
