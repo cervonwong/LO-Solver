@@ -438,6 +438,38 @@
   animation: spin-slow 2s linear infinite;
 }
 
+@keyframes strikethrough-fade {
+  0% {
+    text-decoration: line-through;
+    opacity: 1;
+  }
+  50% {
+    text-decoration: line-through;
+    opacity: 0.5;
+  }
+  100% {
+    text-decoration: line-through;
+    opacity: 0;
+  }
+}
+
+.animate-strikethrough-fade {
+  animation: strikethrough-fade 400ms ease-out forwards;
+}
+
+@keyframes highlight-update {
+  0% {
+    background-color: rgba(245, 158, 11, 0.15);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+.animate-highlight-update {
+  animation: highlight-update 600ms ease-out;
+}
+
 /* Collapsible animation using grid-rows technique */
 [data-state='open'].animate-collapsible {
   display: grid;
