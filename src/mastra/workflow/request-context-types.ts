@@ -61,4 +61,7 @@ export interface WorkflowRequestContext {
 
   /** Event source tag: 'draft' for perspective-local events, 'merged' for post-synthesis */
   'event-source'?: 'draft' | 'merged';
+
+  /** Current step ID — tools read this to tag data-tool-call events */
+  'step-id'?: string;
 }

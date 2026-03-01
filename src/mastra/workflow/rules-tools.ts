@@ -70,21 +70,30 @@ export const addRules = createTool({
 
     console.log(`[RULES:ADD] Added ${added}, skipped ${skipped}, total ${rulesState.size}`);
 
+    const timestamp = new Date().toISOString();
     await emitToolTraceEvent(ctx?.requestContext, {
       type: 'data-rules-update',
       data: {
         action: 'add',
         entries: addedEntries,
         totalCount: rulesState.size,
-        timestamp: new Date().toISOString(),
+        timestamp,
       },
     });
 
-    return {
-      added,
-      skipped,
-      total: rulesState.size,
-    };
+    const result = { added, skipped, total: rulesState.size };
+
+    await emitToolTraceEvent(ctx?.requestContext, {
+      type: 'data-tool-call',
+      data: {
+        toolName: 'addRules',
+        input: { count: entries.length },
+        result,
+        timestamp,
+      },
+    });
+
+    return result;
   },
 });
 
@@ -126,21 +135,30 @@ export const updateRules = createTool({
 
     console.log(`[RULES:UPDATE] Updated ${updated}, skipped ${skipped}, total ${rulesState.size}`);
 
+    const timestamp = new Date().toISOString();
     await emitToolTraceEvent(ctx?.requestContext, {
       type: 'data-rules-update',
       data: {
         action: 'update',
         entries: updatedEntries,
         totalCount: rulesState.size,
-        timestamp: new Date().toISOString(),
+        timestamp,
       },
     });
 
-    return {
-      updated,
-      skipped,
-      total: rulesState.size,
-    };
+    const result = { updated, skipped, total: rulesState.size };
+
+    await emitToolTraceEvent(ctx?.requestContext, {
+      type: 'data-tool-call',
+      data: {
+        toolName: 'updateRules',
+        input: { count: entries.length },
+        result,
+        timestamp,
+      },
+    });
+
+    return result;
   },
 });
 
@@ -179,21 +197,30 @@ export const removeRules = createTool({
       `[RULES:REMOVE] Removed ${removed}, not found ${notFound}, total ${rulesState.size}`,
     );
 
+    const timestamp = new Date().toISOString();
     await emitToolTraceEvent(ctx?.requestContext, {
       type: 'data-rules-update',
       data: {
         action: 'remove',
         entries: removedTitles.map((t) => ({ title: t, description: '' })),
         totalCount: rulesState.size,
-        timestamp: new Date().toISOString(),
+        timestamp,
       },
     });
 
-    return {
-      removed,
-      notFound,
-      total: rulesState.size,
-    };
+    const result = { removed, notFound, total: rulesState.size };
+
+    await emitToolTraceEvent(ctx?.requestContext, {
+      type: 'data-tool-call',
+      data: {
+        toolName: 'removeRules',
+        input: { count: titles.length },
+        result,
+        timestamp,
+      },
+    });
+
+    return result;
   },
 });
 
@@ -217,13 +244,24 @@ export const clearRules = createTool({
     rulesState.clear();
     console.log(`[RULES:CLEAR] Cleared ${removed} rules`);
 
+    const timestamp = new Date().toISOString();
     await emitToolTraceEvent(ctx?.requestContext, {
       type: 'data-rules-update',
       data: {
         action: 'clear',
         entries: [],
         totalCount: 0,
-        timestamp: new Date().toISOString(),
+        timestamp,
+      },
+    });
+
+    await emitToolTraceEvent(ctx?.requestContext, {
+      type: 'data-tool-call',
+      data: {
+        toolName: 'clearRules',
+        input: {},
+        result: { removed },
+        timestamp,
       },
     });
 

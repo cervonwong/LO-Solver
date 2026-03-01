@@ -212,6 +212,7 @@ const multiPerspectiveHypothesisStep = createStep({
     mainRequestContext.set('log-file', logFile);
     mainRequestContext.set('model-mode', state.modelMode as ModelMode);
     mainRequestContext.set('step-writer', writer);
+    mainRequestContext.set('step-id', stepId);
 
     let lastTestResults: unknown = null;
     let previousPerspectiveIds: string[] = [];
@@ -452,6 +453,7 @@ const multiPerspectiveHypothesisStep = createStep({
         perspectiveRequestContext.set('log-file', logFile);
         perspectiveRequestContext.set('model-mode', state.modelMode as ModelMode);
         perspectiveRequestContext.set('step-writer', writer);
+        perspectiveRequestContext.set('step-id', stepId);
         perspectiveRequestContext.set('event-source', 'draft');
 
         const existingRules = isImproverRound ? Array.from(mainRules.values()) : [];
@@ -907,6 +909,7 @@ const multiPerspectiveHypothesisStep = createStep({
       convergenceRequestContext.set('log-file', logFile);
       convergenceRequestContext.set('model-mode', state.modelMode as ModelMode);
       convergenceRequestContext.set('step-writer', writer);
+      convergenceRequestContext.set('step-id', stepId);
       convergenceRequestContext.set('event-source', 'merged');
 
       const convergenceVerifierPrompt = JSON.stringify({

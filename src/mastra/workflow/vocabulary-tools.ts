@@ -94,21 +94,30 @@ export const addVocabulary = createTool({
     logVocabularyAdded(logFile, addedEntries);
 
     // Emit trace event for vocabulary addition
+    const timestamp = new Date().toISOString();
     await emitToolTraceEvent(ctx?.requestContext, {
       type: 'data-vocabulary-update',
       data: {
         action: 'add',
         entries: addedEntries,
         totalCount: vocabularyState.size,
-        timestamp: new Date().toISOString(),
+        timestamp,
       },
     });
 
-    return {
-      added,
-      skipped,
-      total: vocabularyState.size,
-    };
+    const result = { added, skipped, total: vocabularyState.size };
+
+    await emitToolTraceEvent(ctx?.requestContext, {
+      type: 'data-tool-call',
+      data: {
+        toolName: 'addVocabulary',
+        input: { count: entries.length },
+        result,
+        timestamp,
+      },
+    });
+
+    return result;
   },
 });
 
@@ -159,21 +168,30 @@ export const updateVocabulary = createTool({
     logVocabularyUpdated(logFile, updatedEntries);
 
     // Emit trace event for vocabulary update
+    const timestamp = new Date().toISOString();
     await emitToolTraceEvent(ctx?.requestContext, {
       type: 'data-vocabulary-update',
       data: {
         action: 'update',
         entries: updatedEntries,
         totalCount: vocabularyState.size,
-        timestamp: new Date().toISOString(),
+        timestamp,
       },
     });
 
-    return {
-      updated,
-      skipped,
-      total: vocabularyState.size,
-    };
+    const result = { updated, skipped, total: vocabularyState.size };
+
+    await emitToolTraceEvent(ctx?.requestContext, {
+      type: 'data-tool-call',
+      data: {
+        toolName: 'updateVocabulary',
+        input: { count: entries.length },
+        result,
+        timestamp,
+      },
+    });
+
+    return result;
   },
 });
 
@@ -220,21 +238,30 @@ export const removeVocabulary = createTool({
     logVocabularyRemoved(logFile, removedForms);
 
     // Emit trace event for vocabulary removal
+    const timestamp = new Date().toISOString();
     await emitToolTraceEvent(ctx?.requestContext, {
       type: 'data-vocabulary-update',
       data: {
         action: 'remove',
         entries: removedForms.map((f) => ({ foreignForm: f, meaning: '', type: '', notes: '' })),
         totalCount: vocabularyState.size,
-        timestamp: new Date().toISOString(),
+        timestamp,
       },
     });
 
-    return {
-      removed,
-      notFound,
-      total: vocabularyState.size,
-    };
+    const result = { removed, notFound, total: vocabularyState.size };
+
+    await emitToolTraceEvent(ctx?.requestContext, {
+      type: 'data-tool-call',
+      data: {
+        toolName: 'removeVocabulary',
+        input: { count: foreignForms.length },
+        result,
+        timestamp,
+      },
+    });
+
+    return result;
   },
 });
 
@@ -263,13 +290,24 @@ export const clearVocabulary = createTool({
     logVocabularyCleared(logFile, removed);
 
     // Emit trace event for vocabulary clear
+    const timestamp = new Date().toISOString();
     await emitToolTraceEvent(ctx?.requestContext, {
       type: 'data-vocabulary-update',
       data: {
         action: 'clear',
         entries: [],
         totalCount: 0,
-        timestamp: new Date().toISOString(),
+        timestamp,
+      },
+    });
+
+    await emitToolTraceEvent(ctx?.requestContext, {
+      type: 'data-tool-call',
+      data: {
+        toolName: 'clearVocabulary',
+        input: {},
+        result: { removed },
+        timestamp,
       },
     });
 
