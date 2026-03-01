@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { createStep, createWorkflow } from '@mastra/core/workflows';
 import { RequestContext } from '@mastra/core/request-context';
 import { type VocabularyEntry } from './vocabulary-tools';
@@ -37,7 +38,10 @@ import {
   verifierFeedbackSchema,
   type Perspective,
   type PerspectiveResult,
+  type RoundResult,
+  type VerificationMetadata,
 } from './workflow-schemas';
+import { logVerificationResults } from './logging-utils';
 
 const extractionStep = createStep({
   id: 'extract-structure',
@@ -186,6 +190,13 @@ const multiPerspectiveHypothesisStep = createStep({
 
     let lastTestResults: unknown = null;
     let previousPerspectiveIds: string[] = [];
+
+    // Round-by-round tracking for verification metadata
+    const roundResults: RoundResult[] = [];
+    let bestRound = 0;
+    let bestPassRate = 0;
+    let finalConclusion: 'ALL_RULES_PASS' | 'NEEDS_IMPROVEMENT' | 'MAJOR_ISSUES' = 'MAJOR_ISSUES';
+    let finalFeedback: z.infer<typeof verifierFeedbackSchema> | null = null;
 
     for (let round = 1; round <= effectiveMaxRounds; round++) {
       const isImproverRound = round > 1;
@@ -755,6 +766,50 @@ const multiPerspectiveHypothesisStep = createStep({
 
       let converged = false;
 
+      // Build round result for metadata tracking
+      const convergencePassRate = convergenceParsed.success
+        ? (() => {
+            const fb = convergenceParsed.data;
+            const total = fb.rulesTestedCount + fb.sentencesTestedCount;
+            const failed = fb.errantRules.length + fb.errantSentences.length;
+            return total > 0 ? 1 - failed / total : 0;
+          })()
+        : 0;
+
+      const convergenceConclusion = convergenceParsed.success
+        ? convergenceParsed.data.conclusion
+        : ('MAJOR_ISSUES' as const);
+
+      const roundResult: RoundResult = {
+        round,
+        perspectives: verifyResults.map((r) => ({
+          perspectiveId: r.perspectiveId,
+          perspectiveName: r.perspectiveName,
+          testPassRate: r.testPassRate,
+          verifierConclusion: r.verifierConclusion,
+          rulesCount: r.rulesCount,
+          errantRulesCount: r.errantRulesCount,
+          errantSentencesCount: r.errantSentencesCount,
+        })),
+        convergencePassRate,
+        convergenceConclusion,
+        converged:
+          convergenceParsed.success &&
+          convergenceParsed.data.conclusion === 'ALL_RULES_PASS',
+      };
+      roundResults.push(roundResult);
+
+      // Track best round (highest convergence pass rate)
+      if (convergencePassRate > bestPassRate) {
+        bestPassRate = convergencePassRate;
+        bestRound = round;
+      }
+
+      if (convergenceParsed.success) {
+        finalConclusion = convergenceParsed.data.conclusion;
+        finalFeedback = convergenceParsed.data;
+      }
+
       if (convergenceParsed.success) {
         const feedback = convergenceParsed.data;
         lastTestResults = feedback;
@@ -771,6 +826,14 @@ const multiPerspectiveHypothesisStep = createStep({
             timestamp: new Date().toISOString(),
           },
         });
+
+        // Log detailed per-rule verification results
+        logVerificationResults(
+          logFile,
+          `Round ${round}: Convergence Verification`,
+          feedback,
+          Array.from(mainRules.keys()),
+        );
 
         if (feedback.conclusion === 'ALL_RULES_PASS') {
           converged = true;
@@ -805,6 +868,39 @@ const multiPerspectiveHypothesisStep = createStep({
     // After all rounds: return structuredProblem + rules for answering step
     const finalRules = Array.from(mainRules.values());
 
+    // If we exhausted rounds without convergence, warn
+    if (!roundResults.some((r) => r.converged)) {
+      console.warn(
+        `[Multi-Perspective] Max rounds (${effectiveMaxRounds}) reached without convergence. ` +
+          `Best pass rate: ${bestPassRate.toFixed(2)} (round ${bestRound}). Using best-so-far rules.`,
+      );
+      await emitTraceEvent(writer, {
+        type: 'data-iteration-update',
+        data: {
+          iteration: effectiveMaxRounds,
+          conclusion: finalConclusion,
+          rulesTestedCount: finalFeedback?.rulesTestedCount ?? 0,
+          errantRulesCount: finalFeedback?.errantRules.length ?? 0,
+          sentencesTestedCount: finalFeedback?.sentencesTestedCount ?? 0,
+          errantSentencesCount: finalFeedback?.errantSentences.length ?? 0,
+          timestamp: new Date().toISOString(),
+        },
+      });
+    }
+
+    const verificationMetadata: VerificationMetadata = {
+      totalRounds: roundResults.length,
+      converged: roundResults.some((r) => r.converged),
+      bestRound,
+      bestPassRate,
+      finalConclusion,
+      rounds: roundResults,
+      finalRulesCount: finalFeedback?.rulesTestedCount ?? finalRules.length,
+      finalErrantRulesCount: finalFeedback?.errantRules.length ?? 0,
+      finalSentencesTestedCount: finalFeedback?.sentencesTestedCount ?? 0,
+      finalErrantSentencesCount: finalFeedback?.errantSentences.length ?? 0,
+    };
+
     const totalDurationMs = new Date().getTime() - stepStartTime.getTime();
 
     await emitTraceEvent(writer, {
@@ -819,6 +915,7 @@ const multiPerspectiveHypothesisStep = createStep({
     return {
       structuredProblem,
       rules: finalRules,
+      verificationMetadata,
     };
   },
 });

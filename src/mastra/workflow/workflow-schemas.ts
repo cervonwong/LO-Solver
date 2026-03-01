@@ -253,11 +253,59 @@ export const initialHypothesisInputSchema = structuredProblemDataSchema;
 // Schema for initial hypothesis step output (includes rules, vocabulary, and loop state)
 export const initialHypothesisOutputSchema = hypothesisTestLoopSchema;
 
+// ---------------------------------------------------------------------------
+// Verification metadata schemas (used by multi-perspective step output and evals)
+// ---------------------------------------------------------------------------
+
+/**
+ * Per-round result tracking for verification metadata.
+ * Captured programmatically in workflow code -- not agent-produced.
+ */
+export const roundResultSchema = z.object({
+  round: z.number(),
+  perspectives: z.array(
+    z.object({
+      perspectiveId: z.string(),
+      perspectiveName: z.string(),
+      testPassRate: z.number(),
+      verifierConclusion: z.enum(['ALL_RULES_PASS', 'NEEDS_IMPROVEMENT', 'MAJOR_ISSUES']),
+      rulesCount: z.number(),
+      errantRulesCount: z.number(),
+      errantSentencesCount: z.number(),
+    }),
+  ),
+  convergencePassRate: z.number().describe('Pass rate after synthesis and convergence check'),
+  convergenceConclusion: z.enum(['ALL_RULES_PASS', 'NEEDS_IMPROVEMENT', 'MAJOR_ISSUES']),
+  converged: z.boolean(),
+});
+
+export type RoundResult = z.infer<typeof roundResultSchema>;
+
+/**
+ * Verification metadata attached to the multi-perspective step output.
+ * Provides round-by-round scoring for eval and diagnostic purposes.
+ */
+export const verificationMetadataSchema = z.object({
+  totalRounds: z.number(),
+  converged: z.boolean(),
+  bestRound: z.number().describe('The round that produced the best convergence pass rate'),
+  bestPassRate: z.number(),
+  finalConclusion: z.enum(['ALL_RULES_PASS', 'NEEDS_IMPROVEMENT', 'MAJOR_ISSUES']),
+  rounds: z.array(roundResultSchema),
+  finalRulesCount: z.number(),
+  finalErrantRulesCount: z.number(),
+  finalSentencesTestedCount: z.number(),
+  finalErrantSentencesCount: z.number(),
+});
+
+export type VerificationMetadata = z.infer<typeof verificationMetadataSchema>;
+
 // Schema for the question answering step input
 // Vocabulary is read from workflow state, not passed in this schema
 export const questionAnsweringInputSchema = z.object({
   structuredProblem: structuredProblemDataSchema,
   rules: rulesArraySchema,
+  verificationMetadata: verificationMetadataSchema.optional(),
 });
 
 // ---------------------------------------------------------------------------

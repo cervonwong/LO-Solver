@@ -198,3 +198,65 @@ export const logRuleTestResult = (
   if (!logFile) return;
   fs.appendFileSync(logFile, `[RULE] "${title}": ${status}\n`);
 };
+
+/**
+ * Log detailed verification results: each rule's pass/fail status with failure details.
+ * Writes detailed per-rule sections to the markdown log.
+ */
+export const logVerificationResults = (
+  logFile: string | undefined,
+  sectionTitle: string,
+  feedback: {
+    rulesTestedCount: number;
+    errantRules: string[];
+    sentencesTestedCount: number;
+    errantSentences: string[];
+    conclusion: string;
+    issues?: Array<{ title: string; description: string; recommendation: string }>;
+    fullExplanation?: string;
+  },
+  allRuleTitles: string[],
+): void => {
+  if (!logFile) return;
+
+  let content = `## ${sectionTitle}\n\n`;
+  content += `**Conclusion:** ${feedback.conclusion}\n`;
+  content += `**Rules tested:** ${feedback.rulesTestedCount} | **Errant:** ${feedback.errantRules.length}\n`;
+  content += `**Sentences tested:** ${feedback.sentencesTestedCount} | **Errant:** ${feedback.errantSentences.length}\n\n`;
+
+  // Per-rule status
+  content += `### Per-Rule Status\n\n`;
+  for (const title of allRuleTitles) {
+    const isErrant = feedback.errantRules.includes(title);
+    const status = isErrant ? 'FAIL' : 'PASS';
+    content += `- **[${status}]** ${title}\n`;
+  }
+  content += `\n`;
+
+  // Errant sentences
+  if (feedback.errantSentences.length > 0) {
+    content += `### Errant Sentences\n\n`;
+    for (const sentenceId of feedback.errantSentences) {
+      content += `- ${sentenceId}\n`;
+    }
+    content += `\n`;
+  }
+
+  // Issues (detailed failure reasons)
+  if (feedback.issues && feedback.issues.length > 0) {
+    content += `### Issues\n\n`;
+    for (const issue of feedback.issues) {
+      content += `#### ${issue.title}\n\n`;
+      content += `${issue.description}\n\n`;
+      content += `**Recommendation:** ${issue.recommendation}\n\n`;
+    }
+  }
+
+  // Full explanation
+  if (feedback.fullExplanation) {
+    content += `### Full Explanation\n\n${feedback.fullExplanation}\n\n`;
+  }
+
+  content += `---\n\n`;
+  fs.appendFileSync(logFile, content);
+};
