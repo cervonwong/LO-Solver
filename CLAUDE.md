@@ -39,6 +39,8 @@ The solver workflow lives at `src/mastra/workflow/`. It uses per-rule and per-se
 - `StepProgress`, `DevTracePanel`, `TraceEventCard` — Pipeline progress and real-time trace UI components
 - Event types defined in `src/lib/workflow-events.ts` (`WorkflowTraceEvent` union); parsing/grouping logic in `src/lib/trace-utils.ts`
 - `UIStepId` extends backend `StepId` with `verify-${N}` and `improve-${N}` patterns, derived from `data-verify-improve-phase` boundary events. `getUIStepLabel()` produces display labels. The progress bar and trace panel use `UIStepId`; the backend continues to use `StepId`.
+- `src/app/evals/page.tsx` — Eval results viewer (run history table, per-problem breakdown with comparison and intermediate scores)
+- `/api/evals` and `/api/evals/[id]` — API routes serving eval run data from `src/evals/storage.ts`
 
 ### File Conventions
 
