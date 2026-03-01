@@ -26,14 +26,14 @@
 
 ---
 
-### Phase 3: Evaluation Expansion
+### Phase 3: Evaluation Expansion — Complete
 **Goal:** Extend the eval harness with zero-shot comparison, intermediate output scoring, and a UI for viewing results.
 **Requirements:** EVAL-02, EVAL-03, EVAL-04
-**Plans:** 2 plans
+**Plans:** 2 plans (2 complete)
 
 Plans:
 - [x] 03-01-PLAN.md — Backend: zero-shot solver, intermediate scorers, storage types, runner integration
-- [ ] 03-02-PLAN.md — Frontend: API routes, eval results page, nav bar update
+- [x] 03-02-PLAN.md — Frontend: API routes, eval results page, nav bar update
 
 **Success Criteria:**
 1. User can run a comparison eval that scores zero-shot LLM output alongside agentic workflow output on the same problems and displays the delta
