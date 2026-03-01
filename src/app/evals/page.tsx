@@ -46,6 +46,13 @@ interface RuleQualityScore {
   verifierConclusion: string;
   score: number;
   iterations: number;
+  roundDetails?: Array<{
+    round: number;
+    convergencePassRate: number;
+    convergenceConclusion: string;
+    converged: boolean;
+    perspectiveCount: number;
+  }>;
 }
 
 interface EvalProblemResult {
@@ -258,6 +265,42 @@ function ProblemBreakdown({ problem }: { problem: EvalProblemResult }) {
                     {problem.intermediateScores.ruleQuality.iterations !== 1 ? 's' : ''}
                   </div>
                 </div>
+                {/* Round-by-round details */}
+                {problem.intermediateScores.ruleQuality.roundDetails &&
+                  problem.intermediateScores.ruleQuality.roundDetails.length > 0 && (
+                    <div className="col-span-2 border border-border-subtle p-2">
+                      <div className="mb-1 text-muted-foreground">Round-by-round verification</div>
+                      <div className="space-y-1">
+                        {problem.intermediateScores.ruleQuality.roundDetails.map((rd) => (
+                          <div
+                            key={rd.round}
+                            className="flex items-center gap-2 text-foreground/80"
+                          >
+                            <span className="font-mono">R{rd.round}</span>
+                            <span>{pct(rd.convergencePassRate)} pass</span>
+                            <Badge
+                              variant={
+                                rd.convergenceConclusion === 'ALL_RULES_PASS'
+                                  ? 'default'
+                                  : rd.convergenceConclusion === 'NEEDS_IMPROVEMENT'
+                                    ? 'secondary'
+                                    : 'destructive'
+                              }
+                              className="px-1 py-0 text-[10px]"
+                            >
+                              {rd.converged
+                                ? 'converged'
+                                : rd.convergenceConclusion.toLowerCase().replace(/_/g, ' ')}
+                            </Badge>
+                            <span className="text-muted-foreground">
+                              {rd.perspectiveCount} perspective
+                              {rd.perspectiveCount !== 1 ? 's' : ''}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
               </div>
             </div>
           )}
