@@ -46,6 +46,12 @@ Plans:
 ### Phase 4: Multi-Perspective Hypothesis Generation
 **Goal:** Replace the single-perspective hypothesis step with a dispatcher that fans out to multiple independent hypothesizer agents exploring different linguistic angles, then selects the best-scoring ruleset.
 **Requirements:** WORK-01, WORK-02, WORK-03, WORK-04
+**Plans:** 3 plans
+
+Plans:
+- [ ] 04-01-PLAN.md — Foundation: rules CRUD tools, draft store architecture, new workflow schemas
+- [ ] 04-02-PLAN.md — Agents: dispatcher, synthesizer, improver-dispatcher definitions + hypothesizer refactor
+- [ ] 04-03-PLAN.md — Workflow rewrite: dispatch-hypothesize-verify-synthesize loop + UI sliders + frontend progress
 
 **Success Criteria:**
 1. A dispatcher agent analyzes each problem and produces at least 3 distinct linguistic perspectives to explore
@@ -92,4 +98,4 @@ Plans:
 
 ---
 
-_7 phases. 22 v1 requirements mapped. Phases 1-2 complete. Question bank expansion deferred to v2._
+_7 phases. 22 v1 requirements mapped. Phases 1-3 complete. Question bank expansion deferred to v2._
