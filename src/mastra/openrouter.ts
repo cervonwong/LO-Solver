@@ -1,12 +1,25 @@
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 
-/**
- * Shared OpenRouter provider instance.
- * Usage: openrouter('google/gemini-3-pro-preview') or openrouter('openai/gpt-5-mini')
- */
-export const openrouter = createOpenRouter({
+const openrouterBase = createOpenRouter({
   apiKey: process.env.OPENROUTER_API_KEY!,
 });
+
+/** Provider routing for gpt-oss models: prefer clarifai/fp4, then google-vertex. */
+const GPT_OSS_PROVIDER_ORDER = ['clarifai/fp4', 'google-vertex'];
+
+/**
+ * Shared OpenRouter provider instance with automatic provider routing.
+ * gpt-oss models are routed to clarifai/fp4 first, then google-vertex.
+ */
+export const openrouter: typeof openrouterBase = ((modelId: string, settings?: object) => {
+  if (modelId.includes('gpt-oss')) {
+    return openrouterBase(modelId, {
+      ...settings,
+      provider: { order: GPT_OSS_PROVIDER_ORDER },
+    });
+  }
+  return openrouterBase(modelId, settings);
+}) as typeof openrouterBase;
 
 /** Model mode for switching between cheap testing and production models. */
 export type ModelMode = 'testing' | 'production';
