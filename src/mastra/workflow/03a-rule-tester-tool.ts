@@ -148,12 +148,39 @@ ${JSON.stringify(structuredProblem.questions, null, 2)}
       logRuleTestResult(logFile, rule.title, ruleResult.status);
     }
 
+    // Emit rule test result for the frontend rules panel
+    const rcGetter = requestContext
+      ? { get: (key: string) => requestContext.get(key as keyof import('./request-context-types').WorkflowRequestContext) }
+      : undefined;
+    await emitToolTraceEvent(rcGetter as Parameters<typeof emitToolTraceEvent>[0], {
+      type: 'data-rule-test-result',
+      data: {
+        ruleTitle: rule.title,
+        passed: ruleResult.status === 'RULE_OK',
+        timestamp: new Date().toISOString(),
+      },
+    });
+
     return ruleResult;
   } catch (err) {
     const durationSec = ((Date.now() - testStartTime) / 1000).toFixed(1);
     console.error(
       `[TOOL:testRule] Rule-tester for "${rule.title}" FAILED after ${durationSec}s — ${err instanceof Error ? err.message : 'Unknown error'}`,
     );
+
+    // Emit failing rule test result for the frontend rules panel
+    const rcGetter = requestContext
+      ? { get: (key: string) => requestContext.get(key as keyof import('./request-context-types').WorkflowRequestContext) }
+      : undefined;
+    await emitToolTraceEvent(rcGetter as Parameters<typeof emitToolTraceEvent>[0], {
+      type: 'data-rule-test-result',
+      data: {
+        ruleTitle: rule.title,
+        passed: false,
+        timestamp: new Date().toISOString(),
+      },
+    });
+
     return {
       success: false as const,
       error: `Rule test failed: ${err instanceof Error ? err.message : 'Unknown error'}`,
