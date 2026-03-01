@@ -14,6 +14,14 @@ export const STEP_LABELS: Record<StepId, string> = {
   'answer-questions': 'Answer',
 };
 
+// Unique event ID generator (incrementing counter with random prefix)
+let eventCounter = 0;
+const eventPrefix = Math.random().toString(36).slice(2, 8);
+
+export function generateEventId(): string {
+  return `evt_${eventPrefix}_${eventCounter++}`;
+}
+
 export function getUIStepLabel(id: UIStepId): string {
   if (id in STEP_LABELS) return STEP_LABELS[id as StepId];
   const roundMatch = id.match(/^round-(\d+)$/);
@@ -52,6 +60,10 @@ export interface StepCompleteEvent {
   };
 }
 
+/**
+ * @deprecated Superseded by HierarchicalAgentStartEvent / HierarchicalAgentEndEvent pair.
+ * Kept for backward compatibility during migration (removed in a later plan).
+ */
 export interface AgentReasoningEvent {
   type: 'data-agent-reasoning';
   data: {
@@ -64,6 +76,70 @@ export interface AgentReasoningEvent {
   };
 }
 
+export interface HierarchicalAgentStartEvent {
+  type: 'data-agent-start';
+  data: {
+    id: string;
+    parentId?: string;
+    stepId: StepId;
+    agentName: string;
+    model: string;
+    task: string;
+    timestamp: string;
+  };
+}
+
+export interface HierarchicalAgentEndEvent {
+  type: 'data-agent-end';
+  data: {
+    id: string;
+    parentId?: string;
+    stepId: StepId;
+    agentName: string;
+    reasoning: string;
+    durationMs: number;
+    attempt: number;
+    totalAttempts: number;
+    timestamp: string;
+  };
+}
+
+export interface HierarchicalToolCallEvent {
+  type: 'data-tool-call';
+  data: {
+    id: string;
+    parentId: string;
+    stepId: StepId;
+    toolName: string;
+    input: Record<string, unknown>;
+    result: Record<string, unknown>;
+    timestamp: string;
+  };
+}
+
+export interface AgentTextChunkEvent {
+  type: 'data-agent-text-chunk';
+  data: {
+    parentId: string;
+    text: string;
+    timestamp: string;
+  };
+}
+
+export interface RuleTestResultEvent {
+  type: 'data-rule-test-result';
+  data: {
+    ruleTitle: string;
+    passed: boolean;
+    failingSentences?: string[];
+    timestamp: string;
+  };
+}
+
+/**
+ * @deprecated Superseded by HierarchicalToolCallEvent (which adds id and parentId fields).
+ * Kept for backward compatibility during migration (removed in a later plan).
+ */
 export interface ToolCallEvent {
   type: 'data-tool-call';
   data: {
@@ -197,6 +273,11 @@ export type WorkflowTraceEvent =
   | StepCompleteEvent
   | AgentReasoningEvent
   | ToolCallEvent
+  | HierarchicalAgentStartEvent
+  | HierarchicalAgentEndEvent
+  | HierarchicalToolCallEvent
+  | AgentTextChunkEvent
+  | RuleTestResultEvent
   | VocabularyUpdateEvent
   | RulesUpdateEvent
   | IterationUpdateEvent
