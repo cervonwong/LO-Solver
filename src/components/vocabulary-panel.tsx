@@ -1,6 +1,5 @@
 'use client';
 
-import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Table,
@@ -10,6 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { RollingActivityChips, type ActivityEvent } from '@/components/rolling-activity-chips';
 
 interface VocabEntry {
   foreignForm: string;
@@ -18,22 +18,13 @@ interface VocabEntry {
   notes?: string;
 }
 
-interface MutationSummary {
-  added: number;
-  updated: number;
-  removed: number;
-}
-
 interface VocabularyPanelProps {
   vocabulary: VocabEntry[];
-  mutationSummary: MutationSummary;
+  activityEvents: ActivityEvent[];
   isRunning: boolean;
 }
 
-export function VocabularyPanel({ vocabulary, mutationSummary, isRunning }: VocabularyPanelProps) {
-  const hasActivity =
-    mutationSummary.added > 0 || mutationSummary.updated > 0 || mutationSummary.removed > 0;
-
+export function VocabularyPanel({ vocabulary, activityEvents, isRunning }: VocabularyPanelProps) {
   return (
     <div className="frosted flex h-full flex-col">
       <div className="frosted flex shrink-0 items-center justify-between border-b border-border px-4 py-2">
@@ -53,25 +44,7 @@ export function VocabularyPanel({ vocabulary, mutationSummary, isRunning }: Voca
             {vocabulary.length} {vocabulary.length === 1 ? 'entry' : 'entries'}
           </span>
         </div>
-        {hasActivity && (
-          <div className="flex items-center gap-1.5">
-            {mutationSummary.added > 0 && (
-              <Badge variant="outline" className="border-foreground text-foreground text-xs">
-                +{mutationSummary.added} added
-              </Badge>
-            )}
-            {mutationSummary.updated > 0 && (
-              <Badge variant="outline" className="border-status-warning text-status-warning text-xs">
-                {mutationSummary.updated} updated
-              </Badge>
-            )}
-            {mutationSummary.removed > 0 && (
-              <Badge variant="outline" className="border-destructive text-destructive text-xs">
-                {mutationSummary.removed} removed
-              </Badge>
-            )}
-          </div>
-        )}
+        <RollingActivityChips events={activityEvents} />
       </div>
       <ScrollArea className="min-h-0 flex-1">
         {vocabulary.length === 0 ? (
@@ -84,10 +57,18 @@ export function VocabularyPanel({ vocabulary, mutationSummary, isRunning }: Voca
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Form</TableHead>
-                <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Meaning</TableHead>
-                <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Type</TableHead>
-                <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Notes</TableHead>
+                <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">
+                  Form
+                </TableHead>
+                <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">
+                  Meaning
+                </TableHead>
+                <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">
+                  Type
+                </TableHead>
+                <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">
+                  Notes
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -96,10 +77,10 @@ export function VocabularyPanel({ vocabulary, mutationSummary, isRunning }: Voca
                   <TableCell className="text-sm">{entry.foreignForm}</TableCell>
                   <TableCell className="text-sm">{entry.meaning}</TableCell>
                   <TableCell className="text-xs text-muted-foreground">
-                    {entry.type ?? '—'}
+                    {entry.type ?? '\u2014'}
                   </TableCell>
                   <TableCell className="text-xs text-muted-foreground">
-                    {entry.notes ?? '—'}
+                    {entry.notes ?? '\u2014'}
                   </TableCell>
                 </TableRow>
               ))}

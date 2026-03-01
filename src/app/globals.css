@@ -470,6 +470,36 @@
   animation: highlight-update 600ms ease-out;
 }
 
+@keyframes chip-in {
+  from {
+    opacity: 0;
+    transform: translateX(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes chip-out {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+}
+
+.animate-chip-in {
+  animation: chip-in 200ms ease-out both;
+}
+
+.animate-chip-out {
+  animation: chip-out 200ms ease-out forwards;
+}
+
 /* Collapsible animation using grid-rows technique */
 [data-state='open'].animate-collapsible {
   display: grid;
