@@ -99,6 +99,11 @@ export interface IterationUpdateEvent {
     errantRulesCount: number;
     sentencesTestedCount: number;
     errantSentencesCount: number;
+    // Failure detail fields (added in Phase 5)
+    errantRules?: string[]; // Rule titles that failed
+    errantSentences?: string[]; // Sentence IDs that failed (e.g., "#1", "Q2")
+    passRate?: number; // Computed pass rate (0.0 to 1.0)
+    isConvergenceWarning?: boolean; // True when max rounds exhausted without convergence
     timestamp: string;
   };
 }

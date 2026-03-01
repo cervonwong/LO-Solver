@@ -823,6 +823,9 @@ const multiPerspectiveHypothesisStep = createStep({
             errantRulesCount: feedback.errantRules.length,
             sentencesTestedCount: feedback.sentencesTestedCount,
             errantSentencesCount: feedback.errantSentences.length,
+            errantRules: feedback.errantRules,
+            errantSentences: feedback.errantSentences,
+            passRate: convergencePassRate,
             timestamp: new Date().toISOString(),
           },
         });
@@ -883,6 +886,10 @@ const multiPerspectiveHypothesisStep = createStep({
           errantRulesCount: finalFeedback?.errantRules.length ?? 0,
           sentencesTestedCount: finalFeedback?.sentencesTestedCount ?? 0,
           errantSentencesCount: finalFeedback?.errantSentences.length ?? 0,
+          errantRules: finalFeedback?.errantRules ?? [],
+          errantSentences: finalFeedback?.errantSentences ?? [],
+          passRate: bestPassRate,
+          isConvergenceWarning: true,
           timestamp: new Date().toISOString(),
         },
       });
