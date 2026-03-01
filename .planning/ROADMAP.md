@@ -80,13 +80,20 @@ Plans:
 
 ---
 
-### Phase 6: UI Event System & Rules Panel
+### Phase 6: UI Event System & Rules Panel — Complete
 **Goal:** Build the hierarchical event streaming infrastructure and add a live-updating rules panel alongside the existing vocabulary panel.
 **Requirements:** UI-01, UI-02, UI-06
+**Plans:** 4/4 plans complete
+
+Plans:
+- [x] 06-01-PLAN.md — Hierarchical event types and streamWithRetry function
+- [x] 06-02-PLAN.md — Rules panel, rolling activity chips, vocabulary panel update
+- [x] 06-03-PLAN.md — Hierarchical event emission, streamWithRetry migration, rule test events
+- [x] 06-04-PLAN.md — Three-panel layout wiring, rules state, activity tracking, minimum heights
 
 **Success Criteria:**
 1. Event streaming system emits hierarchical events (agent-start, tool-calls nested within, agent-end) that the frontend can consume
-2. Rules are displayed alongside vocabulary in a stacked resizable panel layout, collapsible to a thin header bar
+2. Rules are displayed alongside vocabulary in a stacked resizable panel layout with minimum height constraints
 3. Rules panel updates live as agents generate, test, and revise rules during a solve run
 4. Existing trace and progress UI continues to function correctly with the new event structure
 
@@ -104,4 +111,4 @@ Plans:
 
 ---
 
-_7 phases. 22 v1 requirements mapped. Phases 1-4 complete. EVAL-03 regressed in Phase 4, reassigned to Phase 5. Question bank expansion deferred to v2._
+_7 phases. 22 v1 requirements mapped. Phases 1-6 complete. Phase 7 remaining. Question bank expansion deferred to v2._

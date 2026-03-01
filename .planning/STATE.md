@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in-progress
-last_updated: "2026-03-01T13:04:48Z"
+last_updated: "2026-03-01T15:33:00Z"
 progress:
   total_phases: 7
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 11
-  completed_plans: 10
+  completed_plans: 11
 ---
 
 # Project State
@@ -21,7 +21,7 @@ See: .planning/PROJECT.md (updated 2026-03-01)
 **Current milestone:** v1.0 Prove the Agentic Advantage
 
 ## Current Phase
-Phase 6: UI Event System & Rules Panel — In Progress (3/4 plans)
+Phase 7: Hierarchical Trace Display & Results — Not Started
 
 ## Phase Status
 | Phase | Name | Status |
@@ -31,7 +31,7 @@ Phase 6: UI Event System & Rules Panel — In Progress (3/4 plans)
 | 3 | Evaluation Expansion | ✓ Complete |
 | 4 | Multi-Perspective Hypothesis Generation | ✓ Complete |
 | 5 | Verification Loop Improvements | ✓ Complete |
-| 6 | UI Event System & Rules Panel | ◐ In Progress (3/4) |
+| 6 | UI Event System & Rules Panel | ✓ Complete |
 | 7 | Hierarchical Trace Display & Results | ○ Not Started |
 
 ## Accumulated Context
@@ -60,6 +60,8 @@ Phase 6: UI Event System & Rules Panel — In Progress (3/4 plans)
 | 2026-03-01 | All workflow agent calls follow hierarchical event pattern: generateEventId -> agent-start -> set parent-agent-id -> streamWithRetry -> agent-end -> clear parent-agent-id |
 | 2026-03-01 | Parallel agent calls set parent-agent-id on per-perspective/verify RequestContext instances to avoid race conditions |
 | 2026-03-01 | streamWithRetry generic uses Agent['generate'] parameter types (not Agent['stream']) to support structuredOutput overloads |
+| 2026-03-01 | Three-panel right layout: Trace (top 50%) + Vocabulary (middle 25%) + Rules (bottom 25%) with min-height constraints |
+| 2026-03-01 | Removed collapsible behavior from data panels; minSize=10% + min-h-[120px] prevents zero-height collapse |
 
 ## Session Log
 | Date | Phase | Action | Notes |
@@ -84,6 +86,8 @@ Phase 6: UI Event System & Rules Panel — In Progress (3/4 plans)
 | 2026-03-01 | 6 | Plan 06-02 complete | Rules panel, rolling activity chips, vocabulary panel updated (commits d0c7fbe, f4fd439) |
 | 2026-03-01 | 6 | Plan 06-03 complete | Hierarchical event emission, streamWithRetry migration, rule test events (commits e93e500, a52f0a8, 52dc53b, fb21c7a) |
 | 2026-03-01 | Quick | Quick task 1 complete | State-specific duck images, 25 message variants, typewriter animation, auto-cycling (commits 4b7cd04, 5fb6c5d) |
+| 2026-03-01 | 6 | Plan 06-04 complete | Three-panel layout wiring, minimum heights on panels (commits 0939e91, e6842dd) |
+| 2026-03-01 | 6 | Phase 6 complete | UI Event System & Rules Panel done: hierarchical events, rules panel, activity chips, three-panel layout |
 
 ### Quick Tasks Completed
 
@@ -92,4 +96,4 @@ Phase 6: UI Event System & Rules Panel — In Progress (3/4 plans)
 | 1 | Improve duck mascot with state-specific images, speech variants, typewriter animation, and auto-cycling | 2026-03-01 | a2dd476 | [1-improve-duck-mascot-with-state-specific-](./quick/1-improve-duck-mascot-with-state-specific-/) |
 
 ---
-Last activity: 2026-03-01 - Completed quick task 1: Improve duck mascot with state-specific images, speech variants, typewriter animation, and auto-cycling
+Last activity: 2026-03-01 - Completed Phase 6: UI Event System & Rules Panel (Plan 06-04, three-panel layout with minimum heights)
