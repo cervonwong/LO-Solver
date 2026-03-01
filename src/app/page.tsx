@@ -5,6 +5,7 @@ import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
 import { MascotProvider, useMascotState } from '@/contexts/mascot-context';
 import { useModelMode } from '@/hooks/use-model-mode';
+import { useWorkflowSettings } from '@/hooks/use-workflow-settings';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -16,7 +17,16 @@ import { ResultsPanel } from '@/components/results-panel';
 import { DevTracePanel } from '@/components/dev-trace-panel';
 import { VocabularyPanel } from '@/components/vocabulary-panel';
 import { getUIStepLabel, type UIStepId } from '@/lib/workflow-events';
-import type { StepId, WorkflowTraceEvent, VerifyImprovePhaseEvent } from '@/lib/workflow-events';
+import type {
+  StepId,
+  WorkflowTraceEvent,
+  PerspectiveStartEvent,
+  PerspectiveCompleteEvent,
+  SynthesisStartEvent,
+  SynthesisCompleteEvent,
+  RoundStartEvent,
+  RoundCompleteEvent,
+} from '@/lib/workflow-events';
 
 interface WorkflowStepData {
   status: string;
@@ -78,6 +88,7 @@ function SolverPageInner() {
   const [problemText, setProblemText] = useState('');
   const hasSent = useRef(false);
   const [modelMode] = useModelMode();
+  const [workflowSettings] = useWorkflowSettings();
 
   useEffect(() => {
     fetch('/api/examples')
@@ -97,11 +108,13 @@ function SolverPageInner() {
                 (messages[messages.length - 1]?.parts?.[0] as { text?: string } | undefined)
                   ?.text ?? '',
               modelMode,
+              maxRounds: workflowSettings.maxRounds,
+              perspectiveCount: workflowSettings.perspectiveCount,
             },
           },
         }),
       }),
-    [modelMode],
+    [modelMode, workflowSettings],
   );
 
   const { messages, sendMessage, status, setMessages } = useChat({ transport });
@@ -144,73 +157,134 @@ function SolverPageInner() {
       return 'pending';
     }
 
-    // Add Extract and Hypothesize
+    // Add Extract
     result.push({
       id: 'extract-structure',
       label: getUIStepLabel('extract-structure'),
       status: getStepStatus('extract-structure'),
     });
-    result.push({
-      id: 'initial-hypothesis',
-      label: getUIStepLabel('initial-hypothesis'),
-      status: getStepStatus('initial-hypothesis'),
-    });
 
-    // Derive verify/improve steps from phase events
-    const phaseEvents = allParts.filter(
-      (p) => 'type' in p && (p as { type: string }).type === 'data-verify-improve-phase',
-    ) as unknown as VerifyImprovePhaseEvent[];
+    // Parse round/perspective/synthesis events for multi-perspective progress
+    const roundStartEvents = allParts.filter(
+      (p) => 'type' in p && (p as { type: string }).type === 'data-round-start',
+    ) as unknown as RoundStartEvent[];
 
-    const loopStatus = getStepStatus('verify-improve-rules-loop');
-    const loopDone = loopStatus === 'success' || loopStatus === 'failed';
+    const roundCompleteEvents = allParts.filter(
+      (p) => 'type' in p && (p as { type: string }).type === 'data-round-complete',
+    ) as unknown as RoundCompleteEvent[];
 
-    // Track which verify/improve steps have been seen
-    const seenVerify = new Set<number>();
-    const seenImprove = new Set<number>();
-    let latestPhase: { iteration: number; phase: string } | null = null;
+    const perspectiveStartEvents = allParts.filter(
+      (p) => 'type' in p && (p as { type: string }).type === 'data-perspective-start',
+    ) as unknown as PerspectiveStartEvent[];
 
-    for (const event of phaseEvents) {
-      const { iteration, phase } = event.data;
-      latestPhase = { iteration, phase };
+    const perspectiveCompleteEvents = allParts.filter(
+      (p) => 'type' in p && (p as { type: string }).type === 'data-perspective-complete',
+    ) as unknown as PerspectiveCompleteEvent[];
 
-      if (phase === 'verify-start' && !seenVerify.has(iteration)) {
-        seenVerify.add(iteration);
+    const synthesisStartEvents = allParts.filter(
+      (p) => 'type' in p && (p as { type: string }).type === 'data-synthesis-start',
+    ) as unknown as SynthesisStartEvent[];
+
+    const synthesisCompleteEvents = allParts.filter(
+      (p) => 'type' in p && (p as { type: string }).type === 'data-synthesis-complete',
+    ) as unknown as SynthesisCompleteEvent[];
+
+    const hypothesisStepStatus = getStepStatus('multi-perspective-hypothesis');
+    const hypothesisDone =
+      hypothesisStepStatus === 'success' || hypothesisStepStatus === 'failed';
+
+    // Build round-level progress
+    const completedRounds = new Set(roundCompleteEvents.map((e) => e.data.round));
+    const completedPerspectives = new Set(
+      perspectiveCompleteEvents.map((e) => e.data.perspectiveId),
+    );
+    const completedSyntheses = new Set(synthesisCompleteEvents.map((e) => e.data.round));
+
+    // Determine which round is currently running
+    const latestRoundStart = roundStartEvents.at(-1);
+    const latestPerspectiveStart = perspectiveStartEvents.at(-1);
+    const latestSynthesisStart = synthesisStartEvents.at(-1);
+
+    for (const roundEvent of roundStartEvents) {
+      const roundNum = roundEvent.data.round;
+      const roundId: UIStepId = `round-${roundNum}`;
+
+      // Determine round status
+      let roundStatus: StepStatus = 'pending';
+      if (completedRounds.has(roundNum)) {
+        roundStatus = hypothesisDone && hypothesisStepStatus === 'failed' ? 'failed' : 'success';
+      } else if (latestRoundStart && latestRoundStart.data.round === roundNum) {
+        roundStatus = hypothesisDone
+          ? hypothesisStepStatus === 'success'
+            ? 'success'
+            : 'failed'
+          : 'running';
       }
-      if (phase === 'improve-start' && !seenImprove.has(iteration)) {
-        seenImprove.add(iteration);
+
+      result.push({
+        id: roundId,
+        label: getUIStepLabel(roundId),
+        status: roundStatus,
+      });
+
+      // Add perspective sub-steps for this round
+      const roundPerspectives = perspectiveStartEvents.filter((e) => e.data.round === roundNum);
+      for (const perspEvent of roundPerspectives) {
+        const perspId: UIStepId = `perspective-${perspEvent.data.perspectiveId}`;
+        let perspStatus: StepStatus = 'pending';
+        if (completedPerspectives.has(perspEvent.data.perspectiveId)) {
+          perspStatus = 'success';
+        } else if (
+          latestPerspectiveStart &&
+          latestPerspectiveStart.data.perspectiveId === perspEvent.data.perspectiveId
+        ) {
+          perspStatus = hypothesisDone
+            ? hypothesisStepStatus === 'success'
+              ? 'success'
+              : 'failed'
+            : 'running';
+        }
+
+        result.push({
+          id: perspId,
+          label: `  ${getUIStepLabel(perspId)}`,
+          status: perspStatus,
+        });
+      }
+
+      // Add synthesis step for this round (if synthesis has started)
+      const hasSynthesisForRound = synthesisStartEvents.some((e) => e.data.round === roundNum);
+      if (hasSynthesisForRound) {
+        const synthesisId: UIStepId = `synthesis-${roundNum}`;
+        let synthesisStatus: StepStatus = 'pending';
+        if (completedSyntheses.has(roundNum)) {
+          synthesisStatus = 'success';
+        } else if (latestSynthesisStart && latestSynthesisStart.data.round === roundNum) {
+          synthesisStatus = hypothesisDone
+            ? hypothesisStepStatus === 'success'
+              ? 'success'
+              : 'failed'
+            : 'running';
+        }
+
+        result.push({
+          id: synthesisId,
+          label: `  ${getUIStepLabel(synthesisId)}`,
+          status: synthesisStatus,
+        });
       }
     }
 
-    // Build verify/improve steps in order
-    const maxIter = Math.max(0, ...seenVerify, ...seenImprove);
-    for (let i = 1; i <= maxIter; i++) {
-      if (seenVerify.has(i)) {
-        let status: StepStatus = 'pending';
-        if (latestPhase && latestPhase.iteration === i && latestPhase.phase === 'verify-start') {
-          status = loopDone ? (loopStatus === 'success' ? 'success' : 'failed') : 'running';
-        } else {
-          // Verify for this iteration has completed (we're past it)
-          status = 'success';
-        }
-        result.push({
-          id: `verify-${i}` as UIStepId,
-          label: getUIStepLabel(`verify-${i}` as UIStepId),
-          status,
-        });
-      }
-      if (seenImprove.has(i)) {
-        let status: StepStatus = 'pending';
-        if (latestPhase && latestPhase.iteration === i && latestPhase.phase === 'improve-start') {
-          status = loopDone ? (loopStatus === 'success' ? 'success' : 'failed') : 'running';
-        } else {
-          status = 'success';
-        }
-        result.push({
-          id: `improve-${i}` as UIStepId,
-          label: getUIStepLabel(`improve-${i}` as UIStepId),
-          status,
-        });
-      }
+    // If the multi-perspective step is running but no round events yet, show it as running
+    if (
+      hypothesisStepStatus === 'running' &&
+      roundStartEvents.length === 0
+    ) {
+      result.push({
+        id: 'multi-perspective-hypothesis',
+        label: getUIStepLabel('multi-perspective-hypothesis'),
+        status: 'running',
+      });
     }
 
     // Add Answer
@@ -228,7 +302,7 @@ function SolverPageInner() {
   const activeStep = progressSteps.find((s) => s.status === 'running');
   const STATUS_MESSAGES: Record<string, string> = {
     'extract-structure': 'Extracting problem structure...',
-    'initial-hypothesis': 'Generating linguistic rules and vocabulary...',
+    'multi-perspective-hypothesis': 'Generating multi-perspective hypotheses...',
     'answer-questions': 'Applying rules to answer questions...',
   };
   const statusMessage =
@@ -238,11 +312,13 @@ function SolverPageInner() {
         ? 'Workflow failed.'
         : activeStep
           ? (STATUS_MESSAGES[activeStep.id] ??
-            (activeStep.id.startsWith('verify-')
-              ? 'Verifying rules...'
-              : activeStep.id.startsWith('improve-')
-                ? 'Improving rules...'
-                : 'Processing...'))
+            (activeStep.id.startsWith('round-')
+              ? `Running round ${activeStep.id.split('-')[1]}...`
+              : activeStep.id.startsWith('perspective-')
+                ? `Exploring ${getUIStepLabel(activeStep.id as UIStepId)}...`
+                : activeStep.id.startsWith('synthesis-')
+                  ? 'Synthesizing rulesets...'
+                  : 'Processing...'))
           : status === 'submitted' || status === 'streaming'
             ? 'Starting workflow...'
             : undefined;
@@ -263,9 +339,9 @@ function SolverPageInner() {
   }, [setMessages, setMascotState]);
 
   const answerStepOutput = steps['answer-questions']?.output;
-  const verifyStepOutput = steps['verify-improve-rules-loop']?.output;
+  const hypothesisStepOutput = steps['multi-perspective-hypothesis']?.output;
   const rules =
-    (verifyStepOutput?.rules as Array<{
+    (hypothesisStepOutput?.rules as Array<{
       title: string;
       description: string;
       confidence: 'HIGH' | 'MEDIUM' | 'LOW';

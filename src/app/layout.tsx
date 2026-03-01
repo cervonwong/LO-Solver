@@ -4,6 +4,7 @@ import Link from 'next/link';
 import './globals.css';
 import 'streamdown/styles.css';
 import { ModelModeToggle } from '@/components/model-mode-toggle';
+import { WorkflowSliders } from '@/components/workflow-sliders';
 
 const notoSans = Noto_Sans({
   subsets: ['latin'],
@@ -41,6 +42,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             >
               Eval Results
             </Link>
+            <div className="h-5 w-px bg-border" />
+            <WorkflowSliders />
             <div className="h-5 w-px bg-border" />
             <ModelModeToggle />
           </div>
