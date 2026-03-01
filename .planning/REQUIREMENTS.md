@@ -32,12 +32,12 @@
 
 ### UI Improvements (UI)
 
-- [ ] **UI-01**: Rules are displayed in the UI alongside vocabulary in a stacked resizable panel layout, collapsible to a thin header bar
-- [ ] **UI-02**: Rules panel updates live as agents generate, test, and revise rules
+- [x] **UI-01**: Rules are displayed in the UI alongside vocabulary in a stacked resizable panel layout, collapsible to a thin header bar
+- [x] **UI-02**: Rules panel updates live as agents generate, test, and revise rules
 - [ ] **UI-03**: Trace panel displays tool calls nested under their parent agent calls (hierarchical view, not flat)
 - [ ] **UI-04**: Each tool type has custom-fitted input/output display (e.g., testRule shows rule text + pass/fail + failing sentences, vocabulary tools show the entry being modified)
 - [ ] **UI-05**: Final results are presented with clear formatting — answers, confidence scores, working steps, and which rules were applied
-- [ ] **UI-06**: Event streaming system supports hierarchical events (agent starts → tool calls within → agent ends) so the frontend can build nested views
+- [x] **UI-06**: Event streaming system supports hierarchical events (agent starts → tool calls within → agent ends) so the frontend can build nested views
 
 ## v2 Requirements (Deferred)
 
@@ -77,9 +77,9 @@
 | WORK-04 | Phase 4: Multi-Perspective Hypothesis Generation | Complete |
 | WORK-05 | Phase 5: Verification Loop Improvements | Complete |
 | WORK-06 | Phase 5: Verification Loop Improvements | Complete |
-| UI-01 | Phase 6: UI Event System & Rules Panel | Pending |
-| UI-02 | Phase 6: UI Event System & Rules Panel | Pending |
-| UI-06 | Phase 6: UI Event System & Rules Panel | Pending |
+| UI-01 | Phase 6: UI Event System & Rules Panel | Complete |
+| UI-02 | Phase 6: UI Event System & Rules Panel | Complete |
+| UI-06 | Phase 6: UI Event System & Rules Panel | Complete |
 | UI-03 | Phase 7: Hierarchical Trace Display & Results | Pending |
 | UI-04 | Phase 7: Hierarchical Trace Display & Results | Pending |
 | UI-05 | Phase 7: Hierarchical Trace Display & Results | Pending |

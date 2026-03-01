@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: unknown
-last_updated: "2026-03-01T10:25:44.932Z"
+status: in-progress
+last_updated: "2026-03-01T12:46:44Z"
 progress:
   total_phases: 7
-  completed_phases: 3
-  total_plans: 7
-  completed_plans: 7
+  completed_phases: 5
+  total_plans: 11
+  completed_plans: 9
 ---
 
 # Project State
@@ -21,7 +21,7 @@ See: .planning/PROJECT.md (updated 2026-03-01)
 **Current milestone:** v1.0 Prove the Agentic Advantage
 
 ## Current Phase
-Phase 5: Verification Loop Improvements — Complete (2/2 plans)
+Phase 6: UI Event System & Rules Panel — In Progress (2/4 plans)
 
 ## Phase Status
 | Phase | Name | Status |
@@ -31,7 +31,7 @@ Phase 5: Verification Loop Improvements — Complete (2/2 plans)
 | 3 | Evaluation Expansion | ✓ Complete |
 | 4 | Multi-Perspective Hypothesis Generation | ✓ Complete |
 | 5 | Verification Loop Improvements | ✓ Complete |
-| 6 | UI Event System & Rules Panel | ○ Not Started |
+| 6 | UI Event System & Rules Panel | ◐ In Progress (2/4) |
 | 7 | Hierarchical Trace Display & Results | ○ Not Started |
 
 ## Accumulated Context
@@ -53,6 +53,10 @@ Phase 5: Verification Loop Improvements — Complete (2/2 plans)
 | 2026-03-01 | Multi-perspective step output now includes verificationMetadata with round-by-round data; scoreRuleQuality reads it |
 | 2026-03-01 | Verification metadata schemas must be defined before questionAnsweringInputSchema to avoid forward-reference errors |
 | 2026-03-01 | IterationUpdateEvent enriched with optional fields (errantRules, errantSentences, passRate, isConvergenceWarning) for backward-compatible event evolution |
+| 2026-03-01 | Rolling activity chips pattern: max 3 visible, 8s auto-expiry, shared by vocabulary and rules panels via ActivityEvent interface |
+| 2026-03-01 | VocabularyPanel prop change from mutationSummary to activityEvents is breaking; page.tsx update deferred to Plan 06-04 |
+| 2026-03-01 | Hierarchical event types use id/parentId for nesting; AgentReasoningEvent deprecated but kept in union for backward compat |
+| 2026-03-01 | streamWithRetry returns FullOutput from @mastra/core/stream; onTextChunk callback enables real-time text forwarding |
 
 ## Session Log
 | Date | Phase | Action | Notes |
@@ -73,6 +77,8 @@ Phase 5: Verification Loop Improvements — Complete (2/2 plans)
 | 2026-03-01 | 5 | Plan 05-01 complete | Verification metadata, per-rule logging, EVAL-03 fix (commits db69d3f, 3090ef7) |
 | 2026-03-01 | 5 | Plan 05-02 complete | Event enrichment + round-by-round UI (commits 5edaf83, f84192b) |
 | 2026-03-01 | 5 | Phase 5 complete | Verification Loop Improvements done: metadata, event enrichment, eval UI |
+| 2026-03-01 | 6 | Plan 06-01 complete | Hierarchical event types + streamWithRetry function (commits 7e89b2d, 8839c3a) |
+| 2026-03-01 | 6 | Plan 06-02 complete | Rules panel, rolling activity chips, vocabulary panel updated (commits d0c7fbe, f4fd439) |
 
 ---
 _Last updated: 2026-03-01_
