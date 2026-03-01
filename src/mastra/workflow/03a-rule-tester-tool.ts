@@ -120,6 +120,11 @@ ${JSON.stringify(structuredProblem.questions, null, 2)}
 **Your task**: Test the rule shown above against ALL relevant sentences in the dataset. Check if the rule's predictions match the actual data. Note any conflicts with other rules as a secondary concern.
 `.trim();
 
+  const testStartTime = Date.now();
+  console.log(
+    `[TOOL:testRule] Starting rule-tester sub-agent for "${rule.title}" (${allRules.length} rules in context)...`,
+  );
+
   try {
     const result = await generateWithRetry(mastra.getAgentById('rule-tester'), {
       prompt,
@@ -133,6 +138,10 @@ ${JSON.stringify(structuredProblem.questions, null, 2)}
     });
 
     const ruleResult = result.object as z.infer<typeof ruleTestSuccessSchema>;
+    const durationSec = ((Date.now() - testStartTime) / 1000).toFixed(1);
+    console.log(
+      `[TOOL:testRule] Rule-tester for "${rule.title}" completed in ${durationSec}s — ${ruleResult.status}`,
+    );
 
     // Log result only if logFile is provided (i.e., using committed rules)
     if (logFile) {
@@ -141,6 +150,10 @@ ${JSON.stringify(structuredProblem.questions, null, 2)}
 
     return ruleResult;
   } catch (err) {
+    const durationSec = ((Date.now() - testStartTime) / 1000).toFixed(1);
+    console.error(
+      `[TOOL:testRule] Rule-tester for "${rule.title}" FAILED after ${durationSec}s — ${err instanceof Error ? err.message : 'Unknown error'}`,
+    );
     return {
       success: false as const,
       error: `Rule test failed: ${err instanceof Error ? err.message : 'Unknown error'}`,
@@ -175,6 +188,18 @@ export const testRuleTool = createTool({
     const allRules = getCurrentRules(ctx?.requestContext);
     const logFile = getLogFile(ctx?.requestContext);
 
+    // Emit start event so the UI shows the test is running
+    await emitToolTraceEvent(ctx?.requestContext, {
+      type: 'data-tool-call',
+      data: {
+        stepId: 'multi-perspective-hypothesis',
+        toolName: 'testRule',
+        input: { title, ruleCount: allRules.length },
+        result: { status: 'started', subAgent: 'rule-tester' },
+        timestamp: new Date().toISOString(),
+      },
+    });
+
     const result = await executeRuleTest({
       rule: { title, description },
       allRules,
@@ -185,6 +210,7 @@ export const testRuleTool = createTool({
       ...(ctx.requestContext && { requestContext: ctx.requestContext as RequestContext }),
     });
 
+    // Emit completion event with actual result
     await emitToolTraceEvent(ctx?.requestContext, {
       type: 'data-tool-call',
       data: {
@@ -230,6 +256,18 @@ export const testRuleWithRulesetTool = createTool({
     const vocabulary = getVocabularyArray(ctx?.requestContext);
     const logFile = getLogFile(ctx?.requestContext);
 
+    // Emit start event so the UI shows the test is running
+    await emitToolTraceEvent(ctx?.requestContext, {
+      type: 'data-tool-call',
+      data: {
+        stepId: 'multi-perspective-hypothesis',
+        toolName: 'testRuleWithRuleset',
+        input: { rule: { title: rule.title }, rulesetCount: ruleset.length },
+        result: { status: 'started', subAgent: 'rule-tester' },
+        timestamp: new Date().toISOString(),
+      },
+    });
+
     // Convert ruleset to Rule[] format (conditionally include confidence if present)
     const allRules: Rule[] = ruleset.map((r) => ({
       title: r.title,
@@ -251,6 +289,7 @@ export const testRuleWithRulesetTool = createTool({
       ...(ctx.requestContext && { requestContext: ctx.requestContext as RequestContext }),
     });
 
+    // Emit completion event with actual result
     await emitToolTraceEvent(ctx?.requestContext, {
       type: 'data-tool-call',
       data: {

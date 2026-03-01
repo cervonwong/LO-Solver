@@ -210,6 +210,7 @@ function getRawStepId(event: WorkflowTraceEvent): StepId | undefined {
     case 'data-verify-improve-phase':
       return 'multi-perspective-hypothesis';
     case 'data-vocabulary-update':
+    case 'data-rules-update':
     case 'data-perspective-start':
     case 'data-perspective-complete':
     case 'data-synthesis-start':

@@ -173,12 +173,27 @@ export interface RoundCompleteEvent {
   };
 }
 
+export interface RulesUpdateEvent {
+  type: 'data-rules-update';
+  data: {
+    action: 'add' | 'update' | 'remove' | 'clear';
+    entries: Array<{
+      title: string;
+      description: string;
+      confidence?: string;
+    }>;
+    totalCount: number;
+    timestamp: string;
+  };
+}
+
 export type WorkflowTraceEvent =
   | StepStartEvent
   | StepCompleteEvent
   | AgentReasoningEvent
   | ToolCallEvent
   | VocabularyUpdateEvent
+  | RulesUpdateEvent
   | IterationUpdateEvent
   | VerifyImprovePhaseEvent
   | PerspectiveStartEvent

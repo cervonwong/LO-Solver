@@ -129,6 +129,11 @@ ${JSON.stringify(vocabulary, null, 2)}
 Attempt to translate this sentence step by step using the rules and vocabulary above. Flag any ambiguities or issues. Produce your BEST translation based solely on the rules.
 `.trim();
 
+  const testStartTime = Date.now();
+  console.log(
+    `[TOOL:testSentence] Starting sentence-tester sub-agent for "${id}" (${rules.length} rules, ${vocabulary.length} vocab)...`,
+  );
+
   try {
     const result = await generateWithRetry(mastra.getAgentById('sentence-tester'), {
       prompt,
@@ -142,6 +147,10 @@ Attempt to translate this sentence step by step using the rules and vocabulary a
     });
 
     const agentResult = result.object as z.infer<typeof agentResponseSchema>;
+    const durationSec = ((Date.now() - testStartTime) / 1000).toFixed(1);
+    console.log(
+      `[TOOL:testSentence] Sentence-tester for "${id}" completed in ${durationSec}s — ${agentResult.overallStatus}`,
+    );
 
     // Phase 2: Post-hoc Comparison (if expected translation provided)
     let matchesExpected: boolean | null = null;
@@ -167,6 +176,10 @@ Attempt to translate this sentence step by step using the rules and vocabulary a
       overallStatus: agentResult.overallStatus,
     };
   } catch (err) {
+    const durationSec = ((Date.now() - testStartTime) / 1000).toFixed(1);
+    console.error(
+      `[TOOL:testSentence] Sentence-tester for "${id}" FAILED after ${durationSec}s — ${err instanceof Error ? err.message : 'Unknown error'}`,
+    );
     return {
       success: false as const,
       error: `Sentence test failed: ${err instanceof Error ? err.message : 'Unknown error'}`,
@@ -211,6 +224,18 @@ export const testSentenceTool = createTool({
     const vocabulary = getVocabularyArray(ctx?.requestContext);
     const logFile = getLogFile(ctx?.requestContext);
 
+    // Emit start event so the UI shows the test is running
+    await emitToolTraceEvent(ctx?.requestContext, {
+      type: 'data-tool-call',
+      data: {
+        stepId: 'multi-perspective-hypothesis',
+        toolName: 'testSentence',
+        input: { id, content },
+        result: { status: 'started', subAgent: 'sentence-tester' },
+        timestamp: new Date().toISOString(),
+      },
+    });
+
     const result = await executeSentenceTest({
       id,
       content,
@@ -225,6 +250,7 @@ export const testSentenceTool = createTool({
       ...(ctx.requestContext && { requestContext: ctx.requestContext as RequestContext }),
     });
 
+    // Emit completion event with actual result
     await emitToolTraceEvent(ctx?.requestContext, {
       type: 'data-tool-call',
       data: {
@@ -281,6 +307,18 @@ export const testSentenceWithRulesetTool = createTool({
     const vocabulary = getVocabularyArray(ctx?.requestContext);
     const logFile = getLogFile(ctx?.requestContext);
 
+    // Emit start event so the UI shows the test is running
+    await emitToolTraceEvent(ctx?.requestContext, {
+      type: 'data-tool-call',
+      data: {
+        stepId: 'multi-perspective-hypothesis',
+        toolName: 'testSentenceWithRuleset',
+        input: { id, content, rulesetCount: ruleset.length },
+        result: { status: 'started', subAgent: 'sentence-tester' },
+        timestamp: new Date().toISOString(),
+      },
+    });
+
     // Convert ruleset to Rule[] format (conditionally include confidence if present)
     const rules: Rule[] = ruleset.map((r) => ({
       title: r.title,
@@ -302,6 +340,7 @@ export const testSentenceWithRulesetTool = createTool({
       ...(ctx.requestContext && { requestContext: ctx.requestContext as RequestContext }),
     });
 
+    // Emit completion event with actual result
     await emitToolTraceEvent(ctx?.requestContext, {
       type: 'data-tool-call',
       data: {
