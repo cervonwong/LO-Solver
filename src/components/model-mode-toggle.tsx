@@ -7,7 +7,7 @@ export function ModelModeToggle() {
   const [mode, setMode] = useModelMode();
 
   return (
-    <div className="flex items-center gap-2 text-sm">
+    <div className="flex items-center gap-2 font-heading text-sm">
       <span className={mode === 'testing' ? 'text-accent' : 'text-muted-foreground'}>
         Testing ($)
       </span>

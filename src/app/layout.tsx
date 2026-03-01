@@ -41,6 +41,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             >
               Eval Results
             </Link>
+            <div className="h-5 w-px bg-border" />
             <ModelModeToggle />
           </div>
         </nav>

@@ -143,7 +143,7 @@ function ProblemBreakdown({ problem }: { problem: EvalProblemResult }) {
     <Collapsible open={open} onOpenChange={setOpen}>
       <CollapsibleTrigger className="flex w-full items-center justify-between border-b border-border-subtle px-3 py-2 text-left text-sm transition-colors hover:bg-surface-1">
         <div className="flex items-center gap-3">
-          <span className="font-heading text-foreground">{problem.problemId}</span>
+          <span className="font-sans text-foreground">{problem.problemId}</span>
           <span className="text-muted-foreground">{problem.title}</span>
         </div>
         <div className="flex items-center gap-3">
