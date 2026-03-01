@@ -166,7 +166,7 @@ interface StreamWithRetryOptions<TOptions> {
  * @returns The FullOutput from the completed stream (has .text, .object, .reasoning, etc.)
  * @throws After all retries are exhausted, or if the caller signal aborts
  */
-export async function streamWithRetry<TOptions extends Parameters<Agent['stream']>[1]>(
+export async function streamWithRetry<TOptions extends Parameters<Agent['generate']>[1]>(
   agent: Agent,
   {
     prompt,
@@ -207,7 +207,7 @@ export async function streamWithRetry<TOptions extends Parameters<Agent['stream'
           const streamOutput = await agent.stream(prompt, {
             ...options,
             abortSignal: mergedSignal,
-          } as TOptions);
+          } as Parameters<Agent['stream']>[1]);
 
           // Consume the textStream, forwarding chunks via callback
           const reader = streamOutput.textStream.getReader();

@@ -13,7 +13,7 @@ import {
   logAgentOutput,
   logValidationError,
 } from './logging-utils';
-import { generateWithRetry } from './agent-utils';
+import { streamWithRetry } from './agent-utils';
 import {
   emitTraceEvent,
   createDraftStore,
@@ -24,6 +24,7 @@ import {
   getVocabularyArray,
 } from './request-context-helpers';
 import type { StepId } from '@/lib/workflow-events';
+import { generateEventId } from '@/lib/workflow-events';
 import {
   workflowStateSchema,
   type WorkflowState,
@@ -65,13 +66,28 @@ const extractionStep = createStep({
       data: { stepId, timestamp: new Date().toISOString() },
     });
 
-    const step1StartTime = new Date();
     const requestContext = new RequestContext<WorkflowRequestContext>();
     requestContext.set('model-mode', modelMode as ModelMode);
-    const response = await generateWithRetry(
+
+    const extractAgentId = generateEventId();
+    const extractPrompt = `${inputData.rawProblemText}`;
+    await emitTraceEvent(writer, {
+      type: 'data-agent-start',
+      data: {
+        id: extractAgentId,
+        stepId,
+        agentName: 'Structured Problem Extractor',
+        model: activeModelId(modelMode, 'openai/gpt-5-mini'),
+        task: extractPrompt.slice(0, 500),
+        timestamp: new Date().toISOString(),
+      },
+    });
+
+    const step1StartTime = new Date();
+    const response = await streamWithRetry(
       mastra.getAgentById('structured-problem-extractor'),
       {
-        prompt: `${inputData.rawProblemText}`,
+        prompt: extractPrompt,
         options: {
           maxSteps: 100,
           requestContext,
@@ -79,8 +95,29 @@ const extractionStep = createStep({
             schema: structuredProblemSchema,
           },
         },
+        onTextChunk: (chunk) => {
+          emitTraceEvent(writer, {
+            type: 'data-agent-text-chunk',
+            data: { parentId: extractAgentId, text: chunk, timestamp: new Date().toISOString() },
+          });
+        },
       },
     );
+    const step1DurationMs = new Date().getTime() - step1StartTime.getTime();
+
+    await emitTraceEvent(writer, {
+      type: 'data-agent-end',
+      data: {
+        id: extractAgentId,
+        stepId,
+        agentName: 'Structured Problem Extractor',
+        reasoning: response.text || '',
+        durationMs: step1DurationMs,
+        attempt: 1,
+        totalAttempts: 1,
+        timestamp: new Date().toISOString(),
+      },
+    });
 
     const timing1 = recordStepTiming(
       'Step 1',
@@ -92,18 +129,6 @@ const extractionStep = createStep({
       `[Step 1] Structured Problem Extractor Agent finished at ${timing1.endTime} (${timing1.durationMinutes} min).`,
     );
 
-    await emitTraceEvent(writer, {
-      type: 'data-agent-reasoning',
-      data: {
-        stepId,
-        agentName: 'Structured Problem Extractor',
-        model: activeModelId(modelMode, 'openai/gpt-5-mini'),
-        reasoning: response.text || '',
-        durationMs: Math.round(timing1.durationMinutes * 60_000),
-        timestamp: new Date().toISOString(),
-      },
-    });
-
     // validate the agent response against the expected schema so the step returns the correct type
     const parseResult = structuredProblemSchema.safeParse(response.object);
 
@@ -112,7 +137,7 @@ const extractionStep = createStep({
       'Step 1: Extract Structure',
       'Structured Problem Extractor Agent',
       response.object,
-      response.reasoning,
+      response.reasoningText,
     );
 
     if (!parseResult.success) {
@@ -218,8 +243,25 @@ const multiPerspectiveHypothesisStep = createStep({
           perspectiveCount: effectivePerspectiveCount,
         });
 
+        const dispatchAgentId = generateEventId();
+        await emitTraceEvent(writer, {
+          type: 'data-agent-start',
+          data: {
+            id: dispatchAgentId,
+            stepId,
+            agentName: `Perspective Dispatcher (Round ${round})`,
+            model: activeModelId(
+              state.modelMode as ModelMode,
+              'google/gemini-3-flash-preview',
+            ),
+            task: dispatcherPrompt.slice(0, 500),
+            timestamp: new Date().toISOString(),
+          },
+        });
+
+        mainRequestContext.set('parent-agent-id', dispatchAgentId);
         const dispatchStartTime = new Date();
-        const dispatcherResponse = await generateWithRetry(
+        const dispatcherResponse = await streamWithRetry(
           mastra.getAgentById('perspective-dispatcher'),
           {
             prompt: dispatcherPrompt,
@@ -228,8 +270,30 @@ const multiPerspectiveHypothesisStep = createStep({
               requestContext: mainRequestContext,
               structuredOutput: { schema: dispatcherOutputSchema },
             },
+            onTextChunk: (chunk) => {
+              emitTraceEvent(writer, {
+                type: 'data-agent-text-chunk',
+                data: { parentId: dispatchAgentId, text: chunk, timestamp: new Date().toISOString() },
+              });
+            },
           },
         );
+        const dispatchDurationMs = new Date().getTime() - dispatchStartTime.getTime();
+        mainRequestContext.set('parent-agent-id', undefined);
+
+        await emitTraceEvent(writer, {
+          type: 'data-agent-end',
+          data: {
+            id: dispatchAgentId,
+            stepId,
+            agentName: `Perspective Dispatcher (Round ${round})`,
+            reasoning: dispatcherResponse.text || '',
+            durationMs: dispatchDurationMs,
+            attempt: 1,
+            totalAttempts: 1,
+            timestamp: new Date().toISOString(),
+          },
+        });
 
         const dispatchTiming = recordStepTiming(
           `Round ${round} Dispatch`,
@@ -241,27 +305,12 @@ const multiPerspectiveHypothesisStep = createStep({
           `[Round ${round}] Dispatcher finished at ${dispatchTiming.endTime} (${dispatchTiming.durationMinutes} min).`,
         );
 
-        await emitTraceEvent(writer, {
-          type: 'data-agent-reasoning',
-          data: {
-            stepId,
-            agentName: `Perspective Dispatcher (Round ${round})`,
-            model: activeModelId(
-              state.modelMode as ModelMode,
-              'google/gemini-3-flash-preview',
-            ),
-            reasoning: dispatcherResponse.text || '',
-            durationMs: Math.round(dispatchTiming.durationMinutes * 60_000),
-            timestamp: new Date().toISOString(),
-          },
-        });
-
         logAgentOutput(
           logFile,
           `Round ${round}: Dispatch`,
           'Perspective Dispatcher Agent',
           dispatcherResponse.object,
-          dispatcherResponse.reasoning,
+          dispatcherResponse.reasoningText,
         );
 
         const dispatchParsed = dispatcherOutputSchema.safeParse(dispatcherResponse.object);
@@ -289,8 +338,25 @@ const multiPerspectiveHypothesisStep = createStep({
           previousPerspectiveIds,
         });
 
+        const improverDispatchAgentId = generateEventId();
+        await emitTraceEvent(writer, {
+          type: 'data-agent-start',
+          data: {
+            id: improverDispatchAgentId,
+            stepId,
+            agentName: `Improver Dispatcher (Round ${round})`,
+            model: activeModelId(
+              state.modelMode as ModelMode,
+              'google/gemini-3-flash-preview',
+            ),
+            task: improverPrompt.slice(0, 500),
+            timestamp: new Date().toISOString(),
+          },
+        });
+
+        mainRequestContext.set('parent-agent-id', improverDispatchAgentId);
         const improverDispatchStartTime = new Date();
-        const improverDispatcherResponse = await generateWithRetry(
+        const improverDispatcherResponse = await streamWithRetry(
           mastra.getAgentById('improver-dispatcher'),
           {
             prompt: improverPrompt,
@@ -299,8 +365,30 @@ const multiPerspectiveHypothesisStep = createStep({
               requestContext: mainRequestContext,
               structuredOutput: { schema: improverDispatcherOutputSchema },
             },
+            onTextChunk: (chunk) => {
+              emitTraceEvent(writer, {
+                type: 'data-agent-text-chunk',
+                data: { parentId: improverDispatchAgentId, text: chunk, timestamp: new Date().toISOString() },
+              });
+            },
           },
         );
+        const improverDispatchDurationMs = new Date().getTime() - improverDispatchStartTime.getTime();
+        mainRequestContext.set('parent-agent-id', undefined);
+
+        await emitTraceEvent(writer, {
+          type: 'data-agent-end',
+          data: {
+            id: improverDispatchAgentId,
+            stepId,
+            agentName: `Improver Dispatcher (Round ${round})`,
+            reasoning: improverDispatcherResponse.text || '',
+            durationMs: improverDispatchDurationMs,
+            attempt: 1,
+            totalAttempts: 1,
+            timestamp: new Date().toISOString(),
+          },
+        });
 
         const improverDispatchTiming = recordStepTiming(
           `Round ${round} Improver Dispatch`,
@@ -312,27 +400,12 @@ const multiPerspectiveHypothesisStep = createStep({
           `[Round ${round}] Improver Dispatcher finished at ${improverDispatchTiming.endTime} (${improverDispatchTiming.durationMinutes} min).`,
         );
 
-        await emitTraceEvent(writer, {
-          type: 'data-agent-reasoning',
-          data: {
-            stepId,
-            agentName: `Improver Dispatcher (Round ${round})`,
-            model: activeModelId(
-              state.modelMode as ModelMode,
-              'google/gemini-3-flash-preview',
-            ),
-            reasoning: improverDispatcherResponse.text || '',
-            durationMs: Math.round(improverDispatchTiming.durationMinutes * 60_000),
-            timestamp: new Date().toISOString(),
-          },
-        });
-
         logAgentOutput(
           logFile,
           `Round ${round}: Improver Dispatch`,
           'Improver Dispatcher Agent',
           improverDispatcherResponse.object,
-          improverDispatcherResponse.reasoning,
+          improverDispatcherResponse.reasoningText,
         );
 
         const improverParsed = improverDispatcherOutputSchema.safeParse(
@@ -390,14 +463,53 @@ const multiPerspectiveHypothesisStep = createStep({
           existingVocabulary,
         });
 
+        const hypAgentId = generateEventId();
+        await emitTraceEvent(writer, {
+          type: 'data-agent-start',
+          data: {
+            id: hypAgentId,
+            stepId,
+            agentName: `Hypothesizer (${perspective.name})`,
+            model: activeModelId(
+              state.modelMode as ModelMode,
+              'google/gemini-3-flash-preview',
+            ),
+            task: hypothesizerPrompt.slice(0, 500),
+            timestamp: new Date().toISOString(),
+          },
+        });
+
+        perspectiveRequestContext.set('parent-agent-id', hypAgentId);
         const hypStartTime = new Date();
-        const hypothesizerResponse = await generateWithRetry(
+        const hypothesizerResponse = await streamWithRetry(
           mastra.getAgentById('initial-hypothesizer'),
           {
             prompt: hypothesizerPrompt,
             options: { maxSteps: 100, requestContext: perspectiveRequestContext },
+            onTextChunk: (chunk) => {
+              emitTraceEvent(writer, {
+                type: 'data-agent-text-chunk',
+                data: { parentId: hypAgentId, text: chunk, timestamp: new Date().toISOString() },
+              });
+            },
           },
         );
+        const hypDurationMs = new Date().getTime() - hypStartTime.getTime();
+        perspectiveRequestContext.set('parent-agent-id', undefined);
+
+        await emitTraceEvent(writer, {
+          type: 'data-agent-end',
+          data: {
+            id: hypAgentId,
+            stepId,
+            agentName: `Hypothesizer (${perspective.name})`,
+            reasoning: hypothesizerResponse.text || '',
+            durationMs: hypDurationMs,
+            attempt: 1,
+            totalAttempts: 1,
+            timestamp: new Date().toISOString(),
+          },
+        });
 
         const hypTiming = recordStepTiming(
           `Round ${round} Hypothesizer (${perspective.id})`,
@@ -408,27 +520,12 @@ const multiPerspectiveHypothesisStep = createStep({
           `[Round ${round}] Hypothesizer (${perspective.id}) finished at ${hypTiming.endTime} (${hypTiming.durationMinutes} min).`,
         );
 
-        await emitTraceEvent(writer, {
-          type: 'data-agent-reasoning',
-          data: {
-            stepId,
-            agentName: `Hypothesizer (${perspective.name})`,
-            model: activeModelId(
-              state.modelMode as ModelMode,
-              'google/gemini-3-flash-preview',
-            ),
-            reasoning: hypothesizerResponse.text || '',
-            durationMs: Math.round(hypTiming.durationMinutes * 60_000),
-            timestamp: new Date().toISOString(),
-          },
-        });
-
         logAgentOutput(
           logFile,
           `Round ${round}: Hypothesizer (${perspective.id})`,
           'Initial Hypothesizer Agent',
           { naturalLanguageOutput: hypothesizerResponse.text },
-          hypothesizerResponse.reasoning,
+          hypothesizerResponse.reasoningText,
         );
 
         await emitTraceEvent(writer, {
@@ -477,14 +574,53 @@ const multiPerspectiveHypothesisStep = createStep({
         });
 
         // Step 1: Call verifier orchestrator
+        const verifierAgentId = generateEventId();
+        await emitTraceEvent(writer, {
+          type: 'data-agent-start',
+          data: {
+            id: verifierAgentId,
+            stepId,
+            agentName: `Verifier (${perspective.name})`,
+            model: activeModelId(
+              state.modelMode as ModelMode,
+              'google/gemini-3-flash-preview',
+            ),
+            task: verifierPrompt.slice(0, 500),
+            timestamp: new Date().toISOString(),
+          },
+        });
+
+        verifyRequestContext.set('parent-agent-id', verifierAgentId);
         const verifierStartTime = new Date();
-        const verifierResponse = await generateWithRetry(
+        const verifierResponse = await streamWithRetry(
           mastra.getAgentById('verifier-orchestrator'),
           {
             prompt: verifierPrompt,
             options: { maxSteps: 100, requestContext: verifyRequestContext },
+            onTextChunk: (chunk) => {
+              emitTraceEvent(writer, {
+                type: 'data-agent-text-chunk',
+                data: { parentId: verifierAgentId, text: chunk, timestamp: new Date().toISOString() },
+              });
+            },
           },
         );
+        const verifierDurationMs = new Date().getTime() - verifierStartTime.getTime();
+        verifyRequestContext.set('parent-agent-id', undefined);
+
+        await emitTraceEvent(writer, {
+          type: 'data-agent-end',
+          data: {
+            id: verifierAgentId,
+            stepId,
+            agentName: `Verifier (${perspective.name})`,
+            reasoning: verifierResponse.text || '',
+            durationMs: verifierDurationMs,
+            attempt: 1,
+            totalAttempts: 1,
+            timestamp: new Date().toISOString(),
+          },
+        });
 
         const verifierTiming = recordStepTiming(
           `Round ${round} Verify (${perspective.id})`,
@@ -496,28 +632,30 @@ const multiPerspectiveHypothesisStep = createStep({
           `[Round ${round}] Verifier (${perspective.id}) finished at ${verifierTiming.endTime} (${verifierTiming.durationMinutes} min).`,
         );
 
-        await emitTraceEvent(writer, {
-          type: 'data-agent-reasoning',
-          data: {
-            stepId,
-            agentName: `Verifier (${perspective.name})`,
-            model: activeModelId(
-              state.modelMode as ModelMode,
-              'google/gemini-3-flash-preview',
-            ),
-            reasoning: verifierResponse.text || '',
-            durationMs: Math.round(verifierTiming.durationMinutes * 60_000),
-            timestamp: new Date().toISOString(),
-          },
-        });
-
         // Step 2: Extract structured feedback
         const extractorPrompt =
           'Please extract the verification feedback from the following analysis:\\n\\n' +
           verifierResponse.text;
 
+        const extractorAgentId = generateEventId();
+        await emitTraceEvent(writer, {
+          type: 'data-agent-start',
+          data: {
+            id: extractorAgentId,
+            stepId,
+            agentName: `Feedback Extractor (${perspective.name})`,
+            model: activeModelId(
+              state.modelMode as ModelMode,
+              'openai/gpt-5-mini',
+            ),
+            task: extractorPrompt.slice(0, 500),
+            timestamp: new Date().toISOString(),
+          },
+        });
+
+        verifyRequestContext.set('parent-agent-id', extractorAgentId);
         const extractorStartTime = new Date();
-        const extractorResponse = await generateWithRetry(
+        const extractorResponse = await streamWithRetry(
           mastra.getAgentById('verifier-feedback-extractor'),
           {
             prompt: extractorPrompt,
@@ -526,8 +664,30 @@ const multiPerspectiveHypothesisStep = createStep({
               requestContext: verifyRequestContext,
               structuredOutput: { schema: verifierFeedbackSchema },
             },
+            onTextChunk: (chunk) => {
+              emitTraceEvent(writer, {
+                type: 'data-agent-text-chunk',
+                data: { parentId: extractorAgentId, text: chunk, timestamp: new Date().toISOString() },
+              });
+            },
           },
         );
+        const extractorDurationMs = new Date().getTime() - extractorStartTime.getTime();
+        verifyRequestContext.set('parent-agent-id', undefined);
+
+        await emitTraceEvent(writer, {
+          type: 'data-agent-end',
+          data: {
+            id: extractorAgentId,
+            stepId,
+            agentName: `Feedback Extractor (${perspective.name})`,
+            reasoning: extractorResponse.text || '',
+            durationMs: extractorDurationMs,
+            attempt: 1,
+            totalAttempts: 1,
+            timestamp: new Date().toISOString(),
+          },
+        });
 
         const extractorTiming = recordStepTiming(
           `Round ${round} Verify Extract (${perspective.id})`,
@@ -543,7 +703,7 @@ const multiPerspectiveHypothesisStep = createStep({
           `Round ${round}: Verify (${perspective.id})`,
           'Verifier Feedback Extractor Agent',
           extractorResponse.object,
-          extractorResponse.reasoning,
+          extractorResponse.reasoningText,
         );
 
         if (!feedbackParsed.success) {
@@ -637,14 +797,53 @@ const multiPerspectiveHypothesisStep = createStep({
         mergedVocabulary: Array.from(mainVocabulary.values()),
       });
 
+      const synthesizerAgentId = generateEventId();
+      await emitTraceEvent(writer, {
+        type: 'data-agent-start',
+        data: {
+          id: synthesizerAgentId,
+          stepId,
+          agentName: `Hypothesis Synthesizer (Round ${round})`,
+          model: activeModelId(
+            state.modelMode as ModelMode,
+            'google/gemini-3-flash-preview',
+          ),
+          task: synthesizerPrompt.slice(0, 500),
+          timestamp: new Date().toISOString(),
+        },
+      });
+
+      mainRequestContext.set('parent-agent-id', synthesizerAgentId);
       const synthesizerStartTime = new Date();
-      const synthesizerResponse = await generateWithRetry(
+      const synthesizerResponse = await streamWithRetry(
         mastra.getAgentById('hypothesis-synthesizer'),
         {
           prompt: synthesizerPrompt,
           options: { maxSteps: 100, requestContext: mainRequestContext },
+          onTextChunk: (chunk) => {
+            emitTraceEvent(writer, {
+              type: 'data-agent-text-chunk',
+              data: { parentId: synthesizerAgentId, text: chunk, timestamp: new Date().toISOString() },
+            });
+          },
         },
       );
+      const synthesizerDurationMs = new Date().getTime() - synthesizerStartTime.getTime();
+      mainRequestContext.set('parent-agent-id', undefined);
+
+      await emitTraceEvent(writer, {
+        type: 'data-agent-end',
+        data: {
+          id: synthesizerAgentId,
+          stepId,
+          agentName: `Hypothesis Synthesizer (Round ${round})`,
+          reasoning: synthesizerResponse.text || '',
+          durationMs: synthesizerDurationMs,
+          attempt: 1,
+          totalAttempts: 1,
+          timestamp: new Date().toISOString(),
+        },
+      });
 
       const synthesizerTiming = recordStepTiming(
         `Round ${round} Synthesis`,
@@ -656,27 +855,12 @@ const multiPerspectiveHypothesisStep = createStep({
         `[Round ${round}] Synthesizer finished at ${synthesizerTiming.endTime} (${synthesizerTiming.durationMinutes} min).`,
       );
 
-      await emitTraceEvent(writer, {
-        type: 'data-agent-reasoning',
-        data: {
-          stepId,
-          agentName: `Hypothesis Synthesizer (Round ${round})`,
-          model: activeModelId(
-            state.modelMode as ModelMode,
-            'google/gemini-3-flash-preview',
-          ),
-          reasoning: synthesizerResponse.text || '',
-          durationMs: Math.round(synthesizerTiming.durationMinutes * 60_000),
-          timestamp: new Date().toISOString(),
-        },
-      });
-
       logAgentOutput(
         logFile,
         `Round ${round}: Synthesis`,
         'Hypothesis Synthesizer Agent',
         { naturalLanguageOutput: synthesizerResponse.text },
-        synthesizerResponse.reasoning,
+        synthesizerResponse.reasoningText,
       );
 
       // Read the merged state from main stores (synthesizer writes via tools)
@@ -711,14 +895,53 @@ const multiPerspectiveHypothesisStep = createStep({
         rules: Array.from(mainRules.values()),
       });
 
+      const convergenceAgentId = generateEventId();
+      await emitTraceEvent(writer, {
+        type: 'data-agent-start',
+        data: {
+          id: convergenceAgentId,
+          stepId,
+          agentName: `Convergence Verifier (Round ${round})`,
+          model: activeModelId(
+            state.modelMode as ModelMode,
+            'google/gemini-3-flash-preview',
+          ),
+          task: convergenceVerifierPrompt.slice(0, 500),
+          timestamp: new Date().toISOString(),
+        },
+      });
+
+      convergenceRequestContext.set('parent-agent-id', convergenceAgentId);
       const convergenceStartTime = new Date();
-      const convergenceVerifierResponse = await generateWithRetry(
+      const convergenceVerifierResponse = await streamWithRetry(
         mastra.getAgentById('verifier-orchestrator'),
         {
           prompt: convergenceVerifierPrompt,
           options: { maxSteps: 100, requestContext: convergenceRequestContext },
+          onTextChunk: (chunk) => {
+            emitTraceEvent(writer, {
+              type: 'data-agent-text-chunk',
+              data: { parentId: convergenceAgentId, text: chunk, timestamp: new Date().toISOString() },
+            });
+          },
         },
       );
+      const convergenceDurationMs = new Date().getTime() - convergenceStartTime.getTime();
+      convergenceRequestContext.set('parent-agent-id', undefined);
+
+      await emitTraceEvent(writer, {
+        type: 'data-agent-end',
+        data: {
+          id: convergenceAgentId,
+          stepId,
+          agentName: `Convergence Verifier (Round ${round})`,
+          reasoning: convergenceVerifierResponse.text || '',
+          durationMs: convergenceDurationMs,
+          attempt: 1,
+          totalAttempts: 1,
+          timestamp: new Date().toISOString(),
+        },
+      });
 
       const convergenceTiming = recordStepTiming(
         `Round ${round} Convergence Check`,
@@ -732,8 +955,25 @@ const multiPerspectiveHypothesisStep = createStep({
         'Please extract the verification feedback from the following analysis:\\n\\n' +
         convergenceVerifierResponse.text;
 
+      const convergenceExtractorAgentId = generateEventId();
+      await emitTraceEvent(writer, {
+        type: 'data-agent-start',
+        data: {
+          id: convergenceExtractorAgentId,
+          stepId,
+          agentName: `Convergence Extractor (Round ${round})`,
+          model: activeModelId(
+            state.modelMode as ModelMode,
+            'openai/gpt-5-mini',
+          ),
+          task: convergenceExtractorPrompt.slice(0, 500),
+          timestamp: new Date().toISOString(),
+        },
+      });
+
+      convergenceRequestContext.set('parent-agent-id', convergenceExtractorAgentId);
       const convergenceExtractorStartTime = new Date();
-      const convergenceExtractorResponse = await generateWithRetry(
+      const convergenceExtractorResponse = await streamWithRetry(
         mastra.getAgentById('verifier-feedback-extractor'),
         {
           prompt: convergenceExtractorPrompt,
@@ -742,8 +982,30 @@ const multiPerspectiveHypothesisStep = createStep({
             requestContext: convergenceRequestContext,
             structuredOutput: { schema: verifierFeedbackSchema },
           },
+          onTextChunk: (chunk) => {
+            emitTraceEvent(writer, {
+              type: 'data-agent-text-chunk',
+              data: { parentId: convergenceExtractorAgentId, text: chunk, timestamp: new Date().toISOString() },
+            });
+          },
         },
       );
+      const convergenceExtractorDurationMs = new Date().getTime() - convergenceExtractorStartTime.getTime();
+      convergenceRequestContext.set('parent-agent-id', undefined);
+
+      await emitTraceEvent(writer, {
+        type: 'data-agent-end',
+        data: {
+          id: convergenceExtractorAgentId,
+          stepId,
+          agentName: `Convergence Extractor (Round ${round})`,
+          reasoning: convergenceExtractorResponse.text || '',
+          durationMs: convergenceExtractorDurationMs,
+          attempt: 1,
+          totalAttempts: 1,
+          timestamp: new Date().toISOString(),
+        },
+      });
 
       const convergenceExtractorTiming = recordStepTiming(
         `Round ${round} Convergence Extract`,
@@ -761,7 +1023,7 @@ const multiPerspectiveHypothesisStep = createStep({
         `Round ${round}: Convergence Check`,
         'Verifier Feedback Extractor Agent',
         convergenceExtractorResponse.object,
-        convergenceExtractorResponse.reasoning,
+        convergenceExtractorResponse.reasoningText,
       );
 
       let converged = false;
@@ -957,10 +1219,24 @@ const answerQuestionsStep = createStep({
       rules: rules,
     });
 
-    const answererStartTime = new Date();
     const requestContext = new RequestContext<WorkflowRequestContext>();
     requestContext.set('model-mode', state.modelMode as ModelMode);
-    const answererResponse = await generateWithRetry(
+
+    const answererAgentId = generateEventId();
+    await emitTraceEvent(writer, {
+      type: 'data-agent-start',
+      data: {
+        id: answererAgentId,
+        stepId,
+        agentName: 'Question Answerer',
+        model: activeModelId(state.modelMode as ModelMode, 'google/gemini-3-flash-preview'),
+        task: answererPrompt.slice(0, 500),
+        timestamp: new Date().toISOString(),
+      },
+    });
+
+    const answererStartTime = new Date();
+    const answererResponse = await streamWithRetry(
       mastra.getAgentById('question-answerer'),
       {
         prompt: answererPrompt,
@@ -971,26 +1247,35 @@ const answerQuestionsStep = createStep({
             schema: questionsAnsweredSchema,
           },
         },
+        onTextChunk: (chunk) => {
+          emitTraceEvent(writer, {
+            type: 'data-agent-text-chunk',
+            data: { parentId: answererAgentId, text: chunk, timestamp: new Date().toISOString() },
+          });
+        },
       },
     );
+    const answererDurationMs = new Date().getTime() - answererStartTime.getTime();
+
+    await emitTraceEvent(writer, {
+      type: 'data-agent-end',
+      data: {
+        id: answererAgentId,
+        stepId,
+        agentName: 'Question Answerer',
+        reasoning: answererResponse.text || '',
+        durationMs: answererDurationMs,
+        attempt: 1,
+        totalAttempts: 1,
+        timestamp: new Date().toISOString(),
+      },
+    });
 
     const answererTiming = recordStepTiming('Step 3', 'Question Answerer Agent', answererStartTime);
     const finalStepTimings = [...state.stepTimings, answererTiming];
     console.log(
       `[Step 3] Question Answerer Agent finished at ${answererTiming.endTime} (${answererTiming.durationMinutes} min).`,
     );
-
-    await emitTraceEvent(writer, {
-      type: 'data-agent-reasoning',
-      data: {
-        stepId,
-        agentName: 'Question Answerer',
-        model: activeModelId(state.modelMode as ModelMode, 'google/gemini-3-flash-preview'),
-        reasoning: answererResponse.text || '',
-        durationMs: Math.round(answererTiming.durationMinutes * 60_000),
-        timestamp: new Date().toISOString(),
-      },
-    });
 
     const answererParseResult = questionsAnsweredSchema.safeParse(answererResponse.object);
 
@@ -999,7 +1284,7 @@ const answerQuestionsStep = createStep({
       'Step 3: Answer Questions',
       'Question Answerer Agent',
       answererResponse.object,
-      answererResponse.reasoning,
+      answererResponse.reasoningText,
     );
 
     if (!answererParseResult.success) {
