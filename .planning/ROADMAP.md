@@ -66,6 +66,11 @@ Plans:
 **Goal:** Strengthen the verification/improvement loop so it starts from the winning multi-perspective ruleset and reliably catches and fixes failing rules with clear failure diagnostics. Also fix the EVAL-03 regression where `scoreRuleQuality` returns all zeros due to Phase 4's output schema change.
 **Requirements:** WORK-05, WORK-06, EVAL-03
 **Gap Closure:** Closes EVAL-03 regression from v1.0 audit
+**Plans:** 2/2 plans complete
+
+Plans:
+1. Verification metadata and scorer fix (schemas, logging, EVAL-03 fix)
+2. Event enrichment and round-by-round UI (IterationUpdateEvent fields, eval results display)
 
 **Success Criteria:**
 1. The verification loop operates on the best-scoring ruleset selected in Phase 4

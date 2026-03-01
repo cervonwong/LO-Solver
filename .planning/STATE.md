@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in-progress
-last_updated: "2026-03-01T10:14:37Z"
+last_updated: "2026-03-01T10:19:19Z"
 progress:
   total_phases: 7
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 7
-  completed_plans: 6
+  completed_plans: 7
 ---
 
 # Project State
@@ -21,7 +21,7 @@ See: .planning/PROJECT.md (updated 2026-03-01)
 **Current milestone:** v1.0 Prove the Agentic Advantage
 
 ## Current Phase
-Phase 5: Verification Loop Improvements — In Progress (1/2 plans)
+Phase 5: Verification Loop Improvements — Complete (2/2 plans)
 
 ## Phase Status
 | Phase | Name | Status |
@@ -30,7 +30,7 @@ Phase 5: Verification Loop Improvements — In Progress (1/2 plans)
 | 2 | Evaluation Foundation | ✓ Complete |
 | 3 | Evaluation Expansion | ✓ Complete |
 | 4 | Multi-Perspective Hypothesis Generation | ✓ Complete |
-| 5 | Verification Loop Improvements | ◐ In Progress (1/2) |
+| 5 | Verification Loop Improvements | ✓ Complete |
 | 6 | UI Event System & Rules Panel | ○ Not Started |
 | 7 | Hierarchical Trace Display & Results | ○ Not Started |
 
@@ -52,6 +52,7 @@ Phase 5: Verification Loop Improvements — In Progress (1/2 plans)
 | 2026-03-01 | gpt-oss models routed to clarifai/fp4 then google-vertex fallback to avoid routing failures |
 | 2026-03-01 | Multi-perspective step output now includes verificationMetadata with round-by-round data; scoreRuleQuality reads it |
 | 2026-03-01 | Verification metadata schemas must be defined before questionAnsweringInputSchema to avoid forward-reference errors |
+| 2026-03-01 | IterationUpdateEvent enriched with optional fields (errantRules, errantSentences, passRate, isConvergenceWarning) for backward-compatible event evolution |
 
 ## Session Log
 | Date | Phase | Action | Notes |
@@ -70,6 +71,8 @@ Phase 5: Verification Loop Improvements — In Progress (1/2 plans)
 | 2026-03-01 | 4 | Plan 04-03 complete | Workflow rewrite + UI sliders + frontend progress (commits 8b2bdb8, 0f347f4 + post-checkpoint fixes) |
 | 2026-03-01 | 4 | Phase 4 complete | Multi-Perspective Hypothesis Generation done: workflow, agents, UI all operational |
 | 2026-03-01 | 5 | Plan 05-01 complete | Verification metadata, per-rule logging, EVAL-03 fix (commits db69d3f, 3090ef7) |
+| 2026-03-01 | 5 | Plan 05-02 complete | Event enrichment + round-by-round UI (commits 5edaf83, f84192b) |
+| 2026-03-01 | 5 | Phase 5 complete | Verification Loop Improvements done: metadata, event enrichment, eval UI |
 
 ---
 _Last updated: 2026-03-01_

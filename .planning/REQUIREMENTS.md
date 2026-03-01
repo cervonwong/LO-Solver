@@ -69,7 +69,7 @@
 | EVAL-05 | Phase 2: Evaluation Foundation | Complete |
 | EVAL-06 | Phase 2: Evaluation Foundation | Complete |
 | EVAL-02 | Phase 3: Evaluation Expansion | Complete |
-| EVAL-03 | Phase 5: Verification Loop Improvements | Pending (regression — scorer broken by Phase 4 schema change) |
+| EVAL-03 | Phase 5: Verification Loop Improvements | Complete |
 | EVAL-04 | Phase 3: Evaluation Expansion | Complete |
 | WORK-01 | Phase 4: Multi-Perspective Hypothesis Generation | Complete |
 | WORK-02 | Phase 4: Multi-Perspective Hypothesis Generation | Complete |
