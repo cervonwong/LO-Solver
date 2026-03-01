@@ -63,8 +63,9 @@ Plans:
 ---
 
 ### Phase 5: Verification Loop Improvements
-**Goal:** Strengthen the verification/improvement loop so it starts from the winning multi-perspective ruleset and reliably catches and fixes failing rules with clear failure diagnostics.
-**Requirements:** WORK-05, WORK-06
+**Goal:** Strengthen the verification/improvement loop so it starts from the winning multi-perspective ruleset and reliably catches and fixes failing rules with clear failure diagnostics. Also fix the EVAL-03 regression where `scoreRuleQuality` returns all zeros due to Phase 4's output schema change.
+**Requirements:** WORK-05, WORK-06, EVAL-03
+**Gap Closure:** Closes EVAL-03 regression from v1.0 audit
 
 **Success Criteria:**
 1. The verification loop operates on the best-scoring ruleset selected in Phase 4
@@ -98,4 +99,4 @@ Plans:
 
 ---
 
-_7 phases. 22 v1 requirements mapped. Phases 1-4 complete. Question bank expansion deferred to v2._
+_7 phases. 22 v1 requirements mapped. Phases 1-4 complete. EVAL-03 regressed in Phase 4, reassigned to Phase 5. Question bank expansion deferred to v2._

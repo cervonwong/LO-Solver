@@ -16,7 +16,7 @@
 
 - [x] **EVAL-01**: User can run automated scoring that executes the workflow against problems with known ground-truth answers and computes accuracy (percentage of correct translations)
 - [x] **EVAL-02**: User can run comparison mode that scores zero-shot LLM output vs. agentic workflow output on the same problems, showing the delta
-- [x] **EVAL-03**: User can evaluate intermediate outputs — rule quality (do generated rules correctly predict sentence translations?) and extraction quality (is the problem correctly parsed?)
+- [ ] **EVAL-03**: User can evaluate intermediate outputs — rule quality (do generated rules correctly predict sentence translations?) and extraction quality (is the problem correctly parsed?)
 - [x] **EVAL-04**: User can view eval results in the UI — accuracy scores, per-problem breakdowns, pass/fail per question
 - [x] **EVAL-05**: Eval harness uses Mastra's `@mastra/evals` framework where applicable (consult Mastra docs for eval patterns)
 - [x] **EVAL-06**: Eval results are persisted so users can track accuracy over time across workflow changes
@@ -69,7 +69,7 @@
 | EVAL-05 | Phase 2: Evaluation Foundation | Complete |
 | EVAL-06 | Phase 2: Evaluation Foundation | Complete |
 | EVAL-02 | Phase 3: Evaluation Expansion | Complete |
-| EVAL-03 | Phase 3: Evaluation Expansion | Complete |
+| EVAL-03 | Phase 5: Verification Loop Improvements | Pending (regression — scorer broken by Phase 4 schema change) |
 | EVAL-04 | Phase 3: Evaluation Expansion | Complete |
 | WORK-01 | Phase 4: Multi-Perspective Hypothesis Generation | Complete |
 | WORK-02 | Phase 4: Multi-Perspective Hypothesis Generation | Complete |
