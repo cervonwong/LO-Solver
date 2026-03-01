@@ -11,6 +11,8 @@ interface UseTypewriterOptions {
 interface UseTypewriterResult {
   visibleSegments: MessageSegment[];
   isTyping: boolean;
+  showCursor: boolean;
+  isCollapsing: boolean;
 }
 
 /**
@@ -32,11 +34,25 @@ export function useTypewriter(
   const segmentsKey = useMemo(() => JSON.stringify(segments), [segments]);
 
   const [charIndex, setCharIndex] = useState(0);
+  const [showCursor, setShowCursor] = useState(true);
+  const [isCollapsing, setIsCollapsing] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const cursorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const collapseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Reset when segments change
   useEffect(() => {
     setCharIndex(0);
+    setShowCursor(true);
+    setIsCollapsing(false);
+    if (cursorTimerRef.current) {
+      clearTimeout(cursorTimerRef.current);
+      cursorTimerRef.current = null;
+    }
+    if (collapseTimerRef.current) {
+      clearTimeout(collapseTimerRef.current);
+      collapseTimerRef.current = null;
+    }
   }, [segmentsKey]);
 
   // Run the typing interval
@@ -64,9 +80,40 @@ export function useTypewriter(
     };
   }, [segmentsKey, charDelay, enabled, totalChars, charIndex >= totalChars]);
 
+  // After typing finishes: blink 3s, then collapse, then hide
+  useEffect(() => {
+    if (!enabled) return;
+    const isTyping = charIndex < totalChars;
+    if (isTyping || totalChars === 0) return;
+
+    // After 3 visible blinks, start collapse animation
+    cursorTimerRef.current = setTimeout(() => {
+      setIsCollapsing(true);
+      cursorTimerRef.current = null;
+
+      // After collapse animation finishes (300ms), hide cursor
+      collapseTimerRef.current = setTimeout(() => {
+        setShowCursor(false);
+        setIsCollapsing(false);
+        collapseTimerRef.current = null;
+      }, 300);
+    }, 2500);
+
+    return () => {
+      if (cursorTimerRef.current) {
+        clearTimeout(cursorTimerRef.current);
+        cursorTimerRef.current = null;
+      }
+      if (collapseTimerRef.current) {
+        clearTimeout(collapseTimerRef.current);
+        collapseTimerRef.current = null;
+      }
+    };
+  }, [enabled, charIndex, totalChars]);
+
   // If disabled, return all segments immediately
   if (!enabled) {
-    return { visibleSegments: segments, isTyping: false };
+    return { visibleSegments: segments, isTyping: false, showCursor: false, isCollapsing: false };
   }
 
   // Derive visible segments from charIndex
@@ -87,5 +134,10 @@ export function useTypewriter(
 
   const isTyping = charIndex < totalChars;
 
-  return { visibleSegments, isTyping };
+  return {
+    visibleSegments,
+    isTyping,
+    showCursor: showCursor && (isTyping || charIndex > 0),
+    isCollapsing,
+  };
 }

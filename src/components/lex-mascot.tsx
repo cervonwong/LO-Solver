@@ -27,7 +27,7 @@ export function LexMascot() {
   const prevStateRef = useRef<MascotState>(mascotState);
   const cycleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const { visibleSegments, isTyping } = useTypewriter(currentMessage);
+  const { visibleSegments, isTyping, showCursor, isCollapsing } = useTypewriter(currentMessage);
 
   // Pick a new random message, avoiding the current one if possible
   const pickNewMessage = useCallback(
@@ -131,7 +131,18 @@ export function LexMascot() {
               <span key={i}>{seg.text}</span>
             ),
           )}
-          {isTyping && <span className="animate-pulse text-accent">|</span>}
+          {showCursor && (
+            <span
+              className="text-accent ml-0.5 inline-block"
+              style={{
+                animation: isCollapsing
+                  ? 'cursor-collapse 300ms ease-in forwards'
+                  : 'blink-cursor 1s step-end infinite',
+              }}
+            >
+              |
+            </span>
+          )}
         </p>
       </div>
     </div>
