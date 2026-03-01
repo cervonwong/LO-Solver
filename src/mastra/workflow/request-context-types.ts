@@ -18,6 +18,16 @@ export type { Rule } from './workflow-schemas';
 export type StepWriter = { write?: (data: unknown) => Promise<void> };
 
 /**
+ * Isolated store for a single perspective's rules and vocabulary.
+ * Created via createDraftStore, merged back via mergeDraftToMain.
+ */
+export interface DraftStore {
+  perspectiveId: string;
+  vocabulary: Map<string, VocabularyEntry>;
+  rules: Map<string, Rule>;
+}
+
+/**
  * Request Context type for the solver workflow.
  * All agents and tools access runtime data via this context.
  */
@@ -28,8 +38,14 @@ export interface WorkflowRequestContext {
   /** Structured problem data (immutable through workflow) */
   'structured-problem': StructuredProblemData;
 
-  /** Current rules (updated each iteration) */
+  /** Current rules (updated each iteration) — kept for backward compat with verifier tools */
   'current-rules': Rule[];
+
+  /** Main rules store (mutable Map for rules management, keyed by title) */
+  'rules-state': Map<string, Rule>;
+
+  /** Per-perspective draft stores for multi-perspective hypothesis generation */
+  'draft-stores': Map<string, DraftStore>;
 
   /** Log file path for writing tool output */
   'log-file': string;

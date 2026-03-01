@@ -7,6 +7,7 @@ import type {
   StructuredProblemData,
   Rule,
   StepWriter,
+  DraftStore,
 } from './request-context-types';
 import type { VocabularyEntry } from './vocabulary-tools';
 import type { Mastra } from '@mastra/core/mastra';
@@ -131,4 +132,185 @@ export async function emitToolTraceEvent(
   if (!requestContext) return;
   const writer = requestContext.get('step-writer') as StepWriter | undefined;
   await emitTraceEvent(writer, event);
+}
+
+// ---------------------------------------------------------------------------
+// Rules state helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Helper to get the main rules Map from request context.
+ * Throws if rules-state is not set in the context.
+ */
+export function getRulesState(requestContext: RequestContextGetter): Map<string, Rule> {
+  if (!requestContext) {
+    throw new Error('requestContext is required for rules tools');
+  }
+  const state = requestContext.get('rules-state') as Map<string, Rule> | undefined;
+  if (!state) {
+    throw new Error("'rules-state' not found in requestContext");
+  }
+  return state;
+}
+
+/**
+ * Helper to get rules as an array from the main rules Map.
+ */
+export function getRulesArray(requestContext: RequestContextGetter): Rule[] {
+  return Array.from(getRulesState(requestContext).values());
+}
+
+// ---------------------------------------------------------------------------
+// Draft store helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Internal helper to get or initialize the draft-stores Map.
+ * Creates an empty Map on first access if not yet set.
+ */
+function getDraftStoresMap(requestContext: RequestContextGetter): Map<string, DraftStore> {
+  if (!requestContext) {
+    throw new Error('requestContext is required for draft store operations');
+  }
+  let stores = requestContext.get('draft-stores') as Map<string, DraftStore> | undefined;
+  if (!stores) {
+    // First access — the Map does not exist yet; create it.
+    // Note: WorkflowRequestContext.get returns undefined for unset keys,
+    // but the map reference must be stored externally by the caller that
+    // initializes requestContext. We create a new Map here for safety.
+    stores = new Map<string, DraftStore>();
+  }
+  return stores;
+}
+
+/**
+ * Create a new draft store for a perspective.
+ * If pullFromMain is true, deep-copies the current main vocabulary and rules into the draft.
+ */
+export function createDraftStore(
+  requestContext: RequestContextGetter,
+  perspectiveId: string,
+  pullFromMain: boolean,
+): DraftStore {
+  if (!requestContext) {
+    throw new Error('requestContext is required for draft store creation');
+  }
+  const stores = getDraftStoresMap(requestContext);
+
+  let vocabulary = new Map<string, VocabularyEntry>();
+  let rules = new Map<string, Rule>();
+
+  if (pullFromMain) {
+    // Deep-copy main vocabulary
+    const mainVocab = requestContext.get('vocabulary-state') as
+      | Map<string, VocabularyEntry>
+      | undefined;
+    if (mainVocab) {
+      for (const [key, entry] of mainVocab) {
+        vocabulary.set(key, { ...entry });
+      }
+    }
+
+    // Deep-copy main rules
+    const mainRules = requestContext.get('rules-state') as Map<string, Rule> | undefined;
+    if (mainRules) {
+      for (const [key, rule] of mainRules) {
+        rules.set(key, { ...rule });
+      }
+    }
+  }
+
+  const store: DraftStore = { perspectiveId, vocabulary, rules };
+  stores.set(perspectiveId, store);
+  return store;
+}
+
+/**
+ * Get a specific draft store by perspective ID.
+ * Throws if the draft store does not exist.
+ */
+export function getDraftStore(
+  requestContext: RequestContextGetter,
+  perspectiveId: string,
+): DraftStore {
+  const stores = getDraftStoresMap(requestContext);
+  const store = stores.get(perspectiveId);
+  if (!store) {
+    throw new Error(`Draft store not found for perspective '${perspectiveId}'`);
+  }
+  return store;
+}
+
+/**
+ * Get all draft stores.
+ */
+export function getAllDraftStores(requestContext: RequestContextGetter): Map<string, DraftStore> {
+  return getDraftStoresMap(requestContext);
+}
+
+/**
+ * Merge a draft store's vocabulary and rules into the main stores.
+ * Overwrites by key. Removes the draft store entry after merge.
+ */
+export function mergeDraftToMain(
+  requestContext: RequestContextGetter,
+  perspectiveId: string,
+): void {
+  if (!requestContext) {
+    throw new Error('requestContext is required for draft store merge');
+  }
+  const stores = getDraftStoresMap(requestContext);
+  const draft = stores.get(perspectiveId);
+  if (!draft) {
+    throw new Error(`Draft store not found for perspective '${perspectiveId}'`);
+  }
+
+  // Merge vocabulary into main
+  const mainVocab = requestContext.get('vocabulary-state') as
+    | Map<string, VocabularyEntry>
+    | undefined;
+  if (mainVocab) {
+    for (const [key, entry] of draft.vocabulary) {
+      mainVocab.set(key, entry);
+    }
+  }
+
+  // Merge rules into main
+  const mainRules = requestContext.get('rules-state') as Map<string, Rule> | undefined;
+  if (mainRules) {
+    for (const [key, rule] of draft.rules) {
+      mainRules.set(key, rule);
+    }
+  }
+
+  // Remove the draft store
+  stores.delete(perspectiveId);
+}
+
+/**
+ * Clear all draft stores.
+ */
+export function clearAllDraftStores(requestContext: RequestContextGetter): void {
+  const stores = getDraftStoresMap(requestContext);
+  stores.clear();
+}
+
+/**
+ * Get the vocabulary Map from a specific draft store.
+ */
+export function getDraftVocabularyState(
+  requestContext: RequestContextGetter,
+  perspectiveId: string,
+): Map<string, VocabularyEntry> {
+  return getDraftStore(requestContext, perspectiveId).vocabulary;
+}
+
+/**
+ * Get the rules Map from a specific draft store.
+ */
+export function getDraftRulesState(
+  requestContext: RequestContextGetter,
+  perspectiveId: string,
+): Map<string, Rule> {
+  return getDraftStore(requestContext, perspectiveId).rules;
 }
