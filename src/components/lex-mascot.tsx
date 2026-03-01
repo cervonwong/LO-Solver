@@ -1,41 +1,107 @@
 'use client';
 
 import Image from 'next/image';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useMascotState, type MascotState } from '@/contexts/mascot-context';
+import { getRandomMessage, type MessageSegment } from '@/lib/mascot-messages';
+import { useTypewriter } from '@/hooks/use-typewriter';
 
-const MESSAGES: Record<MascotState, { text: string; accent?: string }[]> = {
-  idle: [
-    { text: "I'm Lex, the Linguistics Olympiad Problem solving duck! " },
-    { text: 'Copy and paste', accent: 'true' },
-    { text: ' a LO Problem below or try one of my examples!' },
-  ],
-  ready: [
-    { text: "Ooh, that's a juicy one! Hit " },
-    { text: 'Solve', accent: 'true' },
-    { text: " whenever you're ready and I'll get quacking!" },
-  ],
-  solving: [{ text: 'Quack-ulating... my finest duck brains are on it!' }],
-  solved: [{ text: "Duck yeah! The answer's all wrapped up. How'd I do?" }],
-  error: [
-    { text: 'Oh no, I ruffled my feathers on that one... Try again or paste a different problem!' },
-  ],
+const STATE_IMAGE: Record<MascotState, string> = {
+  idle: '/lex-neutral.png',
+  ready: '/lex-neutral.png',
+  solving: '/lex-thinking.png',
+  solved: '/lex-happy.png',
+  error: '/lex-defeated.png',
 };
+
+const ALL_IMAGES = [...new Set(Object.values(STATE_IMAGE))];
+
+/** Reading pause (ms) before auto-cycling to next solving message */
+const CYCLE_PAUSE_MS = 8000;
 
 export function LexMascot() {
   const { mascotState } = useMascotState();
-  const segments = MESSAGES[mascotState];
+  const [currentMessage, setCurrentMessage] = useState<MessageSegment[]>(() =>
+    getRandomMessage('idle'),
+  );
+  const prevStateRef = useRef<MascotState>(mascotState);
+  const cycleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const { visibleSegments, isTyping } = useTypewriter(currentMessage);
+
+  // Pick a new random message, avoiding the current one if possible
+  const pickNewMessage = useCallback(
+    (state: MascotState) => {
+      let next = getRandomMessage(state);
+      // Re-roll once to avoid repeats (best-effort)
+      if (JSON.stringify(next) === JSON.stringify(currentMessage)) {
+        next = getRandomMessage(state);
+      }
+      setCurrentMessage(next);
+    },
+    [currentMessage],
+  );
+
+  // Handle state changes: pick new message, cancel pending cycle timer
+  useEffect(() => {
+    if (mascotState !== prevStateRef.current) {
+      prevStateRef.current = mascotState;
+      if (cycleTimerRef.current) {
+        clearTimeout(cycleTimerRef.current);
+        cycleTimerRef.current = null;
+      }
+      pickNewMessage(mascotState);
+    }
+  }, [mascotState, pickNewMessage]);
+
+  // Auto-cycle during solving: after typing finishes, wait CYCLE_PAUSE_MS then show next
+  useEffect(() => {
+    if (mascotState !== 'solving') return;
+    if (isTyping) return;
+
+    cycleTimerRef.current = setTimeout(() => {
+      pickNewMessage('solving');
+    }, CYCLE_PAUSE_MS);
+
+    return () => {
+      if (cycleTimerRef.current) {
+        clearTimeout(cycleTimerRef.current);
+        cycleTimerRef.current = null;
+      }
+    };
+  }, [mascotState, isTyping, pickNewMessage]);
+
+  // Preload all duck images on mount
+  useEffect(() => {
+    ALL_IMAGES.forEach((src) => {
+      const img = new window.Image();
+      img.src = src;
+    });
+  }, []);
+
+  // Cleanup cycle timer on unmount
+  useEffect(() => {
+    return () => {
+      if (cycleTimerRef.current) {
+        clearTimeout(cycleTimerRef.current);
+      }
+    };
+  }, []);
+
+  const imageSrc = STATE_IMAGE[mascotState];
 
   return (
     <div className="flex items-start">
       <Image
-        src="/lex-mascot.png"
+        src={imageSrc}
         alt="Lex the duck mascot"
         width={60}
         height={60}
         className="shrink-0"
+        priority
       />
 
-      {/* SVG tail — sits on top of the bubble's left border via z-10 */}
+      {/* SVG tail -- sits on top of the bubble's left border via z-10 */}
       <svg
         width="12"
         height="24"
@@ -56,7 +122,7 @@ export function LexMascot() {
       {/* Speech bubble with crosshair corner extensions */}
       <div className="speech-bubble px-4 py-3">
         <p className="font-heading text-base leading-relaxed">
-          {segments.map((seg, i) =>
+          {visibleSegments.map((seg, i) =>
             seg.accent ? (
               <span key={i} className="text-accent">
                 {seg.text}
@@ -65,6 +131,7 @@ export function LexMascot() {
               <span key={i}>{seg.text}</span>
             ),
           )}
+          {isTyping && <span className="animate-pulse text-accent">|</span>}
         </p>
       </div>
     </div>
