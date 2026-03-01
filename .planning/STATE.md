@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in-progress
-last_updated: "2026-03-01T12:46:44Z"
+last_updated: "2026-03-01T13:04:48Z"
 progress:
   total_phases: 7
   completed_phases: 5
   total_plans: 11
-  completed_plans: 9
+  completed_plans: 10
 ---
 
 # Project State
@@ -21,7 +21,7 @@ See: .planning/PROJECT.md (updated 2026-03-01)
 **Current milestone:** v1.0 Prove the Agentic Advantage
 
 ## Current Phase
-Phase 6: UI Event System & Rules Panel — In Progress (2/4 plans)
+Phase 6: UI Event System & Rules Panel — In Progress (3/4 plans)
 
 ## Phase Status
 | Phase | Name | Status |
@@ -31,7 +31,7 @@ Phase 6: UI Event System & Rules Panel — In Progress (2/4 plans)
 | 3 | Evaluation Expansion | ✓ Complete |
 | 4 | Multi-Perspective Hypothesis Generation | ✓ Complete |
 | 5 | Verification Loop Improvements | ✓ Complete |
-| 6 | UI Event System & Rules Panel | ◐ In Progress (2/4) |
+| 6 | UI Event System & Rules Panel | ◐ In Progress (3/4) |
 | 7 | Hierarchical Trace Display & Results | ○ Not Started |
 
 ## Accumulated Context
@@ -57,6 +57,9 @@ Phase 6: UI Event System & Rules Panel — In Progress (2/4 plans)
 | 2026-03-01 | VocabularyPanel prop change from mutationSummary to activityEvents is breaking; page.tsx update deferred to Plan 06-04 |
 | 2026-03-01 | Hierarchical event types use id/parentId for nesting; AgentReasoningEvent deprecated but kept in union for backward compat |
 | 2026-03-01 | streamWithRetry returns FullOutput from @mastra/core/stream; onTextChunk callback enables real-time text forwarding |
+| 2026-03-01 | All workflow agent calls follow hierarchical event pattern: generateEventId -> agent-start -> set parent-agent-id -> streamWithRetry -> agent-end -> clear parent-agent-id |
+| 2026-03-01 | Parallel agent calls set parent-agent-id on per-perspective/verify RequestContext instances to avoid race conditions |
+| 2026-03-01 | streamWithRetry generic uses Agent['generate'] parameter types (not Agent['stream']) to support structuredOutput overloads |
 
 ## Session Log
 | Date | Phase | Action | Notes |
@@ -79,6 +82,7 @@ Phase 6: UI Event System & Rules Panel — In Progress (2/4 plans)
 | 2026-03-01 | 5 | Phase 5 complete | Verification Loop Improvements done: metadata, event enrichment, eval UI |
 | 2026-03-01 | 6 | Plan 06-01 complete | Hierarchical event types + streamWithRetry function (commits 7e89b2d, 8839c3a) |
 | 2026-03-01 | 6 | Plan 06-02 complete | Rules panel, rolling activity chips, vocabulary panel updated (commits d0c7fbe, f4fd439) |
+| 2026-03-01 | 6 | Plan 06-03 complete | Hierarchical event emission, streamWithRetry migration, rule test events (commits e93e500, a52f0a8, 52dc53b, fb21c7a) |
 
 ---
 _Last updated: 2026-03-01_
