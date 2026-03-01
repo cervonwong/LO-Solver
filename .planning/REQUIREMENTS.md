@@ -23,10 +23,10 @@
 
 ### Workflow Improvements (WORK)
 
-- [ ] **WORK-01**: A dispatcher agent analyzes the problem and generates multiple linguistic perspectives to explore (e.g., phonological rules, morphological patterns, grammatical tense, person/number agreement, part of speech, word order)
-- [ ] **WORK-02**: Each perspective is dispatched to an independent hypothesizer agent that generates rules and vocabulary from that specific linguistic angle
-- [ ] **WORK-03**: Each hypothesizer uses the existing testing tools (`testRuleWithRuleset`, `testSentenceWithRuleset`) to validate its rules against the data
-- [ ] **WORK-04**: Competing hypothesis sets are scored by test pass rate, and the best-scoring ruleset is selected as the basis for further refinement
+- [x] **WORK-01**: A dispatcher agent analyzes the problem and generates multiple linguistic perspectives to explore (e.g., phonological rules, morphological patterns, grammatical tense, person/number agreement, part of speech, word order)
+- [x] **WORK-02**: Each perspective is dispatched to an independent hypothesizer agent that generates rules and vocabulary from that specific linguistic angle
+- [x] **WORK-03**: Each hypothesizer uses the existing testing tools (`testRuleWithRuleset`, `testSentenceWithRuleset`) to validate its rules against the data
+- [x] **WORK-04**: Competing hypothesis sets are scored by test pass rate, and the best-scoring ruleset is selected as the basis for further refinement
 - [ ] **WORK-05**: The verification loop uses the winning ruleset and iteratively improves it (existing verify/improve pattern, but starting from a stronger foundation)
 - [ ] **WORK-06**: Failure reasons are logged and surfaced — when a rule fails testing, the specific sentences it fails on and why are captured for the improver agent
 
@@ -71,10 +71,10 @@
 | EVAL-02 | Phase 3: Evaluation Expansion | Complete |
 | EVAL-03 | Phase 3: Evaluation Expansion | Complete |
 | EVAL-04 | Phase 3: Evaluation Expansion | Complete |
-| WORK-01 | Phase 4: Multi-Perspective Hypothesis Generation | Pending |
-| WORK-02 | Phase 4: Multi-Perspective Hypothesis Generation | Pending |
-| WORK-03 | Phase 4: Multi-Perspective Hypothesis Generation | Pending |
-| WORK-04 | Phase 4: Multi-Perspective Hypothesis Generation | Pending |
+| WORK-01 | Phase 4: Multi-Perspective Hypothesis Generation | Complete |
+| WORK-02 | Phase 4: Multi-Perspective Hypothesis Generation | Complete |
+| WORK-03 | Phase 4: Multi-Perspective Hypothesis Generation | Complete |
+| WORK-04 | Phase 4: Multi-Perspective Hypothesis Generation | Complete |
 | WORK-05 | Phase 5: Verification Loop Improvements | Pending |
 | WORK-06 | Phase 5: Verification Loop Improvements | Pending |
 | UI-01 | Phase 6: UI Event System & Rules Panel | Pending |

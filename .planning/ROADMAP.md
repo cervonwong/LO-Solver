@@ -49,7 +49,7 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 04-01-PLAN.md — Foundation: rules CRUD tools, draft store architecture, new workflow schemas
+- [x] 04-01-PLAN.md — Foundation: rules CRUD tools, draft store architecture, new workflow schemas
 - [ ] 04-02-PLAN.md — Agents: dispatcher, synthesizer, improver-dispatcher definitions + hypothesizer refactor
 - [ ] 04-03-PLAN.md — Workflow rewrite: dispatch-hypothesize-verify-synthesize loop + UI sliders + frontend progress
 
