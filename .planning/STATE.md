@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in-progress
-last_updated: "2026-03-01T05:30:09.000Z"
+last_updated: "2026-03-01T05:37:22.000Z"
 progress:
   total_phases: 7
   completed_phases: 3
   total_plans: 3
-  completed_plans: 1
+  completed_plans: 2
 ---
 
 # Project State
@@ -21,7 +21,7 @@ See: .planning/PROJECT.md (updated 2026-03-01)
 **Current milestone:** v1.0 Prove the Agentic Advantage
 
 ## Current Phase
-Phase 4: Multi-Perspective Hypothesis Generation — In Progress (Plan 1 of 3 complete)
+Phase 4: Multi-Perspective Hypothesis Generation — In Progress (Plan 2 of 3 complete)
 
 ## Phase Status
 | Phase | Name | Status |
@@ -29,7 +29,7 @@ Phase 4: Multi-Perspective Hypothesis Generation — In Progress (Plan 1 of 3 co
 | 1 | Legacy Cleanup | ✓ Complete |
 | 2 | Evaluation Foundation | ✓ Complete |
 | 3 | Evaluation Expansion | ✓ Complete |
-| 4 | Multi-Perspective Hypothesis Generation | ◐ In Progress (1/3) |
+| 4 | Multi-Perspective Hypothesis Generation | ◐ In Progress (2/3) |
 | 5 | Verification Loop Improvements | ○ Not Started |
 | 6 | UI Event System & Rules Panel | ○ Not Started |
 | 7 | Hierarchical Trace Display & Results | ○ Not Started |
@@ -44,6 +44,8 @@ Phase 4: Multi-Perspective Hypothesis Generation — In Progress (Plan 1 of 3 co
 | 2026-03-01 | Eval results viewable at /evals with run history, per-problem breakdown, comparison delta, and intermediate scores |
 | 2026-03-01 | Rules CRUD tools follow same 5-tool pattern as vocabulary tools (keyed by title); DraftStore provides per-perspective isolation via Map in RequestContext |
 | 2026-03-01 | Zod .default() makes schema input optional but output required; Mastra types inputData as output type, so callers must provide explicit values |
+| 2026-03-01 | Dispatcher agents use no tools; structured output applied at call site via structuredOutput param |
+| 2026-03-01 | Hypothesizer uses rules CRUD tools directly; extractor chain deprecated but kept for backward compat |
 
 ## Session Log
 | Date | Phase | Action | Notes |
@@ -58,6 +60,7 @@ Phase 4: Multi-Perspective Hypothesis Generation — In Progress (Plan 1 of 3 co
 | 2026-03-01 | 3 | Phase 3 complete | Evaluation Expansion done: backend scoring + frontend viewer |
 | 2026-03-01 | 4 | Context gathered | Phase context captured: dispatch-hypothesize-verify-synthesize loop, rules CRUD tools, main/draft stores, UI sliders |
 | 2026-03-01 | 4 | Plan 04-01 complete | Foundation types/tools/schemas: rules CRUD tools, DraftStore infrastructure, multi-perspective Zod schemas (commits 04de404, e38212e) |
+| 2026-03-01 | 4 | Plan 04-02 complete | Agent definitions: dispatcher, synthesizer, improver-dispatcher, hypothesizer refactored (commits b674113, c23adb8) |
 
 ---
 _Last updated: 2026-03-01_
