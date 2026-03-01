@@ -18,6 +18,13 @@ export interface RuleQualityScore {
   verifierConclusion: string;
   score: number;
   iterations: number;
+  roundDetails?: Array<{
+    round: number;
+    convergencePassRate: number;
+    convergenceConclusion: string;
+    converged: boolean;
+    perspectiveCount: number;
+  }>;
 }
 
 /**
@@ -35,7 +42,11 @@ export function scoreExtraction(
     score: 0,
   };
 
-  if (extractionOutput === null || extractionOutput === undefined || typeof extractionOutput !== 'object') {
+  if (
+    extractionOutput === null ||
+    extractionOutput === undefined ||
+    typeof extractionOutput !== 'object'
+  ) {
     return defaultResult;
   }
 
@@ -71,6 +82,7 @@ export function scoreExtraction(
 
 /**
  * Score the rule quality based on verifier feedback from the verify-improve loop.
+ * Reads the enriched verificationMetadata format (new) with legacy fallback (old).
  */
 export function scoreRuleQuality(verifyImproveOutput: unknown): RuleQualityScore {
   const defaultResult: RuleQualityScore = {
@@ -93,8 +105,64 @@ export function scoreRuleQuality(verifyImproveOutput: unknown): RuleQualityScore
 
   const output = verifyImproveOutput as Record<string, unknown>;
 
-  const iterationCount =
-    typeof output.iterationCount === 'number' ? output.iterationCount : 0;
+  // New format: { structuredProblem, rules, verificationMetadata }
+  const verificationMetadata = output.verificationMetadata as
+    | Record<string, unknown>
+    | null
+    | undefined;
+  if (verificationMetadata && typeof verificationMetadata === 'object') {
+    const totalRounds =
+      typeof verificationMetadata.totalRounds === 'number' ? verificationMetadata.totalRounds : 0;
+    const finalRulesCount =
+      typeof verificationMetadata.finalRulesCount === 'number'
+        ? verificationMetadata.finalRulesCount
+        : 0;
+    const finalErrantRulesCount =
+      typeof verificationMetadata.finalErrantRulesCount === 'number'
+        ? verificationMetadata.finalErrantRulesCount
+        : 0;
+    const finalSentencesTestedCount =
+      typeof verificationMetadata.finalSentencesTestedCount === 'number'
+        ? verificationMetadata.finalSentencesTestedCount
+        : 0;
+    const finalErrantSentencesCount =
+      typeof verificationMetadata.finalErrantSentencesCount === 'number'
+        ? verificationMetadata.finalErrantSentencesCount
+        : 0;
+    const finalConclusion =
+      typeof verificationMetadata.finalConclusion === 'string'
+        ? verificationMetadata.finalConclusion
+        : 'unknown';
+
+    const passingRules = Math.max(0, finalRulesCount - finalErrantRulesCount);
+    const passingSentences = Math.max(0, finalSentencesTestedCount - finalErrantSentencesCount);
+    const score = finalRulesCount > 0 ? passingRules / finalRulesCount : 0;
+
+    const rounds = Array.isArray(verificationMetadata.rounds) ? verificationMetadata.rounds : [];
+    const roundDetails = rounds.map((r: Record<string, unknown>) => ({
+      round: typeof r.round === 'number' ? r.round : 0,
+      convergencePassRate:
+        typeof r.convergencePassRate === 'number' ? r.convergencePassRate : 0,
+      convergenceConclusion:
+        typeof r.convergenceConclusion === 'string' ? r.convergenceConclusion : 'unknown',
+      converged: typeof r.converged === 'boolean' ? r.converged : false,
+      perspectiveCount: Array.isArray(r.perspectives) ? r.perspectives.length : 0,
+    }));
+
+    return {
+      totalRules: finalRulesCount,
+      passingRules,
+      totalSentencesTested: finalSentencesTestedCount,
+      passingSentences,
+      verifierConclusion: finalConclusion,
+      score,
+      iterations: totalRounds,
+      roundDetails,
+    };
+  }
+
+  // Legacy format fallback: { iterationCount, testResults.{...} }
+  const iterationCount = typeof output.iterationCount === 'number' ? output.iterationCount : 0;
 
   const testResults = output.testResults as Record<string, unknown> | null | undefined;
   if (testResults === null || testResults === undefined || typeof testResults !== 'object') {
@@ -103,16 +171,12 @@ export function scoreRuleQuality(verifyImproveOutput: unknown): RuleQualityScore
 
   const rulesTestedCount =
     typeof testResults.rulesTestedCount === 'number' ? testResults.rulesTestedCount : 0;
-
   const errantRules = Array.isArray(testResults.errantRules) ? testResults.errantRules : [];
-
   const sentencesTestedCount =
     typeof testResults.sentencesTestedCount === 'number' ? testResults.sentencesTestedCount : 0;
-
   const errantSentences = Array.isArray(testResults.errantSentences)
     ? testResults.errantSentences
     : [];
-
   const conclusion =
     typeof testResults.conclusion === 'string' ? testResults.conclusion : 'unknown';
 
