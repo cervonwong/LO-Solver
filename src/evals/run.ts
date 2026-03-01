@@ -174,6 +174,8 @@ async function main(): Promise<void> {
         inputData: {
           rawProblemText: evalProblem.rawProblemText,
           modelMode: mode,
+          maxRounds: 3,
+          perspectiveCount: 3,
         },
       });
     })();

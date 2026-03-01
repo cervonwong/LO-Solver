@@ -4,6 +4,36 @@ import { getLogFilePath, initializeLogFile } from './logging-utils';
 
 export const MAX_VERIFY_IMPROVE_ITERATIONS = 4;
 
+// ---------------------------------------------------------------------------
+// Core schemas (defined first since other schemas reference them)
+// ---------------------------------------------------------------------------
+
+export const ruleSchema = z.object({
+  title: z
+    .string()
+    .describe(
+      'A short title that groups or organises the rule (e.g. "Sentence syntax", "Verb agreement", "Noun cases")',
+    ),
+  description: z
+    .string()
+    .describe('A detailed description of the rule, such as grammar patterns or phonetic changes'),
+  confidence: z
+    .enum(['HIGH', 'MEDIUM', 'LOW'])
+    .optional()
+    .describe('Confidence level for this rule based on evidence strength'),
+});
+
+export type Rule = z.infer<typeof ruleSchema>;
+
+const rulesArraySchema = z.array(ruleSchema);
+
+// Note: vocabularyEntrySchema is imported from vocabulary-tools.ts
+const vocabularyArraySchema = z.array(vocabularyEntrySchema);
+
+// ---------------------------------------------------------------------------
+// Workflow state and input schemas
+// ---------------------------------------------------------------------------
+
 // Step timing schema for workflow state
 const stepTimingSchema = z.object({
   stepName: z.string(),
@@ -16,10 +46,14 @@ const stepTimingSchema = z.object({
 // All fields have defaults so workflow can start without initialState
 export const workflowStateSchema = z.object({
   vocabulary: z.record(z.string(), vocabularyEntrySchema).default({}), // Vocabulary keyed by foreignForm
+  rules: z.record(z.string(), ruleSchema).default({}), // Main rules store keyed by title
   logFile: z.string().default(''), // Will be set in first step
   startTime: z.string().default(''), // Will be set in first step (ISO string)
   stepTimings: z.array(stepTimingSchema).default([]),
   modelMode: z.enum(['testing', 'production']).default('testing'),
+  currentRound: z.number().default(0),
+  maxRounds: z.number().default(3),
+  perspectiveCount: z.number().default(3),
 });
 
 export type WorkflowState = z.infer<typeof workflowStateSchema>;
@@ -32,17 +66,27 @@ export const initializeWorkflowState = (): WorkflowState => {
 
   return {
     vocabulary: {},
+    rules: {},
     logFile,
     startTime,
     stepTimings: [],
     modelMode: 'testing' as const,
+    currentRound: 0,
+    maxRounds: 3,
+    perspectiveCount: 3,
   };
 };
 
 export const rawProblemInputSchema = z.object({
   rawProblemText: z.string(),
   modelMode: z.enum(['testing', 'production']).default('testing'),
+  maxRounds: z.number().min(1).max(5).default(3),
+  perspectiveCount: z.number().min(2).max(7).default(3),
 });
+
+// ---------------------------------------------------------------------------
+// Structured problem schemas
+// ---------------------------------------------------------------------------
 
 export const structuredProblemDataSchema = z.object({
   context: z
@@ -84,27 +128,9 @@ export const structuredProblemSchema = z.object({
     .describe('The extracted problem data. Null if success is false.'),
 });
 
-export const ruleSchema = z.object({
-  title: z
-    .string()
-    .describe(
-      'A short title that groups or organises the rule (e.g. "Sentence syntax", "Verb agreement", "Noun cases")',
-    ),
-  description: z
-    .string()
-    .describe('A detailed description of the rule, such as grammar patterns or phonetic changes'),
-  confidence: z
-    .enum(['HIGH', 'MEDIUM', 'LOW'])
-    .optional()
-    .describe('Confidence level for this rule based on evidence strength'),
-});
-
-export type Rule = z.infer<typeof ruleSchema>;
-
-const rulesArraySchema = z.array(ruleSchema);
-
-// Note: vocabularyEntrySchema is imported from vocabulary-tools.ts
-const vocabularyArraySchema = z.array(vocabularyEntrySchema);
+// ---------------------------------------------------------------------------
+// Rules extraction schema (used by hypothesis extractor)
+// ---------------------------------------------------------------------------
 
 export const rulesSchema = z.object({
   success: z
@@ -122,6 +148,10 @@ export const rulesSchema = z.object({
     ),
   // Note: Vocabulary is managed via workflow state, not extracted in this schema
 });
+
+// ---------------------------------------------------------------------------
+// Verifier feedback schema
+// ---------------------------------------------------------------------------
 
 // Schema for the verifier orchestrator's aggregated feedback
 const issueSchema = z.object({
@@ -162,6 +192,10 @@ export const verifierFeedbackSchema = z.object({
     ),
 });
 
+// ---------------------------------------------------------------------------
+// Question answering schemas
+// ---------------------------------------------------------------------------
+
 const questionAnswerSchema = z.object({
   questionId: z.string().describe('The ID of the question being answered (e.g., Q1, Q2)'),
   answer: z.string().describe('The final translated phrase or answer'),
@@ -195,6 +229,10 @@ export const questionsAnsweredSchema = z.object({
     .describe('Array of answers for each question. Null if success is false.'),
 });
 
+// ---------------------------------------------------------------------------
+// Hypothesis-test loop schemas
+// ---------------------------------------------------------------------------
+
 // Combined schema for the hypothesis-test loop
 // This schema carries all the data needed for both the hypothesizer and tester
 // Vocabulary is managed via workflow state, not passed in this schema
@@ -221,3 +259,94 @@ export const questionAnsweringInputSchema = z.object({
   structuredProblem: structuredProblemDataSchema,
   rules: rulesArraySchema,
 });
+
+// ---------------------------------------------------------------------------
+// Multi-perspective hypothesis generation schemas (Phase 4)
+// ---------------------------------------------------------------------------
+
+/**
+ * Perspective definition from dispatcher output.
+ * Each perspective represents a linguistic angle for a hypothesizer to explore.
+ */
+export const perspectiveSchema = z.object({
+  id: z
+    .string()
+    .describe(
+      'Unique perspective identifier (e.g., "morphological-affixes", "verb-agreement")',
+    ),
+  name: z.string().describe('Human-readable name for this perspective'),
+  linguisticAngle: z
+    .string()
+    .describe(
+      'The specific linguistic angle to explore (e.g., "Focus on verb morphology and tense/aspect markers")',
+    ),
+  reasoning: z
+    .string()
+    .describe('Why this perspective is worth exploring for this problem'),
+  priority: z
+    .enum(['HIGH', 'MEDIUM', 'LOW'])
+    .describe('How likely this angle is to yield useful rules'),
+});
+
+export type Perspective = z.infer<typeof perspectiveSchema>;
+
+/**
+ * Dispatcher output: the perspectives to explore for this problem.
+ */
+export const dispatcherOutputSchema = z.object({
+  success: z.boolean(),
+  explanation: z.string(),
+  perspectives: z.array(perspectiveSchema).nullable(),
+});
+
+export type DispatcherOutput = z.infer<typeof dispatcherOutputSchema>;
+
+/**
+ * Result of one perspective's hypothesis + verification scoring.
+ */
+export const perspectiveResultSchema = z.object({
+  perspectiveId: z.string(),
+  perspectiveName: z.string(),
+  rulesCount: z.number(),
+  vocabularyCount: z.number(),
+  testPassRate: z
+    .number()
+    .describe('Fraction of test checks that passed (0.0 to 1.0)'),
+  verifierConclusion: z.enum(['ALL_RULES_PASS', 'NEEDS_IMPROVEMENT', 'MAJOR_ISSUES']),
+  errantRulesCount: z.number(),
+  errantSentencesCount: z.number(),
+});
+
+export type PerspectiveResult = z.infer<typeof perspectiveResultSchema>;
+
+/**
+ * Synthesis input: what the synthesizer receives to merge perspectives.
+ * Actual rules and vocabulary for each perspective are in draft stores
+ * accessed via RequestContext, not passed in this schema.
+ */
+export const synthesisInputSchema = z.object({
+  structuredProblem: structuredProblemDataSchema,
+  perspectiveResults: z.array(perspectiveResultSchema),
+});
+
+export type SynthesisInput = z.infer<typeof synthesisInputSchema>;
+
+/**
+ * Improver-dispatcher output: gap analysis for round 2+ of the multi-perspective loop.
+ */
+export const improverDispatcherOutputSchema = z.object({
+  success: z.boolean(),
+  explanation: z.string(),
+  gaps: z.array(
+    z.object({
+      description: z.string().describe('What gap or weakness was identified'),
+      suggestedApproach: z.string().describe('How to address this gap'),
+    }),
+  ),
+  perspectives: z
+    .array(perspectiveSchema)
+    .nullable()
+    .describe('New or refined perspectives to explore'),
+});
+
+export type ImproverDispatcherOutput = z.infer<typeof improverDispatcherOutputSchema>;
