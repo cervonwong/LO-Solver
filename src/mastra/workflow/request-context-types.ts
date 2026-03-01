@@ -55,4 +55,7 @@ export interface WorkflowRequestContext {
 
   /** Step writer for emitting trace events from tools (bypasses broken ctx.writer) */
   'step-writer': StepWriter;
+
+  /** ID of the currently-executing agent (set before agent calls, read by tools) */
+  'parent-agent-id'?: string;
 }

@@ -12,6 +12,7 @@ import type {
 import type { VocabularyEntry } from './vocabulary-tools';
 import type { Mastra } from '@mastra/core/mastra';
 import type { ToolStream } from '@mastra/core/tools';
+import { generateEventId } from '@/lib/workflow-events';
 
 /**
  * Type for the tool execute context that includes requestContext, mastra, and writer.
@@ -121,9 +122,21 @@ export async function emitTraceEvent(
 }
 
 /**
+ * Helper to get the ID of the currently-executing agent from request context.
+ * Returns undefined if no agent is active.
+ */
+export function getParentAgentId(requestContext: RequestContextGetter): string | undefined {
+  if (!requestContext) return undefined;
+  return requestContext.get('parent-agent-id') as string | undefined;
+}
+
+/**
  * Emit a trace event from a tool via the step writer stored in requestContext.
  * This bypasses the broken ctx.writer?.custom() path (Mastra does not pass
  * outputWriter to tools when called from workflow steps).
+ *
+ * For data-tool-call events, automatically injects an id and parentId from the
+ * request context's parent-agent-id key so tools link to their parent agent.
  */
 export async function emitToolTraceEvent(
   requestContext: RequestContextGetter,
@@ -131,7 +144,13 @@ export async function emitToolTraceEvent(
 ): Promise<void> {
   if (!requestContext) return;
   const writer = requestContext.get('step-writer') as StepWriter | undefined;
-  await emitTraceEvent(writer, event);
+  const parentAgentId = requestContext.get('parent-agent-id') as string | undefined;
+  // Inject parentId and id into tool-call events for hierarchical linking
+  const enrichedData =
+    event.type === 'data-tool-call'
+      ? { ...event.data, id: generateEventId(), parentId: parentAgentId ?? '' }
+      : event.data;
+  await emitTraceEvent(writer, { type: event.type, data: enrichedData });
 }
 
 // ---------------------------------------------------------------------------
