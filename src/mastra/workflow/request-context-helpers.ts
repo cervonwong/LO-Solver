@@ -145,11 +145,23 @@ export async function emitToolTraceEvent(
   if (!requestContext) return;
   const writer = requestContext.get('step-writer') as StepWriter | undefined;
   const parentAgentId = requestContext.get('parent-agent-id') as string | undefined;
+  const eventSource = requestContext.get('event-source') as 'draft' | 'merged' | undefined;
+
+  let enrichedData = event.data;
+
   // Inject parentId and id into tool-call events for hierarchical linking
-  const enrichedData =
-    event.type === 'data-tool-call'
-      ? { ...event.data, id: generateEventId(), parentId: parentAgentId ?? '' }
-      : event.data;
+  if (event.type === 'data-tool-call') {
+    enrichedData = { ...enrichedData, id: generateEventId(), parentId: parentAgentId ?? '' };
+  }
+
+  // Inject source into vocabulary and rules update events
+  if (
+    (event.type === 'data-vocabulary-update' || event.type === 'data-rules-update') &&
+    eventSource
+  ) {
+    enrichedData = { ...enrichedData, source: eventSource };
+  }
+
   await emitTraceEvent(writer, { type: event.type, data: enrichedData });
 }
 

@@ -348,9 +348,13 @@ function SolverPageInner() {
       confidence: 'HIGH' | 'MEDIUM' | 'LOW';
     }>) ?? undefined;
 
-  // Accumulate vocabulary from data-vocabulary-update parts
+  // Accumulate vocabulary from data-vocabulary-update parts (only merged or untagged)
   const vocabParts = allParts.filter(
-    (p) => 'type' in p && p.type === 'data-vocabulary-update',
+    (p) =>
+      'type' in p &&
+      p.type === 'data-vocabulary-update' &&
+      (!(p as { data?: { source?: string } }).data?.source ||
+        (p as { data?: { source?: string } }).data?.source === 'merged'),
   ) as Array<{ type: string; data: VocabUpdateData }>;
 
   const vocabulary = useMemo(() => {
@@ -376,9 +380,13 @@ function SolverPageInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vocabParts.length]);
 
-  // Accumulate rules from data-rules-update parts
+  // Accumulate rules from data-rules-update parts (only merged or untagged)
   const rulesParts = allParts.filter(
-    (p) => 'type' in p && p.type === 'data-rules-update',
+    (p) =>
+      'type' in p &&
+      p.type === 'data-rules-update' &&
+      (!(p as { data?: { source?: string } }).data?.source ||
+        (p as { data?: { source?: string } }).data?.source === 'merged'),
   ) as Array<{ type: string; data: RulesUpdateEvent['data'] }>;
 
   const rules = useMemo(() => {

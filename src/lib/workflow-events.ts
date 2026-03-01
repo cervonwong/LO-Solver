@@ -81,6 +81,7 @@ export interface HierarchicalAgentStartEvent {
   data: {
     id: string;
     parentId?: string;
+    perspectiveId?: string;
     stepId: StepId;
     agentName: string;
     model: string;
@@ -94,6 +95,7 @@ export interface HierarchicalAgentEndEvent {
   data: {
     id: string;
     parentId?: string;
+    perspectiveId?: string;
     stepId: StepId;
     agentName: string;
     reasoning: string;
@@ -162,6 +164,7 @@ export interface VocabularyUpdateEvent {
       notes: string;
     }>;
     totalCount: number;
+    source?: 'draft' | 'merged';
     timestamp: string;
   };
 }
@@ -236,6 +239,24 @@ export interface SynthesisCompleteEvent {
   };
 }
 
+export interface ConvergenceStartEvent {
+  type: 'data-convergence-start';
+  data: {
+    round: number;
+    timestamp: string;
+  };
+}
+
+export interface ConvergenceCompleteEvent {
+  type: 'data-convergence-complete';
+  data: {
+    round: number;
+    converged: boolean;
+    testPassRate: number;
+    timestamp: string;
+  };
+}
+
 export interface RoundStartEvent {
   type: 'data-round-start';
   data: {
@@ -264,6 +285,7 @@ export interface RulesUpdateEvent {
       confidence?: string;
     }>;
     totalCount: number;
+    source?: 'draft' | 'merged';
     timestamp: string;
   };
 }
@@ -286,5 +308,7 @@ export type WorkflowTraceEvent =
   | PerspectiveCompleteEvent
   | SynthesisStartEvent
   | SynthesisCompleteEvent
+  | ConvergenceStartEvent
+  | ConvergenceCompleteEvent
   | RoundStartEvent
   | RoundCompleteEvent;

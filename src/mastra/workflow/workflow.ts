@@ -452,6 +452,7 @@ const multiPerspectiveHypothesisStep = createStep({
         perspectiveRequestContext.set('log-file', logFile);
         perspectiveRequestContext.set('model-mode', state.modelMode as ModelMode);
         perspectiveRequestContext.set('step-writer', writer);
+        perspectiveRequestContext.set('event-source', 'draft');
 
         const existingRules = isImproverRound ? Array.from(mainRules.values()) : [];
         const existingVocabulary = isImproverRound ? Array.from(mainVocabulary.values()) : [];
@@ -468,6 +469,7 @@ const multiPerspectiveHypothesisStep = createStep({
           type: 'data-agent-start',
           data: {
             id: hypAgentId,
+            perspectiveId: perspective.id,
             stepId,
             agentName: `Hypothesizer (${perspective.name})`,
             model: activeModelId(
@@ -501,6 +503,7 @@ const multiPerspectiveHypothesisStep = createStep({
           type: 'data-agent-end',
           data: {
             id: hypAgentId,
+            perspectiveId: perspective.id,
             stepId,
             agentName: `Hypothesizer (${perspective.name})`,
             reasoning: hypothesizerResponse.text || '',
@@ -563,6 +566,7 @@ const multiPerspectiveHypothesisStep = createStep({
         verifyRequestContext.set('log-file', logFile);
         verifyRequestContext.set('model-mode', state.modelMode as ModelMode);
         verifyRequestContext.set('step-writer', writer);
+        verifyRequestContext.set('event-source', 'draft');
 
         const verifyVocabulary = Array.from(draftStore.vocabulary.values());
         const verifyRules = Array.from(draftStore.rules.values());
@@ -579,6 +583,7 @@ const multiPerspectiveHypothesisStep = createStep({
           type: 'data-agent-start',
           data: {
             id: verifierAgentId,
+            perspectiveId: perspective.id,
             stepId,
             agentName: `Verifier (${perspective.name})`,
             model: activeModelId(
@@ -612,6 +617,7 @@ const multiPerspectiveHypothesisStep = createStep({
           type: 'data-agent-end',
           data: {
             id: verifierAgentId,
+            perspectiveId: perspective.id,
             stepId,
             agentName: `Verifier (${perspective.name})`,
             reasoning: verifierResponse.text || '',
@@ -642,6 +648,7 @@ const multiPerspectiveHypothesisStep = createStep({
           type: 'data-agent-start',
           data: {
             id: extractorAgentId,
+            perspectiveId: perspective.id,
             stepId,
             agentName: `Feedback Extractor (${perspective.name})`,
             model: activeModelId(
@@ -679,6 +686,7 @@ const multiPerspectiveHypothesisStep = createStep({
           type: 'data-agent-end',
           data: {
             id: extractorAgentId,
+            perspectiveId: perspective.id,
             stepId,
             agentName: `Feedback Extractor (${perspective.name})`,
             reasoning: extractorResponse.text || '',
@@ -747,6 +755,9 @@ const multiPerspectiveHypothesisStep = createStep({
       // ---------------------------------------------------------------
       // d. SYNTHESIZE: Merge best rulesets
       // ---------------------------------------------------------------
+      // Mark main context as merged source for synthesis events
+      mainRequestContext.set('event-source', 'merged');
+
       await emitTraceEvent(writer, {
         type: 'data-synthesis-start',
         data: {
@@ -881,6 +892,11 @@ const multiPerspectiveHypothesisStep = createStep({
       // ---------------------------------------------------------------
       // e. CONVERGENCE CHECK: Verify synthesized rules
       // ---------------------------------------------------------------
+      await emitTraceEvent(writer, {
+        type: 'data-convergence-start',
+        data: { round, timestamp: new Date().toISOString() },
+      });
+
       const convergenceRequestContext = new RequestContext<WorkflowRequestContext>();
       convergenceRequestContext.set('vocabulary-state', mainVocabulary);
       convergenceRequestContext.set('structured-problem', structuredProblem);
@@ -888,6 +904,7 @@ const multiPerspectiveHypothesisStep = createStep({
       convergenceRequestContext.set('log-file', logFile);
       convergenceRequestContext.set('model-mode', state.modelMode as ModelMode);
       convergenceRequestContext.set('step-writer', writer);
+      convergenceRequestContext.set('event-source', 'merged');
 
       const convergenceVerifierPrompt = JSON.stringify({
         vocabulary: Array.from(mainVocabulary.values()),
@@ -1041,6 +1058,16 @@ const multiPerspectiveHypothesisStep = createStep({
       const convergenceConclusion = convergenceParsed.success
         ? convergenceParsed.data.conclusion
         : ('MAJOR_ISSUES' as const);
+
+      await emitTraceEvent(writer, {
+        type: 'data-convergence-complete',
+        data: {
+          round,
+          converged: convergenceConclusion === 'ALL_RULES_PASS',
+          testPassRate: convergencePassRate,
+          timestamp: new Date().toISOString(),
+        },
+      });
 
       const roundResult: RoundResult = {
         round,

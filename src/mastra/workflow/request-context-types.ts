@@ -58,4 +58,7 @@ export interface WorkflowRequestContext {
 
   /** ID of the currently-executing agent (set before agent calls, read by tools) */
   'parent-agent-id'?: string;
+
+  /** Event source tag: 'draft' for perspective-local events, 'merged' for post-synthesis */
+  'event-source'?: 'draft' | 'merged';
 }

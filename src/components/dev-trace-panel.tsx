@@ -2,10 +2,12 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
-import { TraceEventCard, ToolCallGroupCard } from '@/components/trace-event-card';
+import { TraceEventCard, ToolCallGroupCard, AgentCard } from '@/components/trace-event-card';
 import {
   groupEventsByStep,
+  groupEventsWithAgents,
   groupEventsWithToolCalls,
+  isAgentGroup,
   isToolCallGroup,
   formatDuration,
 } from '@/lib/trace-utils';
@@ -161,12 +163,37 @@ function EventList({
     return <p className="animate-pulse text-xs text-muted-foreground">Agent thinking...</p>;
   }
 
-  const grouped = groupEventsWithToolCalls(displayEvents);
+  // First pass: group agent-start/end/tool-calls into AgentGroups
+  const agentGrouped = groupEventsWithAgents(displayEvents);
+
+  // Second pass: for remaining standalone events (non-AgentGroup), group tool calls
+  const items: Array<ReturnType<typeof groupEventsWithAgents>[number] | ReturnType<typeof groupEventsWithToolCalls>[number]> = [];
+  let standaloneBuffer: WorkflowTraceEvent[] = [];
+
+  const flushStandalone = () => {
+    if (standaloneBuffer.length > 0) {
+      const toolGrouped = groupEventsWithToolCalls(standaloneBuffer);
+      items.push(...toolGrouped);
+      standaloneBuffer = [];
+    }
+  };
+
+  for (const item of agentGrouped) {
+    if (isAgentGroup(item)) {
+      flushStandalone();
+      items.push(item);
+    } else {
+      standaloneBuffer.push(item);
+    }
+  }
+  flushStandalone();
 
   return (
     <div className="flex flex-col gap-1">
-      {grouped.map((item, i) =>
-        isToolCallGroup(item) ? (
+      {items.map((item, i) =>
+        isAgentGroup(item) ? (
+          <AgentCard key={i} group={item} />
+        ) : isToolCallGroup(item) ? (
           <ToolCallGroupCard key={i} group={item} />
         ) : (
           <TraceEventCard key={i} event={item} />
