@@ -16,10 +16,14 @@ import { StepProgress, type StepStatus, type ProgressStep } from '@/components/s
 import { ResultsPanel } from '@/components/results-panel';
 import { DevTracePanel } from '@/components/dev-trace-panel';
 import { VocabularyPanel } from '@/components/vocabulary-panel';
+import { RulesPanel } from '@/components/rules-panel';
+import type { ActivityEvent } from '@/components/rolling-activity-chips';
 import { getUIStepLabel, type UIStepId } from '@/lib/workflow-events';
 import type {
   StepId,
   WorkflowTraceEvent,
+  RulesUpdateEvent,
+  RuleTestResultEvent,
   PerspectiveStartEvent,
   PerspectiveCompleteEvent,
   SynthesisStartEvent,
@@ -43,6 +47,7 @@ interface VocabUpdateData {
   action: 'add' | 'update' | 'remove' | 'clear';
   entries: Array<{ foreignForm: string; meaning: string; type: string; notes: string }>;
   totalCount: number;
+  timestamp: string;
 }
 
 function useMascotSync({
@@ -190,8 +195,7 @@ function SolverPageInner() {
     ) as unknown as SynthesisCompleteEvent[];
 
     const hypothesisStepStatus = getStepStatus('multi-perspective-hypothesis');
-    const hypothesisDone =
-      hypothesisStepStatus === 'success' || hypothesisStepStatus === 'failed';
+    const hypothesisDone = hypothesisStepStatus === 'success' || hypothesisStepStatus === 'failed';
 
     // Build round-level progress
     const completedRounds = new Set(roundCompleteEvents.map((e) => e.data.round));
@@ -276,10 +280,7 @@ function SolverPageInner() {
     }
 
     // If the multi-perspective step is running but no round events yet, show it as running
-    if (
-      hypothesisStepStatus === 'running' &&
-      roundStartEvents.length === 0
-    ) {
+    if (hypothesisStepStatus === 'running' && roundStartEvents.length === 0) {
       result.push({
         id: 'multi-perspective-hypothesis',
         label: getUIStepLabel('multi-perspective-hypothesis'),
@@ -340,7 +341,7 @@ function SolverPageInner() {
 
   const answerStepOutput = steps['answer-questions']?.output;
   const hypothesisStepOutput = steps['multi-perspective-hypothesis']?.output;
-  const rules =
+  const finalRules =
     (hypothesisStepOutput?.rules as Array<{
       title: string;
       description: string;
@@ -375,19 +376,136 @@ function SolverPageInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [vocabParts.length]);
 
-  const mutationSummary = useMemo(() => {
-    const summary = { added: 0, updated: 0, removed: 0 };
-    for (const part of allParts) {
-      if ('type' in part && part.type === 'data-vocabulary-update') {
-        const data = (part as { type: string; data: VocabUpdateData }).data;
-        if (data.action === 'add') summary.added += data.entries?.length ?? 1;
-        else if (data.action === 'update') summary.updated += data.entries?.length ?? 1;
-        else if (data.action === 'remove') summary.removed += data.entries?.length ?? 1;
+  // Accumulate rules from data-rules-update parts
+  const rulesParts = allParts.filter(
+    (p) => 'type' in p && p.type === 'data-rules-update',
+  ) as Array<{ type: string; data: RulesUpdateEvent['data'] }>;
+
+  const rules = useMemo(() => {
+    const rulesMap = new Map<
+      string,
+      {
+        title: string;
+        description: string;
+        confidence?: string;
+        testStatus?: 'pass' | 'fail' | 'untested';
+      }
+    >();
+    for (const part of rulesParts) {
+      const { action, entries } = part.data;
+      if (action === 'clear') {
+        rulesMap.clear();
+      } else if (action === 'remove') {
+        for (const entry of entries) {
+          rulesMap.delete(entry.title);
+        }
+      } else {
+        for (const entry of entries) {
+          const existing = rulesMap.get(entry.title);
+          rulesMap.set(entry.title, {
+            ...entry,
+            testStatus: existing?.testStatus ?? 'untested',
+          });
+        }
       }
     }
-    return summary;
+    return Array.from(rulesMap.values());
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allParts.length]);
+  }, [rulesParts.length]);
+
+  // Apply rule test results to rules
+  const ruleTestParts = allParts.filter(
+    (p) => 'type' in p && p.type === 'data-rule-test-result',
+  ) as Array<{ type: string; data: RuleTestResultEvent['data'] }>;
+
+  const rulesWithTestStatus = useMemo(() => {
+    const testResults = new Map<string, { passed: boolean; failingSentences?: string[] }>();
+    for (const part of ruleTestParts) {
+      const entry: { passed: boolean; failingSentences?: string[] } = {
+        passed: part.data.passed,
+      };
+      if (part.data.failingSentences) {
+        entry.failingSentences = part.data.failingSentences;
+      }
+      testResults.set(part.data.ruleTitle, entry);
+    }
+    return rules.map((rule) => {
+      const testResult = testResults.get(rule.title);
+      return {
+        ...rule,
+        testStatus: testResult
+          ? testResult.passed
+            ? ('pass' as const)
+            : ('fail' as const)
+          : (rule.testStatus ?? ('untested' as const)),
+      };
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rules, ruleTestParts.length]);
+
+  // Build vocabulary activity events for rolling chips
+  const vocabActivityEvents = useMemo(() => {
+    const events: ActivityEvent[] = [];
+    for (const part of vocabParts) {
+      const data = part.data;
+      const ts = new Date(data.timestamp).getTime();
+      if (data.action === 'add') {
+        events.push({
+          label: `+${data.entries?.length ?? 1} added`,
+          variant: 'add',
+          timestamp: ts,
+        });
+      } else if (data.action === 'update') {
+        events.push({
+          label: `${data.entries?.length ?? 1} updated`,
+          variant: 'update',
+          timestamp: ts,
+        });
+      } else if (data.action === 'remove') {
+        events.push({
+          label: `${data.entries?.length ?? 1} removed`,
+          variant: 'remove',
+          timestamp: ts,
+        });
+      } else if (data.action === 'clear') {
+        events.push({ label: 'Cleared', variant: 'clear', timestamp: ts });
+      }
+    }
+    return events;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vocabParts.length]);
+
+  // Build rules activity events for rolling chips
+  const rulesActivityEvents = useMemo(() => {
+    const events: ActivityEvent[] = [];
+    for (const part of rulesParts) {
+      const data = part.data;
+      const ts = new Date(data.timestamp).getTime();
+      if (data.action === 'add') {
+        events.push({
+          label: `+${data.entries?.length ?? 1} added`,
+          variant: 'add',
+          timestamp: ts,
+        });
+      } else if (data.action === 'update') {
+        events.push({
+          label: `${data.entries?.length ?? 1} updated`,
+          variant: 'update',
+          timestamp: ts,
+        });
+      } else if (data.action === 'remove') {
+        events.push({
+          label: `${data.entries?.length ?? 1} removed`,
+          variant: 'remove',
+          timestamp: ts,
+        });
+      } else if (data.action === 'clear') {
+        events.push({ label: 'Rules cleared', variant: 'clear', timestamp: ts });
+      }
+    }
+    return events;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rulesParts.length]);
 
   // Auto-scroll refs and state for the trace panel
   const traceEndRef = useRef<HTMLDivElement>(null);
@@ -529,7 +647,7 @@ function SolverPageInner() {
                     </svg>
                   </CollapsibleTrigger>
                   <CollapsibleContent className="pt-4">
-                    <ResultsPanel output={answerStepOutput} rules={rules} />
+                    <ResultsPanel output={answerStepOutput} rules={finalRules} />
                   </CollapsibleContent>
                 </Collapsible>
               </BlueprintCard>
@@ -546,11 +664,11 @@ function SolverPageInner() {
 
       <ResizableHandle withHandle />
 
-      {/* Right panel: Trace (top) + Vocabulary (bottom) */}
+      {/* Right panel: Trace (top) + Vocabulary (middle) + Rules (bottom) */}
       <ResizablePanel defaultSize="65%" minSize="30%">
         <ResizablePanelGroup orientation="vertical">
           {/* Trace panel */}
-          <ResizablePanel defaultSize="70%" minSize="30%" className="relative">
+          <ResizablePanel defaultSize="50%" minSize="20%" className="relative">
             <ScrollArea className="h-full">
               <DevTracePanel events={traceEvents} isRunning={isRunning} />
               <div ref={traceEndRef} className="h-px" />
@@ -565,16 +683,31 @@ function SolverPageInner() {
             )}
           </ResizablePanel>
 
-          <ResizableHandle withHandle />
+          {hasStarted && (
+            <>
+              <ResizableHandle withHandle />
 
-          {/* Vocabulary panel */}
-          <ResizablePanel defaultSize="30%" minSize="15%">
-            <VocabularyPanel
-              vocabulary={vocabulary}
-              mutationSummary={mutationSummary}
-              isRunning={isRunning}
-            />
-          </ResizablePanel>
+              {/* Vocabulary panel */}
+              <ResizablePanel defaultSize="25%" minSize="5%" collapsible collapsedSize="0%">
+                <VocabularyPanel
+                  vocabulary={vocabulary}
+                  activityEvents={vocabActivityEvents}
+                  isRunning={isRunning}
+                />
+              </ResizablePanel>
+
+              <ResizableHandle withHandle />
+
+              {/* Rules panel */}
+              <ResizablePanel defaultSize="25%" minSize="5%" collapsible collapsedSize="0%">
+                <RulesPanel
+                  rules={rulesWithTestStatus}
+                  activityEvents={rulesActivityEvents}
+                  isRunning={isRunning}
+                />
+              </ResizablePanel>
+            </>
+          )}
         </ResizablePanelGroup>
       </ResizablePanel>
     </ResizablePanelGroup>
