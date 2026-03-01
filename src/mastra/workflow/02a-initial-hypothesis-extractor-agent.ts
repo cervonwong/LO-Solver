@@ -1,3 +1,5 @@
+// DEPRECATED: This agent is no longer used in the multi-perspective workflow.
+// Kept for backward compatibility with existing verify-improve loop.
 import { Agent } from '@mastra/core/agent';
 import { UnicodeNormalizer } from '@mastra/core/processors';
 import { INITIAL_HYPOTHESIS_EXTRACTOR_INSTRUCTIONS } from './02a-initial-hypothesis-extractor-instructions';

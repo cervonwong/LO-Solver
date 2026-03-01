@@ -1,3 +1,5 @@
+// DEPRECATED: This agent is no longer used in the multi-perspective workflow.
+// Kept for backward compatibility with existing verify-improve loop.
 export const INITIAL_HYPOTHESIS_EXTRACTOR_INSTRUCTIONS = `
 You are a JSON extraction agent. Your task is to parse natural language linguistic analysis and extract the rules into JSON.
 

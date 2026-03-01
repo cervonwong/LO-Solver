@@ -1,6 +1,6 @@
 import { Agent } from '@mastra/core/agent';
 import { UnicodeNormalizer } from '@mastra/core/processors';
-import { INITIAL_HYPOTHESIZER_INSTRUCTIONS } from './02-initial-hypothesizer-instructions';
+import { SYNTHESIZER_INSTRUCTIONS } from './02-synthesizer-instructions';
 import { RULES_TOOLS_INSTRUCTIONS } from './rules-tools-prompt';
 import { VOCABULARY_TOOLS_INSTRUCTIONS } from './vocabulary-tools-prompt';
 import { openrouter, TESTING_MODEL } from '../openrouter';
@@ -9,20 +9,20 @@ import { vocabularyTools } from './vocabulary-tools';
 import { testRuleWithRulesetTool } from './03a-rule-tester-tool';
 import { testSentenceWithRulesetTool } from './03a-sentence-tester-tool';
 
-// Inject the tool instructions into the prompt
-const instructions = INITIAL_HYPOTHESIZER_INSTRUCTIONS.replace(
+// Inject tool instructions into the prompt
+const instructions = SYNTHESIZER_INSTRUCTIONS.replace(
   '{{RULES_TOOLS_INSTRUCTIONS}}',
   RULES_TOOLS_INSTRUCTIONS,
 ).replace('{{VOCABULARY_TOOLS_INSTRUCTIONS}}', VOCABULARY_TOOLS_INSTRUCTIONS);
 
 /**
- * Initial Hypothesizer Agent - generates rules and vocabulary from structured problem.
- * Uses rules and vocabulary CRUD tools that read state from requestContext.
- * Has access to testing tools to validate rules before committing.
+ * Hypothesis Synthesizer Agent - merges competing rulesets from multiple perspectives
+ * using score-weighted conflict resolution. Has full access to rules, vocabulary,
+ * and testing tools for validation.
  */
-export const initialHypothesizerAgent = new Agent({
-  id: 'initial-hypothesizer',
-  name: '[Step 2] Initial Hypothesizer Agent',
+export const synthesizerAgent = new Agent({
+  id: 'hypothesis-synthesizer',
+  name: '[Step 2] Hypothesis Synthesizer Agent',
   instructions: {
     role: 'system',
     content: instructions,
@@ -34,8 +34,8 @@ export const initialHypothesizerAgent = new Agent({
         : TESTING_MODEL,
     ),
   tools: {
-    ...vocabularyTools,
     ...rulesTools,
+    ...vocabularyTools,
     testRule: testRuleWithRulesetTool,
     testSentence: testSentenceWithRulesetTool,
   },
