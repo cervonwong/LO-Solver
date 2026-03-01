@@ -16,7 +16,7 @@
 
 - [x] **EVAL-01**: User can run automated scoring that executes the workflow against problems with known ground-truth answers and computes accuracy (percentage of correct translations)
 - [x] **EVAL-02**: User can run comparison mode that scores zero-shot LLM output vs. agentic workflow output on the same problems, showing the delta
-- [ ] **EVAL-03**: User can evaluate intermediate outputs — rule quality (do generated rules correctly predict sentence translations?) and extraction quality (is the problem correctly parsed?)
+- [x] **EVAL-03**: User can evaluate intermediate outputs — rule quality (do generated rules correctly predict sentence translations?) and extraction quality (is the problem correctly parsed?)
 - [x] **EVAL-04**: User can view eval results in the UI — accuracy scores, per-problem breakdowns, pass/fail per question
 - [x] **EVAL-05**: Eval harness uses Mastra's `@mastra/evals` framework where applicable (consult Mastra docs for eval patterns)
 - [x] **EVAL-06**: Eval results are persisted so users can track accuracy over time across workflow changes
@@ -27,8 +27,8 @@
 - [x] **WORK-02**: Each perspective is dispatched to an independent hypothesizer agent that generates rules and vocabulary from that specific linguistic angle
 - [x] **WORK-03**: Each hypothesizer uses the existing testing tools (`testRuleWithRuleset`, `testSentenceWithRuleset`) to validate its rules against the data
 - [x] **WORK-04**: Competing hypothesis sets are scored by test pass rate, and the best-scoring ruleset is selected as the basis for further refinement
-- [ ] **WORK-05**: The verification loop uses the winning ruleset and iteratively improves it (existing verify/improve pattern, but starting from a stronger foundation)
-- [ ] **WORK-06**: Failure reasons are logged and surfaced — when a rule fails testing, the specific sentences it fails on and why are captured for the improver agent
+- [x] **WORK-05**: The verification loop uses the winning ruleset and iteratively improves it (existing verify/improve pattern, but starting from a stronger foundation)
+- [x] **WORK-06**: Failure reasons are logged and surfaced — when a rule fails testing, the specific sentences it fails on and why are captured for the improver agent
 
 ### UI Improvements (UI)
 
@@ -75,8 +75,8 @@
 | WORK-02 | Phase 4: Multi-Perspective Hypothesis Generation | Complete |
 | WORK-03 | Phase 4: Multi-Perspective Hypothesis Generation | Complete |
 | WORK-04 | Phase 4: Multi-Perspective Hypothesis Generation | Complete |
-| WORK-05 | Phase 5: Verification Loop Improvements | Pending |
-| WORK-06 | Phase 5: Verification Loop Improvements | Pending |
+| WORK-05 | Phase 5: Verification Loop Improvements | Complete |
+| WORK-06 | Phase 5: Verification Loop Improvements | Complete |
 | UI-01 | Phase 6: UI Event System & Rules Panel | Pending |
 | UI-02 | Phase 6: UI Event System & Rules Panel | Pending |
 | UI-06 | Phase 6: UI Event System & Rules Panel | Pending |
