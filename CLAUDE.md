@@ -69,10 +69,13 @@ The solver workflow lives at `src/mastra/workflow/`. It uses per-rule and per-se
 - `npm run eval -- --mode testing|production` — Choose model mode (default: testing)
 - `npm run eval -- --concurrency N` — Parallel problem execution (default: 1)
 - `npm run eval -- --problem <id>` — Run a single problem by ID
+- `npm run eval -- --comparison` — Run with zero-shot comparison (shows workflow vs zero-shot scores and delta)
 - Results stored as JSON in `evals/results/` (gitignored)
 - Custom scorer uses `createScorer` from `@mastra/core/evals` (preprocess → generateScore → generateReason pipeline)
 - `src/evals/problems.ts` — Ground-truth problem definitions from Linguini dataset
 - `src/evals/translation-scorer.ts` — Translation accuracy scorer
+- `src/evals/zero-shot-solver.ts` — Zero-shot solver using Mastra Agent (eval-only, not registered in mastra/index.ts)
+- `src/evals/intermediate-scorers.ts` — Extraction and rule quality scoring for workflow step outputs
 - `src/evals/storage.ts` — Result persistence (JSON files)
 - `src/evals/run.ts` — CLI entry point
 

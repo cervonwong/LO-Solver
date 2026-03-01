@@ -3,11 +3,13 @@ import { randomUUID } from 'node:crypto';
 
 import { mastra } from '@/mastra';
 
+import { scoreExtraction, scoreRuleQuality } from './intermediate-scorers';
 import type { EvalProblem, GroundTruthAnswer } from './problems';
 import { loadEvalProblems } from './problems';
 import type { EvalProblemResult, EvalRunResult } from './storage';
 import { saveEvalRun } from './storage';
 import { translationAccuracyScorer } from './translation-scorer';
+import { solveZeroShot } from './zero-shot-solver';
 
 // ---------------------------------------------------------------------------
 // CLI argument parsing
@@ -17,6 +19,7 @@ interface CliArgs {
   mode: 'testing' | 'production';
   concurrency: number;
   problem: string | undefined;
+  comparison: boolean;
 }
 
 function parseArgs(): CliArgs {
@@ -24,6 +27,7 @@ function parseArgs(): CliArgs {
   let mode: 'testing' | 'production' = 'testing';
   let concurrency = 1;
   let problem: string | undefined;
+  let comparison = false;
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
@@ -51,13 +55,15 @@ function parseArgs(): CliArgs {
         process.exit(1);
       }
       i++;
+    } else if (arg === '--comparison') {
+      comparison = true;
     } else {
       console.error(`Unknown argument: ${arg}`);
       process.exit(1);
     }
   }
 
-  return { mode, concurrency, problem };
+  return { mode, concurrency, problem, comparison };
 }
 
 // ---------------------------------------------------------------------------
@@ -127,11 +133,12 @@ function getGitCommit(): string | undefined {
 // ---------------------------------------------------------------------------
 
 async function main(): Promise<void> {
-  const { mode, concurrency, problem: problemFilter } = parseArgs();
+  const { mode, concurrency, problem: problemFilter, comparison } = parseArgs();
 
   console.log(`\nEval runner starting`);
   console.log(`  Mode: ${mode}`);
   console.log(`  Concurrency: ${concurrency}`);
+  console.log(`  Comparison: ${comparison}`);
   if (problemFilter !== undefined) {
     console.log(`  Problem filter: ${problemFilter}`);
   }
@@ -160,13 +167,25 @@ async function main(): Promise<void> {
     console.log(`Running: ${evalProblem.id} - ${evalProblem.title}`);
     const problemStart = Date.now();
 
-    const run = await workflow.createRun();
-    const result = await run.start({
-      inputData: {
-        rawProblemText: evalProblem.rawProblemText,
-        modelMode: mode,
-      },
-    });
+    // Run workflow and optionally zero-shot in parallel
+    const workflowPromise = (async () => {
+      const run = await workflow.createRun();
+      return run.start({
+        inputData: {
+          rawProblemText: evalProblem.rawProblemText,
+          modelMode: mode,
+        },
+      });
+    })();
+
+    const zeroShotPromise = comparison
+      ? solveZeroShot(evalProblem.rawProblemText, mode)
+      : undefined;
+
+    const [result, zeroShotResult] = await Promise.all([
+      workflowPromise,
+      zeroShotPromise ?? Promise.resolve(undefined),
+    ]);
 
     const elapsed = ((Date.now() - problemStart) / 1000).toFixed(1);
 
@@ -188,7 +207,7 @@ async function main(): Promise<void> {
       };
     }
 
-    // Score using the scorer
+    // Score workflow result
     const scorerResult = await translationAccuracyScorer.run({
       input: evalProblem.rawProblemText,
       output: result.result,
@@ -210,9 +229,79 @@ async function main(): Promise<void> {
       groundTruth,
     );
 
+    // Intermediate scoring (always, for successful workflows)
+    const steps = (result as Record<string, unknown>).steps as
+      | Record<string, { output?: unknown }>
+      | undefined;
+    console.log('  Step keys:', Object.keys(steps ?? {}));
+
+    const extractStepOutput = steps?.['extract-structure']?.output;
+    const verifyImproveStepOutput = steps?.['verify-improve-rules-loop']?.output;
+
+    const extractionScore = scoreExtraction(extractStepOutput, evalProblem.groundTruth.length);
+    const ruleQualityScore = scoreRuleQuality(verifyImproveStepOutput);
+
+    problemResult.intermediateScores = {
+      extraction: extractionScore,
+      ruleQuality: ruleQualityScore,
+    };
+
+    // Zero-shot comparison scoring
+    if (comparison && zeroShotResult !== undefined) {
+      const zsScorerResult = await translationAccuracyScorer.run({
+        input: evalProblem.rawProblemText,
+        output: zeroShotResult,
+        groundTruth: evalProblem.groundTruth,
+      });
+
+      const zsPreprocessResult = zsScorerResult.preprocessStepResult as
+        | { predictedAnswers: string[]; groundTruth: GroundTruthAnswer[]; totalQuestions: number }
+        | undefined;
+
+      const zsPredictedAnswers = zsPreprocessResult?.predictedAnswers ?? [];
+      const zsGroundTruth = zsPreprocessResult?.groundTruth ?? evalProblem.groundTruth;
+
+      // Build zero-shot details using the same logic as buildProblemResult
+      let zsCorrectCount = 0;
+      const zsDetails: EvalProblemResult['details'] = [];
+
+      for (let i = 0; i < zsGroundTruth.length; i++) {
+        const truth = zsGroundTruth[i];
+        const predicted = zsPredictedAnswers[i];
+
+        if (truth === undefined) continue;
+
+        const predictedStr = predicted ?? '';
+        const correct =
+          predicted !== undefined &&
+          truth.acceptedAnswers.some((accepted) => normalize(accepted) === normalize(predicted));
+
+        if (correct) zsCorrectCount++;
+
+        zsDetails.push({
+          questionIndex: truth.questionIndex,
+          predicted: predictedStr,
+          expected: truth.acceptedAnswers,
+          correct,
+        });
+      }
+
+      problemResult.zeroShot = {
+        score: zsScorerResult.score,
+        reason: zsScorerResult.reason ?? '',
+        correctCount: zsCorrectCount,
+        details: zsDetails,
+      };
+    }
+
+    const zsInfo =
+      problemResult.zeroShot !== undefined
+        ? ` | zero-shot=${problemResult.zeroShot.score.toFixed(2)}`
+        : '';
+
     console.log(
       `  ${evalProblem.id}: score=${problemResult.score.toFixed(2)} ` +
-        `(${problemResult.correctCount}/${problemResult.totalQuestions}) [${elapsed}s]`,
+        `(${problemResult.correctCount}/${problemResult.totalQuestions})${zsInfo} [${elapsed}s]`,
     );
 
     return problemResult;
@@ -234,7 +323,7 @@ async function main(): Promise<void> {
 
   const duration = Date.now() - startTime;
 
-  // Compute summary
+  // Compute workflow summary
   const totalQuestions = problemResults.reduce((sum, r) => sum + r.totalQuestions, 0);
   const totalCorrect = problemResults.reduce((sum, r) => sum + r.correctCount, 0);
   const meanScore =
@@ -242,20 +331,49 @@ async function main(): Promise<void> {
       ? problemResults.reduce((sum, r) => sum + r.score, 0) / problemResults.length
       : 0;
 
+  const summary: EvalRunResult['summary'] = {
+    totalProblems: problemResults.length,
+    meanScore,
+    totalQuestions,
+    totalCorrect,
+    overallAccuracy: totalQuestions > 0 ? totalCorrect / totalQuestions : 0,
+  };
+
+  // Compute zero-shot summary and delta if comparison mode
+  if (comparison) {
+    const zsProblems = problemResults.filter((r) => r.zeroShot !== undefined);
+    if (zsProblems.length > 0) {
+      const zsTotalCorrect = zsProblems.reduce(
+        (sum, r) => sum + (r.zeroShot?.correctCount ?? 0),
+        0,
+      );
+      const zsTotalQuestions = zsProblems.reduce((sum, r) => sum + r.totalQuestions, 0);
+      const zsMeanScore =
+        zsProblems.reduce((sum, r) => sum + (r.zeroShot?.score ?? 0), 0) / zsProblems.length;
+      const zsOverallAccuracy = zsTotalQuestions > 0 ? zsTotalCorrect / zsTotalQuestions : 0;
+
+      summary.zeroShot = {
+        meanScore: zsMeanScore,
+        overallAccuracy: zsOverallAccuracy,
+        totalCorrect: zsTotalCorrect,
+      };
+
+      summary.delta = {
+        meanScore: meanScore - zsMeanScore,
+        overallAccuracy: summary.overallAccuracy - zsOverallAccuracy,
+      };
+    }
+  }
+
   const evalRunResult: EvalRunResult = {
     id: randomUUID(),
     timestamp: new Date().toISOString(),
     modelMode: mode,
     gitCommit: getGitCommit(),
     duration,
+    comparison,
     problems: problemResults,
-    summary: {
-      totalProblems: problemResults.length,
-      meanScore,
-      totalQuestions,
-      totalCorrect,
-      overallAccuracy: totalQuestions > 0 ? totalCorrect / totalQuestions : 0,
-    },
+    summary,
   };
 
   // Persist
@@ -270,26 +388,69 @@ async function main(): Promise<void> {
   // Table header
   const idWidth = 16;
   const titleWidth = 24;
-  const scoreWidth = 8;
+  const scoreWidth = 10;
   const correctWidth = 12;
 
-  console.log(
-    'Problem ID'.padEnd(idWidth) +
-      'Title'.padEnd(titleWidth) +
-      'Score'.padEnd(scoreWidth) +
-      'Correct',
-  );
-  console.log('-'.repeat(idWidth + titleWidth + scoreWidth + correctWidth));
-
-  for (const r of problemResults) {
-    const titleTruncated =
-      r.title.length > titleWidth - 2 ? r.title.slice(0, titleWidth - 4) + '..' : r.title;
+  if (comparison) {
     console.log(
-      r.problemId.padEnd(idWidth) +
-        titleTruncated.padEnd(titleWidth) +
-        r.score.toFixed(2).padEnd(scoreWidth) +
-        `${r.correctCount}/${r.totalQuestions}`,
+      'Problem ID'.padEnd(idWidth) +
+        'Title'.padEnd(titleWidth) +
+        'Workflow'.padEnd(scoreWidth) +
+        'Zero-Shot'.padEnd(scoreWidth) +
+        'Delta',
     );
+    console.log('-'.repeat(idWidth + titleWidth + scoreWidth * 2 + 8));
+
+    for (const r of problemResults) {
+      const titleTruncated =
+        r.title.length > titleWidth - 2 ? r.title.slice(0, titleWidth - 4) + '..' : r.title;
+      const zsScore = r.zeroShot?.score ?? 0;
+      const delta = r.score - zsScore;
+      const deltaStr = (delta >= 0 ? '+' : '') + delta.toFixed(2);
+      console.log(
+        r.problemId.padEnd(idWidth) +
+          titleTruncated.padEnd(titleWidth) +
+          r.score.toFixed(2).padEnd(scoreWidth) +
+          zsScore.toFixed(2).padEnd(scoreWidth) +
+          deltaStr,
+      );
+    }
+  } else {
+    console.log(
+      'Problem ID'.padEnd(idWidth) +
+        'Title'.padEnd(titleWidth) +
+        'Score'.padEnd(scoreWidth) +
+        'Correct',
+    );
+    console.log('-'.repeat(idWidth + titleWidth + scoreWidth + correctWidth));
+
+    for (const r of problemResults) {
+      const titleTruncated =
+        r.title.length > titleWidth - 2 ? r.title.slice(0, titleWidth - 4) + '..' : r.title;
+      console.log(
+        r.problemId.padEnd(idWidth) +
+          titleTruncated.padEnd(titleWidth) +
+          r.score.toFixed(2).padEnd(scoreWidth) +
+          `${r.correctCount}/${r.totalQuestions}`,
+      );
+    }
+  }
+
+  // Intermediate scores
+  const problemsWithIntermediateScores = problemResults.filter(
+    (r) => r.intermediateScores !== undefined,
+  );
+  if (problemsWithIntermediateScores.length > 0) {
+    console.log('\nIntermediate Scores:');
+    for (const r of problemsWithIntermediateScores) {
+      const is = r.intermediateScores!;
+      console.log(
+        `  ${r.problemId}: extraction=${is.extraction.score.toFixed(2)} ` +
+          `rule-quality=${is.ruleQuality.score.toFixed(2)} ` +
+          `(${is.ruleQuality.passingRules}/${is.ruleQuality.totalRules} rules, ` +
+          `${is.ruleQuality.iterations} iters)`,
+      );
+    }
   }
 
   console.log();
@@ -298,6 +459,21 @@ async function main(): Promise<void> {
       `(${totalCorrect}/${totalQuestions})`,
   );
   console.log(`Mean score: ${meanScore.toFixed(3)}`);
+
+  if (comparison && summary.zeroShot && summary.delta) {
+    console.log(
+      `Zero-shot accuracy: ${(summary.zeroShot.overallAccuracy * 100).toFixed(1)}% ` +
+        `(${summary.zeroShot.totalCorrect}/${totalQuestions})`,
+    );
+    console.log(`Zero-shot mean score: ${summary.zeroShot.meanScore.toFixed(3)}`);
+    const deltaSign = summary.delta.meanScore >= 0 ? '+' : '';
+    console.log(`Delta mean score: ${deltaSign}${summary.delta.meanScore.toFixed(3)}`);
+    const deltaAccSign = summary.delta.overallAccuracy >= 0 ? '+' : '';
+    console.log(
+      `Delta accuracy: ${deltaAccSign}${(summary.delta.overallAccuracy * 100).toFixed(1)}%`,
+    );
+  }
+
   console.log(`Duration: ${(duration / 1000).toFixed(1)}s`);
   console.log(`Mode: ${mode}`);
   if (evalRunResult.gitCommit !== undefined) {

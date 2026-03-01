@@ -1,6 +1,8 @@
 import { mkdir, readdir, readFile, writeFile } from 'fs/promises';
 import { join, resolve } from 'path';
 
+import type { ExtractionScore, RuleQualityScore } from './intermediate-scorers';
+
 export interface EvalProblemResult {
   problemId: string;
   title: string;
@@ -14,6 +16,25 @@ export interface EvalProblemResult {
     expected: string[]; // accepted answers
     correct: boolean;
   }>;
+
+  /** Zero-shot comparison results (only present in comparison mode) */
+  zeroShot?: {
+    score: number;
+    reason: string;
+    correctCount: number;
+    details: Array<{
+      questionIndex: number;
+      predicted: string;
+      expected: string[];
+      correct: boolean;
+    }>;
+  };
+
+  /** Intermediate step scores (always captured when workflow succeeds) */
+  intermediateScores?: {
+    extraction: ExtractionScore;
+    ruleQuality: RuleQualityScore;
+  };
 }
 
 export interface EvalRunResult {
@@ -23,12 +44,28 @@ export interface EvalRunResult {
   gitCommit?: string | undefined; // from `git rev-parse --short HEAD`
   duration: number; // ms
   problems: EvalProblemResult[];
+
+  /** Whether this run included comparison mode */
+  comparison?: boolean;
+
   summary: {
     totalProblems: number;
     meanScore: number; // average across problems
     totalQuestions: number;
     totalCorrect: number;
     overallAccuracy: number; // totalCorrect / totalQuestions
+
+    /** Zero-shot summary (only present in comparison mode) */
+    zeroShot?: {
+      meanScore: number;
+      overallAccuracy: number;
+      totalCorrect: number;
+    };
+    /** Accuracy delta: workflow minus zero-shot (only in comparison mode) */
+    delta?: {
+      meanScore: number;
+      overallAccuracy: number;
+    };
   };
 }
 
