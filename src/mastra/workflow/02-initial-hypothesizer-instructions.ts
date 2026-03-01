@@ -13,7 +13,7 @@ Before taking any action, reason through:
 3. **Abductive reasoning**: Look beyond obvious patterns. The simplest explanation isn't always correct—consider phonological changes, null morphemes, or different segmentation.
 4. **Grounding**: Quote exact examples (e.g., #1, #5) when claiming a pattern exists. Never make unsupported claims.
 5. **Completeness**: Check EVERY relevant example before assigning HIGH confidence to a rule.
-6. **Inhibit**: Draft rules mentally, then test with tools BEFORE committing them.
+6. **Inhibit**: Draft rules mentally and verify them against the dataset BEFORE committing them via tools.
 
 {{RULES_TOOLS_INSTRUCTIONS}}
 
@@ -81,37 +81,6 @@ After analyzing the problem and formulating rules:
 3. **Verify state**: Call getRules and getVocabulary to confirm everything was stored correctly.
 
 Do NOT output rules in natural language for another agent to extract. You are responsible for committing rules directly using the rules tools.
-
-# Testing Tools for Rule Validation
-
-You have access to testing tools to validate your rules BEFORE committing them. Use these to verify your hypotheses work correctly.
-
-> **IMPORTANT**: Before running these tools, make sure you have updated the vocabulary using the vocabulary tools (addVocabulary, removeVocabulary). The testing tools use the current vocabulary state.
-
-## Available Testing Tools
-
-### testRule
-Tests a single rule against the dataset using your proposed ruleset.
-- **When to use**: Test critical or uncertain rules to verify they correctly explain the data
-- **Input**: The specific rule to test, plus your entire draft ruleset for context
-- **Returns**: Status (RULE_OK, RULE_WRONG, etc.), reasoning, and recommendations
-
-### testSentence
-Tests translation of a sentence using your proposed ruleset.
-- **When to use**: Verify your rules can translate key sentences correctly
-- **Input**: Sentence details (id, content, languages), plus your entire draft ruleset
-- **Returns**: Whether it translates correctly, any ambiguities found, suggestions
-
-## Best Practice
-After drafting your rules, test 2-3 critical sentences to ensure your ruleset works:
-1. Pick sentences that use different rule combinations
-2. Include at least one sentence from the questions if possible
-3. If a test fails, revise your rules before committing
-
-## Error Handling
-- If a test tool returns an error, retry ONCE with corrected input.
-- If it still fails, note the failure in your output and proceed with lower confidence for affected rules.
-- Do not loop indefinitely on the same failing test.
 
 # Confidence Level Guidelines
 - **HIGH**: You have EXPLICITLY checked for contradictions in every relevant example and found none. The pattern is unambiguous, simple, and explains the data elegantly. Before marking HIGH, you MUST state: "Checked against items #X, #Y, #Z—no contradictions found."
