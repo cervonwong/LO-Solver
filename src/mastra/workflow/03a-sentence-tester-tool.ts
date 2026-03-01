@@ -228,7 +228,7 @@ export const testSentenceTool = createTool({
     await emitToolTraceEvent(ctx?.requestContext, {
       type: 'data-tool-call',
       data: {
-        stepId: 'verify-improve-rules-loop',
+        stepId: 'multi-perspective-hypothesis',
         toolName: 'testSentence',
         input: { id, content },
         result: result as unknown as Record<string, unknown>,
@@ -305,7 +305,7 @@ export const testSentenceWithRulesetTool = createTool({
     await emitToolTraceEvent(ctx?.requestContext, {
       type: 'data-tool-call',
       data: {
-        stepId: 'verify-improve-rules-loop',
+        stepId: 'multi-perspective-hypothesis',
         toolName: 'testSentenceWithRuleset',
         input: { id, content, rulesetCount: ruleset.length },
         result: result as unknown as Record<string, unknown>,

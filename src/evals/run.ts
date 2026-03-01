@@ -238,7 +238,7 @@ async function main(): Promise<void> {
     console.log('  Step keys:', Object.keys(steps ?? {}));
 
     const extractStepOutput = steps?.['extract-structure']?.output;
-    const verifyImproveStepOutput = steps?.['verify-improve-rules-loop']?.output;
+    const verifyImproveStepOutput = steps?.['multi-perspective-hypothesis']?.output;
 
     const extractionScore = scoreExtraction(extractStepOutput, evalProblem.groundTruth.length);
     const ruleQualityScore = scoreRuleQuality(verifyImproveStepOutput);

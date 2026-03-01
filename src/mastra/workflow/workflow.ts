@@ -1,7 +1,8 @@
 import { createStep, createWorkflow } from '@mastra/core/workflows';
 import { RequestContext } from '@mastra/core/request-context';
 import { type VocabularyEntry } from './vocabulary-tools';
-import type { WorkflowRequestContext } from './request-context-types';
+import type { WorkflowRequestContext, DraftStore } from './request-context-types';
+import type { Rule } from './request-context-types';
 import type { ModelMode } from '../openrouter';
 import { activeModelId } from '../openrouter';
 import {
@@ -12,23 +13,30 @@ import {
   logValidationError,
 } from './logging-utils';
 import { generateWithRetry } from './agent-utils';
-import { emitTraceEvent } from './request-context-helpers';
+import {
+  emitTraceEvent,
+  createDraftStore,
+  clearAllDraftStores,
+  getRulesState,
+  getRulesArray,
+  getVocabularyState,
+  getVocabularyArray,
+} from './request-context-helpers';
 import type { StepId } from '@/lib/workflow-events';
 import {
-  MAX_VERIFY_IMPROVE_ITERATIONS,
   workflowStateSchema,
   type WorkflowState,
   initializeWorkflowState,
   rawProblemInputSchema,
   structuredProblemSchema,
   structuredProblemDataSchema,
-  rulesSchema,
-  verifierFeedbackSchema,
   questionsAnsweredSchema,
-  hypothesisTestLoopSchema,
-  initialHypothesisInputSchema,
-  initialHypothesisOutputSchema,
   questionAnsweringInputSchema,
+  dispatcherOutputSchema,
+  improverDispatcherOutputSchema,
+  verifierFeedbackSchema,
+  type Perspective,
+  type PerspectiveResult,
 } from './workflow-schemas';
 
 const extractionStep = createStep({
@@ -41,7 +49,9 @@ const extractionStep = createStep({
     // Initialize workflow state at the start of the workflow
     const initialState = initializeWorkflowState();
     const modelMode = inputData.modelMode ?? 'testing';
-    const stateWithMode = { ...initialState, modelMode };
+    const maxRounds = inputData.maxRounds ?? 3;
+    const perspectiveCount = inputData.perspectiveCount ?? 3;
+    const stateWithMode = { ...initialState, modelMode, maxRounds, perspectiveCount };
     await setState(stateWithMode);
     const logFile = initialState.logFile;
 
@@ -131,573 +141,693 @@ const extractionStep = createStep({
   },
 });
 
-// Step 2: Initial Hypothesizer - generates initial rules and vocabulary
-// This step chains two agents:
-// 1. Initial Hypothesizer Agent - outputs natural language reasoning with rules and vocabulary
-// 2. Initial Hypothesis Extractor Agent - extracts JSON from the natural language output
-const initialHypothesisStep = createStep({
-  id: 'initial-hypothesis',
-  description: 'Step 2: Generate initial rules and vocabulary from structured problem.',
-  inputSchema: initialHypothesisInputSchema,
-  outputSchema: initialHypothesisOutputSchema,
+// Step 2: Multi-perspective hypothesis generation
+// Implements dispatch -> hypothesize (parallel) -> verify -> synthesize loop
+const multiPerspectiveHypothesisStep = createStep({
+  id: 'multi-perspective-hypothesis',
+  description:
+    'Step 2: Generate rules via multi-perspective dispatch, parallel hypothesis, verification, and synthesis.',
+  inputSchema: structuredProblemDataSchema,
+  outputSchema: questionAnsweringInputSchema,
   stateSchema: workflowStateSchema,
   execute: async ({ inputData, mastra, bail, state, setState, writer }) => {
     const structuredProblem = inputData;
     const logFile = state.logFile;
+    const stepId: StepId = 'multi-perspective-hypothesis';
+    let currentStepTimings = [...state.stepTimings];
 
-    const stepId: StepId = 'initial-hypothesis';
     await emitTraceEvent(writer, {
       type: 'data-step-start',
       data: { stepId, timestamp: new Date().toISOString() },
     });
 
-    // Rebuild vocabulary state from workflow state
-    const vocabularyState = new Map(Object.entries(state.vocabulary));
+    const stepStartTime = new Date();
 
-    // Create RequestContext with vocabulary state and structured problem for the agent
-    const requestContext = new RequestContext<WorkflowRequestContext>();
-    requestContext.set('vocabulary-state', vocabularyState);
-    requestContext.set('log-file', logFile);
-    requestContext.set('structured-problem', structuredProblem);
-    requestContext.set('model-mode', state.modelMode as ModelMode);
-    requestContext.set('step-writer', writer);
+    // Read maxRounds and perspectiveCount from state, apply testing mode limits
+    const effectiveMaxRounds =
+      state.modelMode === 'testing' ? Math.min(state.maxRounds, 2) : state.maxRounds;
+    const effectivePerspectiveCount =
+      state.modelMode === 'testing'
+        ? Math.min(state.perspectiveCount, 2)
+        : state.perspectiveCount;
 
-    // Step 2a: Call the Initial Rules Hypothesizer Agent (natural language output)
-    const vocabulary = Array.from(vocabularyState.values());
+    // Initialize main RequestContext with empty main stores
+    const mainRequestContext = new RequestContext<WorkflowRequestContext>();
+    const mainVocabulary = new Map<string, VocabularyEntry>();
+    const mainRules = new Map<string, Rule>();
+    const draftStores = new Map<string, DraftStore>();
+    mainRequestContext.set('vocabulary-state', mainVocabulary);
+    mainRequestContext.set('rules-state', mainRules);
+    mainRequestContext.set('draft-stores', draftStores);
+    mainRequestContext.set('structured-problem', structuredProblem);
+    mainRequestContext.set('log-file', logFile);
+    mainRequestContext.set('model-mode', state.modelMode as ModelMode);
+    mainRequestContext.set('step-writer', writer);
 
-    const hypothesizerPrompt =
-      'Please analyze the dataset and hypothesize the linguistic rules and extract the vocabulary.\\n\\n' +
-      JSON.stringify({ vocabulary, structuredProblem });
+    let lastTestResults: unknown = null;
+    let previousPerspectiveIds: string[] = [];
 
-    const hypothesizerStartTime = new Date();
-    const hypothesizerResponse = await generateWithRetry(
-      mastra.getAgentById('initial-hypothesizer'),
-      {
-        prompt: hypothesizerPrompt,
-        options: { maxSteps: 100, requestContext },
-      },
-    );
-
-    const hypothesizerTiming = recordStepTiming(
-      'Step 2a',
-      'Initial Hypothesizer Agent',
-      hypothesizerStartTime,
-    );
-    console.log(
-      `[Step 2a] Initial Hypothesizer Agent finished at ${hypothesizerTiming.endTime} (${hypothesizerTiming.durationMinutes} min).`,
-    );
-
-    await emitTraceEvent(writer, {
-      type: 'data-agent-reasoning',
-      data: {
-        stepId,
-        agentName: 'Initial Hypothesizer',
-        model: activeModelId(state.modelMode, 'google/gemini-3-flash-preview'),
-        reasoning: hypothesizerResponse.text || '',
-        durationMs: Math.round(hypothesizerTiming.durationMinutes * 60_000),
-        timestamp: new Date().toISOString(),
-      },
-    });
-
-    // Log the natural language output from the hypothesizer
-    logAgentOutput(
-      logFile,
-      'Step 2a: Initial Hypothesis (Natural Language)',
-      'Initial Hypothesizer Agent',
-      { naturalLanguageOutput: hypothesizerResponse.text },
-      hypothesizerResponse.reasoning,
-    );
-
-    // Step 2b: Call the Initial Hypothesis Extractor Agent to parse into JSON
-    const extractorPrompt =
-      'Please extract the rules and vocabulary from the following linguistic analysis:\\n\\n' +
-      hypothesizerResponse.text;
-
-    const extractorStartTime = new Date();
-    const extractorResponse = await generateWithRetry(
-      mastra.getAgentById('initial-hypothesis-extractor'),
-      {
-        prompt: extractorPrompt,
-        options: {
-          maxSteps: 100,
-          requestContext,
-          structuredOutput: {
-            schema: rulesSchema,
-          },
-        },
-      },
-    );
-
-    const extractorTiming = recordStepTiming(
-      'Step 2b',
-      'Initial Hypothesis Extractor Agent',
-      extractorStartTime,
-    );
-    console.log(
-      `[Step 2b] Initial Hypothesis Extractor Agent finished at ${extractorTiming.endTime} (${extractorTiming.durationMinutes} min).`,
-    );
-
-    await emitTraceEvent(writer, {
-      type: 'data-agent-reasoning',
-      data: {
-        stepId,
-        agentName: 'Initial Hypothesis Extractor',
-        model: activeModelId(state.modelMode, 'openai/gpt-5-mini'),
-        reasoning: extractorResponse.text || '',
-        durationMs: Math.round(extractorTiming.durationMinutes * 60_000),
-        timestamp: new Date().toISOString(),
-      },
-    });
-
-    const extractorParseResult = rulesSchema.safeParse(extractorResponse.object);
-
-    logAgentOutput(
-      logFile,
-      'Step 2b: Initial Hypothesis (JSON Extraction)',
-      'Initial Hypothesis Extractor Agent',
-      extractorResponse.object,
-      extractorResponse.reasoning,
-    );
-
-    if (!extractorParseResult.success) {
-      logValidationError(
-        logFile,
-        'Step 2b: Initial Hypothesis (JSON Extraction)',
-        extractorParseResult.error,
-      );
-      return bail({
-        success: false,
-        message:
-          '[Initial Hypothesis Step] Extraction validation failed: ' +
-          extractorParseResult.error.message,
-      });
-    }
-
-    const extractorParsed = extractorParseResult.data;
-
-    if (extractorParsed.success === false || extractorParsed.rules === null) {
-      return bail({
-        success: false,
-        message: '[Initial Hypothesis Step] Extraction failed: ' + extractorParsed.explanation,
-      });
-    }
-
-    // Save updated vocabulary and timings to state
-    await setState({
-      ...state,
-      vocabulary: Object.fromEntries(vocabularyState),
-      stepTimings: [...state.stepTimings, hypothesizerTiming, extractorTiming],
-    });
-
-    // Return the initial loop state with hypothesized rules
-    await emitTraceEvent(writer, {
-      type: 'data-step-complete',
-      data: {
-        stepId,
-        durationMs: Math.round(
-          (hypothesizerTiming.durationMinutes + extractorTiming.durationMinutes) * 60_000,
-        ),
-        timestamp: new Date().toISOString(),
-      },
-    });
-
-    return {
-      structuredProblem,
-      rules: extractorParsed.rules,
-      testResults: null, // No test results yet
-      iterationCount: 0,
-    };
-  },
-});
-
-// This step runs the verify-improve cycle
-// It takes the loop state, verifies rules, then improves them
-const verifyImproveLoopStep = createStep({
-  id: 'verify-improve-rules-loop',
-  description: `Step 3: Verify rules and improve based on feedback, up to ${MAX_VERIFY_IMPROVE_ITERATIONS} iterations.`,
-  inputSchema: hypothesisTestLoopSchema,
-  outputSchema: hypothesisTestLoopSchema,
-  stateSchema: workflowStateSchema,
-  execute: async ({ inputData, mastra, bail, state, setState, writer }) => {
-    const { structuredProblem, rules: currentRules, iterationCount } = inputData;
-    const logFile = state.logFile;
-    let currentStepTimings = [...state.stepTimings];
-
-    const stepId: StepId = 'verify-improve-rules-loop';
-    if (iterationCount === 0) {
-      await emitTraceEvent(writer, {
-        type: 'data-step-start',
-        data: { stepId, timestamp: new Date().toISOString() },
-      });
-    }
-
-    // Rebuild vocabulary state from workflow state
-    const vocabularyState = new Map(Object.entries(state.vocabulary));
-
-    // Rules should never be null here (they come from initial hypothesis step)
-    if (currentRules === null) {
-      return bail({
-        success: false,
-        message: '[Verify-Improve Loop] Rules must be provided from initial hypothesis step.',
-      });
-    }
-
-    // Step 3a: Verify rules using the orchestrator (which calls testRule/testSentence tools)
-    // This step chains two agents:
-    // 1. Verifier Orchestrator Agent - outputs natural language feedback
-    // 2. Verifier Feedback Extractor Agent - extracts JSON from the natural language output
-
-    // Create RequestContext with all context needed by tools
-    const requestContext = new RequestContext<WorkflowRequestContext>();
-    requestContext.set('vocabulary-state', vocabularyState);
-    requestContext.set('structured-problem', structuredProblem);
-    requestContext.set('current-rules', currentRules);
-    requestContext.set('log-file', logFile);
-    requestContext.set('model-mode', state.modelMode as ModelMode);
-    requestContext.set('step-writer', writer);
-
-    const vocabulary = Array.from(vocabularyState.values());
-
-    await emitTraceEvent(writer, {
-      type: 'data-verify-improve-phase',
-      data: {
-        iteration: iterationCount + 1,
-        phase: 'verify-start',
-        timestamp: new Date().toISOString(),
-      },
-    });
-
-    // Note: vocabulary, structuredProblem, rules are passed in the prompt for the agent
-    const orchestratorPrompt = JSON.stringify({
-      vocabulary,
-      structuredProblem,
-      rules: currentRules,
-    });
-
-    // Step 3a1: Call the Verifier Orchestrator Agent (natural language output)
-    const orchestratorStartTime = new Date();
-    const orchestratorResponse = await generateWithRetry(
-      mastra.getAgentById('verifier-orchestrator'),
-      {
-        prompt: orchestratorPrompt,
-        options: { maxSteps: 100, requestContext },
-      },
-    );
-
-    const orchestratorTiming = recordStepTiming(
-      `Step 3a1 (Iter ${iterationCount + 1})`,
-      'Verifier Orchestrator Agent',
-      orchestratorStartTime,
-    );
-    currentStepTimings.push(orchestratorTiming);
-    console.log(
-      `[Step 3a1] Verifier Orchestrator Agent finished (Iteration ${iterationCount + 1}) at ${orchestratorTiming.endTime} (${orchestratorTiming.durationMinutes} min).`,
-    );
-
-    await emitTraceEvent(writer, {
-      type: 'data-agent-reasoning',
-      data: {
-        stepId,
-        agentName: `Verifier Orchestrator (Iter ${iterationCount + 1})`,
-        model: activeModelId(state.modelMode as ModelMode, 'google/gemini-3-flash-preview'),
-        reasoning: orchestratorResponse.text || '',
-        durationMs: Math.round(orchestratorTiming.durationMinutes * 60_000),
-        timestamp: new Date().toISOString(),
-      },
-    });
-
-    // Log the natural language output from the orchestrator
-    logAgentOutput(
-      logFile,
-      `Step 3a1: Verify-Improve Loop (Iteration ${iterationCount + 1}) - Verifier (Natural Language)`,
-      'Verifier Orchestrator Agent',
-      { naturalLanguageOutput: orchestratorResponse.text },
-      orchestratorResponse.reasoning,
-    );
-
-    // Step 3a2: Call the Verifier Feedback Extractor Agent to parse into JSON
-    const verifierExtractorPrompt =
-      'Please extract the verification feedback from the following analysis:\\n\\n' +
-      orchestratorResponse.text;
-
-    const verifierExtractorStartTime = new Date();
-    const verifierExtractorResponse = await generateWithRetry(
-      mastra.getAgentById('verifier-feedback-extractor'),
-      {
-        prompt: verifierExtractorPrompt,
-        options: {
-          maxSteps: 100,
-          requestContext,
-          structuredOutput: {
-            schema: verifierFeedbackSchema,
-          },
-        },
-      },
-    );
-
-    const verifierExtractorTiming = recordStepTiming(
-      `Step 3a2 (Iter ${iterationCount + 1})`,
-      'Verifier Feedback Extractor Agent',
-      verifierExtractorStartTime,
-    );
-    currentStepTimings.push(verifierExtractorTiming);
-    console.log(
-      `[Step 3a2] Verifier Feedback Extractor Agent finished (Iteration ${iterationCount + 1}) at ${verifierExtractorTiming.endTime} (${verifierExtractorTiming.durationMinutes} min).`,
-    );
-
-    await emitTraceEvent(writer, {
-      type: 'data-agent-reasoning',
-      data: {
-        stepId,
-        agentName: `Verifier Feedback Extractor (Iter ${iterationCount + 1})`,
-        model: activeModelId(state.modelMode as ModelMode, 'openai/gpt-5-mini'),
-        reasoning: verifierExtractorResponse.text || '',
-        durationMs: Math.round(verifierExtractorTiming.durationMinutes * 60_000),
-        timestamp: new Date().toISOString(),
-      },
-    });
-
-    const orchestratorParseResult = verifierFeedbackSchema.safeParse(
-      verifierExtractorResponse.object,
-    );
-
-    logAgentOutput(
-      logFile,
-      `Step 3a2: Verify-Improve Loop (Iteration ${iterationCount + 1}) - Extractor (JSON)`,
-      'Verifier Feedback Extractor Agent',
-      verifierExtractorResponse.object,
-      verifierExtractorResponse.reasoning,
-    );
-
-    if (!orchestratorParseResult.success) {
-      logValidationError(
-        logFile,
-        `Step 3a2: Verify-Improve Loop (Iteration ${iterationCount + 1}) - Extractor`,
-        orchestratorParseResult.error,
-      );
-      return bail({
-        success: false,
-        message: '[Verify Rules Step] Validation failed: ' + orchestratorParseResult.error.message,
-      });
-    }
-
-    const verifierFeedback = orchestratorParseResult.data;
-
-    await emitTraceEvent(writer, {
-      type: 'data-iteration-update',
-      data: {
-        iteration: iterationCount + 1,
-        conclusion: verifierFeedback.conclusion,
-        rulesTestedCount: verifierFeedback.rulesTestedCount,
-        errantRulesCount: verifierFeedback.errantRules.length,
-        sentencesTestedCount: verifierFeedback.sentencesTestedCount,
-        errantSentencesCount: verifierFeedback.errantSentences.length,
-        timestamp: new Date().toISOString(),
-      },
-    });
-
-    await emitTraceEvent(writer, {
-      type: 'data-verify-improve-phase',
-      data: {
-        iteration: iterationCount + 1,
-        phase: 'verify-complete',
-        timestamp: new Date().toISOString(),
-      },
-    });
-
-    // If all rules pass, we're done - no need to improve
-    if (verifierFeedback.conclusion === 'ALL_RULES_PASS') {
-      await setState({ ...state, stepTimings: currentStepTimings });
+    for (let round = 1; round <= effectiveMaxRounds; round++) {
+      const isImproverRound = round > 1;
 
       await emitTraceEvent(writer, {
-        type: 'data-step-complete',
+        type: 'data-round-start',
+        data: { round, isImproverRound, timestamp: new Date().toISOString() },
+      });
+
+      // ---------------------------------------------------------------
+      // a. DISPATCH: Get perspectives
+      // ---------------------------------------------------------------
+      let perspectives: Perspective[];
+
+      if (!isImproverRound) {
+        // Round 1: Use dispatcher agent
+        const dispatcherPrompt = JSON.stringify({
+          structuredProblem,
+          perspectiveCount: effectivePerspectiveCount,
+        });
+
+        const dispatchStartTime = new Date();
+        const dispatcherResponse = await generateWithRetry(
+          mastra.getAgentById('perspective-dispatcher'),
+          {
+            prompt: dispatcherPrompt,
+            options: {
+              maxSteps: 100,
+              requestContext: mainRequestContext,
+              structuredOutput: { schema: dispatcherOutputSchema },
+            },
+          },
+        );
+
+        const dispatchTiming = recordStepTiming(
+          `Round ${round} Dispatch`,
+          'Perspective Dispatcher Agent',
+          dispatchStartTime,
+        );
+        currentStepTimings.push(dispatchTiming);
+        console.log(
+          `[Round ${round}] Dispatcher finished at ${dispatchTiming.endTime} (${dispatchTiming.durationMinutes} min).`,
+        );
+
+        await emitTraceEvent(writer, {
+          type: 'data-agent-reasoning',
+          data: {
+            stepId,
+            agentName: `Perspective Dispatcher (Round ${round})`,
+            model: activeModelId(
+              state.modelMode as ModelMode,
+              'google/gemini-3-flash-preview',
+            ),
+            reasoning: dispatcherResponse.text || '',
+            durationMs: Math.round(dispatchTiming.durationMinutes * 60_000),
+            timestamp: new Date().toISOString(),
+          },
+        });
+
+        logAgentOutput(
+          logFile,
+          `Round ${round}: Dispatch`,
+          'Perspective Dispatcher Agent',
+          dispatcherResponse.object,
+          dispatcherResponse.reasoning,
+        );
+
+        const dispatchParsed = dispatcherOutputSchema.safeParse(dispatcherResponse.object);
+        if (!dispatchParsed.success || !dispatchParsed.data.perspectives) {
+          return bail({
+            success: false,
+            message:
+              '[Multi-Perspective] Dispatcher failed: ' +
+              (dispatchParsed.error?.message ?? 'No perspectives generated'),
+          });
+        }
+
+        perspectives = dispatchParsed.data.perspectives;
+      } else {
+        // Round 2+: Use improver-dispatcher with current state + test results
+        const mainRulesArray = Array.from(mainRules.values());
+        const mainVocabArray = Array.from(mainVocabulary.values());
+
+        const improverPrompt = JSON.stringify({
+          structuredProblem,
+          perspectiveCount: effectivePerspectiveCount,
+          currentRules: mainRulesArray,
+          currentVocabulary: mainVocabArray,
+          testResults: lastTestResults,
+          previousPerspectiveIds,
+        });
+
+        const improverDispatchStartTime = new Date();
+        const improverDispatcherResponse = await generateWithRetry(
+          mastra.getAgentById('improver-dispatcher'),
+          {
+            prompt: improverPrompt,
+            options: {
+              maxSteps: 100,
+              requestContext: mainRequestContext,
+              structuredOutput: { schema: improverDispatcherOutputSchema },
+            },
+          },
+        );
+
+        const improverDispatchTiming = recordStepTiming(
+          `Round ${round} Improver Dispatch`,
+          'Improver Dispatcher Agent',
+          improverDispatchStartTime,
+        );
+        currentStepTimings.push(improverDispatchTiming);
+        console.log(
+          `[Round ${round}] Improver Dispatcher finished at ${improverDispatchTiming.endTime} (${improverDispatchTiming.durationMinutes} min).`,
+        );
+
+        await emitTraceEvent(writer, {
+          type: 'data-agent-reasoning',
+          data: {
+            stepId,
+            agentName: `Improver Dispatcher (Round ${round})`,
+            model: activeModelId(
+              state.modelMode as ModelMode,
+              'google/gemini-3-flash-preview',
+            ),
+            reasoning: improverDispatcherResponse.text || '',
+            durationMs: Math.round(improverDispatchTiming.durationMinutes * 60_000),
+            timestamp: new Date().toISOString(),
+          },
+        });
+
+        logAgentOutput(
+          logFile,
+          `Round ${round}: Improver Dispatch`,
+          'Improver Dispatcher Agent',
+          improverDispatcherResponse.object,
+          improverDispatcherResponse.reasoning,
+        );
+
+        const improverParsed = improverDispatcherOutputSchema.safeParse(
+          improverDispatcherResponse.object,
+        );
+        if (!improverParsed.success || !improverParsed.data.perspectives) {
+          // If improver-dispatcher returns no perspectives, stop iteration
+          console.log(`[Round ${round}] Improver returned no new perspectives, stopping.`);
+          break;
+        }
+
+        perspectives = improverParsed.data.perspectives;
+      }
+
+      // Track perspective IDs for future rounds
+      previousPerspectiveIds.push(...perspectives.map((p) => p.id));
+
+      // ---------------------------------------------------------------
+      // b. HYPOTHESIZE: Run hypothesizers in parallel
+      // ---------------------------------------------------------------
+      const hypothesizePromises = perspectives.map(async (perspective) => {
+        await emitTraceEvent(writer, {
+          type: 'data-perspective-start',
+          data: {
+            perspectiveId: perspective.id,
+            perspectiveName: perspective.name,
+            round,
+            timestamp: new Date().toISOString(),
+          },
+        });
+
+        // Create a draft store for this perspective
+        const draftStore = createDraftStore(
+          mainRequestContext,
+          perspective.id,
+          isImproverRound, // pull from main on round 2+
+        );
+
+        // Create a fresh RequestContext pointing to this perspective's draft stores
+        const perspectiveRequestContext = new RequestContext<WorkflowRequestContext>();
+        perspectiveRequestContext.set('vocabulary-state', draftStore.vocabulary);
+        perspectiveRequestContext.set('rules-state', draftStore.rules);
+        perspectiveRequestContext.set('structured-problem', structuredProblem);
+        perspectiveRequestContext.set('log-file', logFile);
+        perspectiveRequestContext.set('model-mode', state.modelMode as ModelMode);
+        perspectiveRequestContext.set('step-writer', writer);
+
+        const existingRules = isImproverRound ? Array.from(mainRules.values()) : [];
+        const existingVocabulary = isImproverRound ? Array.from(mainVocabulary.values()) : [];
+
+        const hypothesizerPrompt = JSON.stringify({
+          structuredProblem,
+          perspective,
+          existingRules,
+          existingVocabulary,
+        });
+
+        const hypStartTime = new Date();
+        const hypothesizerResponse = await generateWithRetry(
+          mastra.getAgentById('initial-hypothesizer'),
+          {
+            prompt: hypothesizerPrompt,
+            options: { maxSteps: 100, requestContext: perspectiveRequestContext },
+          },
+        );
+
+        const hypTiming = recordStepTiming(
+          `Round ${round} Hypothesizer (${perspective.id})`,
+          'Initial Hypothesizer Agent',
+          hypStartTime,
+        );
+        console.log(
+          `[Round ${round}] Hypothesizer (${perspective.id}) finished at ${hypTiming.endTime} (${hypTiming.durationMinutes} min).`,
+        );
+
+        await emitTraceEvent(writer, {
+          type: 'data-agent-reasoning',
+          data: {
+            stepId,
+            agentName: `Hypothesizer (${perspective.name})`,
+            model: activeModelId(
+              state.modelMode as ModelMode,
+              'google/gemini-3-flash-preview',
+            ),
+            reasoning: hypothesizerResponse.text || '',
+            durationMs: Math.round(hypTiming.durationMinutes * 60_000),
+            timestamp: new Date().toISOString(),
+          },
+        });
+
+        logAgentOutput(
+          logFile,
+          `Round ${round}: Hypothesizer (${perspective.id})`,
+          'Initial Hypothesizer Agent',
+          { naturalLanguageOutput: hypothesizerResponse.text },
+          hypothesizerResponse.reasoning,
+        );
+
+        await emitTraceEvent(writer, {
+          type: 'data-perspective-complete',
+          data: {
+            perspectiveId: perspective.id,
+            perspectiveName: perspective.name,
+            round,
+            testPassRate: 0, // Will be computed during verification
+            rulesCount: draftStore.rules.size,
+            vocabularyCount: draftStore.vocabulary.size,
+            timestamp: new Date().toISOString(),
+          },
+        });
+
+        return { perspective, draftStore, timing: hypTiming };
+      });
+
+      const hypothesisResults = await Promise.all(hypothesizePromises);
+      for (const h of hypothesisResults) {
+        currentStepTimings.push(h.timing);
+      }
+
+      // ---------------------------------------------------------------
+      // c. VERIFY: Score each perspective's draft store
+      // ---------------------------------------------------------------
+      const perspectiveResults: PerspectiveResult[] = [];
+
+      const verifyPromises = hypothesisResults.map(async ({ perspective, draftStore }) => {
+        // Create a RequestContext with draft rules as current-rules for verifier
+        const verifyRequestContext = new RequestContext<WorkflowRequestContext>();
+        verifyRequestContext.set('vocabulary-state', draftStore.vocabulary);
+        verifyRequestContext.set('structured-problem', structuredProblem);
+        verifyRequestContext.set('current-rules', Array.from(draftStore.rules.values()));
+        verifyRequestContext.set('log-file', logFile);
+        verifyRequestContext.set('model-mode', state.modelMode as ModelMode);
+        verifyRequestContext.set('step-writer', writer);
+
+        const verifyVocabulary = Array.from(draftStore.vocabulary.values());
+        const verifyRules = Array.from(draftStore.rules.values());
+
+        const verifierPrompt = JSON.stringify({
+          vocabulary: verifyVocabulary,
+          structuredProblem,
+          rules: verifyRules,
+        });
+
+        // Step 1: Call verifier orchestrator
+        const verifierStartTime = new Date();
+        const verifierResponse = await generateWithRetry(
+          mastra.getAgentById('verifier-orchestrator'),
+          {
+            prompt: verifierPrompt,
+            options: { maxSteps: 100, requestContext: verifyRequestContext },
+          },
+        );
+
+        const verifierTiming = recordStepTiming(
+          `Round ${round} Verify (${perspective.id})`,
+          'Verifier Orchestrator Agent',
+          verifierStartTime,
+        );
+        currentStepTimings.push(verifierTiming);
+        console.log(
+          `[Round ${round}] Verifier (${perspective.id}) finished at ${verifierTiming.endTime} (${verifierTiming.durationMinutes} min).`,
+        );
+
+        await emitTraceEvent(writer, {
+          type: 'data-agent-reasoning',
+          data: {
+            stepId,
+            agentName: `Verifier (${perspective.name})`,
+            model: activeModelId(
+              state.modelMode as ModelMode,
+              'google/gemini-3-flash-preview',
+            ),
+            reasoning: verifierResponse.text || '',
+            durationMs: Math.round(verifierTiming.durationMinutes * 60_000),
+            timestamp: new Date().toISOString(),
+          },
+        });
+
+        // Step 2: Extract structured feedback
+        const extractorPrompt =
+          'Please extract the verification feedback from the following analysis:\\n\\n' +
+          verifierResponse.text;
+
+        const extractorStartTime = new Date();
+        const extractorResponse = await generateWithRetry(
+          mastra.getAgentById('verifier-feedback-extractor'),
+          {
+            prompt: extractorPrompt,
+            options: {
+              maxSteps: 100,
+              requestContext: verifyRequestContext,
+              structuredOutput: { schema: verifierFeedbackSchema },
+            },
+          },
+        );
+
+        const extractorTiming = recordStepTiming(
+          `Round ${round} Verify Extract (${perspective.id})`,
+          'Verifier Feedback Extractor Agent',
+          extractorStartTime,
+        );
+        currentStepTimings.push(extractorTiming);
+
+        const feedbackParsed = verifierFeedbackSchema.safeParse(extractorResponse.object);
+
+        logAgentOutput(
+          logFile,
+          `Round ${round}: Verify (${perspective.id})`,
+          'Verifier Feedback Extractor Agent',
+          extractorResponse.object,
+          extractorResponse.reasoning,
+        );
+
+        if (!feedbackParsed.success) {
+          // If verification feedback fails to parse, assign a 0 score
+          console.warn(
+            `[Round ${round}] Verifier feedback parse failed for ${perspective.id}:`,
+            feedbackParsed.error.message,
+          );
+          return {
+            perspectiveId: perspective.id,
+            perspectiveName: perspective.name,
+            rulesCount: draftStore.rules.size,
+            vocabularyCount: draftStore.vocabulary.size,
+            testPassRate: 0,
+            verifierConclusion: 'MAJOR_ISSUES' as const,
+            errantRulesCount: draftStore.rules.size,
+            errantSentencesCount: 0,
+          };
+        }
+
+        const feedback = feedbackParsed.data;
+        const totalChecks = feedback.rulesTestedCount + feedback.sentencesTestedCount;
+        const failedChecks = feedback.errantRules.length + feedback.errantSentences.length;
+        const testPassRate = totalChecks > 0 ? 1 - failedChecks / totalChecks : 0;
+
+        return {
+          perspectiveId: perspective.id,
+          perspectiveName: perspective.name,
+          rulesCount: draftStore.rules.size,
+          vocabularyCount: draftStore.vocabulary.size,
+          testPassRate,
+          verifierConclusion: feedback.conclusion,
+          errantRulesCount: feedback.errantRules.length,
+          errantSentencesCount: feedback.errantSentences.length,
+        };
+      });
+
+      const verifyResults = await Promise.all(verifyPromises);
+      perspectiveResults.push(...verifyResults);
+
+      // ---------------------------------------------------------------
+      // d. SYNTHESIZE: Merge best rulesets
+      // ---------------------------------------------------------------
+      await emitTraceEvent(writer, {
+        type: 'data-synthesis-start',
         data: {
-          stepId,
-          durationMs: Math.round(
-            (orchestratorTiming.durationMinutes + verifierExtractorTiming.durationMinutes) * 60_000,
-          ),
+          round,
+          perspectiveCount: perspectives.length,
           timestamp: new Date().toISOString(),
         },
       });
 
-      return {
-        structuredProblem,
-        rules: currentRules,
-        testResults: verifierFeedback,
-        iterationCount: iterationCount + 1,
-      };
-    }
+      // Sort perspectives by testPassRate descending
+      const sortedResults = [...perspectiveResults].sort(
+        (a, b) => b.testPassRate - a.testPassRate,
+      );
 
-    // Step 3b: Improve rules based on verifier feedback
-    // This step chains two agents:
-    // 1. Rules Improver Agent - outputs natural language with reasoning and alternatives
-    // 2. Rules Improvement Extractor Agent - extracts JSON from the natural language output
+      // Programmatic vocabulary merge: iterate draft stores in score order
+      // Higher-scored perspective's entries take priority (last write wins, but we go best-first)
+      // Clear main vocabulary first, then merge from worst to best so best wins
+      mainVocabulary.clear();
+      for (const result of [...sortedResults].reverse()) {
+        const draft = draftStores.get(result.perspectiveId);
+        if (draft) {
+          for (const [key, entry] of draft.vocabulary) {
+            mainVocabulary.set(key, entry);
+          }
+        }
+      }
 
-    await emitTraceEvent(writer, {
-      type: 'data-verify-improve-phase',
-      data: {
-        iteration: iterationCount + 1,
-        phase: 'improve-start',
-        timestamp: new Date().toISOString(),
-      },
-    });
+      // Clear main rules before synthesis (synthesizer rebuilds from scratch)
+      mainRules.clear();
 
-    // Create improver agent with vocabulary tools
-    const improverVocabulary = Array.from(vocabularyState.values());
-
-    const improverPrompt =
-      'Your previous rules did not fully pass verification. Please improve your rules and vocabulary based on the feedback provided. Think outside the box and generate 2-3 alternative hypotheses for problematic areas.\\n\\n' +
-      JSON.stringify({
-        vocabulary: improverVocabulary,
-        structuredProblem,
-        previousRules: currentRules,
-        verifierFeedback,
+      // Build serialized rules for each perspective (for synthesizer prompt)
+      const perspectiveRulesData = sortedResults.map((result) => {
+        const draft = draftStores.get(result.perspectiveId);
+        return {
+          perspectiveId: result.perspectiveId,
+          perspectiveName: result.perspectiveName,
+          testPassRate: result.testPassRate,
+          verifierConclusion: result.verifierConclusion,
+          rules: draft ? Array.from(draft.rules.values()) : [],
+          vocabularyCount: result.vocabularyCount,
+        };
       });
 
-    // Step 3b1: Call the Rules Improver Agent (natural language output)
-    const improverStartTime = new Date();
-    const improverResponse = await generateWithRetry(mastra.getAgentById('rules-improver'), {
-      prompt: improverPrompt,
-      options: { maxSteps: 100, requestContext },
-    });
+      const synthesizerPrompt = JSON.stringify({
+        structuredProblem,
+        perspectiveResults: sortedResults,
+        perspectiveRules: perspectiveRulesData,
+        mergedVocabulary: Array.from(mainVocabulary.values()),
+      });
 
-    const improverTiming = recordStepTiming(
-      `Step 3b1 (Iter ${iterationCount + 1})`,
-      'Rules Improver Agent',
-      improverStartTime,
-    );
-    currentStepTimings.push(improverTiming);
-    console.log(
-      `[Step 3b1] Rules Improver Agent finished (Iteration ${iterationCount + 1}) at ${improverTiming.endTime} (${improverTiming.durationMinutes} min).`,
-    );
+      const synthesizerStartTime = new Date();
+      const synthesizerResponse = await generateWithRetry(
+        mastra.getAgentById('hypothesis-synthesizer'),
+        {
+          prompt: synthesizerPrompt,
+          options: { maxSteps: 100, requestContext: mainRequestContext },
+        },
+      );
 
-    await emitTraceEvent(writer, {
-      type: 'data-agent-reasoning',
-      data: {
-        stepId,
-        agentName: `Rules Improver (Iter ${iterationCount + 1})`,
-        model: activeModelId(state.modelMode as ModelMode, 'google/gemini-3-flash-preview'),
-        reasoning: improverResponse.text || '',
-        durationMs: Math.round(improverTiming.durationMinutes * 60_000),
-        timestamp: new Date().toISOString(),
-      },
-    });
+      const synthesizerTiming = recordStepTiming(
+        `Round ${round} Synthesis`,
+        'Hypothesis Synthesizer Agent',
+        synthesizerStartTime,
+      );
+      currentStepTimings.push(synthesizerTiming);
+      console.log(
+        `[Round ${round}] Synthesizer finished at ${synthesizerTiming.endTime} (${synthesizerTiming.durationMinutes} min).`,
+      );
 
-    // Log the natural language output from the improver
-    logAgentOutput(
-      logFile,
-      `Step 3b1: Verify-Improve Loop (Iteration ${iterationCount + 1}) - Improver (Natural Language)`,
-      'Rules Improver Agent',
-      { naturalLanguageOutput: improverResponse.text },
-      improverResponse.reasoning,
-    );
+      await emitTraceEvent(writer, {
+        type: 'data-agent-reasoning',
+        data: {
+          stepId,
+          agentName: `Hypothesis Synthesizer (Round ${round})`,
+          model: activeModelId(
+            state.modelMode as ModelMode,
+            'google/gemini-3-flash-preview',
+          ),
+          reasoning: synthesizerResponse.text || '',
+          durationMs: Math.round(synthesizerTiming.durationMinutes * 60_000),
+          timestamp: new Date().toISOString(),
+        },
+      });
 
-    // Step 3b2: Call the Rules Improvement Extractor Agent to parse into JSON
-    const extractorPrompt =
-      'Please extract the revised rules and vocabulary from the following improvement analysis:\\n\\n' +
-      improverResponse.text;
+      logAgentOutput(
+        logFile,
+        `Round ${round}: Synthesis`,
+        'Hypothesis Synthesizer Agent',
+        { naturalLanguageOutput: synthesizerResponse.text },
+        synthesizerResponse.reasoning,
+      );
 
-    const extractorStartTime = new Date();
-    const extractorResponse = await generateWithRetry(
-      mastra.getAgentById('rules-improvement-extractor'),
-      {
-        prompt: extractorPrompt,
-        options: {
-          maxSteps: 100,
-          requestContext,
-          structuredOutput: {
-            schema: rulesSchema,
+      // Read the merged state from main stores (synthesizer writes via tools)
+      const mergedRulesCount = mainRules.size;
+      const mergedVocabCount = mainVocabulary.size;
+
+      await emitTraceEvent(writer, {
+        type: 'data-synthesis-complete',
+        data: {
+          round,
+          mergedRulesCount,
+          mergedVocabCount,
+          testPassRate: 0, // Will be computed during convergence check
+          timestamp: new Date().toISOString(),
+        },
+      });
+
+      // ---------------------------------------------------------------
+      // e. CONVERGENCE CHECK: Verify synthesized rules
+      // ---------------------------------------------------------------
+      const convergenceRequestContext = new RequestContext<WorkflowRequestContext>();
+      convergenceRequestContext.set('vocabulary-state', mainVocabulary);
+      convergenceRequestContext.set('structured-problem', structuredProblem);
+      convergenceRequestContext.set('current-rules', Array.from(mainRules.values()));
+      convergenceRequestContext.set('log-file', logFile);
+      convergenceRequestContext.set('model-mode', state.modelMode as ModelMode);
+      convergenceRequestContext.set('step-writer', writer);
+
+      const convergenceVerifierPrompt = JSON.stringify({
+        vocabulary: Array.from(mainVocabulary.values()),
+        structuredProblem,
+        rules: Array.from(mainRules.values()),
+      });
+
+      const convergenceStartTime = new Date();
+      const convergenceVerifierResponse = await generateWithRetry(
+        mastra.getAgentById('verifier-orchestrator'),
+        {
+          prompt: convergenceVerifierPrompt,
+          options: { maxSteps: 100, requestContext: convergenceRequestContext },
+        },
+      );
+
+      const convergenceTiming = recordStepTiming(
+        `Round ${round} Convergence Check`,
+        'Verifier Orchestrator Agent',
+        convergenceStartTime,
+      );
+      currentStepTimings.push(convergenceTiming);
+
+      // Extract convergence feedback
+      const convergenceExtractorPrompt =
+        'Please extract the verification feedback from the following analysis:\\n\\n' +
+        convergenceVerifierResponse.text;
+
+      const convergenceExtractorStartTime = new Date();
+      const convergenceExtractorResponse = await generateWithRetry(
+        mastra.getAgentById('verifier-feedback-extractor'),
+        {
+          prompt: convergenceExtractorPrompt,
+          options: {
+            maxSteps: 100,
+            requestContext: convergenceRequestContext,
+            structuredOutput: { schema: verifierFeedbackSchema },
           },
         },
-      },
-    );
+      );
 
-    const extractorTiming = recordStepTiming(
-      `Step 3b2 (Iter ${iterationCount + 1})`,
-      'Rules Improvement Extractor Agent',
-      extractorStartTime,
-    );
-    currentStepTimings.push(extractorTiming);
-    console.log(
-      `[Step 3b2] Rules Improvement Extractor Agent finished (Iteration ${iterationCount + 1}) at ${extractorTiming.endTime} (${extractorTiming.durationMinutes} min).`,
-    );
+      const convergenceExtractorTiming = recordStepTiming(
+        `Round ${round} Convergence Extract`,
+        'Verifier Feedback Extractor Agent',
+        convergenceExtractorStartTime,
+      );
+      currentStepTimings.push(convergenceExtractorTiming);
+
+      const convergenceParsed = verifierFeedbackSchema.safeParse(
+        convergenceExtractorResponse.object,
+      );
+
+      logAgentOutput(
+        logFile,
+        `Round ${round}: Convergence Check`,
+        'Verifier Feedback Extractor Agent',
+        convergenceExtractorResponse.object,
+        convergenceExtractorResponse.reasoning,
+      );
+
+      let converged = false;
+
+      if (convergenceParsed.success) {
+        const feedback = convergenceParsed.data;
+        lastTestResults = feedback;
+
+        await emitTraceEvent(writer, {
+          type: 'data-iteration-update',
+          data: {
+            iteration: round,
+            conclusion: feedback.conclusion,
+            rulesTestedCount: feedback.rulesTestedCount,
+            errantRulesCount: feedback.errantRules.length,
+            sentencesTestedCount: feedback.sentencesTestedCount,
+            errantSentencesCount: feedback.errantSentences.length,
+            timestamp: new Date().toISOString(),
+          },
+        });
+
+        if (feedback.conclusion === 'ALL_RULES_PASS') {
+          converged = true;
+        }
+      }
+
+      await emitTraceEvent(writer, {
+        type: 'data-round-complete',
+        data: { round, converged, timestamp: new Date().toISOString() },
+      });
+
+      // Save state after each round
+      await setState({
+        ...state,
+        vocabulary: Object.fromEntries(mainVocabulary),
+        rules: Object.fromEntries(mainRules),
+        currentRound: round,
+        stepTimings: currentStepTimings,
+      });
+
+      if (converged) {
+        console.log(`[Round ${round}] Converged! All rules pass.`);
+        break;
+      }
+
+      // ---------------------------------------------------------------
+      // f. Clear draft stores for next round
+      // ---------------------------------------------------------------
+      clearAllDraftStores(mainRequestContext);
+    }
+
+    // After all rounds: return structuredProblem + rules for answering step
+    const finalRules = Array.from(mainRules.values());
+
+    const totalDurationMs = new Date().getTime() - stepStartTime.getTime();
 
     await emitTraceEvent(writer, {
-      type: 'data-agent-reasoning',
+      type: 'data-step-complete',
       data: {
         stepId,
-        agentName: `Rules Improvement Extractor (Iter ${iterationCount + 1})`,
-        model: activeModelId(state.modelMode as ModelMode, 'openai/gpt-5-mini'),
-        reasoning: extractorResponse.text || '',
-        durationMs: Math.round(extractorTiming.durationMinutes * 60_000),
+        durationMs: totalDurationMs,
         timestamp: new Date().toISOString(),
       },
     });
 
-    const extractorParseResult = rulesSchema.safeParse(extractorResponse.object);
-
-    logAgentOutput(
-      logFile,
-      `Step 3b2: Verify-Improve Loop (Iteration ${iterationCount + 1}) - Extractor (JSON)`,
-      'Rules Improvement Extractor Agent',
-      extractorResponse.object,
-      extractorResponse.reasoning,
-    );
-
-    if (!extractorParseResult.success) {
-      logValidationError(
-        logFile,
-        `Step 3b2: Verify-Improve Loop (Iteration ${iterationCount + 1}) - Extractor`,
-        extractorParseResult.error,
-      );
-      return bail({
-        success: false,
-        message:
-          '[Improve Rules Step] Extraction validation failed: ' +
-          extractorParseResult.error.message,
-      });
-    }
-
-    const extractorParsed = extractorParseResult.data;
-
-    if (extractorParsed.success === false || extractorParsed.rules === null) {
-      return bail({
-        success: false,
-        message: '[Improve Rules Step] Extraction failed: ' + extractorParsed.explanation,
-      });
-    }
-
-    // Save updated vocabulary and timings to state
-    await setState({
-      ...state,
-      vocabulary: Object.fromEntries(vocabularyState),
-      stepTimings: currentStepTimings,
-    });
-
-    await emitTraceEvent(writer, {
-      type: 'data-verify-improve-phase',
-      data: {
-        iteration: iterationCount + 1,
-        phase: 'improve-complete',
-        timestamp: new Date().toISOString(),
-      },
-    });
-
-    // Return the updated loop state with improved rules
     return {
       structuredProblem,
-      rules: extractorParsed.rules,
-      testResults: verifierFeedback,
-      iterationCount: iterationCount + 1,
+      rules: finalRules,
     };
   },
 });
 
-// Step 4: Answer questions using the validated rules and vocabulary from state
+// Step 3: Answer questions using the validated rules and vocabulary from state
 const answerQuestionsStep = createStep({
   id: 'answer-questions',
   description:
-    "Step 4: Answer the user's questions using the validated rules and vocabulary from workflow state.",
+    "Step 3: Answer the user's questions using the validated rules and vocabulary from workflow state.",
   inputSchema: questionAnsweringInputSchema,
   outputSchema: questionsAnsweredSchema,
   stateSchema: workflowStateSchema,
@@ -740,10 +870,10 @@ const answerQuestionsStep = createStep({
       },
     );
 
-    const answererTiming = recordStepTiming('Step 4', 'Question Answerer Agent', answererStartTime);
+    const answererTiming = recordStepTiming('Step 3', 'Question Answerer Agent', answererStartTime);
     const finalStepTimings = [...state.stepTimings, answererTiming];
     console.log(
-      `[Step 4] Question Answerer Agent finished at ${answererTiming.endTime} (${answererTiming.durationMinutes} min).`,
+      `[Step 3] Question Answerer Agent finished at ${answererTiming.endTime} (${answererTiming.durationMinutes} min).`,
     );
 
     await emitTraceEvent(writer, {
@@ -762,14 +892,14 @@ const answerQuestionsStep = createStep({
 
     logAgentOutput(
       logFile,
-      'Step 4: Answer Questions',
+      'Step 3: Answer Questions',
       'Question Answerer Agent',
       answererResponse.object,
       answererResponse.reasoning,
     );
 
     if (!answererParseResult.success) {
-      logValidationError(logFile, 'Step 4: Answer Questions', answererParseResult.error);
+      logValidationError(logFile, 'Step 3: Answer Questions', answererParseResult.error);
       return bail({
         success: false,
         message: '[Answer Questions Step] Validation failed: ' + answererParseResult.error.message,
@@ -814,22 +944,8 @@ export const solverWorkflow = createWorkflow({
   // Step 1: Extract structured problem data from raw text input.
   .then(extractionStep)
   .map(async ({ inputData }) => inputData.data!)
-  // Step 2: Generate initial rules and vocabulary.
-  .then(initialHypothesisStep)
-  // Step 3: Up to 4 iterations, perform the verify-improve loop:
-  // - Step 3a: Verify rules using the orchestrator
-  // - Step 3b: Improve rules based on verification feedback
-  .dountil(verifyImproveLoopStep, async ({ inputData }) => {
-    // Exit if max iterations reached or all rules are correct
-    if (inputData.iterationCount >= MAX_VERIFY_IMPROVE_ITERATIONS) {
-      return true;
-    }
-    return inputData.testResults?.conclusion === 'ALL_RULES_PASS';
-  })
-  .map(async ({ inputData }) => ({
-    structuredProblem: inputData.structuredProblem,
-    rules: inputData.rules!,
-  }))
-  // Step 4: Answer the user's questions using the validated rules and extracted vocabulary.
+  // Step 2: Multi-perspective hypothesis generation (dispatch -> hypothesize -> verify -> synthesize loop)
+  .then(multiPerspectiveHypothesisStep)
+  // Step 3: Answer the user's questions using the validated rules and extracted vocabulary.
   .then(answerQuestionsStep)
   .commit();

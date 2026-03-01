@@ -1,20 +1,33 @@
-export type StepId =
-  | 'extract-structure'
-  | 'initial-hypothesis'
-  | 'verify-improve-rules-loop'
-  | 'answer-questions';
+export type StepId = 'extract-structure' | 'multi-perspective-hypothesis' | 'answer-questions';
 
-export type UIStepId = StepId | `verify-${number}` | `improve-${number}`;
+export type UIStepId =
+  | StepId
+  | `round-${number}`
+  | `perspective-${string}`
+  | `synthesis-${number}`
+  | `verify-${number}`
+  | `improve-${number}`;
 
 export const STEP_LABELS: Record<StepId, string> = {
   'extract-structure': 'Extract',
-  'initial-hypothesis': 'Hypothesize',
-  'verify-improve-rules-loop': 'Verify / Improve',
+  'multi-perspective-hypothesis': 'Hypothesize',
   'answer-questions': 'Answer',
 };
 
 export function getUIStepLabel(id: UIStepId): string {
   if (id in STEP_LABELS) return STEP_LABELS[id as StepId];
+  const roundMatch = id.match(/^round-(\d+)$/);
+  if (roundMatch) return `Round ${roundMatch[1]}`;
+  const perspectiveMatch = id.match(/^perspective-(.+)$/);
+  if (perspectiveMatch && perspectiveMatch[1]) {
+    // Capitalize and format perspective name (e.g., "morphological-affixes" -> "Morphological Affixes")
+    return perspectiveMatch[1]
+      .split('-')
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(' ');
+  }
+  const synthesisMatch = id.match(/^synthesis-(\d+)$/);
+  if (synthesisMatch) return `Synthesis ${synthesisMatch[1]}`;
   const verifyMatch = id.match(/^verify-(\d+)$/);
   if (verifyMatch) return `Verify ${verifyMatch[1]}`;
   const improveMatch = id.match(/^improve-(\d+)$/);
@@ -99,6 +112,67 @@ export interface VerifyImprovePhaseEvent {
   };
 }
 
+export interface PerspectiveStartEvent {
+  type: 'data-perspective-start';
+  data: {
+    perspectiveId: string;
+    perspectiveName: string;
+    round: number;
+    timestamp: string;
+  };
+}
+
+export interface PerspectiveCompleteEvent {
+  type: 'data-perspective-complete';
+  data: {
+    perspectiveId: string;
+    perspectiveName: string;
+    round: number;
+    testPassRate: number;
+    rulesCount: number;
+    vocabularyCount: number;
+    timestamp: string;
+  };
+}
+
+export interface SynthesisStartEvent {
+  type: 'data-synthesis-start';
+  data: {
+    round: number;
+    perspectiveCount: number;
+    timestamp: string;
+  };
+}
+
+export interface SynthesisCompleteEvent {
+  type: 'data-synthesis-complete';
+  data: {
+    round: number;
+    mergedRulesCount: number;
+    mergedVocabCount: number;
+    testPassRate: number;
+    timestamp: string;
+  };
+}
+
+export interface RoundStartEvent {
+  type: 'data-round-start';
+  data: {
+    round: number;
+    isImproverRound: boolean;
+    timestamp: string;
+  };
+}
+
+export interface RoundCompleteEvent {
+  type: 'data-round-complete';
+  data: {
+    round: number;
+    converged: boolean;
+    timestamp: string;
+  };
+}
+
 export type WorkflowTraceEvent =
   | StepStartEvent
   | StepCompleteEvent
@@ -106,4 +180,10 @@ export type WorkflowTraceEvent =
   | ToolCallEvent
   | VocabularyUpdateEvent
   | IterationUpdateEvent
-  | VerifyImprovePhaseEvent;
+  | VerifyImprovePhaseEvent
+  | PerspectiveStartEvent
+  | PerspectiveCompleteEvent
+  | SynthesisStartEvent
+  | SynthesisCompleteEvent
+  | RoundStartEvent
+  | RoundCompleteEvent;
