@@ -86,7 +86,7 @@ Plans:
 
 **Success Criteria:**
 1. Event streaming system emits hierarchical events (agent-start, tool-calls nested within, agent-end) that the frontend can consume
-2. Rules are displayed in a tabbed panel view alongside vocabulary — user can switch between "Vocabulary" and "Rules" tabs
+2. Rules are displayed alongside vocabulary in a stacked resizable panel layout, collapsible to a thin header bar
 3. Rules panel updates live as agents generate, test, and revise rules during a solve run
 4. Existing trace and progress UI continues to function correctly with the new event structure
 

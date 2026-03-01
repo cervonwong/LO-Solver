@@ -32,7 +32,7 @@
 
 ### UI Improvements (UI)
 
-- [ ] **UI-01**: Rules are displayed in the UI alongside vocabulary in a tabbed panel view — user can switch between "Vocabulary" and "Rules" tabs
+- [ ] **UI-01**: Rules are displayed in the UI alongside vocabulary in a stacked resizable panel layout, collapsible to a thin header bar
 - [ ] **UI-02**: Rules panel updates live as agents generate, test, and revise rules
 - [ ] **UI-03**: Trace panel displays tool calls nested under their parent agent calls (hierarchical view, not flat)
 - [ ] **UI-04**: Each tool type has custom-fitted input/output display (e.g., testRule shows rule text + pass/fail + failing sentences, vocabulary tools show the entry being modified)
