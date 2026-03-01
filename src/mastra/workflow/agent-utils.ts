@@ -1,12 +1,21 @@
 import type { Agent } from '@mastra/core/agent';
 import type { FullOutput } from '@mastra/core/stream';
 
+/**
+ * What constitutes a valid (non-empty) response from the agent.
+ * - 'text': require non-empty result.text (default for agents without structuredOutput)
+ * - 'structuredOutput': require non-null result.object (default when structuredOutput option is set)
+ * - 'toolActivity': require multi-step execution (tool calls happened); text may be empty
+ */
+type ResponseCheck = 'text' | 'structuredOutput' | 'toolActivity';
+
 interface GenerateWithRetryOptions<TOptions> {
   prompt: string;
   options?: TOptions;
   timeoutMs?: number; // Default: 600,000 (10 minutes)
   maxRetries?: number; // Default: 2 (3 total attempts)
   abortSignal?: AbortSignal; // Caller-provided abort signal
+  responseCheck?: ResponseCheck; // Default: auto-detected from options
 }
 
 /**
@@ -30,6 +39,7 @@ export async function generateWithRetry<TOptions extends Parameters<Agent['gener
     timeoutMs = 600_000,
     maxRetries = 2,
     abortSignal: callerSignal,
+    responseCheck: explicitResponseCheck,
   }: GenerateWithRetryOptions<TOptions>,
 ): Promise<Awaited<ReturnType<Agent['generate']>>> {
   let lastError: Error | undefined;
@@ -71,14 +81,20 @@ export async function generateWithRetry<TOptions extends Parameters<Agent['gener
       // Clean up timeout on success
       clearTimeout(hardTimeoutId!);
 
-      // Check for empty response - this should trigger a retry
-      // When structuredOutput is provided, check result.object; otherwise check result.text
-      const hasStructuredOutput =
-        options && typeof options === 'object' && 'structuredOutput' in options;
+      // Determine what counts as a valid response
+      const check =
+        explicitResponseCheck ??
+        (options && typeof options === 'object' && 'structuredOutput' in options
+          ? 'structuredOutput'
+          : 'text');
 
-      if (hasStructuredOutput) {
+      if (check === 'structuredOutput') {
         if (result.object === null || result.object === undefined) {
           throw new Error('Empty response from model');
+        }
+      } else if (check === 'toolActivity') {
+        if (!result.steps || result.steps.length <= 1) {
+          throw new Error('Empty response from model (no tool activity)');
         }
       } else {
         if (!result.text || result.text.trim() === '') {
@@ -151,6 +167,7 @@ interface StreamWithRetryOptions<TOptions> {
   maxRetries?: number; // Default: 2 (3 total attempts)
   abortSignal?: AbortSignal; // Caller-provided abort signal
   onTextChunk?: (chunk: string) => void; // Callback for real-time text streaming
+  responseCheck?: ResponseCheck; // Default: auto-detected from options
 }
 
 /**
@@ -175,6 +192,7 @@ export async function streamWithRetry<TOptions extends Parameters<Agent['generat
     maxRetries = 2,
     abortSignal: callerSignal,
     onTextChunk,
+    responseCheck: explicitResponseCheck,
   }: StreamWithRetryOptions<TOptions>,
 ): Promise<FullOutput> {
   let lastError: Error | undefined;
@@ -232,13 +250,20 @@ export async function streamWithRetry<TOptions extends Parameters<Agent['generat
       // Clean up timeout on success
       clearTimeout(hardTimeoutId!);
 
-      // Check for empty response — same logic as generateWithRetry
-      const hasStructuredOutput =
-        options && typeof options === 'object' && 'structuredOutput' in options;
+      // Determine what counts as a valid response
+      const check =
+        explicitResponseCheck ??
+        (options && typeof options === 'object' && 'structuredOutput' in options
+          ? 'structuredOutput'
+          : 'text');
 
-      if (hasStructuredOutput) {
+      if (check === 'structuredOutput') {
         if (result.object === null || result.object === undefined) {
           throw new Error('Empty response from model');
+        }
+      } else if (check === 'toolActivity') {
+        if (!result.steps || result.steps.length <= 1) {
+          throw new Error('Empty response from model (no tool activity)');
         }
       } else {
         if (!result.text || result.text.trim() === '') {

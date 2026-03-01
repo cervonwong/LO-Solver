@@ -488,6 +488,7 @@ const multiPerspectiveHypothesisStep = createStep({
           {
             prompt: hypothesizerPrompt,
             options: { maxSteps: 100, requestContext: perspectiveRequestContext },
+            responseCheck: 'toolActivity',
             onTextChunk: (chunk) => {
               emitTraceEvent(writer, {
                 type: 'data-agent-text-chunk',
@@ -602,6 +603,7 @@ const multiPerspectiveHypothesisStep = createStep({
           {
             prompt: verifierPrompt,
             options: { maxSteps: 100, requestContext: verifyRequestContext },
+            responseCheck: 'toolActivity',
             onTextChunk: (chunk) => {
               emitTraceEvent(writer, {
                 type: 'data-agent-text-chunk',
@@ -831,6 +833,7 @@ const multiPerspectiveHypothesisStep = createStep({
         {
           prompt: synthesizerPrompt,
           options: { maxSteps: 100, requestContext: mainRequestContext },
+          responseCheck: 'toolActivity',
           onTextChunk: (chunk) => {
             emitTraceEvent(writer, {
               type: 'data-agent-text-chunk',
@@ -935,6 +938,7 @@ const multiPerspectiveHypothesisStep = createStep({
         {
           prompt: convergenceVerifierPrompt,
           options: { maxSteps: 100, requestContext: convergenceRequestContext },
+          responseCheck: 'toolActivity',
           onTextChunk: (chunk) => {
             emitTraceEvent(writer, {
               type: 'data-agent-text-chunk',
