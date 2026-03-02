@@ -723,7 +723,7 @@ export function AgentCard({ group, depth = 0 }: { group: AgentGroup; depth?: num
               <span className="text-[10px] font-medium text-muted-foreground uppercase">
                 Reasoning
               </span>
-              <div className="mt-1">
+              <div className="reasoning-compact mt-1">
                 <Streamdown className={TRACE_SD_CLASS} plugins={{ code }}>{agentEnd.data.reasoning}</Streamdown>
               </div>
             </div>
