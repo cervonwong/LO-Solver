@@ -248,8 +248,14 @@
   transform: rotate(-2deg);
 }
 
-.stamp-btn:hover {
-  background: rgba(224, 74, 74, 0.1);
+.stamp-btn:hover:not(:disabled) {
+  background: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 7px,
+    currentColor 7px,
+    currentColor 8px
+  );
 }
 
 .stamp-btn:active {
@@ -284,8 +290,14 @@
   box-shadow: 0 0 8px rgba(0, 255, 255, 0.3);
 }
 
-.stamp-btn-accent:hover {
-  background: rgba(0, 255, 255, 0.08);
+.stamp-btn-accent:hover:not(:disabled) {
+  background: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 7px,
+    currentColor 7px,
+    currentColor 8px
+  );
   box-shadow: 0 0 16px rgba(0, 255, 255, 0.4);
 }
 
@@ -318,8 +330,14 @@
   transition: all 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-.stamp-btn-secondary:hover {
-  background: var(--muted);
+.stamp-btn-secondary:hover:not(:disabled) {
+  background: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 7px,
+    currentColor 7px,
+    currentColor 8px
+  );
 }
 
 .stamp-btn-secondary:active {
