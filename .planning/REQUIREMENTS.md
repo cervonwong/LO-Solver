@@ -9,7 +9,7 @@ Requirements for UI Polish milestone. Each maps to roadmap phases.
 
 ### Trace Hierarchy
 
-- [ ] **HIER-01**: Tool-call trace events carry correct parentId matching their parent agent-start event
+- [x] **HIER-01**: Tool-call trace events carry correct parentId matching their parent agent-start event
 - [ ] **HIER-02**: Tools render nested under their actual parent agent in the trace panel (no orphans or misassignments)
 
 ### Reasoning Display
@@ -48,7 +48,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| HIER-01 | Phase 8 | Pending |
+| HIER-01 | Phase 8 | Complete |
 | HIER-02 | Phase 8 | Pending |
 | STYLE-01 | Phase 9 | Pending |
 | STYLE-02 | Phase 9 | Pending |
