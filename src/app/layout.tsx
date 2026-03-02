@@ -27,7 +27,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`h-full ${notoSans.variable} ${architectsDaughter.variable}`}>
-      <body className="flex h-full flex-col bg-background font-sans text-foreground antialiased">
+      <body className="flex h-full flex-col gap-1 bg-background font-sans text-foreground antialiased">
         <nav className="frosted flex shrink-0 items-center justify-between border border-border px-6 py-3">
           <Link
             href="/"
