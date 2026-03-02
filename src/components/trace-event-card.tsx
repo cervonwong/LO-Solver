@@ -4,8 +4,8 @@ import { useState } from 'react';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import type { WorkflowTraceEvent } from '@/lib/workflow-events';
-import { formatDuration } from '@/lib/trace-utils';
+import type { WorkflowTraceEvent, HierarchicalToolCallEvent } from '@/lib/workflow-events';
+import { formatDuration, getAgentSummary } from '@/lib/trace-utils';
 import type { ToolCallGroup, AgentGroup } from '@/lib/trace-utils';
 import { Streamdown } from 'streamdown';
 import { code } from '@streamdown/code';
@@ -101,7 +101,9 @@ export function TraceEventCard({ event }: TraceEventCardProps) {
 
     case 'data-rule-test-result':
       return (
-        <div className={`animate-fade-in border-l-2 ${event.data.passed ? 'border-l-status-success' : 'border-l-status-error'} flex items-center gap-2 py-1 text-xs text-muted-foreground`}>
+        <div
+          className={`animate-fade-in border-l-2 ${event.data.passed ? 'border-l-status-success' : 'border-l-status-error'} flex items-center gap-2 py-1 text-xs text-muted-foreground`}
+        >
           <Badge
             variant="outline"
             className={`${event.data.passed ? 'border-status-success text-status-success' : 'border-status-error text-status-error'} bg-transparent text-[10px]`}
@@ -117,7 +119,10 @@ export function TraceEventCard({ event }: TraceEventCardProps) {
         <Collapsible open={open} onOpenChange={setOpen}>
           <CollapsibleTrigger className="animate-fade-in border-l-2 border-l-trace-tool flex w-full items-center justify-between border border-border-subtle bg-surface-2 px-3 py-1.5 text-left text-xs hover:bg-surface-3">
             <span className="flex items-center gap-2">
-              <Badge variant="default" className="border-trace-tool text-trace-tool bg-transparent text-[10px]">
+              <Badge
+                variant="default"
+                className="border-trace-tool text-trace-tool bg-transparent text-[10px]"
+              >
                 TOOL
               </Badge>
               <span className="font-medium">{event.data.toolName}</span>
@@ -155,12 +160,15 @@ export function TraceEventCard({ event }: TraceEventCardProps) {
     case 'data-vocabulary-update':
       return (
         <div className="animate-fade-in border-l-2 border-l-trace-vocab flex items-center gap-2 py-1 text-xs text-muted-foreground">
-          <Badge variant="outline" className="border-trace-vocab text-trace-vocab bg-transparent text-[10px]">
+          <Badge
+            variant="outline"
+            className="border-trace-vocab text-trace-vocab bg-transparent text-[10px]"
+          >
             VOCAB
           </Badge>
           <span>
-            {event.data.action}: {event.data.entries.length} entries (total: {event.data.totalCount}
-            )
+            {event.data.action}: {event.data.entries.length} entries (total:{' '}
+            {event.data.totalCount})
           </span>
         </div>
       );
@@ -204,7 +212,10 @@ export function ToolCallGroupCard({ group }: ToolCallGroupCardProps) {
     <Collapsible open={open} onOpenChange={setOpen}>
       <CollapsibleTrigger className="animate-fade-in border-l-2 border-l-trace-tool flex w-full items-center justify-between border border-border-subtle bg-surface-2 px-3 py-1.5 text-left text-xs hover:bg-surface-3">
         <span className="flex items-center gap-2">
-          <Badge variant="default" className="border-trace-tool text-trace-tool bg-transparent text-[10px]">
+          <Badge
+            variant="default"
+            className="border-trace-tool text-trace-tool bg-transparent text-[10px]"
+          >
             TOOL
           </Badge>
           <span className="font-medium">{group.toolName}</span>
@@ -251,40 +262,431 @@ function ToolCallDetail({
 }
 
 // ---------------------------------------------------------------------------
-// AgentCard — merged rendering of agent-start + tool calls + agent-end
+// Raw JSON toggle — shows custom view or raw JSON for any tool call
 // ---------------------------------------------------------------------------
 
-interface AgentCardProps {
-  group: AgentGroup;
+function RawJsonToggle({
+  data,
+  children,
+}: {
+  data: { input: Record<string, unknown>; result: Record<string, unknown> };
+  children: React.ReactNode;
+}) {
+  const [showRaw, setShowRaw] = useState(false);
+
+  return (
+    <div className="relative">
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          setShowRaw(!showRaw);
+        }}
+        className="absolute top-0 right-0 text-[10px] text-muted-foreground hover:text-foreground opacity-40 hover:opacity-100 transition-opacity px-1"
+        title={showRaw ? 'Custom view' : 'Raw JSON'}
+      >
+        {'{...}'}
+      </button>
+      {showRaw ? (
+        <div className="flex flex-col gap-2">
+          <Streamdown plugins={{ code }}>{jsonMarkdown('Input', data.input)}</Streamdown>
+          <Streamdown plugins={{ code }}>{jsonMarkdown('Result', data.result)}</Streamdown>
+        </div>
+      ) : (
+        children
+      )}
+    </div>
+  );
 }
+
+// ---------------------------------------------------------------------------
+// Custom tool renderers
+// ---------------------------------------------------------------------------
+
+function VocabularyToolCard({
+  toolCall,
+}: {
+  toolCall: {
+    data: {
+      toolName: string;
+      input: Record<string, unknown>;
+      result: Record<string, unknown>;
+    };
+  };
+}) {
+  const action = toolCall.data.toolName.replace('Vocabulary', '').toUpperCase();
+  const entries = (toolCall.data.input.entries ??
+    toolCall.data.input.foreignForms ??
+    []) as Array<Record<string, unknown>>;
+  const isUpdate = toolCall.data.toolName === 'updateVocabulary';
+  const isRemove = toolCall.data.toolName === 'removeVocabulary';
+
+  // For updates, try to extract previous values from result for diff display
+  const previousEntries = isUpdate
+    ? ((toolCall.data.result.previous ?? toolCall.data.result.previousEntries ?? []) as Array<
+        Record<string, unknown>
+      >)
+    : [];
+
+  return (
+    <RawJsonToggle data={toolCall.data}>
+      <div className="flex flex-col gap-0.5 text-[11px]">
+        {entries.length <= 5 ? (
+          entries.map((entry, i) => {
+            const foreignForm = (entry.foreignForm ?? entry) as string;
+            const meaning = entry.meaning as string | undefined;
+            const type = entry.type as string | undefined;
+            const prev = isUpdate && previousEntries[i] ? previousEntries[i] : undefined;
+            const prevMeaning = prev?.meaning as string | undefined;
+            const prevType = prev?.type as string | undefined;
+
+            return (
+              <div
+                key={i}
+                className={`flex items-center gap-2 ${isRemove ? 'line-through text-muted-foreground' : ''}`}
+              >
+                <Badge
+                  variant="outline"
+                  className={`text-[9px] shrink-0 ${
+                    isRemove
+                      ? 'border-status-error text-status-error'
+                      : isUpdate
+                        ? 'border-status-warning text-status-warning'
+                        : 'border-status-success text-status-success'
+                  } bg-transparent`}
+                >
+                  {action}
+                </Badge>
+                <span className="font-medium">{String(foreignForm)}</span>
+                {isUpdate && prev ? (
+                  <>
+                    {prevMeaning && prevMeaning !== meaning && (
+                      <span className="text-muted-foreground">
+                        <span className="line-through opacity-60">{prevMeaning}</span>
+                        {meaning && <span> &rarr; {meaning}</span>}
+                      </span>
+                    )}
+                    {(!prevMeaning || prevMeaning === meaning) && meaning && (
+                      <span className="text-muted-foreground">&rarr; {meaning}</span>
+                    )}
+                    {prevType && prevType !== type && (
+                      <span className="text-muted-foreground">
+                        [<span className="line-through opacity-60">{prevType}</span>
+                        {type && <span> &rarr; {type}</span>}]
+                      </span>
+                    )}
+                    {(!prevType || prevType === type) && type && (
+                      <span className="text-muted-foreground">[{type}]</span>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    {meaning && <span className="text-muted-foreground">&rarr; {meaning}</span>}
+                    {type && <span className="text-muted-foreground">[{type}]</span>}
+                  </>
+                )}
+              </div>
+            );
+          })
+        ) : (
+          <div className="flex items-center gap-2">
+            <Badge
+              variant="outline"
+              className={`text-[9px] shrink-0 ${
+                isRemove
+                  ? 'border-status-error text-status-error'
+                  : isUpdate
+                    ? 'border-status-warning text-status-warning'
+                    : 'border-status-success text-status-success'
+              } bg-transparent`}
+            >
+              {action}
+            </Badge>
+            <span>{entries.length} entries</span>
+          </div>
+        )}
+      </div>
+    </RawJsonToggle>
+  );
+}
+
+function SentenceTestToolCard({
+  toolCall,
+}: {
+  toolCall: {
+    data: {
+      toolName: string;
+      input: Record<string, unknown>;
+      result: Record<string, unknown>;
+    };
+  };
+}) {
+  const [open, setOpen] = useState(false);
+  const sentenceId = (toolCall.data.input.sentenceId ?? toolCall.data.input.id ?? '?') as string;
+  const result = toolCall.data.result;
+  const status = result.status as string | undefined;
+  const passed = status === 'SENTENCE_OK' || status === 'PASS';
+  const details = result.details as string | undefined;
+  const expected = result.expected as string | undefined;
+  const actual = result.actual as string | undefined;
+
+  return (
+    <RawJsonToggle data={toolCall.data}>
+      <Collapsible open={open} onOpenChange={setOpen}>
+        <CollapsibleTrigger className="flex w-full items-center gap-2 py-0.5 text-left text-xs hover:bg-surface-3">
+          <Badge
+            variant="outline"
+            className={`${passed ? 'border-status-success text-status-success' : 'border-status-error text-status-error'} bg-transparent text-[10px]`}
+          >
+            {passed ? 'PASS' : 'FAIL'}
+          </Badge>
+          <span className="flex-1 truncate">Sentence {sentenceId}</span>
+          <ChevronIcon open={open} />
+        </CollapsibleTrigger>
+        <CollapsibleContent className="animate-collapsible pl-6 pr-2 py-1 text-[11px] text-muted-foreground">
+          {expected && (
+            <p>
+              <span className="font-medium">Expected:</span> {expected}
+            </p>
+          )}
+          {actual && (
+            <p>
+              <span className="font-medium">Actual:</span> {actual}
+            </p>
+          )}
+          {details && <p className="mt-1">{details}</p>}
+        </CollapsibleContent>
+      </Collapsible>
+    </RawJsonToggle>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Bulk tool call grouping — groups 4+ consecutive same-type tool calls
+// ---------------------------------------------------------------------------
+
+function BulkToolCallGroup({
+  toolName,
+  toolCalls,
+  depth,
+}: {
+  toolName: string;
+  toolCalls: HierarchicalToolCallEvent[];
+  depth: number;
+}) {
+  const [open, setOpen] = useState(false);
+
+  // Calculate pass/fail for test tools
+  const isTest = isRuleTestTool(toolName) || isSentenceTestTool(toolName);
+  let passCount = 0;
+  let failCount = 0;
+  if (isTest) {
+    for (const tc of toolCalls) {
+      const status = tc.data.result.status as string | undefined;
+      if (status === 'RULE_OK' || status === 'SENTENCE_OK' || status === 'PASS') passCount++;
+      else failCount++;
+    }
+  }
+
+  const summaryText = isTest
+    ? `${toolCalls.length}: ${passCount} pass, ${failCount} fail`
+    : `${toolCalls.length} calls`;
+
+  return (
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <CollapsibleTrigger className="flex w-full items-center gap-2 py-0.5 text-left text-xs hover:bg-surface-3">
+        <Badge
+          variant="default"
+          className="border-trace-tool text-trace-tool bg-transparent text-[10px]"
+        >
+          TOOL
+        </Badge>
+        <span className="font-medium">{toolName}</span>
+        <span className="text-muted-foreground">({summaryText})</span>
+        <ChevronIcon open={open} />
+      </CollapsibleTrigger>
+      <CollapsibleContent className="animate-collapsible">
+        <div className="flex flex-col gap-0.5 pl-4">
+          {toolCalls.map((tc, i) => (
+            <ToolCallRenderer key={i} toolCall={tc} depth={depth + 1} />
+          ))}
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Tool call type detection and routing
+// ---------------------------------------------------------------------------
 
 function isRuleTestTool(toolName: string): boolean {
   return toolName === 'testRule' || toolName === 'testRuleWithRuleset';
+}
+
+function isSentenceTestTool(toolName: string): boolean {
+  return toolName === 'testSentence' || toolName === 'testSentenceWithRuleset';
+}
+
+function isVocabularyTool(toolName: string): boolean {
+  return [
+    'addVocabulary',
+    'updateVocabulary',
+    'removeVocabulary',
+    'getVocabulary',
+    'clearVocabulary',
+  ].includes(toolName);
 }
 
 function isStartedStatus(result: Record<string, unknown>): boolean {
   return result.status === 'started';
 }
 
-export function AgentCard({ group }: AgentCardProps) {
-  const [open, setOpen] = useState(false);
-  const { agentStart, agentEnd, toolCalls, isActive } = group;
+function ToolCallRenderer({
+  toolCall,
+  depth,
+}: {
+  toolCall: HierarchicalToolCallEvent;
+  depth: number;
+}) {
+  // Skip intermediate "started" status events
+  if (isStartedStatus(toolCall.data.result)) return null;
+
+  if (isRuleTestTool(toolCall.data.toolName)) {
+    return <RuleTestCard toolCall={toolCall} />;
+  }
+
+  if (isSentenceTestTool(toolCall.data.toolName)) {
+    return <SentenceTestToolCard toolCall={toolCall} />;
+  }
+
+  if (isVocabularyTool(toolCall.data.toolName)) {
+    return <VocabularyToolCard toolCall={toolCall} />;
+  }
+
+  // Default: generic tool call card with raw JSON toggle
+  return <AgentToolCallCard toolCall={toolCall} />;
+}
+
+// ---------------------------------------------------------------------------
+// Render items: build ordered list from children array with bulk grouping
+// ---------------------------------------------------------------------------
+
+type RenderItemType =
+  | { kind: 'agent'; group: AgentGroup }
+  | { kind: 'tool'; toolCall: HierarchicalToolCallEvent }
+  | { kind: 'bulk'; toolName: string; toolCalls: HierarchicalToolCallEvent[] };
+
+function buildRenderItems(
+  children: Array<AgentGroup | HierarchicalToolCallEvent>,
+): RenderItemType[] {
+  const items: RenderItemType[] = [];
+  let i = 0;
+
+  while (i < children.length) {
+    const child = children[i]!;
+
+    if ('type' in child && child.type === 'agent-group') {
+      items.push({ kind: 'agent', group: child as AgentGroup });
+      i++;
+      continue;
+    }
+
+    // It's a tool call -- check for consecutive same-type calls
+    const tc = child as HierarchicalToolCallEvent;
+    if (isStartedStatus(tc.data.result)) {
+      i++;
+      continue;
+    }
+
+    // Look ahead for consecutive same-tool calls
+    const sameToolCalls: HierarchicalToolCallEvent[] = [tc];
+    let j = i + 1;
+    while (j < children.length) {
+      const next = children[j]!;
+      if ('type' in next && next.type === 'agent-group') break;
+      const nextTc = next as HierarchicalToolCallEvent;
+      if (isStartedStatus(nextTc.data.result)) {
+        j++;
+        continue;
+      }
+      if (nextTc.data.toolName !== tc.data.toolName) break;
+      sameToolCalls.push(nextTc);
+      j++;
+    }
+
+    if (sameToolCalls.length >= 4) {
+      items.push({ kind: 'bulk', toolName: tc.data.toolName, toolCalls: sameToolCalls });
+    } else {
+      for (const call of sameToolCalls) {
+        items.push({ kind: 'tool', toolCall: call });
+      }
+    }
+    i = j;
+  }
+
+  return items;
+}
+
+function RenderItem({ item, depth }: { item: RenderItemType; depth: number }) {
+  switch (item.kind) {
+    case 'agent':
+      return <AgentCard group={item.group} depth={depth + 1} />;
+    case 'tool':
+      return <ToolCallRenderer toolCall={item.toolCall} depth={depth + 1} />;
+    case 'bulk':
+      return (
+        <BulkToolCallGroup
+          toolName={item.toolName}
+          toolCalls={item.toolCalls}
+          depth={depth + 1}
+        />
+      );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Depth indent lookup (Tailwind does not support dynamic class values)
+// ---------------------------------------------------------------------------
+
+const DEPTH_INDENT: Record<number, string> = {
+  0: '',
+  1: 'ml-4',
+  2: 'ml-8',
+  3: 'ml-12',
+};
+
+function getIndentClass(depth: number): string {
+  if (depth <= 0) return '';
+  return DEPTH_INDENT[Math.min(depth, 3)] ?? 'ml-12';
+}
+
+// ---------------------------------------------------------------------------
+// AgentCard — hierarchical rendering of agent-start + children + agent-end
+// ---------------------------------------------------------------------------
+
+export function AgentCard({ group, depth = 0 }: { group: AgentGroup; depth?: number }) {
+  const [open, setOpen] = useState(group.isActive);
+  const { agentStart, agentEnd, children, toolCalls, isActive } = group;
   const durationMs = agentEnd?.data.durationMs;
+  const summary = !isActive ? getAgentSummary(group) : undefined;
 
-  // Split tool calls: skip intermediate "started" events for rule tests
-  const displayToolCalls = toolCalls.filter((tc) => !isStartedStatus(tc.data.result));
+  // Count displayable tool calls (excluding "started" intermediates)
+  const displayToolCount = toolCalls.filter((tc) => !isStartedStatus(tc.data.result)).length;
 
-  // Separate rule test calls from other calls
-  const ruleTestCalls = displayToolCalls.filter((tc) => isRuleTestTool(tc.data.toolName));
-  const otherToolCalls = displayToolCalls.filter((tc) => !isRuleTestTool(tc.data.toolName));
+  // Build renderable children: group consecutive same-type tool calls for bulk display
+  const renderItems = buildRenderItems(children);
+
+  const indentClass = getIndentClass(depth);
 
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
-      <CollapsibleTrigger className="animate-fade-in border-l-2 border-l-trace-agent flex w-full items-center justify-between border border-border-subtle bg-surface-2 px-3 py-1.5 text-left text-xs hover:bg-surface-3">
-        <span className="flex items-center gap-2">
+      <CollapsibleTrigger
+        className={`animate-fade-in border-l-2 border-l-trace-agent flex w-full items-center justify-between border border-border-subtle bg-surface-2 px-3 py-1.5 text-left text-xs hover:bg-surface-3 ${indentClass}`}
+      >
+        <span className="flex items-center gap-2 min-w-0">
           <Image src="/lex-mascot.png" alt="" width={16} height={16} className="shrink-0" />
-          <span className="font-medium">{agentStart.data.agentName}</span>
-          <span className="text-muted-foreground">({agentStart.data.model})</span>
+          <span className="font-medium truncate">{agentStart.data.agentName}</span>
+          <span className="text-muted-foreground shrink-0">({agentStart.data.model})</span>
           {isActive && (
             <Image
               src="/lex-mascot.png"
@@ -311,15 +713,25 @@ export function AgentCard({ group }: AgentCardProps) {
               Attempt {agentEnd.data.attempt}/{agentEnd.data.totalAttempts}
             </Badge>
           )}
+          {!open && displayToolCount > 0 && (
+            <Badge variant="outline" className="text-[10px] text-muted-foreground">
+              {displayToolCount} tool calls
+            </Badge>
+          )}
+          {!open && summary && (
+            <span className="text-[10px] text-muted-foreground truncate">{summary}</span>
+          )}
         </span>
-        <span className="flex items-center gap-2">
+        <span className="flex items-center gap-2 shrink-0">
           {durationMs !== undefined && (
             <span className="text-muted-foreground">{formatDuration(durationMs)}</span>
           )}
           <ChevronIcon open={open} />
         </span>
       </CollapsibleTrigger>
-      <CollapsibleContent className="animate-collapsible border-x border-b border-border-subtle bg-surface-2">
+      <CollapsibleContent
+        className={`animate-collapsible border-x border-b border-border-subtle bg-surface-2 ${indentClass}`}
+      >
         <div className="flex flex-col gap-2 px-3 py-2">
           {/* Task description */}
           <div className="text-[11px] text-muted-foreground">
@@ -327,29 +739,10 @@ export function AgentCard({ group }: AgentCardProps) {
             {agentStart.data.task}
           </div>
 
-          {/* Rule test results */}
-          {ruleTestCalls.length > 0 && (
-            <div className="flex flex-col gap-0.5">
-              <span className="text-[10px] font-medium text-muted-foreground uppercase">
-                Rule Tests ({ruleTestCalls.length})
-              </span>
-              {ruleTestCalls.map((tc, i) => (
-                <RuleTestCard key={i} toolCall={tc} />
-              ))}
-            </div>
-          )}
-
-          {/* Other tool calls */}
-          {otherToolCalls.length > 0 && (
-            <div className="flex flex-col gap-0.5">
-              <span className="text-[10px] font-medium text-muted-foreground uppercase">
-                Tool Calls ({otherToolCalls.length})
-              </span>
-              {otherToolCalls.map((tc, i) => (
-                <AgentToolCallCard key={i} toolCall={tc} />
-              ))}
-            </div>
-          )}
+          {/* Render children (interleaved tool calls, bulk groups, sub-agents) */}
+          {renderItems.map((item, i) => (
+            <RenderItem key={i} item={item} depth={depth} />
+          ))}
 
           {/* Agent reasoning */}
           {agentEnd?.data.reasoning && (
@@ -368,10 +761,16 @@ export function AgentCard({ group }: AgentCardProps) {
   );
 }
 
+// ---------------------------------------------------------------------------
+// Individual tool call cards (used by ToolCallRenderer)
+// ---------------------------------------------------------------------------
+
 function RuleTestCard({
   toolCall,
 }: {
-  toolCall: { data: { input: Record<string, unknown>; result: Record<string, unknown> } };
+  toolCall: {
+    data: { input: Record<string, unknown>; result: Record<string, unknown> };
+  };
 }) {
   const [open, setOpen] = useState(false);
   const title = (toolCall.data.input.title as string) || 'Unknown rule';
@@ -382,51 +781,64 @@ function RuleTestCard({
   const recommendation = result.recommendation as string | undefined;
 
   return (
-    <Collapsible open={open} onOpenChange={setOpen}>
-      <CollapsibleTrigger className="flex w-full items-center gap-2 py-0.5 text-left text-xs hover:bg-surface-3">
-        <Badge
-          variant="outline"
-          className={`${passed ? 'border-status-success text-status-success' : 'border-status-error text-status-error'} bg-transparent text-[10px]`}
-        >
-          {passed ? 'PASS' : 'FAIL'}
-        </Badge>
-        <span className="flex-1 truncate">{title}</span>
-        <ChevronIcon open={open} />
-      </CollapsibleTrigger>
-      <CollapsibleContent className="animate-collapsible pl-6 pr-2 py-1 text-[11px] text-muted-foreground">
-        {reasoning && <p>{reasoning}</p>}
-        {recommendation && <p className="mt-1 italic">{recommendation}</p>}
-      </CollapsibleContent>
-    </Collapsible>
+    <RawJsonToggle data={toolCall.data}>
+      <Collapsible open={open} onOpenChange={setOpen}>
+        <CollapsibleTrigger className="flex w-full items-center gap-2 py-0.5 text-left text-xs hover:bg-surface-3">
+          <Badge
+            variant="outline"
+            className={`${passed ? 'border-status-success text-status-success' : 'border-status-error text-status-error'} bg-transparent text-[10px]`}
+          >
+            {passed ? 'PASS' : 'FAIL'}
+          </Badge>
+          <span className="flex-1 truncate">{title}</span>
+          <ChevronIcon open={open} />
+        </CollapsibleTrigger>
+        <CollapsibleContent className="animate-collapsible pl-6 pr-2 py-1 text-[11px] text-muted-foreground">
+          {reasoning && <p>{reasoning}</p>}
+          {recommendation && <p className="mt-1 italic">{recommendation}</p>}
+        </CollapsibleContent>
+      </Collapsible>
+    </RawJsonToggle>
   );
 }
 
 function AgentToolCallCard({
   toolCall,
 }: {
-  toolCall: { data: { toolName: string; input: Record<string, unknown>; result: Record<string, unknown> } };
+  toolCall: {
+    data: {
+      toolName: string;
+      input: Record<string, unknown>;
+      result: Record<string, unknown>;
+    };
+  };
 }) {
   const [open, setOpen] = useState(false);
 
   return (
-    <Collapsible open={open} onOpenChange={setOpen}>
-      <CollapsibleTrigger className="flex w-full items-center gap-2 py-0.5 text-left text-xs hover:bg-surface-3">
-        <Badge variant="default" className="border-trace-tool text-trace-tool bg-transparent text-[10px]">
-          TOOL
-        </Badge>
-        <span className="font-medium">{toolCall.data.toolName}</span>
-        <ChevronIcon open={open} />
-      </CollapsibleTrigger>
-      <CollapsibleContent className="animate-collapsible pl-6 pr-2 py-1">
-        <div className="flex flex-col gap-2">
-          <Streamdown plugins={{ code }}>
-            {jsonMarkdown('Input', toolCall.data.input)}
-          </Streamdown>
-          <Streamdown plugins={{ code }}>
-            {jsonMarkdown('Result', toolCall.data.result)}
-          </Streamdown>
-        </div>
-      </CollapsibleContent>
-    </Collapsible>
+    <RawJsonToggle data={toolCall.data}>
+      <Collapsible open={open} onOpenChange={setOpen}>
+        <CollapsibleTrigger className="flex w-full items-center gap-2 py-0.5 text-left text-xs hover:bg-surface-3">
+          <Badge
+            variant="default"
+            className="border-trace-tool text-trace-tool bg-transparent text-[10px]"
+          >
+            TOOL
+          </Badge>
+          <span className="font-medium">{toolCall.data.toolName}</span>
+          <ChevronIcon open={open} />
+        </CollapsibleTrigger>
+        <CollapsibleContent className="animate-collapsible pl-6 pr-2 py-1">
+          <div className="flex flex-col gap-2">
+            <Streamdown plugins={{ code }}>
+              {jsonMarkdown('Input', toolCall.data.input)}
+            </Streamdown>
+            <Streamdown plugins={{ code }}>
+              {jsonMarkdown('Result', toolCall.data.result)}
+            </Streamdown>
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+    </RawJsonToggle>
   );
 }
