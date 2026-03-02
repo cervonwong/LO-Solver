@@ -319,6 +319,42 @@
   box-shadow: none;
 }
 
+/* Stamp button (warning amber — compact nav bar buttons) */
+.stamp-btn-warning {
+  font-family: var(--font-heading);
+  background: transparent;
+  color: var(--status-warning);
+  border: 2px solid var(--status-warning);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.stamp-btn-warning:hover:not(:disabled) {
+  background: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 7px,
+    rgba(255, 215, 0, 0.15) 7px,
+    rgba(255, 215, 0, 0.15) 8px
+  );
+  text-shadow: 0 0 6px #002b57, 0 0 12px #002b57;
+}
+
+.stamp-btn-warning:active {
+  transform: scale(0.92);
+}
+
+.stamp-btn-warning:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.stamp-btn-warning:disabled:active {
+  transform: none;
+}
+
 /* Stamp button (secondary white) */
 .stamp-btn-secondary {
   font-family: var(--font-heading);

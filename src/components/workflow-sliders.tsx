@@ -2,11 +2,13 @@
 
 import { useWorkflowSettings } from '@/hooks/use-workflow-settings';
 
-export function WorkflowSliders() {
+export function WorkflowSliders({ disabled }: { disabled?: boolean }) {
   const [settings, updateSettings] = useWorkflowSettings();
 
   return (
-    <div className="flex items-center gap-4 font-heading text-sm">
+    <div
+      className={`flex items-center gap-4 font-heading text-sm${disabled ? ' opacity-50 pointer-events-none' : ''}`}
+    >
       <div className="flex items-center gap-1.5">
         <label htmlFor="slider-rounds" className="text-foreground/80">
           Rounds
@@ -20,6 +22,7 @@ export function WorkflowSliders() {
           value={settings.maxRounds}
           onChange={(e) => updateSettings({ maxRounds: Number(e.target.value) })}
           className="h-1 w-16 cursor-pointer appearance-none rounded bg-border accent-accent"
+          disabled={disabled}
         />
         <span className="min-w-[1ch] text-center text-accent">{settings.maxRounds}</span>
       </div>
@@ -36,6 +39,7 @@ export function WorkflowSliders() {
           value={settings.perspectiveCount}
           onChange={(e) => updateSettings({ perspectiveCount: Number(e.target.value) })}
           className="h-1 w-16 cursor-pointer appearance-none rounded bg-border accent-accent"
+          disabled={disabled}
         />
         <span className="min-w-[1ch] text-center text-accent">{settings.perspectiveCount}</span>
       </div>
