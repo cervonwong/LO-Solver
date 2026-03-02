@@ -231,8 +231,6 @@ export function groupEventsWithAgents(
 ): Array<AgentGroup | WorkflowTraceEvent> {
   const result: Array<AgentGroup | WorkflowTraceEvent> = [];
   const agentMap = new Map<string, AgentGroup>(); // id -> group (all agents, open or closed)
-  // Track active agents in a stack for orphaned tool call fallback
-  const activeAgentStack: AgentGroup[] = [];
 
   for (const event of events) {
     if (event.type === 'data-agent-start') {
@@ -245,7 +243,6 @@ export function groupEventsWithAgents(
         isActive: true,
       };
       agentMap.set(event.data.id, group);
-      activeAgentStack.push(group);
 
       // If this agent has a parentId and that parent exists, nest inside parent
       const parentId = event.data.parentId;
@@ -264,9 +261,6 @@ export function groupEventsWithAgents(
       if (group) {
         group.agentEnd = event;
         group.isActive = false;
-        // Remove from active stack
-        const idx = activeAgentStack.indexOf(group);
-        if (idx !== -1) activeAgentStack.splice(idx, 1);
         continue;
       }
       // No matching start — render standalone
@@ -275,7 +269,7 @@ export function groupEventsWithAgents(
     }
 
     if (event.type === 'data-tool-call') {
-      // Try explicit parentId first
+      // Try explicit parentId
       if ('parentId' in event.data && event.data.parentId) {
         const parentGroup = agentMap.get(event.data.parentId);
         if (parentGroup) {
@@ -284,16 +278,11 @@ export function groupEventsWithAgents(
           continue;
         }
       }
-      // TODO: This is a bandaid — tool calls should always have a parentId linking
-      // them to their agent. Investigate why some tool-call events arrive without
-      // parentId or with a parentId that doesn't match any agent-start event.
-      // Fallback: assign to the most recently opened active agent
-      if (activeAgentStack.length > 0) {
-        const fallbackAgent = activeAgentStack[activeAgentStack.length - 1]!;
-        fallbackAgent.toolCalls.push(event as ToolCallEvent);
-        fallbackAgent.children.push(event as ToolCallEvent);
-        continue;
-      }
+      // Orphaned tool call — no matching parent agent found
+      console.warn(
+        `[trace] Orphaned tool call: toolName=${event.data.toolName}, parentId=${'parentId' in event.data ? event.data.parentId : 'missing'}`,
+      );
+      // Falls through to result.push(event) below
     }
 
     // Not matched to any agent group — keep standalone
