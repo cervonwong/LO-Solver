@@ -29,7 +29,7 @@ const jsonMarkdown = (label: string, data: unknown) =>
   `**${label}:**\n\`\`\`json\n${JSON.stringify(data, null, 2)}\n\`\`\``;
 
 /** Font size class for all Streamdown instances in the trace panel. */
-const TRACE_SD_CLASS = 'text-[11px] leading-4';
+const TRACE_SD_CLASS = 'text-[11px] leading-4 streamdown-compact';
 
 interface TraceEventCardProps {
   event: WorkflowTraceEvent;
@@ -107,8 +107,8 @@ export function TraceEventCard({ event }: TraceEventCardProps) {
           </CollapsibleTrigger>
           <CollapsibleContent className="animate-collapsible border-x border-b border-border-subtle bg-surface-2 px-3 py-2">
             <div className="flex flex-col gap-2">
-              <Streamdown className={TRACE_SD_CLASS} plugins={{ code }}>{jsonMarkdown('Input', event.data.input)}</Streamdown>
-              <Streamdown className={TRACE_SD_CLASS} plugins={{ code }}>
+              <Streamdown className={TRACE_SD_CLASS} plugins={{ code }} controls={false}>{jsonMarkdown('Input', event.data.input)}</Streamdown>
+              <Streamdown className={TRACE_SD_CLASS} plugins={{ code }} controls={false}>
                 {jsonMarkdown('Result', event.data.result)}
               </Streamdown>
             </div>
@@ -229,8 +229,8 @@ function ToolCallDetail({
       </CollapsibleTrigger>
       <CollapsibleContent className="animate-collapsible px-3 py-2">
         <div className="flex flex-col gap-2">
-          <Streamdown className={TRACE_SD_CLASS} plugins={{ code }}>{jsonMarkdown('Input', call.input)}</Streamdown>
-          <Streamdown className={TRACE_SD_CLASS} plugins={{ code }}>{jsonMarkdown('Result', call.result)}</Streamdown>
+          <Streamdown className={TRACE_SD_CLASS} plugins={{ code }} controls={false}>{jsonMarkdown('Input', call.input)}</Streamdown>
+          <Streamdown className={TRACE_SD_CLASS} plugins={{ code }} controls={false}>{jsonMarkdown('Result', call.result)}</Streamdown>
         </div>
       </CollapsibleContent>
     </Collapsible>
@@ -264,8 +264,8 @@ function RawJsonToggle({
       </button>
       {showRaw ? (
         <div className="flex flex-col gap-2">
-          <Streamdown className={TRACE_SD_CLASS} plugins={{ code }}>{jsonMarkdown('Input', data.input)}</Streamdown>
-          <Streamdown className={TRACE_SD_CLASS} plugins={{ code }}>{jsonMarkdown('Result', data.result)}</Streamdown>
+          <Streamdown className={TRACE_SD_CLASS} plugins={{ code }} controls={false}>{jsonMarkdown('Input', data.input)}</Streamdown>
+          <Streamdown className={TRACE_SD_CLASS} plugins={{ code }} controls={false}>{jsonMarkdown('Result', data.result)}</Streamdown>
         </div>
       ) : (
         children
@@ -724,7 +724,7 @@ export function AgentCard({ group, depth = 0 }: { group: AgentGroup; depth?: num
                 Reasoning
               </span>
               <div className="reasoning-compact mt-1">
-                <Streamdown className={TRACE_SD_CLASS} plugins={{ code }}>{agentEnd.data.reasoning}</Streamdown>
+                <Streamdown className={TRACE_SD_CLASS} plugins={{ code }} controls={false}>{agentEnd.data.reasoning}</Streamdown>
               </div>
             </div>
           )}
@@ -803,8 +803,8 @@ function AgentToolCallCard({
         </CollapsibleTrigger>
         <CollapsibleContent forceMount className="data-[state=closed]:hidden pl-6 pr-2 py-1">
           <div className="flex flex-col gap-2">
-            <Streamdown className={TRACE_SD_CLASS} plugins={{ code }}>{jsonMarkdown('Input', toolCall.data.input)}</Streamdown>
-            <Streamdown className={TRACE_SD_CLASS} plugins={{ code }}>
+            <Streamdown className={TRACE_SD_CLASS} plugins={{ code }} controls={false}>{jsonMarkdown('Input', toolCall.data.input)}</Streamdown>
+            <Streamdown className={TRACE_SD_CLASS} plugins={{ code }} controls={false}>
               {jsonMarkdown('Result', toolCall.data.result)}
             </Streamdown>
           </div>
