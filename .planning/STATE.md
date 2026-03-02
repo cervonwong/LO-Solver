@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in-progress
-last_updated: "2026-03-02T03:05:00Z"
+last_updated: "2026-03-02T03:49:00Z"
 progress:
   total_phases: 7
   completed_phases: 6
-  total_plans: 11
-  completed_plans: 11
+  total_plans: 14
+  completed_plans: 12
 ---
 
 # Project State
@@ -21,7 +21,7 @@ See: .planning/PROJECT.md (updated 2026-03-01)
 **Current milestone:** v1.0 Prove the Agentic Advantage
 
 ## Current Phase
-Phase 7: Hierarchical Trace Display & Results — Not Started
+Phase 7: Hierarchical Trace Display & Results — In Progress (Plan 1/3 complete)
 
 ## Phase Status
 | Phase | Name | Status |
@@ -32,7 +32,7 @@ Phase 7: Hierarchical Trace Display & Results — Not Started
 | 4 | Multi-Perspective Hypothesis Generation | ✓ Complete |
 | 5 | Verification Loop Improvements | ✓ Complete |
 | 6 | UI Event System & Rules Panel | ✓ Complete |
-| 7 | Hierarchical Trace Display & Results | ○ Not Started |
+| 7 | Hierarchical Trace Display & Results | ◐ In Progress (1/3) |
 
 ## Accumulated Context
 | Date | Insight |
@@ -62,6 +62,7 @@ Phase 7: Hierarchical Trace Display & Results — Not Started
 | 2026-03-01 | streamWithRetry generic uses Agent['generate'] parameter types (not Agent['stream']) to support structuredOutput overloads |
 | 2026-03-01 | Three-panel right layout: Trace (top 50%) + Vocabulary (middle 25%) + Rules (bottom 25%) with min-height constraints |
 | 2026-03-01 | Removed collapsible behavior from data panels; minSize=10% + min-h-[120px] prevents zero-height collapse |
+| 2026-03-02 | rulesApplied is required (not optional) on questionAnswerSchema because every answer should reference at least one rule |
 
 ## Session Log
 | Date | Phase | Action | Notes |
@@ -90,6 +91,7 @@ Phase 7: Hierarchical Trace Display & Results — Not Started
 | 2026-03-01 | 6 | Phase 6 complete | UI Event System & Rules Panel done: hierarchical events, rules panel, activity chips, three-panel layout |
 | 2026-03-02 | Quick | Quick task 2 complete | Vertical timeline layout, softer red #e04a4a (commits 31bf33e, 440435e) |
 | 2026-03-02 | Quick | Quick task 3 complete | Diagonal hatched hover backgrounds for all stamp button variants (commit ef62c84) |
+| 2026-03-02 | 7 | Plan 07-01 complete | Answer schema rulesApplied field + agent instructions (commits 2e210c3, 4fe83fd) |
 
 ### Quick Tasks Completed
 
@@ -100,4 +102,4 @@ Phase 7: Hierarchical Trace Display & Results — Not Started
 | 3 | Diagonal hatched hover backgrounds for stamp buttons | 2026-03-02 | ef62c84 | [3-add-diagonal-hatched-hover-backgrounds-t](./quick/3-add-diagonal-hatched-hover-backgrounds-t/) |
 
 ---
-Last activity: 2026-03-02 - Completed Quick Task 3: Diagonal hatched hover backgrounds for stamp buttons
+Last activity: 2026-03-02 - Completed Plan 07-01: Answer schema rulesApplied field
