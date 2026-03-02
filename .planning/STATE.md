@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: UI Polish
 status: executing
-last_updated: "2026-03-02T08:45:35.000Z"
+last_updated: "2026-03-02T08:52:16.000Z"
 progress:
   total_phases: 4
   completed_phases: 0
@@ -25,7 +25,7 @@ See: .planning/PROJECT.md (updated 2026-03-02)
 Phase: 8 of 11 (Trace Hierarchy Fix) — first phase of v1.1
 Plan: 1 of 2 complete
 Status: Executing
-Last activity: 2026-03-02 - Completed quick task 6: Merge activity indicator and trace header into compact row
+Last activity: 2026-03-02 - Completed quick task 7: Add nav-to-content gap and sticky trace panel header
 
 Progress (v1.1): [█░░░░░░░░░] 10%
 
@@ -73,9 +73,10 @@ None yet.
 | 4 | Highlight SOLVE in accent blue alongside Scroll down in ready-state duck messages | 2026-03-02 | 16be68b | [4-highlight-solve-in-duck-speech-alongside](./quick/4-highlight-solve-in-duck-speech-alongside/) |
 | 5 | Change progress checkmark from white to dark navy for contrast | 2026-03-02 | 71da460 | [5-change-progress-checkmark-from-white-to-](./quick/5-change-progress-checkmark-from-white-to-/) |
 | 6 | Merge activity indicator and trace header into compact row | 2026-03-02 | 446f6c2 | [6-merge-activity-indicator-and-trace-heade](./quick/6-merge-activity-indicator-and-trace-heade/) |
+| 7 | Add nav-to-content gap and sticky trace panel header | 2026-03-02 | 418f8e8 | [7-add-gap-below-top-bar-and-make-panel-hea](./quick/7-add-gap-below-top-bar-and-make-panel-hea/) |
 
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: Completed quick task 6
+Stopped at: Completed quick task 7
 Resume file: None
