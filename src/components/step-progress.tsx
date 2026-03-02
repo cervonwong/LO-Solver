@@ -21,13 +21,22 @@ function StepCircle({ status, label }: { status: StepStatus; label: string | num
       className={cn(
         'flex h-5 w-5 items-center justify-center border text-[10px] font-medium transition-all duration-300',
         status === 'running' && 'animate-pulse-glow border-accent text-accent',
-        status === 'success' && 'border-foreground bg-foreground text-background',
+        status === 'success' && 'border-accent text-accent',
         status === 'failed' && 'border-destructive text-destructive',
         status === 'pending' && 'border-border text-muted-foreground',
       )}
     >
       {status === 'success' ? (
-        <span className="animate-checkmark-scale">&#10003;</span>
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          height="12"
+          viewBox="0 -960 960 960"
+          width="12"
+          fill="currentColor"
+          className="animate-checkmark-scale"
+        >
+          <path d="M382-267.69 183.23-466.46 211.77-495 382-324.77 748.23-691l28.54 28.54L382-267.69Z" />
+        </svg>
       ) : status === 'failed' ? (
         <span>&#10007;</span>
       ) : (
