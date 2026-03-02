@@ -620,15 +620,9 @@
   border-bottom: 1px solid rgba(0, 255, 255, 0.15);
 }
 
-/* Hover-hatch utility classes — diagonal hatching for interactive elements.
-   Uses background-image (not background shorthand) so existing bg-color is preserved.
-   No base background override — elements keep their own bg-surface-* colors. */
-.hover-hatch-cyan {
-  border-top: 1px solid transparent;
-  border-bottom: 1px solid transparent;
-  transition: border-color 0.15s ease;
-}
-
+/* Hover-hatch utility classes — diagonal hatching on hover only.
+   Sets background-image so existing bg-color is preserved.
+   No border or padding overrides — compose with hover-hatch-border if needed. */
 .hover-hatch-cyan:hover {
   background-image: repeating-linear-gradient(
     -45deg,
@@ -637,14 +631,6 @@
     rgba(0, 255, 255, 0.15) 7px,
     rgba(0, 255, 255, 0.15) 8px
   );
-  border-top-color: rgba(0, 255, 255, 0.15);
-  border-bottom-color: rgba(0, 255, 255, 0.15);
-}
-
-.hover-hatch-white {
-  border-top: 1px solid transparent;
-  border-bottom: 1px solid transparent;
-  transition: border-color 0.15s ease;
 }
 
 .hover-hatch-white:hover {
@@ -655,14 +641,6 @@
     rgba(255, 255, 255, 0.12) 7px,
     rgba(255, 255, 255, 0.12) 8px
   );
-  border-top-color: rgba(255, 255, 255, 0.12);
-  border-bottom-color: rgba(255, 255, 255, 0.12);
-}
-
-.hover-hatch-red {
-  border-top: 1px solid transparent;
-  border-bottom: 1px solid transparent;
-  transition: border-color 0.15s ease;
 }
 
 .hover-hatch-red:hover {
@@ -673,8 +651,16 @@
     rgba(224, 74, 74, 0.15) 7px,
     rgba(224, 74, 74, 0.15) 8px
   );
-  border-top-color: rgba(224, 74, 74, 0.15);
-  border-bottom-color: rgba(224, 74, 74, 0.15);
+}
+
+/* Compose with hover-hatch-* for borderless elements that need a hover border */
+.hover-hatch-border {
+  border: 1px solid transparent;
+  transition: border-color 0.15s ease;
+}
+
+.hover-hatch-border:hover {
+  border-color: rgba(0, 255, 255, 0.15);
 }
 
 /* Collapsible animation using grid-rows technique */

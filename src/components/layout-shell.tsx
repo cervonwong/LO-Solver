@@ -16,7 +16,7 @@ function NavBar() {
       {pathname === '/' ? (
         <span className="font-heading text-sm text-foreground/80">LO-Solver</span>
       ) : (
-        <Link href="/" className="hover-hatch-cyan font-heading text-sm text-foreground/80">
+        <Link href="/" className="hover-hatch-cyan hover-hatch-border px-3 py-1.5 font-heading text-sm text-foreground/80">
           LO-Solver
         </Link>
       )}
@@ -26,7 +26,7 @@ function NavBar() {
         >
           <Link
             href="/evals"
-            className="hover-hatch-cyan font-heading text-sm text-foreground/80"
+            className="hover-hatch-cyan hover-hatch-border px-3 py-1.5 font-heading text-sm text-foreground/80"
             aria-disabled={isRunning || undefined}
             tabIndex={isRunning ? -1 : undefined}
           >

@@ -155,37 +155,31 @@ Red border container with stamp label:
 
 Use **diagonal hatched backgrounds** on interactive elements instead of opacity changes or solid color fills.
 
-Pattern: `repeating-linear-gradient` at `-45deg` with `7px` transparent / `1px` colored stripes.
+Pattern: `repeating-linear-gradient` at `-45deg` with `7px` transparent / `1px` colored stripes applied via `background-image`.
 
-```css
-background: repeating-linear-gradient(
-  -45deg,
-  transparent,
-  transparent 7px,
-  rgba(0, 255, 255, 0.15) 7px,
-  rgba(0, 255, 255, 0.15) 8px
-);
-```
+### Utility Classes
 
-Color by context:
+| Class | What it does | When to use |
+|---|---|---|
+| `.hover-hatch-cyan` | Cyan diagonal hatching on `:hover` | Interactive elements (triggers, buttons, links) |
+| `.hover-hatch-white` | White diagonal hatching on `:hover` | Secondary/neutral elements |
+| `.hover-hatch-red` | Red diagonal hatching on `:hover` | Destructive context |
+| `.hover-hatch-border` | Transparent border on base, cyan border on `:hover` | **Only** for elements with no existing borders (e.g., nav links) |
+
+The hatching classes set **only** `background-image` — no borders, no padding, no background-color overrides. Elements keep all their own styling. Compose with `.hover-hatch-border` only when the element has no border of its own.
+
+Color values:
 - **Cyan** `rgba(0, 255, 255, 0.15)` — accent/interactive elements
 - **Red** `rgba(224, 74, 74, 0.15)` — primary stamp buttons
 - **White** `rgba(255, 255, 255, 0.12)` — secondary/neutral elements
 
-To avoid layout shift from hover borders, set transparent borders on the base state:
+### Exceptions
 
-```css
-.element {
-  background: transparent;
-  border-top: 1px solid transparent;
-  border-bottom: 1px solid transparent;
-}
-.element:hover {
-  border-color: rgba(0, 255, 255, 0.15);
-}
-```
+- **Icon-only buttons** (opacity toggles, close buttons): keep opacity transitions
+- **`.stamp-btn` variants**: have their own built-in hatching hover (don't add `.hover-hatch-*`)
+- **`.step-progress-item`**: has its own built-in hatching hover
 
-See `.stamp-btn`, `.step-progress-item` in `globals.css` for reference implementations.
+See `globals.css` for all hover-hatch definitions.
 
 ## Rules
 
