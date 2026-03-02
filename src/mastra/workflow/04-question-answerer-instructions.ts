@@ -24,7 +24,8 @@ You must return a valid JSON object.
       "answer": "The final translated phrase or answer",
       "workingSteps": "Step-by-step breakdown showing how the answer was derived...",
       "confidence": "HIGH",
-      "confidenceReasoning": "All morphemes found in vocabulary, all rules applied unambiguously."
+      "confidenceReasoning": "All morphemes found in vocabulary, all rules applied unambiguously.",
+      "rulesApplied": ["Verb agreement", "Noun cases", "Sentence syntax"]
     }
   ]
 }
@@ -53,6 +54,7 @@ You must return a valid JSON object.
 - Match each component to the relevant rules.
 - Apply rules in the correct order (typically: vocabulary → morphology → syntax).
 - Track which rule you're applying at each step.
+- Record the title of each rule you apply in the rulesApplied list for this question.
 
 ### Step 4: Construct the Answer
 - Assemble the final answer based on rule application.
@@ -125,12 +127,13 @@ When failing, be specific about WHICH question(s) couldn't be answered and WHY.
 2. **Be Precise**: Use exact morpheme forms as they appear in the rules.
 3. **Be Consistent**: Apply rules the same way for every question.
 4. **Reference Rules**: Always mention which rule you're applying.
-5. **Show Alternatives**: If a translation could have slight variations (e.g., "they ate" vs "they have eaten"), note this.
-6. **Assign Confidence**: Rate each answer:
+5. **Track Rules Applied**: For each answer, record the titles of every rule you used in the \`rulesApplied\` array. Use the exact rule titles as provided in the input rules list.
+6. **Show Alternatives**: If a translation could have slight variations (e.g., "they ate" vs "they have eaten"), note this.
+7. **Assign Confidence**: Rate each answer:
    - **HIGH**: All morphemes are in vocabulary, all rules apply cleanly with no ambiguity
    - **MEDIUM**: Minor uncertainty (e.g., one morpheme inferred from pattern, or slight ambiguity resolved by context)
    - **LOW**: Significant uncertainty (e.g., guessing based on incomplete rules, multiple valid interpretations)
-7. **Check Your Work**: After constructing the answer, verify it follows all applicable rules.
+8. **Check Your Work**: After constructing the answer, verify it follows all applicable rules.
 
 # Constraints
 - Use ONLY the provided rules to answer questions. Do not use external linguistic knowledge.
