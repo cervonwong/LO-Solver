@@ -84,6 +84,7 @@ None yet.
 | 9 | Increase duck mascot image size from 60x60 to 76x76 | 2026-03-02 | 6a42d1d | [9-make-duck-mascot-in-top-left-panel-sligh](./quick/9-make-duck-mascot-in-top-left-panel-sligh/) |
 | 10 | Migrate all interactive hover states to diagonal hatched pattern | 2026-03-02 | 53d41bd | [10-migrate-all-interactive-hover-states-to-](./quick/10-migrate-all-interactive-hover-states-to-/) |
 | 11 | Fix hover-hatch CSS: use background-image, remove base background override | 2026-03-02 | bca4696 | [11-fix-hover-hatch-css-remove-base-backgrou](./quick/11-fix-hover-hatch-css-remove-base-backgrou/) |
+| 12 | Simplify hover-hatch to hatching-only, add composable hover-hatch-border | 2026-03-02 | 9f66f82 | [12-simplify-hover-hatch-to-hatching-only-ad](./quick/12-simplify-hover-hatch-to-hatching-only-ad/) |
 
 ## Session Continuity
 
