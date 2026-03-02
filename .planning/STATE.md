@@ -25,7 +25,7 @@ See: .planning/PROJECT.md (updated 2026-03-02)
 Phase: 8 of 11 (Trace Hierarchy Fix) — first phase of v1.1
 Plan: 1 of 2 complete
 Status: Executing
-Last activity: 2026-03-02 - Completed quick task 3: Fill completed step circle with accent background and white checkmark
+Last activity: 2026-03-02 - Completed quick task 4: Highlight SOLVE in accent blue alongside Scroll down in ready-state duck messages
 
 Progress (v1.1): [█░░░░░░░░░] 10%
 
@@ -70,9 +70,10 @@ None yet.
 | 1 | Replace progress panel checkmark symbol with bright blue checkmark icon matching dev trace | 2026-03-02 | 4ce8c16 | [1-replace-progress-panel-checkmark-symbol-](./quick/1-replace-progress-panel-checkmark-symbol-/) |
 | 2 | Update ready-state duck speech to say "Scroll down" to SOLVE button | 2026-03-02 | 9e077ca | [2-improve-duck-speech-to-say-scroll-down-t](./quick/2-improve-duck-speech-to-say-scroll-down-t/) |
 | 3 | Fill completed step circle with accent background and white checkmark | 2026-03-02 | dedcd14 | [3-progress-panel-completed-steps-filled-br](./quick/3-progress-panel-completed-steps-filled-br/) |
+| 4 | Highlight SOLVE in accent blue alongside Scroll down in ready-state duck messages | 2026-03-02 | 16be68b | [4-highlight-solve-in-duck-speech-alongside](./quick/4-highlight-solve-in-duck-speech-alongside/) |
 
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: Completed quick task 3
+Stopped at: Completed quick task 4
 Resume file: None
