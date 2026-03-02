@@ -584,6 +584,64 @@
   border-bottom: 1px solid rgba(0, 255, 255, 0.15);
 }
 
+/* Hover-hatch utility classes — diagonal hatching for interactive elements */
+.hover-hatch-cyan {
+  background: transparent;
+  border-top: 1px solid transparent;
+  border-bottom: 1px solid transparent;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.hover-hatch-cyan:hover {
+  background: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 7px,
+    rgba(0, 255, 255, 0.15) 7px,
+    rgba(0, 255, 255, 0.15) 8px
+  );
+  border-top-color: rgba(0, 255, 255, 0.15);
+  border-bottom-color: rgba(0, 255, 255, 0.15);
+}
+
+.hover-hatch-white {
+  background: transparent;
+  border-top: 1px solid transparent;
+  border-bottom: 1px solid transparent;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.hover-hatch-white:hover {
+  background: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 7px,
+    rgba(255, 255, 255, 0.12) 7px,
+    rgba(255, 255, 255, 0.12) 8px
+  );
+  border-top-color: rgba(255, 255, 255, 0.12);
+  border-bottom-color: rgba(255, 255, 255, 0.12);
+}
+
+.hover-hatch-red {
+  background: transparent;
+  border-top: 1px solid transparent;
+  border-bottom: 1px solid transparent;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.hover-hatch-red:hover {
+  background: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 7px,
+    rgba(224, 74, 74, 0.15) 7px,
+    rgba(224, 74, 74, 0.15) 8px
+  );
+  border-top-color: rgba(224, 74, 74, 0.15);
+  border-bottom-color: rgba(224, 74, 74, 0.15);
+}
+
 /* Collapsible animation using grid-rows technique */
 [data-state='open'].animate-collapsible {
   display: grid;
