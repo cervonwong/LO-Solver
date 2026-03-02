@@ -25,7 +25,7 @@ See: .planning/PROJECT.md (updated 2026-03-02)
 Phase: 8 of 11 (Trace Hierarchy Fix) — first phase of v1.1
 Plan: 1 of 2 complete
 Status: Executing
-Last activity: 2026-03-02 - Completed quick task 7: Add nav-to-content gap and sticky trace panel header
+Last activity: 2026-03-02 - Completed quick task 8: Replace rules panel header icon with list_alt Material Icon
 
 Progress (v1.1): [█░░░░░░░░░] 10%
 
@@ -74,9 +74,10 @@ None yet.
 | 5 | Change progress checkmark from white to dark navy for contrast | 2026-03-02 | 71da460 | [5-change-progress-checkmark-from-white-to-](./quick/5-change-progress-checkmark-from-white-to-/) |
 | 6 | Merge activity indicator and trace header into compact row | 2026-03-02 | 446f6c2 | [6-merge-activity-indicator-and-trace-heade](./quick/6-merge-activity-indicator-and-trace-heade/) |
 | 7 | Add nav-to-content gap and sticky trace panel header | 2026-03-02 | 418f8e8 | [7-add-gap-below-top-bar-and-make-panel-hea](./quick/7-add-gap-below-top-bar-and-make-panel-hea/) |
+| 8 | Replace rules panel header icon with list_alt Material Icon | 2026-03-02 | d87bb2d | [8-replace-rules-panel-icon-with-list-alt-s](./quick/8-replace-rules-panel-icon-with-list-alt-s/) |
 
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: Completed quick task 7
+Stopped at: Completed quick task 8
 Resume file: None
