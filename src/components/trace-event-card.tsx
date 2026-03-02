@@ -74,13 +74,7 @@ export function TraceEventCard({ event }: TraceEventCardProps) {
         <Collapsible open={open} onOpenChange={setOpen}>
           <CollapsibleTrigger className="animate-fade-in border-l-2 border-l-trace-agent flex w-full items-center justify-between border border-border-subtle bg-surface-2 px-3 py-1.5 text-left text-xs hover:bg-surface-3">
             <span className="flex items-center gap-2">
-              <Image
-                src="/lex-mascot.png"
-                alt=""
-                width={16}
-                height={16}
-                className="shrink-0"
-              />
+              <Image src="/lex-mascot.png" alt="" width={16} height={16} className="shrink-0" />
               <span className="font-medium">{event.data.agentName}</span>
               <span className="text-muted-foreground">({event.data.model})</span>
             </span>
@@ -167,8 +161,8 @@ export function TraceEventCard({ event }: TraceEventCardProps) {
             VOCAB
           </Badge>
           <span>
-            {event.data.action}: {event.data.entries.length} entries (total:{' '}
-            {event.data.totalCount})
+            {event.data.action}: {event.data.entries.length} entries (total: {event.data.totalCount}
+            )
           </span>
         </div>
       );
@@ -314,9 +308,9 @@ function VocabularyToolCard({
   };
 }) {
   const action = toolCall.data.toolName.replace('Vocabulary', '').toUpperCase();
-  const entries = (toolCall.data.input.entries ??
-    toolCall.data.input.foreignForms ??
-    []) as Array<Record<string, unknown>>;
+  const entries = (toolCall.data.input.entries ?? toolCall.data.input.foreignForms ?? []) as Array<
+    Record<string, unknown>
+  >;
   const isUpdate = toolCall.data.toolName === 'updateVocabulary';
   const isRemove = toolCall.data.toolName === 'removeVocabulary';
 
@@ -635,11 +629,7 @@ function RenderItem({ item, depth }: { item: RenderItemType; depth: number }) {
       return <ToolCallRenderer toolCall={item.toolCall} depth={depth + 1} />;
     case 'bulk':
       return (
-        <BulkToolCallGroup
-          toolName={item.toolName}
-          toolCalls={item.toolCalls}
-          depth={depth + 1}
-        />
+        <BulkToolCallGroup toolName={item.toolName} toolCalls={item.toolCalls} depth={depth + 1} />
       );
   }
 }
@@ -830,9 +820,7 @@ function AgentToolCallCard({
         </CollapsibleTrigger>
         <CollapsibleContent className="animate-collapsible pl-6 pr-2 py-1">
           <div className="flex flex-col gap-2">
-            <Streamdown plugins={{ code }}>
-              {jsonMarkdown('Input', toolCall.data.input)}
-            </Streamdown>
+            <Streamdown plugins={{ code }}>{jsonMarkdown('Input', toolCall.data.input)}</Streamdown>
             <Streamdown plugins={{ code }}>
               {jsonMarkdown('Result', toolCall.data.result)}
             </Streamdown>

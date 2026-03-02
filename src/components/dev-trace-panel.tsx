@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import { TraceEventCard, ToolCallGroupCard, AgentCard } from '@/components/trace-event-card';
 import {
   groupEventsByStep,
   groupEventsWithAgents,
   groupEventsWithToolCalls,
+  getStepSummary,
   isAgentGroup,
   isToolCallGroup,
   formatDuration,
@@ -25,6 +26,43 @@ interface DevTracePanelProps {
 export function DevTracePanel({ events, isRunning }: DevTracePanelProps) {
   const stepGroups = useMemo(() => groupEventsByStep(events), [events]);
 
+  // Auto-scroll refs
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const isAutoScrollRef = useRef(true);
+  const isUserScrollingRef = useRef(false);
+
+  const handleScroll = useCallback(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+
+    // Threshold for "close enough to bottom" -- 50px tolerance
+    const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 50;
+
+    if (atBottom) {
+      // User scrolled back to bottom -- resume auto-scroll
+      isAutoScrollRef.current = true;
+    } else if (!isUserScrollingRef.current) {
+      // User scrolled away from bottom -- disable auto-scroll
+      isAutoScrollRef.current = false;
+    }
+  }, []);
+
+  // Auto-scroll to bottom when new events arrive
+  useEffect(() => {
+    const el = scrollContainerRef.current;
+    if (!el || !isAutoScrollRef.current) return;
+
+    // Use requestAnimationFrame to scroll after DOM update
+    requestAnimationFrame(() => {
+      isUserScrollingRef.current = true;
+      el.scrollTop = el.scrollHeight;
+      // Reset flag after scroll completes
+      requestAnimationFrame(() => {
+        isUserScrollingRef.current = false;
+      });
+    });
+  }, [events.length]);
+
   if (events.length === 0 && isRunning) {
     return <SkeletonTrace />;
   }
@@ -34,7 +72,11 @@ export function DevTracePanel({ events, isRunning }: DevTracePanelProps) {
   }
 
   return (
-    <div className="flex flex-col gap-4 p-4">
+    <div
+      ref={scrollContainerRef}
+      onScroll={handleScroll}
+      className="flex flex-1 flex-col gap-4 overflow-y-auto p-4"
+    >
       <ActivityIndicator events={events} isRunning={isRunning} />
 
       <div className="flex items-center justify-between border-b-4 border-double border-border pb-2">
@@ -71,11 +113,33 @@ function ChevronIcon({ open }: { open: boolean }) {
 
 function StepSection({ group, isRunning }: StepSectionProps) {
   const isActive = group.durationMs === undefined && group.startTime !== undefined;
+  const isComplete = group.durationMs !== undefined;
   const [open, setOpen] = useState(true);
+  const [wasActive, setWasActive] = useState(false);
+
+  // Auto-expand when step becomes active
+  useEffect(() => {
+    if (isActive && isRunning) {
+      setOpen(true);
+      setWasActive(true);
+    }
+  }, [isActive, isRunning]);
+
+  // Auto-collapse when step completes (only if it was active and workflow is still running)
+  useEffect(() => {
+    if (isComplete && wasActive && isRunning) {
+      // Delay collapse slightly so user can see completion
+      const timer = setTimeout(() => setOpen(false), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [isComplete, wasActive, isRunning]);
 
   const contentEvents = group.events.filter(
     (e) => e.type !== 'data-step-start' && e.type !== 'data-step-complete',
   );
+
+  // Step summary for collapsed header
+  const stepSummary = isComplete ? getStepSummary(group) : undefined;
 
   // Live timer for active steps
   const [elapsed, setElapsed] = useState(0);
@@ -135,6 +199,11 @@ function StepSection({ group, isRunning }: StepSectionProps) {
                 {formatDuration(group.durationMs)}
               </span>
             )}
+            {!open && stepSummary && (
+              <span className="text-[10px] text-muted-foreground truncate max-w-[200px]">
+                {stepSummary}
+              </span>
+            )}
             <ChevronIcon open={open} />
           </span>
         </CollapsibleTrigger>
@@ -167,7 +236,10 @@ function EventList({
   const agentGrouped = groupEventsWithAgents(displayEvents);
 
   // Second pass: for remaining standalone events (non-AgentGroup), group tool calls
-  const items: Array<ReturnType<typeof groupEventsWithAgents>[number] | ReturnType<typeof groupEventsWithToolCalls>[number]> = [];
+  const items: Array<
+    | ReturnType<typeof groupEventsWithAgents>[number]
+    | ReturnType<typeof groupEventsWithToolCalls>[number]
+  > = [];
   let standaloneBuffer: WorkflowTraceEvent[] = [];
 
   const flushStandalone = () => {
@@ -192,7 +264,7 @@ function EventList({
     <div className="flex flex-col gap-1">
       {items.map((item, i) =>
         isAgentGroup(item) ? (
-          <AgentCard key={i} group={item} />
+          <AgentCard key={i} group={item} depth={0} />
         ) : isToolCallGroup(item) ? (
           <ToolCallGroupCard key={i} group={item} />
         ) : (
