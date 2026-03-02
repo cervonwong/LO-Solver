@@ -532,6 +532,36 @@
   animation: chip-out 200ms ease-out forwards;
 }
 
+@keyframes pulse-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 4px rgba(0, 255, 255, 0.3);
+  }
+  50% {
+    box-shadow:
+      0 0 12px rgba(0, 255, 255, 0.6),
+      0 0 20px rgba(0, 255, 255, 0.3);
+  }
+}
+
+@keyframes pulse-glow-line {
+  0%,
+  100% {
+    box-shadow: 0 0 3px rgba(0, 255, 255, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 8px rgba(0, 255, 255, 0.5);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.animate-pulse-glow-line {
+  animation: pulse-glow-line 2s ease-in-out infinite;
+}
+
 /* Collapsible animation using grid-rows technique */
 [data-state='open'].animate-collapsible {
   display: grid;
@@ -556,6 +586,12 @@
 .streamdown {
   font-size: 0.75rem;
   line-height: 1.25rem;
+}
+
+/* Smaller streamdown inside trace agent reasoning and tool details */
+.trace-text-sm .streamdown {
+  font-size: 0.6875rem;
+  line-height: 1rem;
 }
 
 .streamdown h1,
