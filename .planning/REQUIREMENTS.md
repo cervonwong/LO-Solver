@@ -48,22 +48,22 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| HIER-01 | — | Pending |
-| HIER-02 | — | Pending |
-| STYLE-01 | — | Pending |
-| STYLE-02 | — | Pending |
-| FMT-01 | — | Pending |
-| FMT-02 | — | Pending |
-| FMT-03 | — | Pending |
-| FMT-04 | — | Pending |
-| DUCK-01 | — | Pending |
-| DUCK-02 | — | Pending |
+| HIER-01 | Phase 8 | Pending |
+| HIER-02 | Phase 8 | Pending |
+| STYLE-01 | Phase 9 | Pending |
+| STYLE-02 | Phase 9 | Pending |
+| FMT-01 | Phase 10 | Pending |
+| FMT-02 | Phase 10 | Pending |
+| FMT-03 | Phase 10 | Pending |
+| FMT-04 | Phase 10 | Pending |
+| DUCK-01 | Phase 11 | Pending |
+| DUCK-02 | Phase 11 | Pending |
 
 **Coverage:**
 - v1.1 requirements: 10 total
-- Mapped to phases: 0
-- Unmapped: 10 ⚠️
+- Mapped to phases: 10
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-02*
-*Last updated: 2026-03-02 after initial definition*
+*Last updated: 2026-03-02 after roadmap creation*
