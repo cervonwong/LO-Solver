@@ -34,8 +34,8 @@
 
 - [x] **UI-01**: Rules are displayed in the UI alongside vocabulary in a stacked resizable panel layout, collapsible to a thin header bar
 - [x] **UI-02**: Rules panel updates live as agents generate, test, and revise rules
-- [ ] **UI-03**: Trace panel displays tool calls nested under their parent agent calls (hierarchical view, not flat)
-- [ ] **UI-04**: Each tool type has custom-fitted input/output display (e.g., testRule shows rule text + pass/fail + failing sentences, vocabulary tools show the entry being modified)
+- [x] **UI-03**: Trace panel displays tool calls nested under their parent agent calls (hierarchical view, not flat)
+- [x] **UI-04**: Each tool type has custom-fitted input/output display (e.g., testRule shows rule text + pass/fail + failing sentences, vocabulary tools show the entry being modified)
 - [x] **UI-05**: Final results are presented with clear formatting — answers, confidence scores, working steps, and which rules were applied
 - [x] **UI-06**: Event streaming system supports hierarchical events (agent starts → tool calls within → agent ends) so the frontend can build nested views
 
@@ -80,8 +80,8 @@
 | UI-01 | Phase 6: UI Event System & Rules Panel | Complete |
 | UI-02 | Phase 6: UI Event System & Rules Panel | Complete |
 | UI-06 | Phase 6: UI Event System & Rules Panel | Complete |
-| UI-03 | Phase 7: Hierarchical Trace Display & Results | Pending |
-| UI-04 | Phase 7: Hierarchical Trace Display & Results | Pending |
+| UI-03 | Phase 7: Hierarchical Trace Display & Results | Complete |
+| UI-04 | Phase 7: Hierarchical Trace Display & Results | Complete |
 | UI-05 | Phase 7: Hierarchical Trace Display & Results | Complete |
 
 **Coverage:**

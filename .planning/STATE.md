@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in-progress
-last_updated: "2026-03-02T04:15:39Z"
+last_updated: "2026-03-02T04:26:38Z"
 progress:
   total_phases: 7
   completed_phases: 6
   total_plans: 14
-  completed_plans: 12
+  completed_plans: 13
 ---
 
 # Project State
@@ -21,7 +21,7 @@ See: .planning/PROJECT.md (updated 2026-03-01)
 **Current milestone:** v1.0 Prove the Agentic Advantage
 
 ## Current Phase
-Phase 7: Hierarchical Trace Display & Results — In Progress (Plan 1/3 complete)
+Phase 7: Hierarchical Trace Display & Results — In Progress (Plan 2/3 complete)
 
 ## Phase Status
 | Phase | Name | Status |
@@ -32,7 +32,7 @@ Phase 7: Hierarchical Trace Display & Results — In Progress (Plan 1/3 complete
 | 4 | Multi-Perspective Hypothesis Generation | ✓ Complete |
 | 5 | Verification Loop Improvements | ✓ Complete |
 | 6 | UI Event System & Rules Panel | ✓ Complete |
-| 7 | Hierarchical Trace Display & Results | ◐ In Progress (1/3) |
+| 7 | Hierarchical Trace Display & Results | ◐ In Progress (2/3) |
 
 ## Accumulated Context
 | Date | Insight |
@@ -63,6 +63,9 @@ Phase 7: Hierarchical Trace Display & Results — In Progress (Plan 1/3 complete
 | 2026-03-01 | Three-panel right layout: Trace (top 50%) + Vocabulary (middle 25%) + Rules (bottom 25%) with min-height constraints |
 | 2026-03-01 | Removed collapsible behavior from data panels; minSize=10% + min-h-[120px] prevents zero-height collapse |
 | 2026-03-02 | rulesApplied is required (not optional) on questionAnswerSchema because every answer should reference at least one rule |
+| 2026-03-02 | AgentGroup.children interleaves sub-agents and tool calls chronologically; bulk grouping threshold is 4+ consecutive same-type calls |
+| 2026-03-02 | Orphaned tool calls (missing parentId) fall back to most recently opened active agent via stack-based lookup in groupEventsWithAgents |
+| 2026-03-02 | Auto-scroll uses isUserScrollingRef guard to prevent programmatic scrollTo from disabling auto-scroll via the onScroll handler |
 
 ## Session Log
 | Date | Phase | Action | Notes |
@@ -93,6 +96,7 @@ Phase 7: Hierarchical Trace Display & Results — In Progress (Plan 1/3 complete
 | 2026-03-02 | Quick | Quick task 3 complete | Diagonal hatched hover backgrounds for all stamp button variants (commit ef62c84) |
 | 2026-03-02 | 7 | Plan 07-01 complete | Answer schema rulesApplied field + agent instructions (commits 2e210c3, 4fe83fd) |
 | 2026-03-02 | Quick | Quick task 4 complete | Compact progress bar: 20px squares, handwriting font, pulse glow (commits bdc8594, 7245cf7) |
+| 2026-03-02 | 7 | Plan 07-02 complete | Hierarchical trace display: nested agents, custom tool renderers, bulk grouping, auto-expand/collapse, auto-scroll (commits 4081797, 249aa3f, 92a908a, 3ad4e1f) |
 
 ### Quick Tasks Completed
 
@@ -104,4 +108,4 @@ Phase 7: Hierarchical Trace Display & Results — In Progress (Plan 1/3 complete
 | 4 | Compact progress bar with handwriting font and pulse glow | 2026-03-02 | 7245cf7 | [4-optimize-progress-bar-reduce-square-size](./quick/4-optimize-progress-bar-reduce-square-size/) |
 
 ---
-Last activity: 2026-03-02 - Completed Quick Task 4: Compact progress bar with pulse glow
+Last activity: 2026-03-02 - Completed Plan 07-02: Hierarchical trace display with nested agents and custom tool renderers
