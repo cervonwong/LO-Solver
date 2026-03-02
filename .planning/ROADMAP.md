@@ -103,13 +103,14 @@ _v1.1: 4 phases, plans TBD._
 
 ### Phase 12: Add workflow control buttons (Abort, New Problem, Clear) and disable config controls during execution
 
-**Goal:** [To be planned]
-**Requirements**: TBD
+**Goal:** Nav bar has Abort and New Problem buttons that control the workflow, all config controls disable during execution, and aborted workflows show a distinct amber state
+**Requirements**: CTRL-01, CTRL-02, CTRL-03, CTRL-04, CTRL-05
 **Depends on:** Phase 11
-**Plans:** 0 plans
+**Plans:** 2 plans
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 12 to break down)
+- [ ] 12-01-PLAN.md — WorkflowControlContext and client layout wrapper for state bridging
+- [ ] 12-02-PLAN.md — Abort/New Problem buttons, config disable, aborted state, conditional LO-Solver link
 
 ### Phase 13: Move vocabulary and rules panel to a third column layout
 
