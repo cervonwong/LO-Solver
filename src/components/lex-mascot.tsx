@@ -95,8 +95,8 @@ export function LexMascot() {
       <Image
         src={imageSrc}
         alt="Lex the duck mascot"
-        width={60}
-        height={60}
+        width={76}
+        height={76}
         className="shrink-0"
         priority
       />
