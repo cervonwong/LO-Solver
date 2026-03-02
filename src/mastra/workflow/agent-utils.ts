@@ -1,5 +1,6 @@
 import type { Agent } from '@mastra/core/agent';
 import type { FullOutput } from '@mastra/core/stream';
+import { formatTimestamp } from './logging-utils';
 
 /**
  * What constitutes a valid (non-empty) response from the agent.
@@ -137,7 +138,7 @@ export async function generateWithRetry<TOptions extends Parameters<Agent['gener
       const delayMs = 5000 * (attempt + 1);
 
       console.warn(
-        `[generateWithRetry] Attempt ${attempt + 1} failed: ${lastError.message}. ` +
+        `${formatTimestamp()} [generateWithRetry] Attempt ${attempt + 1} failed: ${lastError.message}. ` +
           `Retrying in ${delayMs / 1000} seconds... (${maxRetries - attempt} retries remaining)`,
       );
 
@@ -306,7 +307,7 @@ export async function streamWithRetry<TOptions extends Parameters<Agent['generat
       const delayMs = 5000 * (attempt + 1);
 
       console.warn(
-        `[streamWithRetry] Attempt ${attempt + 1} failed: ${lastError.message}. ` +
+        `${formatTimestamp()} [streamWithRetry] Attempt ${attempt + 1} failed: ${lastError.message}. ` +
           `Retrying in ${delayMs / 1000} seconds... (${maxRetries - attempt} retries remaining)`,
       );
 

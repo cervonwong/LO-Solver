@@ -2,7 +2,13 @@ import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 import { ruleSchema } from './workflow-schemas';
 import type { Rule } from './workflow-schemas';
-import { getRulesState, emitToolTraceEvent, type ToolExecuteContext } from './request-context-helpers';
+import {
+  getRulesState,
+  emitToolTraceEvent,
+  getWorkflowStartTime,
+  type ToolExecuteContext,
+} from './request-context-helpers';
+import { formatTimestamp } from './logging-utils';
 
 export { ruleSchema } from './workflow-schemas';
 export type RuleEntry = Rule;
@@ -22,9 +28,10 @@ export const getRules = createTool({
   }),
   execute: async (_inputData, context) => {
     const ctx = context as unknown as ToolExecuteContext;
+    const wfStartTime = getWorkflowStartTime(ctx?.requestContext);
     const rulesState = getRulesState(ctx?.requestContext);
     const rules = Array.from(rulesState.values());
-    console.log(`[RULES:READ] Retrieved ${rules.length} rules`);
+    console.log(`${formatTimestamp(wfStartTime)} [RULES:READ] Retrieved ${rules.length} rules`);
     return {
       rules,
       count: rules.length,
@@ -53,6 +60,7 @@ export const addRules = createTool({
   }),
   execute: async ({ entries }, context) => {
     const ctx = context as unknown as ToolExecuteContext;
+    const wfStartTime = getWorkflowStartTime(ctx?.requestContext);
     const rulesState = getRulesState(ctx?.requestContext);
     let added = 0;
     let skipped = 0;
@@ -68,7 +76,9 @@ export const addRules = createTool({
       }
     }
 
-    console.log(`[RULES:ADD] Added ${added}, skipped ${skipped}, total ${rulesState.size}`);
+    console.log(
+      `${formatTimestamp(wfStartTime)} [RULES:ADD] Added ${added}, skipped ${skipped}, total ${rulesState.size}`,
+    );
 
     const timestamp = new Date().toISOString();
     await emitToolTraceEvent(ctx?.requestContext, {
@@ -118,6 +128,7 @@ export const updateRules = createTool({
   }),
   execute: async ({ entries }, context) => {
     const ctx = context as unknown as ToolExecuteContext;
+    const wfStartTime = getWorkflowStartTime(ctx?.requestContext);
     const rulesState = getRulesState(ctx?.requestContext);
     let updated = 0;
     let skipped = 0;
@@ -133,7 +144,9 @@ export const updateRules = createTool({
       }
     }
 
-    console.log(`[RULES:UPDATE] Updated ${updated}, skipped ${skipped}, total ${rulesState.size}`);
+    console.log(
+      `${formatTimestamp(wfStartTime)} [RULES:UPDATE] Updated ${updated}, skipped ${skipped}, total ${rulesState.size}`,
+    );
 
     const timestamp = new Date().toISOString();
     await emitToolTraceEvent(ctx?.requestContext, {
@@ -179,6 +192,7 @@ export const removeRules = createTool({
   }),
   execute: async ({ titles }, context) => {
     const ctx = context as unknown as ToolExecuteContext;
+    const wfStartTime = getWorkflowStartTime(ctx?.requestContext);
     const rulesState = getRulesState(ctx?.requestContext);
     let removed = 0;
     let notFound = 0;
@@ -194,7 +208,7 @@ export const removeRules = createTool({
     }
 
     console.log(
-      `[RULES:REMOVE] Removed ${removed}, not found ${notFound}, total ${rulesState.size}`,
+      `${formatTimestamp(wfStartTime)} [RULES:REMOVE] Removed ${removed}, not found ${notFound}, total ${rulesState.size}`,
     );
 
     const timestamp = new Date().toISOString();
@@ -239,10 +253,11 @@ export const clearRules = createTool({
   }),
   execute: async (_inputData, context) => {
     const ctx = context as unknown as ToolExecuteContext;
+    const wfStartTime = getWorkflowStartTime(ctx?.requestContext);
     const rulesState = getRulesState(ctx?.requestContext);
     const removed = rulesState.size;
     rulesState.clear();
-    console.log(`[RULES:CLEAR] Cleared ${removed} rules`);
+    console.log(`${formatTimestamp(wfStartTime)} [RULES:CLEAR] Cleared ${removed} rules`);
 
     const timestamp = new Date().toISOString();
     await emitToolTraceEvent(ctx?.requestContext, {

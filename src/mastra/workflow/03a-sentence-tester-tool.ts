@@ -10,7 +10,7 @@ import {
   emitToolTraceEvent,
   type ToolExecuteContext,
 } from './request-context-helpers';
-import { logSentenceTestResult } from './logging-utils';
+import { logSentenceTestResult, formatTimestamp } from './logging-utils';
 import { ruleSchema } from './workflow-schemas';
 import type { Rule } from './request-context-types';
 import type { VocabularyEntry } from './vocabulary-tools';
@@ -129,9 +129,10 @@ ${JSON.stringify(vocabulary, null, 2)}
 Attempt to translate this sentence step by step using the rules and vocabulary above. Flag any ambiguities or issues. Produce your BEST translation based solely on the rules.
 `.trim();
 
+  const wfStartTime = requestContext?.get('workflow-start-time') as number | undefined;
   const testStartTime = Date.now();
   console.log(
-    `[TOOL:testSentence] Starting sentence-tester sub-agent for "${id}" (${rules.length} rules, ${vocabulary.length} vocab)...`,
+    `${formatTimestamp(wfStartTime)} [TOOL:testSentence] Starting sentence-tester sub-agent for "${id}" (${rules.length} rules, ${vocabulary.length} vocab)...`,
   );
 
   try {
@@ -149,7 +150,7 @@ Attempt to translate this sentence step by step using the rules and vocabulary a
     const agentResult = result.object as z.infer<typeof agentResponseSchema>;
     const durationSec = ((Date.now() - testStartTime) / 1000).toFixed(1);
     console.log(
-      `[TOOL:testSentence] Sentence-tester for "${id}" completed in ${durationSec}s — ${agentResult.overallStatus}`,
+      `${formatTimestamp(wfStartTime)} [TOOL:testSentence] Sentence-tester for "${id}" completed in ${durationSec}s — ${agentResult.overallStatus}`,
     );
 
     // Phase 2: Post-hoc Comparison (if expected translation provided)
@@ -178,7 +179,7 @@ Attempt to translate this sentence step by step using the rules and vocabulary a
   } catch (err) {
     const durationSec = ((Date.now() - testStartTime) / 1000).toFixed(1);
     console.error(
-      `[TOOL:testSentence] Sentence-tester for "${id}" FAILED after ${durationSec}s — ${err instanceof Error ? err.message : 'Unknown error'}`,
+      `${formatTimestamp(wfStartTime)} [TOOL:testSentence] Sentence-tester for "${id}" FAILED after ${durationSec}s — ${err instanceof Error ? err.message : 'Unknown error'}`,
     );
     return {
       success: false as const,

@@ -12,6 +12,7 @@ import {
   logWorkflowSummary,
   logAgentOutput,
   logValidationError,
+  formatTimestamp,
 } from './logging-utils';
 import { streamWithRetry } from './agent-utils';
 import {
@@ -127,7 +128,7 @@ const extractionStep = createStep({
     );
     await setState({ ...stateWithMode, stepTimings: [...stateWithMode.stepTimings, timing1] });
     console.log(
-      `[Step 1] Structured Problem Extractor Agent finished at ${timing1.endTime} (${timing1.durationMinutes} min).`,
+      `${formatTimestamp(initialState.workflowStartTime)} [Step 1] Structured Problem Extractor Agent finished at ${timing1.endTime} (${timing1.durationMinutes} min).`,
     );
 
     // validate the agent response against the expected schema so the step returns the correct type
@@ -305,7 +306,7 @@ const multiPerspectiveHypothesisStep = createStep({
         );
         currentStepTimings.push(dispatchTiming);
         console.log(
-          `[Round ${round}] Dispatcher finished at ${dispatchTiming.endTime} (${dispatchTiming.durationMinutes} min).`,
+          `${formatTimestamp(state.workflowStartTime)} [Round ${round}] Dispatcher finished at ${dispatchTiming.endTime} (${dispatchTiming.durationMinutes} min).`,
         );
 
         logAgentOutput(
@@ -400,7 +401,7 @@ const multiPerspectiveHypothesisStep = createStep({
         );
         currentStepTimings.push(improverDispatchTiming);
         console.log(
-          `[Round ${round}] Improver Dispatcher finished at ${improverDispatchTiming.endTime} (${improverDispatchTiming.durationMinutes} min).`,
+          `${formatTimestamp(state.workflowStartTime)} [Round ${round}] Improver Dispatcher finished at ${improverDispatchTiming.endTime} (${improverDispatchTiming.durationMinutes} min).`,
         );
 
         logAgentOutput(
@@ -416,7 +417,9 @@ const multiPerspectiveHypothesisStep = createStep({
         );
         if (!improverParsed.success || !improverParsed.data.perspectives) {
           // If improver-dispatcher returns no perspectives, stop iteration
-          console.log(`[Round ${round}] Improver returned no new perspectives, stopping.`);
+          console.log(
+            `${formatTimestamp(state.workflowStartTime)} [Round ${round}] Improver returned no new perspectives, stopping.`,
+          );
           break;
         }
 
@@ -526,7 +529,7 @@ const multiPerspectiveHypothesisStep = createStep({
           hypStartTime,
         );
         console.log(
-          `[Round ${round}] Hypothesizer (${perspective.id}) finished at ${hypTiming.endTime} (${hypTiming.durationMinutes} min).`,
+          `${formatTimestamp(state.workflowStartTime)} [Round ${round}] Hypothesizer (${perspective.id}) finished at ${hypTiming.endTime} (${hypTiming.durationMinutes} min).`,
         );
 
         logAgentOutput(
@@ -643,7 +646,7 @@ const multiPerspectiveHypothesisStep = createStep({
         );
         currentStepTimings.push(verifierTiming);
         console.log(
-          `[Round ${round}] Verifier (${perspective.id}) finished at ${verifierTiming.endTime} (${verifierTiming.durationMinutes} min).`,
+          `${formatTimestamp(state.workflowStartTime)} [Round ${round}] Verifier (${perspective.id}) finished at ${verifierTiming.endTime} (${verifierTiming.durationMinutes} min).`,
         );
 
         // Step 2: Extract structured feedback
@@ -725,7 +728,7 @@ const multiPerspectiveHypothesisStep = createStep({
         if (!feedbackParsed.success) {
           // If verification feedback fails to parse, assign a 0 score
           console.warn(
-            `[Round ${round}] Verifier feedback parse failed for ${perspective.id}:`,
+            `${formatTimestamp(state.workflowStartTime)} [Round ${round}] Verifier feedback parse failed for ${perspective.id}:`,
             feedbackParsed.error.message,
           );
           return {
@@ -872,7 +875,7 @@ const multiPerspectiveHypothesisStep = createStep({
       );
       currentStepTimings.push(synthesizerTiming);
       console.log(
-        `[Round ${round}] Synthesizer finished at ${synthesizerTiming.endTime} (${synthesizerTiming.durationMinutes} min).`,
+        `${formatTimestamp(state.workflowStartTime)} [Round ${round}] Synthesizer finished at ${synthesizerTiming.endTime} (${synthesizerTiming.durationMinutes} min).`,
       );
 
       logAgentOutput(
@@ -1159,7 +1162,7 @@ const multiPerspectiveHypothesisStep = createStep({
       });
 
       if (converged) {
-        console.log(`[Round ${round}] Converged! All rules pass.`);
+        console.log(`${formatTimestamp(state.workflowStartTime)} [Round ${round}] Converged! All rules pass.`);
         break;
       }
 
@@ -1175,7 +1178,7 @@ const multiPerspectiveHypothesisStep = createStep({
     // If we exhausted rounds without convergence, warn
     if (!roundResults.some((r) => r.converged)) {
       console.warn(
-        `[Multi-Perspective] Max rounds (${effectiveMaxRounds}) reached without convergence. ` +
+        `${formatTimestamp(state.workflowStartTime)} [Multi-Perspective] Max rounds (${effectiveMaxRounds}) reached without convergence. ` +
           `Best pass rate: ${bestPassRate.toFixed(2)} (round ${bestRound}). Using best-so-far rules.`,
       );
       await emitTraceEvent(writer, {
@@ -1314,7 +1317,7 @@ const answerQuestionsStep = createStep({
     const answererTiming = recordStepTiming('Step 3', 'Question Answerer Agent', answererStartTime);
     const finalStepTimings = [...state.stepTimings, answererTiming];
     console.log(
-      `[Step 3] Question Answerer Agent finished at ${answererTiming.endTime} (${answererTiming.durationMinutes} min).`,
+      `${formatTimestamp(state.workflowStartTime)} [Step 3] Question Answerer Agent finished at ${answererTiming.endTime} (${answererTiming.durationMinutes} min).`,
     );
 
     const answererParseResult = questionsAnsweredSchema.safeParse(answererResponse.object);

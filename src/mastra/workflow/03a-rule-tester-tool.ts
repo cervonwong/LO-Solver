@@ -8,7 +8,7 @@ import {
   emitToolTraceEvent,
   type ToolExecuteContext,
 } from './request-context-helpers';
-import { logRuleTestResult } from './logging-utils';
+import { logRuleTestResult, formatTimestamp } from './logging-utils';
 import type { StructuredProblemData, Rule } from './request-context-types';
 import type { VocabularyEntry } from './vocabulary-tools';
 import type { Mastra } from '@mastra/core/mastra';
@@ -120,9 +120,10 @@ ${JSON.stringify(structuredProblem.questions, null, 2)}
 **Your task**: Test the rule shown above against ALL relevant sentences in the dataset. Check if the rule's predictions match the actual data. Note any conflicts with other rules as a secondary concern.
 `.trim();
 
+  const wfStartTime = requestContext?.get('workflow-start-time') as number | undefined;
   const testStartTime = Date.now();
   console.log(
-    `[TOOL:testRule] Starting rule-tester sub-agent for "${rule.title}" (${allRules.length} rules in context)...`,
+    `${formatTimestamp(wfStartTime)} [TOOL:testRule] Starting rule-tester sub-agent for "${rule.title}" (${allRules.length} rules in context)...`,
   );
 
   try {
@@ -140,7 +141,7 @@ ${JSON.stringify(structuredProblem.questions, null, 2)}
     const ruleResult = result.object as z.infer<typeof ruleTestSuccessSchema>;
     const durationSec = ((Date.now() - testStartTime) / 1000).toFixed(1);
     console.log(
-      `[TOOL:testRule] Rule-tester for "${rule.title}" completed in ${durationSec}s — ${ruleResult.status}`,
+      `${formatTimestamp(wfStartTime)} [TOOL:testRule] Rule-tester for "${rule.title}" completed in ${durationSec}s — ${ruleResult.status}`,
     );
 
     // Log result only if logFile is provided (i.e., using committed rules)
@@ -165,7 +166,7 @@ ${JSON.stringify(structuredProblem.questions, null, 2)}
   } catch (err) {
     const durationSec = ((Date.now() - testStartTime) / 1000).toFixed(1);
     console.error(
-      `[TOOL:testRule] Rule-tester for "${rule.title}" FAILED after ${durationSec}s — ${err instanceof Error ? err.message : 'Unknown error'}`,
+      `${formatTimestamp(wfStartTime)} [TOOL:testRule] Rule-tester for "${rule.title}" FAILED after ${durationSec}s — ${err instanceof Error ? err.message : 'Unknown error'}`,
     );
 
     // Emit failing rule test result for the frontend rules panel

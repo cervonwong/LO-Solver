@@ -5,9 +5,11 @@ import {
   getVocabularyState,
   getLogFile,
   emitToolTraceEvent,
+  getWorkflowStartTime,
   type ToolExecuteContext,
 } from './request-context-helpers';
 import {
+  formatTimestamp,
   logVocabularyAdded,
   logVocabularyUpdated,
   logVocabularyRemoved,
@@ -39,9 +41,10 @@ export const getVocabulary = createTool({
   }),
   execute: async (_inputData, context) => {
     const ctx = context as unknown as ToolExecuteContext;
+    const wfStartTime = getWorkflowStartTime(ctx?.requestContext);
     const vocabularyState = getVocabularyState(ctx?.requestContext);
     const entries = Array.from(vocabularyState.values());
-    console.log(`[VOCAB:READ] Retrieved ${entries.length} vocabulary entries`);
+    console.log(`${formatTimestamp(wfStartTime)} [VOCAB:READ] Retrieved ${entries.length} vocabulary entries`);
     return {
       entries,
       count: entries.length,
@@ -72,6 +75,7 @@ export const addVocabulary = createTool({
   }),
   execute: async ({ entries }, context) => {
     const ctx = context as unknown as ToolExecuteContext;
+    const wfStartTime = getWorkflowStartTime(ctx?.requestContext);
     const vocabularyState = getVocabularyState(ctx?.requestContext);
     const logFile = getLogFile(ctx?.requestContext);
     let added = 0;
@@ -88,7 +92,9 @@ export const addVocabulary = createTool({
       }
     }
 
-    console.log(`[VOCAB:ADD] Added ${added}, skipped ${skipped}, total ${vocabularyState.size}`);
+    console.log(
+      `${formatTimestamp(wfStartTime)} [VOCAB:ADD] Added ${added}, skipped ${skipped}, total ${vocabularyState.size}`,
+    );
 
     // Log added entries to file
     logVocabularyAdded(logFile, addedEntries);
@@ -144,6 +150,7 @@ export const updateVocabulary = createTool({
   }),
   execute: async ({ entries }, context) => {
     const ctx = context as unknown as ToolExecuteContext;
+    const wfStartTime = getWorkflowStartTime(ctx?.requestContext);
     const vocabularyState = getVocabularyState(ctx?.requestContext);
     const logFile = getLogFile(ctx?.requestContext);
     let updated = 0;
@@ -161,7 +168,7 @@ export const updateVocabulary = createTool({
     }
 
     console.log(
-      `[VOCAB:UPDATE] Updated ${updated}, skipped ${skipped}, total ${vocabularyState.size}`,
+      `${formatTimestamp(wfStartTime)} [VOCAB:UPDATE] Updated ${updated}, skipped ${skipped}, total ${vocabularyState.size}`,
     );
 
     // Log updated entries to file
@@ -215,6 +222,7 @@ export const removeVocabulary = createTool({
   }),
   execute: async ({ foreignForms }, context) => {
     const ctx = context as unknown as ToolExecuteContext;
+    const wfStartTime = getWorkflowStartTime(ctx?.requestContext);
     const vocabularyState = getVocabularyState(ctx?.requestContext);
     const logFile = getLogFile(ctx?.requestContext);
     let removed = 0;
@@ -231,7 +239,7 @@ export const removeVocabulary = createTool({
     }
 
     console.log(
-      `[VOCAB:REMOVE] Removed ${removed}, not found ${notFound}, total ${vocabularyState.size}`,
+      `${formatTimestamp(wfStartTime)} [VOCAB:REMOVE] Removed ${removed}, not found ${notFound}, total ${vocabularyState.size}`,
     );
 
     // Log removed entries to file
@@ -280,11 +288,12 @@ export const clearVocabulary = createTool({
   }),
   execute: async (_inputData, context) => {
     const ctx = context as unknown as ToolExecuteContext;
+    const wfStartTime = getWorkflowStartTime(ctx?.requestContext);
     const vocabularyState = getVocabularyState(ctx?.requestContext);
     const logFile = getLogFile(ctx?.requestContext);
     const removed = vocabularyState.size;
     vocabularyState.clear();
-    console.log(`[VOCAB:CLEAR] Cleared ${removed} vocabulary entries`);
+    console.log(`${formatTimestamp(wfStartTime)} [VOCAB:CLEAR] Cleared ${removed} vocabulary entries`);
 
     // Log cleared count to file
     logVocabularyCleared(logFile, removed);
