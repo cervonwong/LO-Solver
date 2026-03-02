@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: UI Polish
 status: executing
-last_updated: "2026-03-02T07:26:00.000Z"
+last_updated: "2026-03-02T08:01:00.000Z"
 progress:
   total_phases: 4
   completed_phases: 0
@@ -25,7 +25,7 @@ See: .planning/PROJECT.md (updated 2026-03-02)
 Phase: 8 of 11 (Trace Hierarchy Fix) — first phase of v1.1
 Plan: 1 of 2 complete
 Status: Executing
-Last activity: 2026-03-02 - Completed quick task 1: Replace progress panel checkmark symbol with bright blue checkmark icon matching dev trace
+Last activity: 2026-03-02 - Completed quick task 2: Update ready-state duck speech to say "Scroll down" to SOLVE button
 
 Progress (v1.1): [█░░░░░░░░░] 10%
 
@@ -68,9 +68,10 @@ None yet.
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 1 | Replace progress panel checkmark symbol with bright blue checkmark icon matching dev trace | 2026-03-02 | 4ce8c16 | [1-replace-progress-panel-checkmark-symbol-](./quick/1-replace-progress-panel-checkmark-symbol-/) |
+| 2 | Update ready-state duck speech to say "Scroll down" to SOLVE button | 2026-03-02 | 9e077ca | [2-improve-duck-speech-to-say-scroll-down-t](./quick/2-improve-duck-speech-to-say-scroll-down-t/) |
 
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: Completed 08-01-PLAN.md
+Stopped at: Completed quick task 2
 Resume file: None
