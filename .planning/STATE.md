@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: UI Polish
-status: unknown
-last_updated: "2026-03-02T12:34:25.767Z"
+status: executing
+last_updated: "2026-03-02T13:26:49Z"
 progress:
   total_phases: 4
   completed_phases: 2
-  total_plans: 3
-  completed_plans: 3
+  total_plans: 4
+  completed_plans: 4
 ---
 
 # Project State
@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-02)
 
 **Core value:** The agentic workflow must produce measurably better results than zero-shotting the same LLMs without orchestration.
-**Current focus:** v1.1 UI Polish — Phase 10 (Structured Data Formatting)
+**Current focus:** v1.1 UI Polish — Phase 12 (Workflow Control Buttons)
 
 ## Current Position
 
-Phase: 10 of 11 (Structured Data Formatting) — third phase of v1.1
-Plan: 0 of ? complete
-Status: Ready for planning
-Last activity: 2026-03-02 - Completed quick task 11: Fix hover-hatch CSS compositing
+Phase: 12 of 13 (Workflow Control Buttons)
+Plan: 1 of 2 complete
+Status: Executing phase 12
+Last activity: 2026-03-02 - Completed 12-01: WorkflowControlContext with register pattern
 
-Progress (v1.1): [█████░░░░░] 50%
+Progress (v1.1): [██████░░░░] 60%
 
 ## Performance Metrics
 
@@ -42,6 +42,7 @@ Progress (v1.1): [█████░░░░░] 50%
 | 08    | 01   | 9min     | 3     | 5     |
 | 08    | 02   | 7min     | 2     | 2     |
 | 09    | 01   | 30min    | 2     | 2     |
+| 12    | 01   | 2min     | 2     | 4     |
 
 ## Accumulated Context
 
@@ -52,6 +53,7 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - Phase 8 Plan 1: parentId injection flow confirmed correct at architecture level; verifyRequestContext was missing step-id (fixed)
 - Phase 8 Plan 2: Orphaned tool calls render at root level with console.warn rather than being hidden
 - Phase 9 Plan 1: Scoped compact overrides under .reasoning-compact class; stripped Streamdown chrome from trace panel code blocks; removed code block backgrounds globally
+- Phase 12 Plan 1: Used register pattern with separate RegisterContext for refs; split layout.tsx into server component + LayoutShell client wrapper
 
 ### Pending Todos
 
@@ -86,5 +88,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: Completed quick task 11 (hover-hatch CSS fix)
+Stopped at: Completed 12-01-PLAN.md (WorkflowControlContext)
 Resume file: None

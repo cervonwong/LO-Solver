@@ -31,9 +31,9 @@ Requirements for UI Polish milestone. Each maps to roadmap phases.
 
 ### Workflow Controls
 
-- [ ] **CTRL-01**: Abort button in nav bar stops the running workflow and keeps partial results visible
-- [ ] **CTRL-02**: New Problem button in nav bar resets all state (problem text, messages, progress, mascot)
-- [ ] **CTRL-03**: All nav bar config controls (Model Mode toggle, Workflow Sliders, Eval Results link) are disabled during execution
+- [x] **CTRL-01**: Abort button in nav bar stops the running workflow and keeps partial results visible
+- [x] **CTRL-02**: New Problem button in nav bar resets all state (problem text, messages, progress, mascot)
+- [x] **CTRL-03**: All nav bar config controls (Model Mode toggle, Workflow Sliders, Eval Results link) are disabled during execution
 - [ ] **CTRL-04**: Aborted workflow shows a distinct amber/yellow "Workflow aborted" banner (not reusing the error/failed state)
 - [ ] **CTRL-05**: LO-Solver text in nav bar is plain text on home page and a link to home on other pages
 
@@ -66,9 +66,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | FMT-04 | Phase 10 | Pending |
 | DUCK-01 | Phase 11 | Pending |
 | DUCK-02 | Phase 11 | Pending |
-| CTRL-01 | Phase 12 | Pending |
-| CTRL-02 | Phase 12 | Pending |
-| CTRL-03 | Phase 12 | Pending |
+| CTRL-01 | Phase 12 | Complete |
+| CTRL-02 | Phase 12 | Complete |
+| CTRL-03 | Phase 12 | Complete |
 | CTRL-04 | Phase 12 | Pending |
 | CTRL-05 | Phase 12 | Pending |
 
