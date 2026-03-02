@@ -2,23 +2,11 @@
 
 ## What This Is
 
-LO-Solver is an AI-powered system for solving Linguistics Olympiad Rosetta Stone problems. It uses a Next.js frontend with a Mastra AI agent orchestration backend. The core solving logic lives in a multi-step workflow that coordinates specialized LLM agents to extract structure, hypothesize linguistic rules, verify/improve those rules, and answer translation questions.
-
-This milestone focuses on making the agentic workflow genuinely outperform zero-shot LLMs, building the evaluation infrastructure to prove it, and improving the UI's observability of agent reasoning.
+LO-Solver is an AI-powered system for solving Linguistics Olympiad Rosetta Stone problems. It uses a Next.js frontend with a Mastra AI agent orchestration backend. A multi-step workflow coordinates specialized LLM agents to extract structure, generate multi-perspective linguistic hypotheses, verify/improve rules with failure diagnostics, and answer translation questions. An automated evaluation harness proves the agentic workflow outperforms zero-shot LLMs, with a rich observability UI showing hierarchical agent traces, live-updating rules, and formatted results.
 
 ## Core Value
 
-The ONE thing that must work: **the agentic workflow must produce measurably better results than zero-shotting the same LLMs without orchestration.** Currently, the workflow achieves ~75% accuracy — which is the same as zero-shot. The goal is near-100% accuracy on most problems.
-
-## Current Milestone: v1.0 Prove the Agentic Advantage
-
-**Goal:** Make the agentic workflow measurably outperform zero-shot LLMs, with automated evaluation to prove it and UI improvements to observe agent reasoning.
-
-**Target features:**
-- Evaluation expansion: zero-shot comparison, intermediate scoring, results UI
-- Multi-perspective hypothesis generation with dispatcher + fan-out
-- Verification loop improvements with failure diagnostics
-- UI: rules panel, hierarchical trace display, formatted results
+The ONE thing that must work: **the agentic workflow must produce measurably better results than zero-shotting the same LLMs without orchestration.**
 
 ## Requirements
 
@@ -32,28 +20,29 @@ The ONE thing that must work: **the agentic workflow must produce measurably bet
 - ✓ Model mode toggle (production vs. testing) — existing
 - ✓ Resizable panel layout with input, results, trace, and vocabulary views — existing
 - ✓ Markdown execution logging — existing
-- ✓ Legacy cleanup: single workflow in `src/mastra/workflow/` — Phase 1
-- ✓ Automated eval scoring against ground truth — Phase 2
-- ✓ Eval uses Mastra `@mastra/evals` framework — Phase 2
-- ✓ Eval results persisted for comparison — Phase 2
+- ✓ Legacy cleanup: single workflow in `src/mastra/workflow/` — v1.0
+- ✓ Automated eval scoring against ground truth — v1.0
+- ✓ Eval uses Mastra `@mastra/evals` framework — v1.0
+- ✓ Eval results persisted for comparison — v1.0
+- ✓ Zero-shot vs agentic comparison mode — v1.0
+- ✓ Intermediate output scoring (rule quality, extraction quality) — v1.0
+- ✓ Eval results viewable in UI — v1.0
+- ✓ Dispatcher generates multiple linguistic perspectives — v1.0
+- ✓ Independent hypothesizer per perspective — v1.0
+- ✓ Each hypothesizer validates via testing tools — v1.0
+- ✓ Best-scoring ruleset selected by test pass rate — v1.0
+- ✓ Verification loop uses winning ruleset — v1.0
+- ✓ Failure reasons logged and surfaced — v1.0
+- ✓ Rules displayed alongside vocabulary (stacked panel layout) — v1.0
+- ✓ Rules panel updates live — v1.0
+- ✓ Hierarchical agent/tool trace display — v1.0
+- ✓ Custom-fitted tool input/output display — v1.0
+- ✓ Formatted final results presentation — v1.0
+- ✓ Hierarchical event streaming system — v1.0
 
 ### Active
 
-- [ ] Zero-shot vs agentic comparison mode
-- [ ] Intermediate output scoring (rule quality, extraction quality)
-- [ ] Eval results viewable in UI
-- [ ] Dispatcher generates multiple linguistic perspectives
-- [ ] Independent hypothesizer per perspective
-- [ ] Each hypothesizer validates via testing tools
-- [ ] Best-scoring ruleset selected by test pass rate
-- [ ] Verification loop uses winning ruleset
-- [ ] Failure reasons logged and surfaced
-- [ ] Rules displayed alongside vocabulary (tabbed panel)
-- [ ] Rules panel updates live
-- [ ] Hierarchical agent/tool trace display
-- [ ] Custom-fitted tool input/output display
-- [ ] Formatted final results presentation
-- [ ] Hierarchical event streaming system
+(None — fresh for next milestone)
 
 ### Out of Scope
 
@@ -65,17 +54,31 @@ The ONE thing that must work: **the agentic workflow must produce measurably bet
 
 ## Problem Statement
 
-- The workflow doesn't add value over zero-shot LLMs — the multi-agent pipeline produces the same accuracy
-- Rule generation (Step 2) is weak — rules are often too vague, hallucinated, or miss key patterns
-- Verification loop (Step 3) is ineffective — doesn't reliably catch and fix bad rules
-- UI trace display doesn't show agent-tool hierarchy (tools and agents shown flat, not nested)
-- Rules aren't visible in the UI during processing (only vocabulary is shown)
+(Resolved in v1.0) The workflow now uses multi-perspective hypothesis generation and verified rules. The evaluation harness demonstrates workflow accuracy improvements over zero-shot baselines.
 
-## Target Outcome
+## Context
 
-1. Automated evaluation harness that scores workflow output against ground truth
-2. Workflow improvements informed by eval data — better rules, better verification
-3. UI that shows rules alongside vocabulary, hierarchical agent/tool traces, and better result display
+Shipped v1.0 with 13,581 LOC TypeScript across 241 files.
+Tech stack: TypeScript 5.9.3, Next.js 16.1.6, Mastra 1.8.0, Zod 4.3.6.
+Models: GPT-5-mini (extraction), Gemini 3 Flash (reasoning), GPT-OSS-120B (testing).
+Storage: LibSQL for Mastra state, markdown logs for execution traces, JSON for eval results.
+Frontend: React 19, shadcn/ui, resizable panels, AI SDK streaming.
+Evaluation: 4 Linguini ground-truth problems, CLI runner with --comparison and --problem flags.
+
+## Key Decisions
+
+| Decision | Rationale | Outcome |
+| --- | --- | --- |
+| Iterate on the workflow (not start fresh) | Core architecture is sound; issues are in prompt quality, rule generation, and verification logic | ✓ Good — v1.0 shipped on existing architecture |
+| Eval harness before workflow changes | Can't improve what you can't measure; need automated scoring to guide iterations | ✓ Good — eval-driven development caught regressions |
+| Consult Mastra docs for new features | Use MCP or web docs to learn about evals, workflow features before implementing | ✓ Good — avoided deprecated APIs |
+| Priority order: eval → workflow → UI → question bank | Measurement first, then improvement, then polish | ✓ Good — each layer built on the previous |
+| Two-agent chain pattern for extraction | Natural language reasoning → JSON extraction avoids hallucinated structure | ✓ Good — reliable structured output |
+| Rules CRUD tools mirroring vocabulary pattern | Consistent 5-tool pattern for both data types | ✓ Good — reduced implementation complexity |
+| DraftStore for per-perspective isolation | Each parallel hypothesizer needs independent state | ✓ Good — no race conditions |
+| streamWithRetry replacing generateWithRetry | Real-time text streaming needed for hierarchical events | ✓ Good — enabled live agent output display |
+| id/parentId for hierarchical events | Simple nesting model, no deep tree structure needed | ✓ Good — clean agent/tool hierarchy |
+| Three-panel right layout (trace/vocab/rules) | All observability data visible simultaneously | ✓ Good — no tab switching during solve |
 
 ## Constraints
 
@@ -84,38 +87,6 @@ The ONE thing that must work: **the agentic workflow must produce measurably bet
 - No test framework configured — eval harness is the testing strategy
 - Mastra documentation should be consulted via MCP or web for any new features
 - Budget-conscious: use cheap models for testing, premium for production
-
-## Technical Context
-
-- **Stack**: TypeScript 5.9.3, Next.js 16.1.6, Mastra 1.8.0, Zod 4.3.6
-- **Models**: GPT-5-mini (extraction), Gemini 3 Flash (reasoning), GPT-OSS-120B (testing)
-- **Storage**: LibSQL for Mastra state, markdown logs for execution traces
-- **Frontend**: React 19, shadcn/ui, resizable panels, AI SDK streaming
-- **Workflow**: `src/mastra/workflow/`
-- **Evaluation**: `src/evals/` — CLI runner, translation scorer, JSON storage, 4 Linguini problems
-- **Existing ground truth**: Linguini dataset problems with known answers
-
-## What Already Exists
-
-- Multi-step agentic workflow: extract → hypothesize → verify/improve → answer
-- Vocabulary CRUD tools with live UI updates
-- Real-time trace event streaming from backend to frontend
-- Step progress bar showing pipeline stages
-- Example problem browser with hand-curated and Linguini dataset problems
-- Model mode toggle (production vs. testing)
-- Resizable panel layout with input, results, trace, and vocabulary views
-- Markdown execution logging
-- Evaluation foundation: CLI runner (`npm run eval`), translation scorer, JSON result persistence, 4 ground-truth problems
-- Legacy workflow code cleaned up — single workflow in `src/mastra/workflow/`
-
-## Key Decisions
-
-| Decision | Rationale | Outcome |
-| --- | --- | --- |
-| Iterate on the workflow (not start fresh) | Core architecture is sound; issues are in prompt quality, rule generation, and verification logic | Decided |
-| Eval harness before workflow changes | Can't improve what you can't measure; need automated scoring to guide iterations | Decided |
-| Consult Mastra docs for new features | Use MCP or web docs to learn about evals, workflow features before implementing | Decided |
-| Priority order: eval → workflow → UI → question bank | Measurement first, then improvement, then polish | Decided |
 
 ## Guidance for Future Phases
 
@@ -126,4 +97,4 @@ When working on any phase that touches Mastra code (agents, workflows, tools, ev
 
 ---
 
-_Last updated: 2026-03-01_
+*Last updated: 2026-03-02 after v1.0 milestone*
