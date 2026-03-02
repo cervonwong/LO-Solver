@@ -59,8 +59,9 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 ### Pending Todos
 
-1 pending todo:
+2 pending todos:
 - `2026-03-02-investigate-missing-parentid-on-tool-call-trace-events.md` — investigation steps for HIER-01 (Phase 8)
+- `2026-03-02-audit-large-files-for-refactor-opportunities.md` — audit src/ for oversized files to split
 
 ### Roadmap Evolution
 
