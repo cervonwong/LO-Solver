@@ -14,7 +14,6 @@ import {
 } from '@/lib/trace-utils';
 import type { StepGroup } from '@/lib/trace-utils';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ActivityIndicator } from '@/components/activity-indicator';
 import { SkeletonTrace } from '@/components/skeleton-trace';
 import type { WorkflowTraceEvent } from '@/lib/workflow-events';
 
@@ -63,6 +62,31 @@ export function DevTracePanel({ events, isRunning }: DevTracePanelProps) {
     });
   }, [events.length]);
 
+  // Elapsed timer for the header (total workflow time)
+  const [headerElapsed, setHeaderElapsed] = useState(0);
+  useEffect(() => {
+    if (events.length === 0) {
+      setHeaderElapsed(0);
+      return;
+    }
+    if (!isRunning) return; // Keep last value visible
+    const firstEvent = events[0];
+    const startMs =
+      firstEvent && 'timestamp' in firstEvent.data
+        ? new Date((firstEvent.data as { timestamp: string }).timestamp).getTime()
+        : Date.now();
+    const tick = () => setHeaderElapsed(Math.floor((Date.now() - startMs) / 1000));
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [isRunning, events]);
+
+  const formatHeaderTimer = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `T+${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  };
+
   if (events.length === 0 && isRunning) {
     return <SkeletonTrace />;
   }
@@ -72,21 +96,37 @@ export function DevTracePanel({ events, isRunning }: DevTracePanelProps) {
   }
 
   return (
-    <div
-      ref={scrollContainerRef}
-      onScroll={handleScroll}
-      className="flex flex-1 flex-col gap-4 overflow-y-auto p-4"
-    >
-      <ActivityIndicator events={events} isRunning={isRunning} />
-
-      <div className="flex items-center justify-between border-b-4 border-double border-border pb-2">
-        <h2 className="font-heading text-lg text-foreground">Lex&apos;s Solving Process</h2>
-        <span className="text-xs text-muted-foreground">{events.length} events</span>
+    <div className="flex flex-1 flex-col">
+      <div className="frosted flex shrink-0 items-center justify-between border-b border-border px-4 py-2">
+        <div className="flex items-center gap-2">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            height="16"
+            viewBox="0 -960 960 960"
+            width="16"
+            fill="currentColor"
+            className="shrink-0"
+          >
+            <path d="M220-140v-481.01q-35-12.84-57.5-39.49-22.5-26.65-22.5-59.24 0-41.77 29.14-71.02Q198.28-820 239.91-820q41.63 0 70.86 29.24Q340-761.51 340-719.74q0 32.59-22.5 59.24T260-620.85V-180h200v-640h280v481.01q35 12.84 57.5 39.49 22.5 26.65 22.5 59.24 0 41.77-29.14 71.02Q761.72-140 720.09-140q-41.63 0-70.86-29.24Q620-198.49 620-240.26q0-32.59 22.5-59.74t57.5-39.15V-780H500v640H220Zm20-520q24.69 0 42.35-17.65Q300-695.31 300-720t-17.65-42.35Q264.69-780 240-780t-42.35 17.65Q180-744.69 180-720t17.65 42.35Q215.31-660 240-660Zm480 480q24.69 0 42.35-17.65Q780-215.31 780-240t-17.65-42.35Q744.69-300 720-300t-42.35 17.65Q660-264.69 660-240t17.65 42.35Q695.31-180 720-180ZM240-720Zm480 480Z" />
+          </svg>
+          <h3 className="font-heading text-sm text-foreground">Lex&apos;s Solving Process</h3>
+          <span className="dimension">{events.length} events</span>
+        </div>
+        {headerElapsed > 0 && (
+          <span className="text-xs tabular-nums text-accent">
+            {formatHeaderTimer(headerElapsed)}
+          </span>
+        )}
       </div>
-
-      {stepGroups.map((group) => (
-        <StepSection key={group.stepId} group={group} isRunning={isRunning} />
-      ))}
+      <div
+        ref={scrollContainerRef}
+        onScroll={handleScroll}
+        className="flex flex-1 flex-col gap-4 overflow-y-auto p-4"
+      >
+        {stepGroups.map((group) => (
+          <StepSection key={group.stepId} group={group} isRunning={isRunning} />
+        ))}
+      </div>
     </div>
   );
 }
