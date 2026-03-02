@@ -151,7 +151,8 @@ export function RulesPanel({ rules, activityEvents, isRunning }: RulesPanelProps
                 return (
                   <TableRow
                     key={rule.title}
-                    className="animate-slide-in-row cursor-pointer select-none"
+                    data-rule-title={rule.title}
+                    className="animate-slide-in-row cursor-pointer select-none transition-all"
                     onClick={() => toggleRow(rule.title)}
                   >
                     <TableCell className="align-top text-xs text-muted-foreground">

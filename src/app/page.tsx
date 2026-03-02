@@ -515,6 +515,29 @@ function SolverPageInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rulesParts.length]);
 
+  // Auto-scroll to results when solve completes
+  const resultsRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (isComplete && resultsRef.current) {
+      const timer = setTimeout(() => {
+        resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [isComplete]);
+
+  // Cross-linking: scroll to and highlight a rule in the right-side Rules panel
+  const handleRuleClick = useCallback((ruleTitle: string) => {
+    const ruleEl = document.querySelector(`[data-rule-title="${CSS.escape(ruleTitle)}"]`);
+    if (ruleEl) {
+      ruleEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      ruleEl.classList.add('ring-2', 'ring-accent');
+      setTimeout(() => {
+        ruleEl.classList.remove('ring-2', 'ring-accent');
+      }, 2000);
+    }
+  }, []);
+
   // Auto-scroll refs and state for the trace panel
   const traceEndRef = useRef<HTMLDivElement>(null);
   const [isAtBottom, setIsAtBottom] = useState(true);
@@ -639,26 +662,32 @@ function SolverPageInner() {
             )}
 
             {isComplete && answerStepOutput && (
-              <BlueprintCard>
-                <Collapsible defaultOpen>
-                  <CollapsibleTrigger className="flex w-full items-center justify-between py-1 text-left font-heading text-base text-foreground hover:text-accent">
-                    Results
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      height="16"
-                      viewBox="0 -960 960 960"
-                      width="16"
-                      fill="currentColor"
-                      className="shrink-0 text-accent transition-transform duration-200 [[data-state=open]>&]:rotate-180"
-                    >
-                      <path d="M480-371.69 267.69-584 296-612.31l184 184 184-184L692.31-584 480-371.69Z" />
-                    </svg>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="pt-4">
-                    <ResultsPanel output={answerStepOutput} rules={finalRules} />
-                  </CollapsibleContent>
-                </Collapsible>
-              </BlueprintCard>
+              <div ref={resultsRef}>
+                <BlueprintCard>
+                  <Collapsible defaultOpen>
+                    <CollapsibleTrigger className="flex w-full items-center justify-between py-1 text-left font-heading text-base text-foreground hover:text-accent">
+                      Results
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        height="16"
+                        viewBox="0 -960 960 960"
+                        width="16"
+                        fill="currentColor"
+                        className="shrink-0 text-accent transition-transform duration-200 [[data-state=open]>&]:rotate-180"
+                      >
+                        <path d="M480-371.69 267.69-584 296-612.31l184 184 184-184L692.31-584 480-371.69Z" />
+                      </svg>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="pt-4">
+                      <ResultsPanel
+                        output={answerStepOutput}
+                        rules={finalRules}
+                        onRuleClick={handleRuleClick}
+                      />
+                    </CollapsibleContent>
+                  </Collapsible>
+                </BlueprintCard>
+              </div>
             )}
 
             {(isComplete || isFailed) && !isRunning && (
