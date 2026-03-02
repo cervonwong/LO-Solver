@@ -21,7 +21,7 @@ function StepCircle({ status, label }: { status: StepStatus; label: string | num
       className={cn(
         'flex h-5 w-5 items-center justify-center border text-[10px] font-medium transition-all duration-300',
         status === 'running' && 'animate-pulse-glow border-accent text-accent',
-        status === 'success' && 'border-accent text-accent',
+        status === 'success' && 'border-accent bg-accent text-white',
         status === 'failed' && 'border-destructive text-destructive',
         status === 'pending' && 'border-border text-muted-foreground',
       )}
