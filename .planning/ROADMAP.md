@@ -114,10 +114,10 @@ Plans:
 
 ### Phase 13: Move vocabulary and rules panel to a third column layout
 
-**Goal:** [To be planned]
-**Requirements**: TBD
+**Goal:** Solver page transitions from 2-column to 3-column layout when the workflow starts, giving vocabulary and rules their own dedicated column with animated transition and responsive collapse below 1024px
+**Requirements**: LAYOUT-01, LAYOUT-02, LAYOUT-03, LAYOUT-04
 **Depends on:** Phase 12
-**Plans:** 0 plans
+**Plans:** 1 plan
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 13 to break down)
+- [ ] 13-01-PLAN.md — 3-column layout with animated workflow-start transition and responsive collapse
