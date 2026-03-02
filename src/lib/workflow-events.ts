@@ -60,23 +60,7 @@ export interface StepCompleteEvent {
   };
 }
 
-/**
- * @deprecated Superseded by HierarchicalAgentStartEvent / HierarchicalAgentEndEvent pair.
- * Kept for backward compatibility during migration (removed in a later plan).
- */
-export interface AgentReasoningEvent {
-  type: 'data-agent-reasoning';
-  data: {
-    stepId: StepId;
-    agentName: string;
-    model: string;
-    reasoning: string;
-    durationMs: number;
-    timestamp: string;
-  };
-}
-
-export interface HierarchicalAgentStartEvent {
+export interface AgentStartEvent {
   type: 'data-agent-start';
   data: {
     id: string;
@@ -90,7 +74,7 @@ export interface HierarchicalAgentStartEvent {
   };
 }
 
-export interface HierarchicalAgentEndEvent {
+export interface AgentEndEvent {
   type: 'data-agent-end';
   data: {
     id: string;
@@ -106,7 +90,7 @@ export interface HierarchicalAgentEndEvent {
   };
 }
 
-export interface HierarchicalToolCallEvent {
+export interface ToolCallEvent {
   type: 'data-tool-call';
   data: {
     id: string;
@@ -134,21 +118,6 @@ export interface RuleTestResultEvent {
     ruleTitle: string;
     passed: boolean;
     failingSentences?: string[];
-    timestamp: string;
-  };
-}
-
-/**
- * @deprecated Superseded by HierarchicalToolCallEvent (which adds id and parentId fields).
- * Kept for backward compatibility during migration (removed in a later plan).
- */
-export interface ToolCallEvent {
-  type: 'data-tool-call';
-  data: {
-    stepId: StepId;
-    toolName: string;
-    input: Record<string, unknown>;
-    result: Record<string, unknown>;
     timestamp: string;
   };
 }
@@ -293,11 +262,9 @@ export interface RulesUpdateEvent {
 export type WorkflowTraceEvent =
   | StepStartEvent
   | StepCompleteEvent
-  | AgentReasoningEvent
+  | AgentStartEvent
+  | AgentEndEvent
   | ToolCallEvent
-  | HierarchicalAgentStartEvent
-  | HierarchicalAgentEndEvent
-  | HierarchicalToolCallEvent
   | AgentTextChunkEvent
   | RuleTestResultEvent
   | VocabularyUpdateEvent
