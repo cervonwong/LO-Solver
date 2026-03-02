@@ -25,7 +25,7 @@ See: .planning/PROJECT.md (updated 2026-03-02)
 Phase: 10 of 11 (Structured Data Formatting) — third phase of v1.1
 Plan: 0 of ? complete
 Status: Ready for planning
-Last activity: 2026-03-02 - Completed quick task 10: Migrate all interactive hover states to diagonal hatching pattern per DESIGN.md
+Last activity: 2026-03-02 - Completed quick task 11: Fix hover-hatch CSS compositing
 
 Progress (v1.1): [█████░░░░░] 50%
 
@@ -81,9 +81,10 @@ None yet.
 | 8 | Replace rules panel header icon with list_alt Material Icon | 2026-03-02 | d87bb2d | [8-replace-rules-panel-icon-with-list-alt-s](./quick/8-replace-rules-panel-icon-with-list-alt-s/) |
 | 9 | Increase duck mascot image size from 60x60 to 76x76 | 2026-03-02 | 6a42d1d | [9-make-duck-mascot-in-top-left-panel-sligh](./quick/9-make-duck-mascot-in-top-left-panel-sligh/) |
 | 10 | Migrate all interactive hover states to diagonal hatched pattern | 2026-03-02 | 53d41bd | [10-migrate-all-interactive-hover-states-to-](./quick/10-migrate-all-interactive-hover-states-to-/) |
+| 11 | Fix hover-hatch CSS: use background-image, remove base background override | 2026-03-02 | bca4696 | [11-fix-hover-hatch-css-remove-base-backgrou](./quick/11-fix-hover-hatch-css-remove-base-backgrou/) |
 
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: Completed quick task 10 (hover state migration)
+Stopped at: Completed quick task 11 (hover-hatch CSS fix)
 Resume file: None
