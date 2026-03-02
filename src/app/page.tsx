@@ -600,7 +600,7 @@ function SolverPageInner() {
 
             <BlueprintCard>
               <Collapsible open={inputOpen} onOpenChange={setInputOpen}>
-                <CollapsibleTrigger className="hover-hatch-cyan -mx-[15px] flex w-full items-center justify-between px-[15px] py-1 text-left font-heading text-base text-foreground">
+                <CollapsibleTrigger className="hover-hatch-cyan -m-[15px] flex w-[calc(100%+30px)] items-center justify-between p-[15px] text-left font-heading text-base text-foreground">
                   Problem Input
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -631,7 +631,7 @@ function SolverPageInner() {
             {hasStarted && (
               <BlueprintCard>
                 <Collapsible defaultOpen>
-                  <CollapsibleTrigger className="hover-hatch-cyan -mx-[15px] flex w-full items-center justify-between px-[15px] py-1 text-left font-heading text-base text-foreground">
+                  <CollapsibleTrigger className="hover-hatch-cyan -m-[15px] flex w-[calc(100%+30px)] items-center justify-between p-[15px] text-left font-heading text-base text-foreground">
                     Progress
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -669,7 +669,7 @@ function SolverPageInner() {
                     )}
                     {isAborted && (
                       <div className="mt-4 border border-status-warning p-4 text-sm text-status-warning">
-                        <p className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-status-warning">
+                        <p className="mb-2 flex items-center gap-1.5 font-heading text-xs uppercase tracking-wider text-status-warning">
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
                             height="16"
@@ -677,7 +677,7 @@ function SolverPageInner() {
                             width="16"
                             fill="currentColor"
                           >
-                            <path d="M360-320h240v-320H360v320Zm120 240q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Z" />
+                            <path d="M502.77-80Q425.38-80 358-117.12q-67.38-37.11-108.77-103.34l-152-244.31L133.46-501 320-377.77V-780h40v478.54L167.38-430.61l115.77 187.23q35 57.92 93.65 90.65Q435.44-120 502.77-120q106.83 0 182.03-74.42Q760-268.85 760-376.46V-760h40v383.54q0 123.83-86.54 210.14Q626.92-80 502.77-80Zm-35.85-420v-360h40v360h-40Zm146.93 0v-320h40v320h-40ZM463.69-310Z" />
                           </svg>
                           Workflow aborted
                         </p>
@@ -695,7 +695,7 @@ function SolverPageInner() {
               <div ref={resultsRef}>
                 <BlueprintCard>
                   <Collapsible defaultOpen>
-                    <CollapsibleTrigger className="hover-hatch-cyan -mx-[15px] flex w-full items-center justify-between px-[15px] py-1 text-left font-heading text-base text-foreground">
+                    <CollapsibleTrigger className="hover-hatch-cyan -m-[15px] flex w-[calc(100%+30px)] items-center justify-between p-[15px] text-left font-heading text-base text-foreground">
                       Results
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
