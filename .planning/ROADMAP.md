@@ -39,7 +39,11 @@
   1. Every tool-call trace event emitted by the backend carries a parentId that matches an existing agent-start event
   2. The activeAgentStack fallback in groupEventsWithAgents (trace-utils.ts) is removed because it is no longer needed
   3. In the trace panel, every tool card renders nested inside its parent agent card with no orphaned tool calls at the root level
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 08-01-PLAN.md — Backend parentId fix, deprecated type removal, type rename
+- [ ] 08-02-PLAN.md — Remove activeAgentStack fallback, orphan detection, visual verification
 
 ### Phase 9: Compact Reasoning Display
 **Goal**: Agent reasoning text renders compactly without overflowing or bloating the trace panel
@@ -86,10 +90,20 @@ Phases execute in numeric order: 8 -> 9 -> 10 -> 11
 | 5. Verification Loop Improvements | v1.0 | 2/2 | Complete | 2026-03-01 |
 | 6. UI Event System & Rules Panel | v1.0 | 4/4 | Complete | 2026-03-01 |
 | 7. Hierarchical Trace & Results | v1.0 | 3/3 | Complete | 2026-03-02 |
-| 8. Trace Hierarchy Fix | v1.1 | 0/? | Not started | - |
+| 8. Trace Hierarchy Fix | v1.1 | 0/2 | Not started | - |
 | 9. Compact Reasoning Display | v1.1 | 0/? | Not started | - |
 | 10. Structured Data Formatting | v1.1 | 0/? | Not started | - |
 | 11. Agent Duck Mascots | v1.1 | 0/? | Not started | - |
 
 _v1.0: 7 phases, 16 plans. All complete._
 _v1.1: 4 phases, plans TBD._
+
+### Phase 12: Add workflow control buttons (Abort, New Problem, Clear) and disable config controls during execution
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 11
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 12 to break down)
