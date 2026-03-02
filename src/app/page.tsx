@@ -69,7 +69,7 @@ function useMascotSync({
       setMascotState('error');
     } else if (isComplete) {
       setMascotState('solved');
-    } else if (isRunning || hasStarted) {
+    } else if (isRunning) {
       setMascotState('solving');
     } else {
       setMascotState('idle');
@@ -300,6 +300,18 @@ function SolverPageInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allParts.length, steps]);
 
+  // Extract results data
+  const isComplete = workflowStatus === 'success';
+  const isFailed = workflowStatus === 'failed' || workflowStatus === 'bailed';
+  const isRunning = status === 'submitted' || status === 'streaming';
+  const isAborted = hasStarted && !isRunning && !isComplete && !isFailed;
+  const setMascotState = useMascotSync({ hasStarted, isComplete, isFailed, isRunning });
+
+  // When aborted, convert any 'running' steps to 'aborted'
+  const displaySteps: ProgressStep[] = isAborted
+    ? progressSteps.map((s) => (s.status === 'running' ? { ...s, status: 'aborted' as StepStatus } : s))
+    : progressSteps;
+
   // Derive status message from progress steps
   const activeStep = progressSteps.find((s) => s.status === 'running');
   const STATUS_MESSAGES: Record<string, string> = {
@@ -312,24 +324,20 @@ function SolverPageInner() {
       ? 'Workflow complete.'
       : workflowStatus === 'failed' || workflowStatus === 'bailed'
         ? 'Workflow failed.'
-        : activeStep
-          ? (STATUS_MESSAGES[activeStep.id] ??
-            (activeStep.id.startsWith('round-')
-              ? `Running round ${activeStep.id.split('-')[1]}...`
-              : activeStep.id.startsWith('perspective-')
-                ? `Exploring ${getUIStepLabel(activeStep.id as UIStepId)}...`
-                : activeStep.id.startsWith('synthesis-')
-                  ? 'Synthesizing rulesets...'
-                  : 'Processing...'))
-          : status === 'submitted' || status === 'streaming'
-            ? 'Starting workflow...'
-            : undefined;
-
-  // Extract results data
-  const isComplete = workflowStatus === 'success';
-  const isFailed = workflowStatus === 'failed' || workflowStatus === 'bailed';
-  const isRunning = status === 'submitted' || status === 'streaming';
-  const setMascotState = useMascotSync({ hasStarted, isComplete, isFailed, isRunning });
+        : isAborted
+          ? 'Workflow aborted.'
+          : activeStep
+            ? (STATUS_MESSAGES[activeStep.id] ??
+              (activeStep.id.startsWith('round-')
+                ? `Running round ${activeStep.id.split('-')[1]}...`
+                : activeStep.id.startsWith('perspective-')
+                  ? `Exploring ${getUIStepLabel(activeStep.id as UIStepId)}...`
+                  : activeStep.id.startsWith('synthesis-')
+                    ? 'Synthesizing rulesets...'
+                    : 'Processing...'))
+            : status === 'submitted' || status === 'streaming'
+              ? 'Starting workflow...'
+              : undefined;
 
   const handleReset = useCallback(() => {
     hasSent.current = false;
@@ -638,7 +646,7 @@ function SolverPageInner() {
                   </CollapsibleTrigger>
                   <CollapsibleContent className="pt-4">
                     <StepProgress
-                      steps={progressSteps}
+                      steps={displaySteps}
                       statusMessage={statusMessage}
                       onStepClick={handleStepClick}
                     />
@@ -657,6 +665,25 @@ function SolverPageInner() {
                           Error encountered.
                         </p>
                         <p>The workflow encountered an error. Check Mastra Studio for details.</p>
+                      </div>
+                    )}
+                    {isAborted && (
+                      <div className="mt-4 border border-status-warning p-4 text-sm text-status-warning">
+                        <p className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-status-warning">
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            height="16"
+                            viewBox="0 -960 960 960"
+                            width="16"
+                            fill="currentColor"
+                          >
+                            <path d="M360-320h240v-320H360v320Zm120 240q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Z" />
+                          </svg>
+                          Workflow aborted
+                        </p>
+                        <p>
+                          Partial results are preserved above. Start a new problem to try again.
+                        </p>
                       </div>
                     )}
                   </CollapsibleContent>
@@ -693,11 +720,6 @@ function SolverPageInner() {
               </div>
             )}
 
-            {(isComplete || isFailed) && !isRunning && (
-              <button onClick={handleReset} className="stamp-btn-secondary w-fit text-sm">
-                New Problem
-              </button>
-            )}
           </div>
         </ScrollArea>
       </ResizablePanel>

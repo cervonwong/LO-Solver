@@ -1,7 +1,7 @@
 import { cn } from '@/lib/utils';
 import type { UIStepId } from '@/lib/workflow-events';
 
-export type StepStatus = 'pending' | 'running' | 'success' | 'failed';
+export type StepStatus = 'pending' | 'running' | 'success' | 'failed' | 'aborted';
 
 export interface ProgressStep {
   id: UIStepId;
@@ -23,6 +23,7 @@ function StepCircle({ status, label }: { status: StepStatus; label: string | num
         status === 'running' && 'animate-pulse-glow border-accent text-accent',
         status === 'success' && 'border-accent bg-accent text-accent-foreground',
         status === 'failed' && 'border-destructive text-destructive',
+        status === 'aborted' && 'border-status-warning text-status-warning',
         status === 'pending' && 'border-border text-muted-foreground',
       )}
     >
@@ -35,7 +36,7 @@ function StepCircle({ status, label }: { status: StepStatus; label: string | num
           fill="currentColor"
           className="animate-checkmark-scale"
         >
-          <path d="M382-267.69 183.23-466.46 211.77-495 382-324.77 748.23-691l28.54 28.54L382-267.69Z" />
+          <path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z" />
         </svg>
       ) : status === 'failed' ? (
         <span>&#10007;</span>
@@ -48,8 +49,10 @@ function StepCircle({ status, label }: { status: StepStatus; label: string | num
 
 function Connector({ fromStatus, toStatus }: { fromStatus: StepStatus; toStatus: StepStatus }) {
   const bothComplete = fromStatus === 'success' && toStatus === 'success';
-  const completedToRunning = fromStatus === 'success' && toStatus === 'running';
-  const hasActivity = fromStatus === 'success' || fromStatus === 'running';
+  const completedToRunning =
+    fromStatus === 'success' && (toStatus === 'running' || toStatus === 'aborted');
+  const hasActivity =
+    fromStatus === 'success' || fromStatus === 'running' || fromStatus === 'aborted';
 
   return (
     <div
@@ -85,6 +88,7 @@ export function StepProgress({ steps, statusMessage, onStepClick }: StepProgress
                 step.status === 'running' && 'font-bold text-accent',
                 step.status === 'success' && 'text-foreground',
                 step.status === 'failed' && 'text-destructive',
+                step.status === 'aborted' && 'text-status-warning',
                 step.status === 'pending' && 'text-muted-foreground',
               )}
             >
