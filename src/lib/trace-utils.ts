@@ -49,6 +49,8 @@ export function groupEventsByStep(events: WorkflowTraceEvent[]): StepGroup[] {
   // Map perspectiveId -> StepGroup for routing concurrent perspective events
   const perspectiveGroupMap = new Map<string, StepGroup>();
   let lastPerspectiveGroup: StepGroup | null = null;
+  // Map agentId -> perspectiveId for routing tool-call events to the correct perspective
+  const agentPerspectiveMap = new Map<string, string>();
 
   for (const event of events) {
     const rawStepId = getRawStepId(event);
@@ -183,8 +185,18 @@ export function groupEventsByStep(events: WorkflowTraceEvent[]): StepGroup[] {
       continue;
     }
 
-    // Route to the correct perspective group using perspectiveId
-    const perspectiveId = getEventPerspectiveId(event);
+    // Build agent-to-perspective lookup from agent-start events
+    if (event.type === 'data-agent-start' && event.data.perspectiveId) {
+      agentPerspectiveMap.set(event.data.id, event.data.perspectiveId);
+    }
+
+    // Route to the correct perspective group:
+    // 1. Agent-start/end events carry perspectiveId directly
+    // 2. Tool-call events use parentId to look up their parent agent's perspective
+    let perspectiveId = getEventPerspectiveId(event);
+    if (!perspectiveId && event.type === 'data-tool-call' && 'parentId' in event.data) {
+      perspectiveId = agentPerspectiveMap.get(event.data.parentId as string);
+    }
     const targetGroup = perspectiveId
       ? (perspectiveGroupMap.get(perspectiveId) ?? lastPerspectiveGroup)
       : lastPerspectiveGroup;

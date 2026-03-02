@@ -278,6 +278,9 @@ function RawJsonToggle({
 // Custom tool renderers
 // ---------------------------------------------------------------------------
 
+// INERT: Tool-call events currently emit `input: { count }`, not the actual entries array.
+// This card activates when events carry `input.entries` — see hasVocabularyEntries().
+// To enable: change vocabulary-tools.ts tool-call events to include the entries data.
 function VocabularyToolCard({
   toolCall,
 }: {
@@ -503,14 +506,12 @@ function isSentenceTestTool(toolName: string): boolean {
   return toolName === 'testSentence' || toolName === 'testSentenceWithRuleset';
 }
 
-function isVocabularyTool(toolName: string): boolean {
-  return [
-    'addVocabulary',
-    'updateVocabulary',
-    'removeVocabulary',
-    'getVocabulary',
-    'clearVocabulary',
-  ].includes(toolName);
+function hasVocabularyEntries(toolCall: ToolCallEvent): boolean {
+  if (!['addVocabulary', 'updateVocabulary', 'removeVocabulary'].includes(toolCall.data.toolName)) {
+    return false;
+  }
+  const entries = toolCall.data.input.entries ?? toolCall.data.input.foreignForms;
+  return Array.isArray(entries) && entries.length > 0;
 }
 
 function isStartedStatus(result: Record<string, unknown>): boolean {
@@ -535,7 +536,7 @@ function ToolCallRenderer({
     return <SentenceTestToolCard toolCall={toolCall} />;
   }
 
-  if (isVocabularyTool(toolCall.data.toolName)) {
+  if (hasVocabularyEntries(toolCall)) {
     return <VocabularyToolCard toolCall={toolCall} />;
   }
 
