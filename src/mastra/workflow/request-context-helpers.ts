@@ -100,6 +100,15 @@ export function getLogFile(requestContext: RequestContextGetter): string | undef
 }
 
 /**
+ * Helper to get workflow start time (epoch ms) from request context.
+ * Returns undefined if not set.
+ */
+export function getWorkflowStartTime(requestContext: RequestContextGetter): number | undefined {
+  if (!requestContext) return undefined;
+  return requestContext.get('workflow-start-time') as number | undefined;
+}
+
+/**
  * Normalizes a translation string for fair comparison.
  * - NFKC Unicode normalization for consistent representation
  * - Collapses whitespace to single spaces

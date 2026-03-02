@@ -54,6 +54,7 @@ export const workflowStateSchema = z.object({
   currentRound: z.number().default(0),
   maxRounds: z.number().default(3),
   perspectiveCount: z.number().default(3),
+  workflowStartTime: z.number().describe('Epoch ms when workflow started'),
 });
 
 export type WorkflowState = z.infer<typeof workflowStateSchema>;
@@ -74,6 +75,7 @@ export const initializeWorkflowState = (): WorkflowState => {
     currentRound: 0,
     maxRounds: 3,
     perspectiveCount: 3,
+    workflowStartTime: Date.now(),
   };
 };
 

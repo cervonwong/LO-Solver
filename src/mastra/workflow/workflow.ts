@@ -68,6 +68,7 @@ const extractionStep = createStep({
 
     const requestContext = new RequestContext<WorkflowRequestContext>();
     requestContext.set('model-mode', modelMode as ModelMode);
+    requestContext.set('workflow-start-time', initialState.workflowStartTime);
 
     const extractAgentId = generateEventId();
     const extractPrompt = `${inputData.rawProblemText}`;
@@ -213,6 +214,7 @@ const multiPerspectiveHypothesisStep = createStep({
     mainRequestContext.set('model-mode', state.modelMode as ModelMode);
     mainRequestContext.set('step-writer', writer);
     mainRequestContext.set('step-id', stepId);
+    mainRequestContext.set('workflow-start-time', state.workflowStartTime);
 
     let lastTestResults: unknown = null;
     let previousPerspectiveIds: string[] = [];
@@ -455,6 +457,7 @@ const multiPerspectiveHypothesisStep = createStep({
         perspectiveRequestContext.set('step-writer', writer);
         perspectiveRequestContext.set('step-id', stepId);
         perspectiveRequestContext.set('event-source', 'draft');
+        perspectiveRequestContext.set('workflow-start-time', state.workflowStartTime);
 
         const existingRules = isImproverRound ? Array.from(mainRules.values()) : [];
         const existingVocabulary = isImproverRound ? Array.from(mainVocabulary.values()) : [];
@@ -570,6 +573,7 @@ const multiPerspectiveHypothesisStep = createStep({
         verifyRequestContext.set('model-mode', state.modelMode as ModelMode);
         verifyRequestContext.set('step-writer', writer);
         verifyRequestContext.set('event-source', 'draft');
+        verifyRequestContext.set('workflow-start-time', state.workflowStartTime);
 
         const verifyVocabulary = Array.from(draftStore.vocabulary.values());
         const verifyRules = Array.from(draftStore.rules.values());
@@ -911,6 +915,7 @@ const multiPerspectiveHypothesisStep = createStep({
       convergenceRequestContext.set('step-writer', writer);
       convergenceRequestContext.set('step-id', stepId);
       convergenceRequestContext.set('event-source', 'merged');
+      convergenceRequestContext.set('workflow-start-time', state.workflowStartTime);
 
       const convergenceVerifierPrompt = JSON.stringify({
         vocabulary: Array.from(mainVocabulary.values()),
@@ -1255,6 +1260,7 @@ const answerQuestionsStep = createStep({
 
     const requestContext = new RequestContext<WorkflowRequestContext>();
     requestContext.set('model-mode', state.modelMode as ModelMode);
+    requestContext.set('workflow-start-time', state.workflowStartTime);
 
     const answererAgentId = generateEventId();
     await emitTraceEvent(writer, {

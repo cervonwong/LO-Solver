@@ -41,6 +41,21 @@ export const formatTimeGMT8 = (date: Date): string => {
   return `${hours}:${minutes}:${seconds}`;
 };
 
+/**
+ * Format a timestamp prefix for log lines: [HH:MM:SS +N.Ns]
+ * Uses GMT+8 wall clock and elapsed seconds since workflow start.
+ * If startTime is undefined, returns wall-clock only: [HH:MM:SS]
+ */
+export const formatTimestamp = (startTime?: number): string => {
+  const now = Date.now();
+  const wallClock = formatTimeGMT8(new Date(now));
+  if (startTime === undefined) {
+    return `[${wallClock}]`;
+  }
+  const elapsedSec = ((now - startTime) / 1000).toFixed(1);
+  return `[${wallClock} +${elapsedSec}s]`;
+};
+
 // Record step timing
 export const recordStepTiming = (
   stepName: string,

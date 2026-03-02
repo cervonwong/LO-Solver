@@ -64,4 +64,7 @@ export interface WorkflowRequestContext {
 
   /** Current step ID — tools read this to tag data-tool-call events */
   'step-id'?: string;
+
+  /** Epoch ms when the workflow started, for elapsed-time timestamps */
+  'workflow-start-time': number;
 }
