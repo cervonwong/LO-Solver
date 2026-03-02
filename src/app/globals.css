@@ -581,34 +581,20 @@
 
 /* ============================================
    STREAMDOWN OVERRIDES
+   Streamdown renders <div class="space-y-4 ...">
+   with data-streamdown attributes on child elements.
    ============================================ */
 
-.streamdown {
-  font-size: 0.75rem;
-  line-height: 1.25rem;
-}
-
-/* Smaller streamdown inside trace agent reasoning and tool details */
-.trace-text-sm .streamdown {
-  font-size: 0.6875rem;
-  line-height: 1rem;
-}
-
-.streamdown h1,
-.streamdown h2,
-.streamdown h3,
-.streamdown h4,
-.streamdown h5,
-.streamdown h6 {
-  font-size: 0.8125rem;
-}
-
-/* Ensure markdown rendered by Streamdown inherits blueprint colors */
-.streamdown pre {
+/* Code blocks inside Streamdown */
+[data-streamdown='code-block'] {
   background: var(--surface-3) !important;
-  border: 1px solid var(--border) !important;
+  border-color: var(--border) !important;
 }
 
-.streamdown code {
+[data-streamdown='code-block'] pre {
+  background: var(--surface-3) !important;
+}
+
+[data-streamdown='code-block'] code {
   color: #00ffff !important;
 }

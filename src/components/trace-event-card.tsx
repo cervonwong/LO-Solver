@@ -28,6 +28,9 @@ function ChevronIcon({ open }: { open: boolean }) {
 const jsonMarkdown = (label: string, data: unknown) =>
   `**${label}:**\n\`\`\`json\n${JSON.stringify(data, null, 2)}\n\`\`\``;
 
+/** Font size class for all Streamdown instances in the trace panel. */
+const TRACE_SD_CLASS = 'text-[11px] leading-4';
+
 interface TraceEventCardProps {
   event: WorkflowTraceEvent;
 }
@@ -84,7 +87,7 @@ export function TraceEventCard({ event }: TraceEventCardProps) {
             </span>
           </CollapsibleTrigger>
           <CollapsibleContent className="animate-collapsible border-x border-b border-border-subtle bg-surface-2 px-3 py-2">
-            <Streamdown plugins={{ code }}>{event.data.reasoning}</Streamdown>
+            <Streamdown className={TRACE_SD_CLASS} plugins={{ code }}>{event.data.reasoning}</Streamdown>
           </CollapsibleContent>
         </Collapsible>
       );
@@ -125,8 +128,8 @@ export function TraceEventCard({ event }: TraceEventCardProps) {
           </CollapsibleTrigger>
           <CollapsibleContent className="animate-collapsible border-x border-b border-border-subtle bg-surface-2 px-3 py-2">
             <div className="flex flex-col gap-2">
-              <Streamdown plugins={{ code }}>{jsonMarkdown('Input', event.data.input)}</Streamdown>
-              <Streamdown plugins={{ code }}>
+              <Streamdown className={TRACE_SD_CLASS} plugins={{ code }}>{jsonMarkdown('Input', event.data.input)}</Streamdown>
+              <Streamdown className={TRACE_SD_CLASS} plugins={{ code }}>
                 {jsonMarkdown('Result', event.data.result)}
               </Streamdown>
             </div>
@@ -247,8 +250,8 @@ function ToolCallDetail({
       </CollapsibleTrigger>
       <CollapsibleContent className="animate-collapsible px-3 py-2">
         <div className="flex flex-col gap-2">
-          <Streamdown plugins={{ code }}>{jsonMarkdown('Input', call.input)}</Streamdown>
-          <Streamdown plugins={{ code }}>{jsonMarkdown('Result', call.result)}</Streamdown>
+          <Streamdown className={TRACE_SD_CLASS} plugins={{ code }}>{jsonMarkdown('Input', call.input)}</Streamdown>
+          <Streamdown className={TRACE_SD_CLASS} plugins={{ code }}>{jsonMarkdown('Result', call.result)}</Streamdown>
         </div>
       </CollapsibleContent>
     </Collapsible>
@@ -282,8 +285,8 @@ function RawJsonToggle({
       </button>
       {showRaw ? (
         <div className="flex flex-col gap-2">
-          <Streamdown plugins={{ code }}>{jsonMarkdown('Input', data.input)}</Streamdown>
-          <Streamdown plugins={{ code }}>{jsonMarkdown('Result', data.result)}</Streamdown>
+          <Streamdown className={TRACE_SD_CLASS} plugins={{ code }}>{jsonMarkdown('Input', data.input)}</Streamdown>
+          <Streamdown className={TRACE_SD_CLASS} plugins={{ code }}>{jsonMarkdown('Result', data.result)}</Streamdown>
         </div>
       ) : (
         children
@@ -436,7 +439,7 @@ function SentenceTestToolCard({
           <span className="flex-1 truncate">Sentence {sentenceId}</span>
           <ChevronIcon open={open} />
         </CollapsibleTrigger>
-        <CollapsibleContent className="animate-collapsible pl-6 pr-2 py-1 text-[11px] text-muted-foreground">
+        <CollapsibleContent forceMount className="data-[state=closed]:hidden pl-6 pr-2 py-1 text-[11px] text-muted-foreground">
           {expected && (
             <p>
               <span className="font-medium">Expected:</span> {expected}
@@ -498,7 +501,7 @@ function BulkToolCallGroup({
         <span className="text-muted-foreground">({summaryText})</span>
         <ChevronIcon open={open} />
       </CollapsibleTrigger>
-      <CollapsibleContent className="animate-collapsible">
+      <CollapsibleContent forceMount className="data-[state=closed]:hidden">
         <div className="flex flex-col gap-0.5 pl-4">
           {toolCalls.map((tc, i) => (
             <ToolCallRenderer key={i} toolCall={tc} depth={depth + 1} />
@@ -741,7 +744,7 @@ export function AgentCard({ group, depth = 0 }: { group: AgentGroup; depth?: num
                 Reasoning
               </span>
               <div className="mt-1">
-                <Streamdown plugins={{ code }}>{agentEnd.data.reasoning}</Streamdown>
+                <Streamdown className={TRACE_SD_CLASS} plugins={{ code }}>{agentEnd.data.reasoning}</Streamdown>
               </div>
             </div>
           )}
@@ -783,7 +786,7 @@ function RuleTestCard({
           <span className="flex-1 truncate">{title}</span>
           <ChevronIcon open={open} />
         </CollapsibleTrigger>
-        <CollapsibleContent className="animate-collapsible pl-6 pr-2 py-1 text-[11px] text-muted-foreground">
+        <CollapsibleContent forceMount className="data-[state=closed]:hidden pl-6 pr-2 py-1 text-[11px] text-muted-foreground">
           {reasoning && <p>{reasoning}</p>}
           {recommendation && <p className="mt-1 italic">{recommendation}</p>}
         </CollapsibleContent>
@@ -818,10 +821,10 @@ function AgentToolCallCard({
           <span className="font-medium">{toolCall.data.toolName}</span>
           <ChevronIcon open={open} />
         </CollapsibleTrigger>
-        <CollapsibleContent className="animate-collapsible pl-6 pr-2 py-1">
+        <CollapsibleContent forceMount className="data-[state=closed]:hidden pl-6 pr-2 py-1">
           <div className="flex flex-col gap-2">
-            <Streamdown plugins={{ code }}>{jsonMarkdown('Input', toolCall.data.input)}</Streamdown>
-            <Streamdown plugins={{ code }}>
+            <Streamdown className={TRACE_SD_CLASS} plugins={{ code }}>{jsonMarkdown('Input', toolCall.data.input)}</Streamdown>
+            <Streamdown className={TRACE_SD_CLASS} plugins={{ code }}>
               {jsonMarkdown('Result', toolCall.data.result)}
             </Streamdown>
           </div>
