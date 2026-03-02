@@ -564,9 +564,12 @@
 
 /* Progress bar step item — clickable hover with hatching */
 .step-progress-item {
+  background: transparent;
+  border-top: 1px solid transparent;
+  border-bottom: 1px solid transparent;
   padding: 3px 6px;
   margin: -3px -6px;
-  transition: background 0.15s ease;
+  transition: background 0.15s ease, border-color 0.15s ease;
 }
 
 .step-progress-item:hover {
@@ -574,9 +577,11 @@
     -45deg,
     transparent,
     transparent 7px,
-    rgba(0, 255, 255, 0.08) 7px,
-    rgba(0, 255, 255, 0.08) 8px
+    rgba(0, 255, 255, 0.15) 7px,
+    rgba(0, 255, 255, 0.15) 8px
   );
+  border-top: 1px solid rgba(0, 255, 255, 0.15);
+  border-bottom: 1px solid rgba(0, 255, 255, 0.15);
 }
 
 /* Collapsible animation using grid-rows technique */

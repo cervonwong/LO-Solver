@@ -81,6 +81,10 @@ The solver workflow lives at `src/mastra/workflow/`. It uses per-rule and per-se
 - `src/evals/storage.ts` — Result persistence (JSON files)
 - `src/evals/run.ts` — CLI entry point
 
+## UI Design
+
+When creating or modifying UI components, **read `DESIGN.md` first** and follow its conventions (colors, hover states, typography, component patterns).
+
 ## Conventions
 
 - Agent IDs: `{descriptor}` (e.g., `initial-hypothesizer`)

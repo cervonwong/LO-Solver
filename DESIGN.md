@@ -151,6 +151,42 @@ Red border container with stamp label:
 </div>
 ```
 
+## Hover States
+
+Use **diagonal hatched backgrounds** on interactive elements instead of opacity changes or solid color fills.
+
+Pattern: `repeating-linear-gradient` at `-45deg` with `7px` transparent / `1px` colored stripes.
+
+```css
+background: repeating-linear-gradient(
+  -45deg,
+  transparent,
+  transparent 7px,
+  rgba(0, 255, 255, 0.15) 7px,
+  rgba(0, 255, 255, 0.15) 8px
+);
+```
+
+Color by context:
+- **Cyan** `rgba(0, 255, 255, 0.15)` — accent/interactive elements
+- **Red** `rgba(224, 74, 74, 0.15)` — primary stamp buttons
+- **White** `rgba(255, 255, 255, 0.12)` — secondary/neutral elements
+
+To avoid layout shift from hover borders, set transparent borders on the base state:
+
+```css
+.element {
+  background: transparent;
+  border-top: 1px solid transparent;
+  border-bottom: 1px solid transparent;
+}
+.element:hover {
+  border-color: rgba(0, 255, 255, 0.15);
+}
+```
+
+See `.stamp-btn`, `.step-progress-item` in `globals.css` for reference implementations.
+
 ## Rules
 
 1. **No rounded corners.** `--radius: 0` is set globally.
