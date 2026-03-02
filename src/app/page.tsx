@@ -600,7 +600,7 @@ function SolverPageInner() {
 
             <BlueprintCard>
               <Collapsible open={inputOpen} onOpenChange={setInputOpen}>
-                <CollapsibleTrigger className="hover-hatch-cyan flex w-full items-center justify-between py-1 text-left font-heading text-base text-foreground">
+                <CollapsibleTrigger className="hover-hatch-cyan -mx-[15px] flex w-full items-center justify-between px-[15px] py-1 text-left font-heading text-base text-foreground">
                   Problem Input
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -631,7 +631,7 @@ function SolverPageInner() {
             {hasStarted && (
               <BlueprintCard>
                 <Collapsible defaultOpen>
-                  <CollapsibleTrigger className="hover-hatch-cyan flex w-full items-center justify-between py-1 text-left font-heading text-base text-foreground">
+                  <CollapsibleTrigger className="hover-hatch-cyan -mx-[15px] flex w-full items-center justify-between px-[15px] py-1 text-left font-heading text-base text-foreground">
                     Progress
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -695,7 +695,7 @@ function SolverPageInner() {
               <div ref={resultsRef}>
                 <BlueprintCard>
                   <Collapsible defaultOpen>
-                    <CollapsibleTrigger className="hover-hatch-cyan flex w-full items-center justify-between py-1 text-left font-heading text-base text-foreground">
+                    <CollapsibleTrigger className="hover-hatch-cyan -mx-[15px] flex w-full items-center justify-between px-[15px] py-1 text-left font-heading text-base text-foreground">
                       Results
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
