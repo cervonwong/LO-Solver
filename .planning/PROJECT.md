@@ -42,7 +42,10 @@ The ONE thing that must work: **the agentic workflow must produce measurably bet
 
 ### Active
 
-(None — fresh for next milestone)
+- [ ] Fix trace hierarchy — root cause fix for missing/mismatched parentId on tool-call events
+- [ ] Compact reasoning display — smaller tables, scrollable codeblocks in streamdown rendering
+- [ ] Structured data formatting — tool I/O, agent instructions/output as labeled lists (keep raw JSON toggle)
+- [ ] Agent duck mascots — oversized, overflowing top-left of cards, color-tinted per agent type
 
 ### Out of Scope
 
@@ -51,6 +54,16 @@ The ONE thing that must work: **the agentic workflow must produce measurably bet
 - Multi-user support / authentication — single-user dev tool
 - Deployment / hosting — development-only for now
 - Real-time collaboration features
+
+## Current Milestone: v1.1 UI Polish
+
+**Goal:** Refine the trace panel and results display with hierarchy bug fixes, compact styling, structured data formatting, and expressive agent mascots.
+
+**Target features:**
+- Fix trace hierarchy parentId root cause
+- Compact streamdown tables/codeblocks in reasoning
+- Pretty-print structured data (tool I/O, agent output) as labeled lists
+- Oversized color-tinted duck mascots for agents
 
 ## Problem Statement
 
@@ -97,4 +110,4 @@ When working on any phase that touches Mastra code (agents, workflows, tools, ev
 
 ---
 
-*Last updated: 2026-03-02 after v1.0 milestone*
+*Last updated: 2026-03-02 after v1.1 milestone start*
