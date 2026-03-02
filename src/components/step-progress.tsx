@@ -45,11 +45,11 @@ function Connector({ fromStatus, toStatus }: { fromStatus: StepStatus; toStatus:
   return (
     <div
       className={cn(
-        'mx-1 h-px min-w-3 flex-1 transition-colors duration-300',
+        'ml-[15px] h-4 w-px min-h-3 transition-colors duration-300',
         bothComplete && 'bg-[rgba(255,255,255,0.6)]',
         completedToRunning && 'bg-accent',
         !bothComplete && !completedToRunning && hasActivity && 'bg-foreground',
-        !hasActivity && 'border-t border-dashed border-border-subtle',
+        !hasActivity && 'border-l border-dashed border-border-subtle',
       )}
     />
   );
@@ -57,36 +57,33 @@ function Connector({ fromStatus, toStatus }: { fromStatus: StepStatus; toStatus:
 
 export function StepProgress({ steps, statusMessage, onStepClick }: StepProgressProps) {
   return (
-    <div className="w-full">
-      <div className="flex items-center">
-        {steps.map((step, i) => (
+    <div className="flex flex-col">
+      {steps.map((step, i) => (
+        <div key={step.id}>
+          {i > 0 && <Connector fromStatus={steps[i - 1]!.status} toStatus={step.status} />}
           <div
-            key={step.id}
-            className="flex items-center"
+            className="flex items-center gap-3"
             onClick={() => onStepClick?.(step.id)}
             role={onStepClick ? 'button' : undefined}
             style={onStepClick ? { cursor: 'pointer' } : undefined}
           >
-            {i > 0 && <Connector fromStatus={steps[i - 1]!.status} toStatus={step.status} />}
-            <div className="flex flex-col items-center gap-1">
-              <StepCircle status={step.status} label={i + 1} />
-              <span
-                className={cn(
-                  'whitespace-nowrap text-xs uppercase tracking-wider',
-                  step.status === 'running' && 'font-bold text-accent',
-                  step.status === 'success' && 'text-foreground',
-                  step.status === 'failed' && 'text-destructive',
-                  step.status === 'pending' && 'text-muted-foreground',
-                )}
-              >
-                {step.label}
-              </span>
-            </div>
+            <StepCircle status={step.status} label={i + 1} />
+            <span
+              className={cn(
+                'text-xs uppercase tracking-wider',
+                step.status === 'running' && 'font-bold text-accent',
+                step.status === 'success' && 'text-foreground',
+                step.status === 'failed' && 'text-destructive',
+                step.status === 'pending' && 'text-muted-foreground',
+              )}
+            >
+              {step.label}
+            </span>
           </div>
-        ))}
-      </div>
+        </div>
+      ))}
       {statusMessage && (
-        <p className="mt-4 text-center text-sm text-muted-foreground">{statusMessage}</p>
+        <p className="mt-3 pl-[44px] text-sm text-muted-foreground">{statusMessage}</p>
       )}
     </div>
   );
