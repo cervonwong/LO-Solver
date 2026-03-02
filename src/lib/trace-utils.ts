@@ -284,6 +284,9 @@ export function groupEventsWithAgents(
           continue;
         }
       }
+      // TODO: This is a bandaid — tool calls should always have a parentId linking
+      // them to their agent. Investigate why some tool-call events arrive without
+      // parentId or with a parentId that doesn't match any agent-start event.
       // Fallback: assign to the most recently opened active agent
       if (activeAgentStack.length > 0) {
         const fallbackAgent = activeAgentStack[activeAgentStack.length - 1]!;
