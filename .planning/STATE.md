@@ -25,7 +25,7 @@ See: .planning/PROJECT.md (updated 2026-03-02)
 Phase: 8 of 11 (Trace Hierarchy Fix) — first phase of v1.1
 Plan: 1 of 2 complete
 Status: Executing
-Last activity: 2026-03-02 — Completed 08-01-PLAN (event type cleanup + parentId fix)
+Last activity: 2026-03-02 - Completed quick task 1: Replace progress panel checkmark symbol with bright blue checkmark icon matching dev trace
 
 Progress (v1.1): [█░░░░░░░░░] 10%
 
@@ -57,10 +57,17 @@ Decisions are logged in PROJECT.md Key Decisions table.
 ### Roadmap Evolution
 
 - Phase 12 added: Add workflow control buttons (Abort, New Problem, Clear) and disable config controls during execution
+- Phase 13 added: Move vocabulary and rules panel to a third column layout
 
 ### Blockers/Concerns
 
 None yet.
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 1 | Replace progress panel checkmark symbol with bright blue checkmark icon matching dev trace | 2026-03-02 | 4ce8c16 | [1-replace-progress-panel-checkmark-symbol-](./quick/1-replace-progress-panel-checkmark-symbol-/) |
 
 ## Session Continuity
 
