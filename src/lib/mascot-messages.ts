@@ -40,29 +40,29 @@ export const MASCOT_MESSAGES: Record<MascotState, MessageSegment[][]> = {
 
   ready: [
     [
-      { text: "Ooh, that's a juicy one! Hit " },
-      { text: 'Solve', accent: true },
-      { text: " whenever you're ready and I'll get quacking!" },
+      { text: "Ooh, that's a juicy one! " },
+      { text: 'Scroll down', accent: true },
+      { text: " and hit 'SOLVE' — I'll get quacking!" },
     ],
     [
-      { text: "Now we're talking! Smash that " },
-      { text: 'Solve', accent: true },
-      { text: " button and I'll work my magic!" },
+      { text: "Now we're talking! " },
+      { text: 'Scroll down', accent: true },
+      { text: " and smash that 'SOLVE' button!" },
     ],
     [
-      { text: 'Ooh I love this kind of puzzle! Hit ' },
-      { text: 'Solve', accent: true },
-      { text: ' and watch me fly!' },
+      { text: 'Ooh I love this kind of puzzle! ' },
+      { text: 'Scroll down', accent: true },
+      { text: " to click 'SOLVE' and watch me fly!" },
     ],
     [
-      { text: 'My duck senses are tingling... press ' },
-      { text: 'Solve', accent: true },
-      { text: " and let's do this!" },
+      { text: 'My duck senses are tingling... ' },
+      { text: 'Scroll down', accent: true },
+      { text: " and press 'SOLVE' — let's do this!" },
     ],
     [
-      { text: 'A worthy challenge! Click ' },
-      { text: 'Solve', accent: true },
-      { text: " and I'll give it my best quack!" },
+      { text: 'A worthy challenge! ' },
+      { text: 'Scroll down', accent: true },
+      { text: " to click 'SOLVE' — I'll give it my best quack!" },
     ],
   ],
 
