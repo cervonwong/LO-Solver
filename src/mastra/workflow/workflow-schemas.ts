@@ -212,6 +212,9 @@ const questionAnswerSchema = z.object({
   confidenceReasoning: z
     .string()
     .describe('Brief explanation of why this confidence level was assigned'),
+  rulesApplied: z
+    .array(z.string())
+    .describe('Titles of the rules that were applied to derive this answer'),
 });
 
 export const questionsAnsweredSchema = z.object({
