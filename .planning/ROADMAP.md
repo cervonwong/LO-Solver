@@ -106,7 +106,7 @@ _v1.1: 4 phases, plans TBD._
 **Goal:** Nav bar has Abort and New Problem buttons that control the workflow, all config controls disable during execution, and aborted workflows show a distinct amber state
 **Requirements**: CTRL-01, CTRL-02, CTRL-03, CTRL-04, CTRL-05
 **Depends on:** Phase 11
-**Plans:** 2/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [x] 12-01-PLAN.md — WorkflowControlContext and client layout wrapper for state bridging
