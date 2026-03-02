@@ -30,6 +30,7 @@ export interface AgentGroup {
   agentStart: HierarchicalAgentStartEvent;
   agentEnd: HierarchicalAgentEndEvent | undefined;
   toolCalls: HierarchicalToolCallEvent[];
+  children: Array<AgentGroup | HierarchicalToolCallEvent>; // Ordered interleaving of sub-agents and tool calls
   isActive: boolean;
 }
 
@@ -221,13 +222,15 @@ function getEventPerspectiveId(event: WorkflowTraceEvent): string | undefined {
 
 /**
  * Group events into AgentGroups (merging agent-start + tool-calls + agent-end).
+ * Builds a nested hierarchy: sub-agents with parentId are placed inside their parent's
+ * children array. Tool calls are added to both the flat toolCalls and ordered children arrays.
  * Events not matched to any agent remain standalone in the output array.
  */
 export function groupEventsWithAgents(
   events: WorkflowTraceEvent[],
 ): Array<AgentGroup | WorkflowTraceEvent> {
   const result: Array<AgentGroup | WorkflowTraceEvent> = [];
-  const openAgents = new Map<string, AgentGroup>();
+  const agentMap = new Map<string, AgentGroup>(); // id -> group (all agents, open or closed)
 
   for (const event of events) {
     if (event.type === 'data-agent-start') {
@@ -236,19 +239,28 @@ export function groupEventsWithAgents(
         agentStart: event,
         agentEnd: undefined,
         toolCalls: [],
+        children: [],
         isActive: true,
       };
-      openAgents.set(event.data.id, group);
-      result.push(group);
+      agentMap.set(event.data.id, group);
+
+      // If this agent has a parentId and that parent exists, nest inside parent
+      const parentId = event.data.parentId;
+      if (parentId && agentMap.has(parentId)) {
+        const parent = agentMap.get(parentId)!;
+        parent.children.push(group);
+      } else {
+        // Top-level agent
+        result.push(group);
+      }
       continue;
     }
 
     if (event.type === 'data-agent-end') {
-      const group = openAgents.get(event.data.id);
+      const group = agentMap.get(event.data.id);
       if (group) {
         group.agentEnd = event;
         group.isActive = false;
-        openAgents.delete(event.data.id);
         continue;
       }
       // No matching start — render standalone
@@ -257,9 +269,10 @@ export function groupEventsWithAgents(
     }
 
     if (event.type === 'data-tool-call' && 'parentId' in event.data && event.data.parentId) {
-      const group = openAgents.get(event.data.parentId);
-      if (group) {
-        group.toolCalls.push(event as HierarchicalToolCallEvent);
+      const parentGroup = agentMap.get(event.data.parentId);
+      if (parentGroup) {
+        parentGroup.toolCalls.push(event as HierarchicalToolCallEvent);
+        parentGroup.children.push(event as HierarchicalToolCallEvent);
         continue;
       }
     }
@@ -352,6 +365,85 @@ function getRawStepId(event: WorkflowTraceEvent): StepId | undefined {
     case 'data-round-complete':
       return undefined;
   }
+}
+
+/** Generate a one-line summary for a completed agent group. */
+export function getAgentSummary(group: AgentGroup): string | undefined {
+  if (!group.agentEnd) return undefined;
+
+  const toolCalls = group.toolCalls;
+  if (toolCalls.length === 0) return undefined;
+
+  // Count tool calls by type
+  const testResults = { pass: 0, fail: 0 };
+  const vocabActions = { add: 0, update: 0, remove: 0 };
+
+  for (const tc of toolCalls) {
+    const name = tc.data.toolName;
+
+    if (name === 'testRule' || name === 'testRuleWithRuleset') {
+      const status = tc.data.result.status as string | undefined;
+      if (status === 'RULE_OK') testResults.pass++;
+      else testResults.fail++;
+    }
+
+    if (name === 'addVocabulary') vocabActions.add++;
+    if (name === 'updateVocabulary') vocabActions.update++;
+    if (name === 'removeVocabulary') vocabActions.remove++;
+  }
+
+  // Build summary based on dominant tool usage
+  const ruleTests = testResults.pass + testResults.fail;
+  const vocabTotal = vocabActions.add + vocabActions.update + vocabActions.remove;
+
+  if (ruleTests > 0 && ruleTests >= vocabTotal) {
+    return `${ruleTests} rules tested, ${testResults.pass} pass, ${testResults.fail} fail`;
+  }
+
+  if (vocabTotal > 0) {
+    const parts: string[] = [];
+    if (vocabActions.add > 0) parts.push(`${vocabActions.add} added`);
+    if (vocabActions.update > 0) parts.push(`${vocabActions.update} updated`);
+    if (vocabActions.remove > 0) parts.push(`${vocabActions.remove} removed`);
+    return `Vocabulary: ${parts.join(', ')}`;
+  }
+
+  // Fallback: count tool calls
+  return `${toolCalls.length} tool calls`;
+}
+
+/** Generate a brief outcome summary for a completed step section. */
+export function getStepSummary(group: StepGroup): string | undefined {
+  if (group.durationMs === undefined) return undefined; // Not complete
+
+  const events = group.events;
+  const agentEnds = events.filter((e) => e.type === 'data-agent-end');
+  const toolCalls = events.filter((e) => e.type === 'data-tool-call');
+  const iterUpdates = events.filter((e) => e.type === 'data-iteration-update');
+
+  // Extract step: count agents
+  if (group.stepId === 'extract-structure') {
+    return agentEnds.length > 0 ? 'Problem structure extracted' : undefined;
+  }
+
+  // Answer step
+  if (group.stepId === 'answer-questions') {
+    return agentEnds.length > 0 ? 'Questions answered' : undefined;
+  }
+
+  // Perspective/synthesis/verify sections: summarize based on events
+  const lastIter = iterUpdates.at(-1);
+  if (lastIter && lastIter.type === 'data-iteration-update') {
+    const d = lastIter.data;
+    const passRate = d.passRate !== undefined ? `${Math.round(d.passRate * 100)}%` : undefined;
+    return passRate ? `Pass rate: ${passRate}` : undefined;
+  }
+
+  if (toolCalls.length > 0) {
+    return `${agentEnds.length} agents, ${toolCalls.length} tool calls`;
+  }
+
+  return undefined;
 }
 
 /** Format milliseconds as human-readable duration. */
