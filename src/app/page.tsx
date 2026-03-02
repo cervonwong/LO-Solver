@@ -589,7 +589,7 @@ function SolverPageInner() {
 
             <BlueprintCard>
               <Collapsible open={inputOpen} onOpenChange={setInputOpen}>
-                <CollapsibleTrigger className="flex w-full items-center justify-between py-1 text-left font-heading text-base text-foreground hover:text-accent">
+                <CollapsibleTrigger className="hover-hatch-cyan flex w-full items-center justify-between py-1 text-left font-heading text-base text-foreground">
                   Problem Input
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -620,7 +620,7 @@ function SolverPageInner() {
             {hasStarted && (
               <BlueprintCard>
                 <Collapsible defaultOpen>
-                  <CollapsibleTrigger className="flex w-full items-center justify-between py-1 text-left font-heading text-base text-foreground hover:text-accent">
+                  <CollapsibleTrigger className="hover-hatch-cyan flex w-full items-center justify-between py-1 text-left font-heading text-base text-foreground">
                     Progress
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -665,7 +665,7 @@ function SolverPageInner() {
               <div ref={resultsRef}>
                 <BlueprintCard>
                   <Collapsible defaultOpen>
-                    <CollapsibleTrigger className="flex w-full items-center justify-between py-1 text-left font-heading text-base text-foreground hover:text-accent">
+                    <CollapsibleTrigger className="hover-hatch-cyan flex w-full items-center justify-between py-1 text-left font-heading text-base text-foreground">
                       Results
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -713,7 +713,7 @@ function SolverPageInner() {
             {!isAtBottom && isRunning && (
               <button
                 onClick={() => traceEndRef.current?.scrollIntoView({ behavior: 'smooth' })}
-                className="absolute bottom-3 left-1/2 z-10 -translate-x-1/2 border border-accent bg-background/80 px-3 py-1 text-xs uppercase tracking-wider text-accent transition-opacity hover:bg-muted"
+                className="hover-hatch-cyan absolute bottom-3 left-1/2 z-10 -translate-x-1/2 border border-accent bg-background/80 px-3 py-1 text-xs uppercase tracking-wider text-accent"
               >
                 Jump to latest &#8595;
               </button>

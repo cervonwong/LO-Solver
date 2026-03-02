@@ -89,7 +89,7 @@ export function ProblemInput({
               role="combobox"
               aria-expanded={comboOpen}
               disabled={isDisabled}
-              className="flex h-8 items-center justify-between gap-1 border border-border bg-surface-2 px-2 text-xs text-foreground hover:bg-surface-3 disabled:opacity-50"
+              className="hover-hatch-cyan flex h-8 items-center justify-between gap-1 border border-border bg-surface-2 px-2 text-xs text-foreground disabled:opacity-50"
             >
               {selectedExample
                 ? examples.find((ex) => ex.id === selectedExample)?.label ?? 'Select...'

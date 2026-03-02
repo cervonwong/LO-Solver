@@ -204,7 +204,7 @@ function StepSection({ group, isRunning }: StepSectionProps) {
   return (
     <Collapsible open={open} onOpenChange={setOpen} asChild>
       <section id={`trace-${group.stepId}`} className="frosted border border-border">
-        <CollapsibleTrigger className="flex w-full items-center justify-between border-b border-border px-3 py-2 text-left hover:bg-surface-2">
+        <CollapsibleTrigger className="hover-hatch-cyan flex w-full items-center justify-between border-b border-border px-3 py-2 text-left">
           <span className="flex items-center gap-2 font-heading text-sm text-foreground">
             {group.label}
             {isActive && isRunning && (
@@ -225,7 +225,7 @@ function StepSection({ group, isRunning }: StepSectionProps) {
                 fill="currentColor"
                 className="animate-checkmark-scale shrink-0 text-accent"
               >
-                <path d="M382-267.69 183.23-466.46 211.77-495 382-324.77 748.23-691l28.54 28.54L382-267.69Z" />
+                <path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z" />
               </svg>
             )}
           </span>

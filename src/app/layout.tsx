@@ -31,14 +31,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <nav className="frosted flex shrink-0 items-center justify-between border border-border px-6 py-3">
           <Link
             href="/"
-            className="font-heading text-sm text-foreground/80 transition-colors hover:text-foreground"
+            className="hover-hatch-cyan font-heading text-sm text-foreground/80"
           >
             LO-Solver
           </Link>
           <div className="flex items-center gap-4">
             <Link
               href="/evals"
-              className="font-heading text-sm text-foreground/80 transition-colors hover:text-foreground"
+              className="hover-hatch-cyan font-heading text-sm text-foreground/80"
             >
               Eval Results
             </Link>

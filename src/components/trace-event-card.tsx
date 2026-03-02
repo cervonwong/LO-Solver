@@ -93,7 +93,7 @@ export function TraceEventCard({ event }: TraceEventCardProps) {
     case 'data-tool-call':
       return (
         <Collapsible open={open} onOpenChange={setOpen}>
-          <CollapsibleTrigger className="animate-fade-in border-l-2 border-l-trace-tool flex w-full items-center justify-between border border-border-subtle bg-surface-2 px-3 py-1.5 text-left text-xs hover:bg-surface-3">
+          <CollapsibleTrigger className="hover-hatch-cyan animate-fade-in border-l-2 border-l-trace-tool flex w-full items-center justify-between border border-border-subtle bg-surface-2 px-3 py-1.5 text-left text-xs">
             <span className="flex items-center gap-2">
               <Badge
                 variant="default"
@@ -186,7 +186,7 @@ export function ToolCallGroupCard({ group }: ToolCallGroupCardProps) {
 
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
-      <CollapsibleTrigger className="animate-fade-in border-l-2 border-l-trace-tool flex w-full items-center justify-between border border-border-subtle bg-surface-2 px-3 py-1.5 text-left text-xs hover:bg-surface-3">
+      <CollapsibleTrigger className="hover-hatch-cyan animate-fade-in border-l-2 border-l-trace-tool flex w-full items-center justify-between border border-border-subtle bg-surface-2 px-3 py-1.5 text-left text-xs">
         <span className="flex items-center gap-2">
           <Badge
             variant="default"
@@ -223,7 +223,7 @@ function ToolCallDetail({
 
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
-      <CollapsibleTrigger className="flex w-full items-center justify-between px-3 py-1.5 text-left text-[10px] hover:bg-muted">
+      <CollapsibleTrigger className="hover-hatch-cyan flex w-full items-center justify-between px-3 py-1.5 text-left text-[10px]">
         <span className="text-muted-foreground">Call #{index}</span>
         <ChevronIcon open={open} />
       </CollapsibleTrigger>
@@ -411,7 +411,7 @@ function SentenceTestToolCard({
   return (
     <RawJsonToggle data={toolCall.data}>
       <Collapsible open={open} onOpenChange={setOpen}>
-        <CollapsibleTrigger className="flex w-full items-center gap-2 py-0.5 text-left text-xs hover:bg-surface-3">
+        <CollapsibleTrigger className="hover-hatch-cyan flex w-full items-center gap-2 py-0.5 text-left text-xs">
           <Badge
             variant="outline"
             className={`${passed ? 'border-status-success text-status-success' : 'border-status-error text-status-error'} bg-transparent text-[10px]`}
@@ -472,7 +472,7 @@ function BulkToolCallGroup({
 
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
-      <CollapsibleTrigger className="flex w-full items-center gap-2 py-0.5 text-left text-xs hover:bg-surface-3">
+      <CollapsibleTrigger className="hover-hatch-cyan flex w-full items-center gap-2 py-0.5 text-left text-xs">
         <Badge
           variant="default"
           className="border-trace-tool text-trace-tool bg-transparent text-[10px]"
@@ -654,7 +654,7 @@ export function AgentCard({ group, depth = 0 }: { group: AgentGroup; depth?: num
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
       <CollapsibleTrigger
-        className={`animate-fade-in border-l-2 border-l-trace-agent flex w-full items-center justify-between border border-border-subtle bg-surface-2 px-3 py-1.5 text-left text-xs hover:bg-surface-3 ${indentClass}`}
+        className={`hover-hatch-cyan animate-fade-in border-l-2 border-l-trace-agent flex w-full items-center justify-between border border-border-subtle bg-surface-2 px-3 py-1.5 text-left text-xs ${indentClass}`}
       >
         <span className="flex items-center gap-2 min-w-0">
           <Image src="/lex-mascot.png" alt="" width={16} height={16} className="shrink-0" />
@@ -756,7 +756,7 @@ function RuleTestCard({
   return (
     <RawJsonToggle data={toolCall.data}>
       <Collapsible open={open} onOpenChange={setOpen}>
-        <CollapsibleTrigger className="flex w-full items-center gap-2 py-0.5 text-left text-xs hover:bg-surface-3">
+        <CollapsibleTrigger className="hover-hatch-cyan flex w-full items-center gap-2 py-0.5 text-left text-xs">
           <Badge
             variant="outline"
             className={`${passed ? 'border-status-success text-status-success' : 'border-status-error text-status-error'} bg-transparent text-[10px]`}
@@ -791,7 +791,7 @@ function AgentToolCallCard({
   return (
     <RawJsonToggle data={toolCall.data}>
       <Collapsible open={open} onOpenChange={setOpen}>
-        <CollapsibleTrigger className="flex w-full items-center gap-2 py-0.5 text-left text-xs hover:bg-surface-3">
+        <CollapsibleTrigger className="hover-hatch-cyan flex w-full items-center gap-2 py-0.5 text-left text-xs">
           <Badge
             variant="default"
             className="border-trace-tool text-trace-tool bg-transparent text-[10px]"

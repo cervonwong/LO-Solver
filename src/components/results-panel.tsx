@@ -81,7 +81,7 @@ function RuleTag({
         e.stopPropagation();
         onClick?.(ruleTitle);
       }}
-      className="inline-flex items-center gap-1 border border-border-subtle px-1.5 py-0.5 text-[10px] text-accent hover:bg-muted hover:border-accent transition-colors cursor-pointer"
+      className="hover-hatch-cyan inline-flex items-center gap-1 border border-border-subtle px-1.5 py-0.5 text-[10px] text-accent cursor-pointer"
       title={`View rule: ${ruleTitle}`}
     >
       <svg
@@ -115,7 +115,7 @@ function AnswersSection({
           <SummaryBar answers={answers} />
           {answers.map((a) => (
             <Collapsible key={a.questionId}>
-              <CollapsibleTrigger className="flex w-full flex-col gap-1 border border-border-subtle px-3 py-2 text-left text-sm hover:bg-muted">
+              <CollapsibleTrigger className="hover-hatch-cyan flex w-full flex-col gap-1 border border-border-subtle px-3 py-2 text-left text-sm">
                 <div className="flex w-full items-center justify-between">
                   <span>
                     <span className="font-bold">{a.questionId}:</span> {a.answer}
@@ -181,7 +181,7 @@ function RulesSection({ rules }: { rules: Rule[] }) {
       <div className="flex flex-col gap-2">
         {rules.map((r) => (
           <Collapsible key={r.title}>
-            <CollapsibleTrigger className="flex w-full items-center justify-between border border-border-subtle px-3 py-2 text-left text-sm hover:bg-muted">
+            <CollapsibleTrigger className="hover-hatch-cyan flex w-full items-center justify-between border border-border-subtle px-3 py-2 text-left text-sm">
               <span>{r.title}</span>
               <Badge variant={CONFIDENCE_VARIANT[r.confidence]}>{r.confidence}</Badge>
             </CollapsibleTrigger>
