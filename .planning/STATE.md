@@ -49,6 +49,10 @@ No new decisions for v1.1 yet.
 1 pending todo:
 - `2026-03-02-investigate-missing-parentid-on-tool-call-trace-events.md` — investigation steps for HIER-01 (Phase 8)
 
+### Roadmap Evolution
+
+- Phase 12 added: Add workflow control buttons (Abort, New Problem, Clear) and disable config controls during execution
+
 ### Blockers/Concerns
 
 None yet.
