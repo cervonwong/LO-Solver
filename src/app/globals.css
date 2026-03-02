@@ -607,14 +607,16 @@
    with data-streamdown attributes on child elements.
    ============================================ */
 
-/* Code blocks inside Streamdown */
+/* Code blocks inside Streamdown — override Shiki inline styles and Tailwind bg classes */
 [data-streamdown='code-block'] {
-  background: var(--surface-3) !important;
+  background: transparent !important;
   border-color: var(--border) !important;
 }
 
-[data-streamdown='code-block'] pre {
+[data-streamdown='code-block'] pre,
+[data-streamdown='code-block-body'] {
   background: transparent !important;
+  background-color: transparent !important;
 }
 
 [data-streamdown='code-block'] code {
