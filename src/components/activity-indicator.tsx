@@ -25,7 +25,6 @@ export function ActivityIndicator({ events, isRunning }: ActivityIndicatorProps)
       (e) =>
         e.type === 'data-agent-start' ||
         e.type === 'data-agent-end' ||
-        e.type === 'data-agent-reasoning' ||
         e.type === 'data-tool-call',
     );
 
@@ -65,18 +64,14 @@ export function ActivityIndicator({ events, isRunning }: ActivityIndicatorProps)
   const agentName =
     latestActivity?.type === 'data-agent-start' || latestActivity?.type === 'data-agent-end'
       ? (latestActivity.data as { agentName?: string }).agentName
-      : latestActivity?.type === 'data-agent-reasoning'
-        ? (latestActivity.data as { agentName?: string }).agentName
-        : latestActivity?.type === 'data-tool-call'
-          ? (latestActivity.data as { toolName?: string }).toolName
-          : null;
+      : latestActivity?.type === 'data-tool-call'
+        ? (latestActivity.data as { toolName?: string }).toolName
+        : null;
 
   const model =
     latestActivity?.type === 'data-agent-start'
       ? (latestActivity.data as { model?: string }).model
-      : latestActivity?.type === 'data-agent-reasoning'
-        ? (latestActivity.data as { model?: string }).model
-        : null;
+      : null;
 
   return (
     <div className="frosted flex items-center gap-2 border border-border px-4 py-2">

@@ -2,9 +2,9 @@ import type {
   WorkflowTraceEvent,
   StepId,
   UIStepId,
-  HierarchicalAgentStartEvent,
-  HierarchicalAgentEndEvent,
-  HierarchicalToolCallEvent,
+  AgentStartEvent,
+  AgentEndEvent,
+  ToolCallEvent,
 } from './workflow-events';
 import { getUIStepLabel } from './workflow-events';
 
@@ -27,10 +27,10 @@ export interface ToolCallGroup {
 
 export interface AgentGroup {
   type: 'agent-group';
-  agentStart: HierarchicalAgentStartEvent;
-  agentEnd: HierarchicalAgentEndEvent | undefined;
-  toolCalls: HierarchicalToolCallEvent[];
-  children: Array<AgentGroup | HierarchicalToolCallEvent>; // Ordered interleaving of sub-agents and tool calls
+  agentStart: AgentStartEvent;
+  agentEnd: AgentEndEvent | undefined;
+  toolCalls: ToolCallEvent[];
+  children: Array<AgentGroup | ToolCallEvent>; // Ordered interleaving of sub-agents and tool calls
   isActive: boolean;
 }
 
@@ -279,8 +279,8 @@ export function groupEventsWithAgents(
       if ('parentId' in event.data && event.data.parentId) {
         const parentGroup = agentMap.get(event.data.parentId);
         if (parentGroup) {
-          parentGroup.toolCalls.push(event as HierarchicalToolCallEvent);
-          parentGroup.children.push(event as HierarchicalToolCallEvent);
+          parentGroup.toolCalls.push(event as ToolCallEvent);
+          parentGroup.children.push(event as ToolCallEvent);
           continue;
         }
       }
@@ -290,8 +290,8 @@ export function groupEventsWithAgents(
       // Fallback: assign to the most recently opened active agent
       if (activeAgentStack.length > 0) {
         const fallbackAgent = activeAgentStack[activeAgentStack.length - 1]!;
-        fallbackAgent.toolCalls.push(event as HierarchicalToolCallEvent);
-        fallbackAgent.children.push(event as HierarchicalToolCallEvent);
+        fallbackAgent.toolCalls.push(event as ToolCallEvent);
+        fallbackAgent.children.push(event as ToolCallEvent);
         continue;
       }
     }
@@ -359,7 +359,6 @@ function getRawStepId(event: WorkflowTraceEvent): StepId | undefined {
   switch (event.type) {
     case 'data-step-start':
     case 'data-step-complete':
-    case 'data-agent-reasoning':
     case 'data-tool-call':
       return event.data.stepId;
     case 'data-agent-start':

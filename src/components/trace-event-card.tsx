@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import type { WorkflowTraceEvent, HierarchicalToolCallEvent } from '@/lib/workflow-events';
+import type { WorkflowTraceEvent, ToolCallEvent } from '@/lib/workflow-events';
 import { formatDuration, getAgentSummary } from '@/lib/trace-utils';
 import type { ToolCallGroup, AgentGroup } from '@/lib/trace-utils';
 import { Streamdown } from 'streamdown';
@@ -70,27 +70,6 @@ export function TraceEventCard({ event }: TraceEventCardProps) {
       // These are now handled by AgentCard via groupEventsWithAgents.
       // Fallback rendering for un-grouped events (shouldn't normally appear).
       return null;
-
-    case 'data-agent-reasoning':
-      // Deprecated: kept for backward compatibility with old event data
-      return (
-        <Collapsible open={open} onOpenChange={setOpen}>
-          <CollapsibleTrigger className="animate-fade-in border-l-2 border-l-trace-agent flex w-full items-center justify-between border border-border-subtle bg-surface-2 px-3 py-1.5 text-left text-xs hover:bg-surface-3">
-            <span className="flex items-center gap-2">
-              <Image src="/lex-mascot.png" alt="" width={16} height={16} className="shrink-0" />
-              <span className="font-medium">{event.data.agentName}</span>
-              <span className="text-muted-foreground">({event.data.model})</span>
-            </span>
-            <span className="flex items-center gap-2">
-              <span className="text-muted-foreground">{formatDuration(event.data.durationMs)}</span>
-              <ChevronIcon open={open} />
-            </span>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="animate-collapsible border-x border-b border-border-subtle bg-surface-2 px-3 py-2">
-            <Streamdown className={TRACE_SD_CLASS} plugins={{ code }}>{event.data.reasoning}</Streamdown>
-          </CollapsibleContent>
-        </Collapsible>
-      );
 
     case 'data-agent-text-chunk':
       // Ephemeral streaming events; filtered out by EventList, no render needed
@@ -467,7 +446,7 @@ function BulkToolCallGroup({
   depth,
 }: {
   toolName: string;
-  toolCalls: HierarchicalToolCallEvent[];
+  toolCalls: ToolCallEvent[];
   depth: number;
 }) {
   const [open, setOpen] = useState(false);
@@ -542,7 +521,7 @@ function ToolCallRenderer({
   toolCall,
   depth,
 }: {
-  toolCall: HierarchicalToolCallEvent;
+  toolCall: ToolCallEvent;
   depth: number;
 }) {
   // Skip intermediate "started" status events
@@ -570,11 +549,11 @@ function ToolCallRenderer({
 
 type RenderItemType =
   | { kind: 'agent'; group: AgentGroup }
-  | { kind: 'tool'; toolCall: HierarchicalToolCallEvent }
-  | { kind: 'bulk'; toolName: string; toolCalls: HierarchicalToolCallEvent[] };
+  | { kind: 'tool'; toolCall: ToolCallEvent }
+  | { kind: 'bulk'; toolName: string; toolCalls: ToolCallEvent[] };
 
 function buildRenderItems(
-  children: Array<AgentGroup | HierarchicalToolCallEvent>,
+  children: Array<AgentGroup | ToolCallEvent>,
 ): RenderItemType[] {
   const items: RenderItemType[] = [];
   let i = 0;
@@ -589,19 +568,19 @@ function buildRenderItems(
     }
 
     // It's a tool call -- check for consecutive same-type calls
-    const tc = child as HierarchicalToolCallEvent;
+    const tc = child as ToolCallEvent;
     if (isStartedStatus(tc.data.result)) {
       i++;
       continue;
     }
 
     // Look ahead for consecutive same-tool calls
-    const sameToolCalls: HierarchicalToolCallEvent[] = [tc];
+    const sameToolCalls: ToolCallEvent[] = [tc];
     let j = i + 1;
     while (j < children.length) {
       const next = children[j]!;
       if ('type' in next && next.type === 'agent-group') break;
-      const nextTc = next as HierarchicalToolCallEvent;
+      const nextTc = next as ToolCallEvent;
       if (isStartedStatus(nextTc.data.result)) {
         j++;
         continue;
