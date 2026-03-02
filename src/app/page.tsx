@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
 import { MascotProvider, useMascotState } from '@/contexts/mascot-context';
+import { useRegisterWorkflowControl } from '@/contexts/workflow-control-context';
 import { useModelMode } from '@/hooks/use-model-mode';
 import { useWorkflowSettings } from '@/hooks/use-workflow-settings';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
@@ -122,7 +123,7 @@ function SolverPageInner() {
     [modelMode, workflowSettings],
   );
 
-  const { messages, sendMessage, status, setMessages } = useChat({ transport });
+  const { messages, sendMessage, status, setMessages, stop } = useChat({ transport });
 
   const handleSolve = useCallback(
     async (text: string) => {
@@ -338,6 +339,8 @@ function SolverPageInner() {
     setMessages([]);
     setMascotState('idle');
   }, [setMessages, setMascotState]);
+
+  useRegisterWorkflowControl({ isRunning, hasStarted, stop, handleReset });
 
   const answerStepOutput = steps['answer-questions']?.output;
   const hypothesisStepOutput = steps['multi-perspective-hypothesis']?.output;
