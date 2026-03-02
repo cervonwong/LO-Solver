@@ -62,10 +62,12 @@ export function StepProgress({ steps, statusMessage, onStepClick }: StepProgress
         <div key={step.id}>
           {i > 0 && <Connector fromStatus={steps[i - 1]!.status} toStatus={step.status} />}
           <div
-            className="flex items-center gap-2"
+            className={cn(
+              'flex items-center gap-2',
+              onStepClick && 'step-progress-item cursor-pointer group',
+            )}
             onClick={() => onStepClick?.(step.id)}
             role={onStepClick ? 'button' : undefined}
-            style={onStepClick ? { cursor: 'pointer' } : undefined}
           >
             <StepCircle status={step.status} label={i + 1} />
             <span
@@ -79,6 +81,11 @@ export function StepProgress({ steps, statusMessage, onStepClick }: StepProgress
             >
               {step.label}
             </span>
+            {onStepClick && (
+              <span className="text-[9px] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity ml-auto">
+                Jump to step
+              </span>
+            )}
           </div>
         </div>
       ))}

@@ -562,6 +562,23 @@
   animation: pulse-glow-line 2s ease-in-out infinite;
 }
 
+/* Progress bar step item — clickable hover with hatching */
+.step-progress-item {
+  padding: 3px 6px;
+  margin: -3px -6px;
+  transition: background 0.15s ease;
+}
+
+.step-progress-item:hover {
+  background: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 7px,
+    rgba(0, 255, 255, 0.08) 7px,
+    rgba(0, 255, 255, 0.08) 8px
+  );
+}
+
 /* Collapsible animation using grid-rows technique */
 [data-state='open'].animate-collapsible {
   display: grid;
