@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in-progress
-last_updated: "2026-03-02T04:32:25Z"
+last_updated: "2026-03-02T04:37:00Z"
 progress:
   total_phases: 7
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 14
-  completed_plans: 13
+  completed_plans: 14
 ---
 
 # Project State
@@ -21,7 +21,7 @@ See: .planning/PROJECT.md (updated 2026-03-01)
 **Current milestone:** v1.0 Prove the Agentic Advantage
 
 ## Current Phase
-Phase 7: Hierarchical Trace Display & Results — In Progress (Plan 2/3 complete)
+Phase 7: Hierarchical Trace Display & Results — Complete (Plan 3/3 complete)
 
 ## Phase Status
 | Phase | Name | Status |
@@ -32,7 +32,7 @@ Phase 7: Hierarchical Trace Display & Results — In Progress (Plan 2/3 complete
 | 4 | Multi-Perspective Hypothesis Generation | ✓ Complete |
 | 5 | Verification Loop Improvements | ✓ Complete |
 | 6 | UI Event System & Rules Panel | ✓ Complete |
-| 7 | Hierarchical Trace Display & Results | ◐ In Progress (2/3) |
+| 7 | Hierarchical Trace Display & Results | ✓ Complete |
 
 ## Accumulated Context
 | Date | Insight |
@@ -66,6 +66,7 @@ Phase 7: Hierarchical Trace Display & Results — In Progress (Plan 2/3 complete
 | 2026-03-02 | AgentGroup.children interleaves sub-agents and tool calls chronologically; bulk grouping threshold is 4+ consecutive same-type calls |
 | 2026-03-02 | Orphaned tool calls (missing parentId) fall back to most recently opened active agent via stack-based lookup in groupEventsWithAgents |
 | 2026-03-02 | Auto-scroll uses isUserScrollingRef guard to prevent programmatic scrollTo from disabling auto-scroll via the onScroll handler |
+| 2026-03-02 | Cross-linking uses data-rule-title DOM attributes with CSS.escape for safe querying across component boundaries |
 
 ## Session Log
 | Date | Phase | Action | Notes |
@@ -98,6 +99,8 @@ Phase 7: Hierarchical Trace Display & Results — In Progress (Plan 2/3 complete
 | 2026-03-02 | Quick | Quick task 4 complete | Compact progress bar: 20px squares, handwriting font, pulse glow (commits bdc8594, 7245cf7) |
 | 2026-03-02 | 7 | Plan 07-02 complete | Hierarchical trace display: nested agents, custom tool renderers, bulk grouping, auto-expand/collapse, auto-scroll (commits 4081797, 249aa3f, 92a908a, 3ad4e1f) |
 | 2026-03-02 | Quick | Quick task 5 complete | Hatched hover background and jump-to-step subtitle on progress bar (commit 643f2de) |
+| 2026-03-02 | 7 | Plan 07-03 complete | Results display: summary bar, rule tags, cross-linking, Streamdown markdown, auto-scroll (commits 00ac4a1, edbd3c5) |
+| 2026-03-02 | 7 | Phase 7 complete | Hierarchical Trace Display & Results done: all v1 requirements (22/22) complete |
 
 ### Quick Tasks Completed
 
@@ -110,4 +113,4 @@ Phase 7: Hierarchical Trace Display & Results — In Progress (Plan 2/3 complete
 | 5 | Hatched hover background and jump-to-step subtitle on progress bar | 2026-03-02 | 643f2de | [5-add-hatched-hover-background-and-jump-to](./quick/5-add-hatched-hover-background-and-jump-to/) |
 
 ---
-Last activity: 2026-03-02 - Completed quick task 5: Hatched hover background and jump-to-step subtitle on progress bar
+Last activity: 2026-03-02 - Phase 7 complete: results display with summary bar, rule tags, cross-linking, markdown working steps, auto-scroll. All v1 requirements (22/22) complete.

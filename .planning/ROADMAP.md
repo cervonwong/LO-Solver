@@ -99,15 +99,15 @@ Plans:
 
 ---
 
-### Phase 7: Hierarchical Trace Display & Results
+### Phase 7: Hierarchical Trace Display & Results — Complete
 **Goal:** Render agent/tool hierarchy in the trace panel with custom-fitted tool displays, and present final results with clear formatting.
 **Requirements:** UI-03, UI-04, UI-05
-**Plans:** 2/3 plans complete
+**Plans:** 3/3 plans complete
 
 Plans:
 - [x] 07-01-PLAN.md — Answer schema: rulesApplied field + agent instructions
 - [x] 07-02-PLAN.md — Hierarchical trace display: nested agents, custom tool renderers, bulk grouping, auto-expand/collapse, auto-scroll
-- [ ] 07-03-PLAN.md — Results display formatting
+- [x] 07-03-PLAN.md — Results display: summary bar, rule tags, cross-linking, markdown working steps, auto-scroll
 
 **Success Criteria:**
 1. Trace panel displays tool calls nested under their parent agent calls in a collapsible hierarchical view
@@ -117,4 +117,4 @@ Plans:
 
 ---
 
-_7 phases. 22 v1 requirements mapped. Phases 1-6 complete. Phase 7 in progress (2/3 plans). Question bank expansion deferred to v2._
+_7 phases. 22 v1 requirements mapped. All phases complete. All 22 v1 requirements satisfied. Question bank expansion deferred to v2._
