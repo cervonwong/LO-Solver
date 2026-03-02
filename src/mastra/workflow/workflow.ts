@@ -579,6 +579,7 @@ const multiPerspectiveHypothesisStep = createStep({
         verifyRequestContext.set('log-file', logFile);
         verifyRequestContext.set('model-mode', state.modelMode as ModelMode);
         verifyRequestContext.set('step-writer', writer);
+        verifyRequestContext.set('step-id', stepId);
         verifyRequestContext.set('event-source', 'draft');
         verifyRequestContext.set('workflow-start-time', state.workflowStartTime);
 
