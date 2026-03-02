@@ -146,7 +146,7 @@ ${JSON.stringify(structuredProblem.questions, null, 2)}
 
     // Log result only if logFile is provided (i.e., using committed rules)
     if (logFile) {
-      logRuleTestResult(logFile, rule.title, ruleResult.status);
+      logRuleTestResult(logFile, rule.title, ruleResult.status, wfStartTime);
     }
 
     // Emit rule test result for the frontend rules panel

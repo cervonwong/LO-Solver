@@ -163,7 +163,7 @@ Attempt to translate this sentence step by step using the rules and vocabulary a
 
     // Log result only if logFile is provided (i.e., using committed rules)
     if (logFile) {
-      logSentenceTestResult(logFile, id, agentResult.overallStatus);
+      logSentenceTestResult(logFile, id, agentResult.overallStatus, wfStartTime);
     }
 
     return {

@@ -97,7 +97,7 @@ export const addVocabulary = createTool({
     );
 
     // Log added entries to file
-    logVocabularyAdded(logFile, addedEntries);
+    logVocabularyAdded(logFile, addedEntries, wfStartTime);
 
     // Emit trace event for vocabulary addition
     const timestamp = new Date().toISOString();
@@ -172,7 +172,7 @@ export const updateVocabulary = createTool({
     );
 
     // Log updated entries to file
-    logVocabularyUpdated(logFile, updatedEntries);
+    logVocabularyUpdated(logFile, updatedEntries, wfStartTime);
 
     // Emit trace event for vocabulary update
     const timestamp = new Date().toISOString();
@@ -243,7 +243,7 @@ export const removeVocabulary = createTool({
     );
 
     // Log removed entries to file
-    logVocabularyRemoved(logFile, removedForms);
+    logVocabularyRemoved(logFile, removedForms, wfStartTime);
 
     // Emit trace event for vocabulary removal
     const timestamp = new Date().toISOString();
@@ -296,7 +296,7 @@ export const clearVocabulary = createTool({
     console.log(`${formatTimestamp(wfStartTime)} [VOCAB:CLEAR] Cleared ${removed} vocabulary entries`);
 
     // Log cleared count to file
-    logVocabularyCleared(logFile, removed);
+    logVocabularyCleared(logFile, removed, wfStartTime);
 
     // Emit trace event for vocabulary clear
     const timestamp = new Date().toISOString();

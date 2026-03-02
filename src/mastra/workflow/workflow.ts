@@ -140,10 +140,11 @@ const extractionStep = createStep({
       'Structured Problem Extractor Agent',
       response.object,
       response.reasoningText,
+      initialState.workflowStartTime,
     );
 
     if (!parseResult.success) {
-      logValidationError(logFile, 'Step 1: Extract Structure', parseResult.error);
+      logValidationError(logFile, 'Step 1: Extract Structure', parseResult.error, initialState.workflowStartTime);
       return bail({
         success: false,
         message: '[Extract Structure Step] Validation failed: ' + parseResult.error.message,
@@ -315,6 +316,7 @@ const multiPerspectiveHypothesisStep = createStep({
           'Perspective Dispatcher Agent',
           dispatcherResponse.object,
           dispatcherResponse.reasoningText,
+          state.workflowStartTime,
         );
 
         const dispatchParsed = dispatcherOutputSchema.safeParse(dispatcherResponse.object);
@@ -410,6 +412,7 @@ const multiPerspectiveHypothesisStep = createStep({
           'Improver Dispatcher Agent',
           improverDispatcherResponse.object,
           improverDispatcherResponse.reasoningText,
+          state.workflowStartTime,
         );
 
         const improverParsed = improverDispatcherOutputSchema.safeParse(
@@ -538,6 +541,7 @@ const multiPerspectiveHypothesisStep = createStep({
           'Initial Hypothesizer Agent',
           { naturalLanguageOutput: hypothesizerResponse.text },
           hypothesizerResponse.reasoningText,
+          state.workflowStartTime,
         );
 
         await emitTraceEvent(writer, {
@@ -723,6 +727,7 @@ const multiPerspectiveHypothesisStep = createStep({
           'Verifier Feedback Extractor Agent',
           extractorResponse.object,
           extractorResponse.reasoningText,
+          state.workflowStartTime,
         );
 
         if (!feedbackParsed.success) {
@@ -884,6 +889,7 @@ const multiPerspectiveHypothesisStep = createStep({
         'Hypothesis Synthesizer Agent',
         { naturalLanguageOutput: synthesizerResponse.text },
         synthesizerResponse.reasoningText,
+        state.workflowStartTime,
       );
 
       // Read the merged state from main stores (synthesizer writes via tools)
@@ -1056,6 +1062,7 @@ const multiPerspectiveHypothesisStep = createStep({
         'Verifier Feedback Extractor Agent',
         convergenceExtractorResponse.object,
         convergenceExtractorResponse.reasoningText,
+        state.workflowStartTime,
       );
 
       let converged = false;
@@ -1140,6 +1147,7 @@ const multiPerspectiveHypothesisStep = createStep({
           `Round ${round}: Convergence Verification`,
           feedback,
           Array.from(mainRules.keys()),
+          state.workflowStartTime,
         );
 
         if (feedback.conclusion === 'ALL_RULES_PASS') {
@@ -1328,10 +1336,11 @@ const answerQuestionsStep = createStep({
       'Question Answerer Agent',
       answererResponse.object,
       answererResponse.reasoningText,
+      state.workflowStartTime,
     );
 
     if (!answererParseResult.success) {
-      logValidationError(logFile, 'Step 3: Answer Questions', answererParseResult.error);
+      logValidationError(logFile, 'Step 3: Answer Questions', answererParseResult.error, state.workflowStartTime);
       return bail({
         success: false,
         message: '[Answer Questions Step] Validation failed: ' + answererParseResult.error.message,

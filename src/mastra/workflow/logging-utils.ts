@@ -131,8 +131,9 @@ export const logAgentOutput = (
   output: unknown,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   reasoning?: any,
+  startTime?: number,
 ): void => {
-  let content = `## ${stepName}\n\n**Agent:** ${agentName}\n\n`;
+  let content = `${formatTimestamp(startTime)} ## ${stepName}\n\n**Agent:** ${agentName}\n\n`;
 
   const formattedReasoning = formatReasoning(reasoning);
   if (formattedReasoning) {
@@ -146,8 +147,13 @@ export const logAgentOutput = (
 };
 
 // Log validation error
-export const logValidationError = (logFile: string, stepName: string, error: z.ZodError): void => {
-  const content = `## ⚠️ Validation Error: ${stepName}\n\n\`\`\`\n${error.message}\n\`\`\`\n\n**Issues:**\n${error.issues.map((issue) => `- **${issue.path.join('.')}**: ${issue.message}`).join('\n')}\n\n---\n\n`;
+export const logValidationError = (
+  logFile: string,
+  stepName: string,
+  error: z.ZodError,
+  startTime?: number,
+): void => {
+  const content = `${formatTimestamp(startTime)} ## ⚠️ Validation Error: ${stepName}\n\n\`\`\`\n${error.message}\n\`\`\`\n\n**Issues:**\n${error.issues.map((issue) => `- **${issue.path.join('.')}**: ${issue.message}`).join('\n')}\n\n---\n\n`;
   fs.appendFileSync(logFile, content);
 };
 
@@ -157,39 +163,55 @@ export const logValidationError = (logFile: string, stepName: string, error: z.Z
 export const logVocabularyAdded = (
   logFile: string | undefined,
   entries: { meaning: string; foreignForm: string }[],
+  startTime?: number,
 ): void => {
   if (!logFile || entries.length === 0) return;
   const mappings = entries.map((e) => `  ${e.meaning} → ${e.foreignForm}`).join('\n');
-  fs.appendFileSync(logFile, `### Vocabulary Added (${entries.length} entries)\n\n${mappings}\n\n`);
+  fs.appendFileSync(
+    logFile,
+    `${formatTimestamp(startTime)} ### Vocabulary Added (${entries.length} entries)\n\n${mappings}\n\n`,
+  );
 };
 
 /** Log vocabulary entries updated (meaning → foreignForm) */
 export const logVocabularyUpdated = (
   logFile: string | undefined,
   entries: { meaning: string; foreignForm: string }[],
+  startTime?: number,
 ): void => {
   if (!logFile || entries.length === 0) return;
   const mappings = entries.map((e) => `  ${e.meaning} → ${e.foreignForm}`).join('\n');
   fs.appendFileSync(
     logFile,
-    `### Vocabulary Updated (${entries.length} entries)\n\n${mappings}\n\n`,
+    `${formatTimestamp(startTime)} ### Vocabulary Updated (${entries.length} entries)\n\n${mappings}\n\n`,
   );
 };
 
 /** Log vocabulary entries removed (foreignForm list) */
-export const logVocabularyRemoved = (logFile: string | undefined, foreignForms: string[]): void => {
+export const logVocabularyRemoved = (
+  logFile: string | undefined,
+  foreignForms: string[],
+  startTime?: number,
+): void => {
   if (!logFile || foreignForms.length === 0) return;
   const list = foreignForms.map((f) => `  - ${f}`).join('\n');
   fs.appendFileSync(
     logFile,
-    `### Vocabulary Removed (${foreignForms.length} entries)\n\n${list}\n\n`,
+    `${formatTimestamp(startTime)} ### Vocabulary Removed (${foreignForms.length} entries)\n\n${list}\n\n`,
   );
 };
 
 /** Log vocabulary cleared */
-export const logVocabularyCleared = (logFile: string | undefined, count: number): void => {
+export const logVocabularyCleared = (
+  logFile: string | undefined,
+  count: number,
+  startTime?: number,
+): void => {
   if (!logFile || count === 0) return;
-  fs.appendFileSync(logFile, `### Vocabulary Cleared (${count} entries)\n\n`);
+  fs.appendFileSync(
+    logFile,
+    `${formatTimestamp(startTime)} ### Vocabulary Cleared (${count} entries)\n\n`,
+  );
 };
 
 // Tester logging
@@ -199,9 +221,10 @@ export const logSentenceTestResult = (
   logFile: string | undefined,
   id: string,
   status: string,
+  startTime?: number,
 ): void => {
   if (!logFile) return;
-  fs.appendFileSync(logFile, `[SENTENCE] #${id}: ${status}\n`);
+  fs.appendFileSync(logFile, `${formatTimestamp(startTime)} [SENTENCE] #${id}: ${status}\n`);
 };
 
 /** Log rule test result (title + status) */
@@ -209,9 +232,10 @@ export const logRuleTestResult = (
   logFile: string | undefined,
   title: string,
   status: string,
+  startTime?: number,
 ): void => {
   if (!logFile) return;
-  fs.appendFileSync(logFile, `[RULE] "${title}": ${status}\n`);
+  fs.appendFileSync(logFile, `${formatTimestamp(startTime)} [RULE] "${title}": ${status}\n`);
 };
 
 /**
@@ -231,10 +255,11 @@ export const logVerificationResults = (
     fullExplanation?: string;
   },
   allRuleTitles: string[],
+  startTime?: number,
 ): void => {
   if (!logFile) return;
 
-  let content = `## ${sectionTitle}\n\n`;
+  let content = `${formatTimestamp(startTime)} ## ${sectionTitle}\n\n`;
   content += `**Conclusion:** ${feedback.conclusion}\n`;
   content += `**Rules tested:** ${feedback.rulesTestedCount} | **Errant:** ${feedback.errantRules.length}\n`;
   content += `**Sentences tested:** ${feedback.sentencesTestedCount} | **Errant:** ${feedback.errantSentences.length}\n\n`;
