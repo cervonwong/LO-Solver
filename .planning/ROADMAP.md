@@ -25,7 +25,7 @@
 **Milestone Goal:** Refine the trace panel and results display with hierarchy bug fixes, compact styling, structured data formatting, and expressive agent mascots.
 
 - [x] **Phase 8: Trace Hierarchy Fix** - Root-cause fix for parentId emission and frontend verification (completed 2026-03-02)
-- [ ] **Phase 9: Compact Reasoning Display** - Smaller tables and scrollable codeblocks in streamdown rendering
+- [x] **Phase 9: Compact Reasoning Display** - Smaller tables and scrollable codeblocks in streamdown rendering (completed 2026-03-02)
 - [ ] **Phase 10: Structured Data Formatting** - Tool I/O and agent output as labeled lists with raw JSON toggle
 - [ ] **Phase 11: Agent Duck Mascots** - Oversized color-tinted duck icons overflowing agent cards
 
@@ -53,7 +53,10 @@ Plans:
   1. Tables inside reasoning text render with smaller font size and reduced cell padding compared to the default streamdown styling
   2. Codeblocks inside reasoning text scroll horizontally when content exceeds the container width instead of expanding the container
   3. Neither tables nor codeblocks cause the trace panel to grow wider than its allocated resizable panel width
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [x] 09-01-PLAN.md — Compact reasoning CSS overrides and visual verification
 
 ### Phase 10: Structured Data Formatting
 **Goal**: Structured JSON data throughout the trace panel renders as human-readable labeled lists instead of raw JSON
@@ -91,7 +94,7 @@ Phases execute in numeric order: 8 -> 9 -> 10 -> 11
 | 6. UI Event System & Rules Panel | v1.0 | 4/4 | Complete | 2026-03-01 |
 | 7. Hierarchical Trace & Results | v1.0 | 3/3 | Complete | 2026-03-02 |
 | 8. Trace Hierarchy Fix | v1.1 | 2/2 | Complete | 2026-03-02 |
-| 9. Compact Reasoning Display | v1.1 | 0/? | Not started | - |
+| 9. Compact Reasoning Display | v1.1 | 1/1 | Complete | 2026-03-02 |
 | 10. Structured Data Formatting | v1.1 | 0/? | Not started | - |
 | 11. Agent Duck Mascots | v1.1 | 0/? | Not started | - |
 

@@ -14,8 +14,8 @@ Requirements for UI Polish milestone. Each maps to roadmap phases.
 
 ### Reasoning Display
 
-- [ ] **STYLE-01**: Tables in reasoning text render with compact styling (smaller font, reduced padding)
-- [ ] **STYLE-02**: Codeblocks in reasoning text use horizontal scroll instead of expanding the container width
+- [x] **STYLE-01**: Tables in reasoning text render with compact styling (smaller font, reduced padding)
+- [x] **STYLE-02**: Codeblocks in reasoning text use horizontal scroll instead of expanding the container width
 
 ### Structured Data Formatting
 
@@ -50,8 +50,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | HIER-01 | Phase 8 | Complete |
 | HIER-02 | Phase 8 | Complete |
-| STYLE-01 | Phase 9 | Pending |
-| STYLE-02 | Phase 9 | Pending |
+| STYLE-01 | Phase 9 | Complete |
+| STYLE-02 | Phase 9 | Complete |
 | FMT-01 | Phase 10 | Pending |
 | FMT-02 | Phase 10 | Pending |
 | FMT-03 | Phase 10 | Pending |
