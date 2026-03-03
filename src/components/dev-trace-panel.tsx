@@ -15,7 +15,7 @@ import {
 } from '@/lib/trace-utils';
 import type { StepGroup } from '@/lib/trace-utils';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { SkeletonTrace } from '@/components/skeleton-trace';
+import { Skeleton } from '@/components/skeleton';
 import type { WorkflowTraceEvent } from '@/lib/workflow-events';
 
 interface DevTracePanelProps {
@@ -52,7 +52,7 @@ export function DevTracePanel({ events, isRunning }: DevTracePanelProps) {
   };
 
   if (events.length === 0 && isRunning) {
-    return <SkeletonTrace />;
+    return <Skeleton />;
   }
 
   if (events.length === 0 && !isRunning) {
