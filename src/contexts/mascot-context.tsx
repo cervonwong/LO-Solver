@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, type ReactNode } from 'react';
 
-export type MascotState = 'idle' | 'ready' | 'solving' | 'solved' | 'error';
+export type MascotState = 'idle' | 'ready' | 'solving' | 'solved' | 'error' | 'aborted';
 
 interface MascotContextValue {
   mascotState: MascotState;

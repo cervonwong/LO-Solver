@@ -120,6 +120,34 @@ export const MASCOT_MESSAGES: Record<MascotState, MessageSegment[][]> = {
       { text: ' or retry!' },
     ],
   ],
+
+  aborted: [
+    [
+      { text: 'Quack! No worries, we can ' },
+      { text: 'try again', accent: true },
+      { text: " whenever you're ready!" },
+    ],
+    [
+      { text: 'Stopped mid-waddle! ' },
+      { text: 'Paste a new problem', accent: true },
+      { text: ' or hit ' },
+      { text: 'SOLVE', accent: true },
+      { text: ' to restart.' },
+    ],
+    [
+      { text: "Mission a-duck-ed! Ready for another go when you are." },
+    ],
+    [
+      { text: 'Alright, pulling the brakes! ' },
+      { text: 'Try another problem', accent: true },
+      { text: ' or re-run this one.' },
+    ],
+    [
+      { text: 'Wings folded! Want to ' },
+      { text: 'give it another go', accent: true },
+      { text: ' or try something new?' },
+    ],
+  ],
 };
 
 /** Pick a random message variant for the given state. */
