@@ -778,10 +778,7 @@ function SolverPageInner() {
           {showThirdColumn ? (
             // Wide screen + started: trace only (vocab/rules in third column)
             <div className="relative h-full min-h-[120px]">
-              <ScrollArea className="h-full">
-                <DevTracePanel events={traceEvents} isRunning={isRunning} />
-                <div ref={traceEndRef} className="h-px" />
-              </ScrollArea>
+              <DevTracePanel events={traceEvents} isRunning={isRunning} bottomRef={traceEndRef} />
               {!isAtBottom && isRunning && (
                 <button
                   onClick={() => traceEndRef.current?.scrollIntoView({ behavior: 'smooth' })}
@@ -795,10 +792,7 @@ function SolverPageInner() {
             // Narrow screen OR not started: trace + vocab/rules stacked vertically
             <ResizablePanelGroup orientation="vertical">
               <ResizablePanel defaultSize="50%" minSize="20%" className="relative min-h-[120px]">
-                <ScrollArea className="h-full">
-                  <DevTracePanel events={traceEvents} isRunning={isRunning} />
-                  <div ref={traceEndRef} className="h-px" />
-                </ScrollArea>
+                <DevTracePanel events={traceEvents} isRunning={isRunning} bottomRef={traceEndRef} />
                 {!isAtBottom && isRunning && (
                   <button
                     onClick={() => traceEndRef.current?.scrollIntoView({ behavior: 'smooth' })}
