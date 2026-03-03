@@ -67,7 +67,11 @@ Plans:
   2. Tool output JSON displays as a labeled list with key names as labels and values formatted inline
   3. Agent structured output (non-streaming final result) displays as a labeled list with key names as labels and values formatted inline
   4. Each labeled list has a toggle button (e.g., `{...}` icon) that switches to the original raw JSON view and back
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 10-01-PLAN.md — LabeledList component and generic tool call formatting
+- [ ] 10-02-PLAN.md — Agent structured output on backend events and AgentCard section
 
 ### Phase 11: Agent Duck Mascots
 **Goal**: Agent cards in the trace panel have expressive, oversized duck mascot icons that visually distinguish agent types
@@ -95,7 +99,7 @@ Phases execute in numeric order: 8 -> 9 -> 10 -> 11
 | 7. Hierarchical Trace & Results | v1.0 | 3/3 | Complete | 2026-03-02 |
 | 8. Trace Hierarchy Fix | v1.1 | 2/2 | Complete | 2026-03-02 |
 | 9. Compact Reasoning Display | v1.1 | 1/1 | Complete | 2026-03-02 |
-| 10. Structured Data Formatting | v1.1 | 0/? | Not started | - |
+| 10. Structured Data Formatting | v1.1 | 0/2 | Not started | - |
 | 11. Agent Duck Mascots | 1/1 | Complete    | 2026-03-03 | - |
 | 12. Workflow Control Buttons | v1.1 | 2/2 | Complete | 2026-03-02 |
 | 13. 3-Column Layout | v1.1 | Complete    | 2026-03-03 | 2026-03-03 |
