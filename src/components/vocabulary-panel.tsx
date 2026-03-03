@@ -27,7 +27,7 @@ interface VocabularyPanelProps {
 export function VocabularyPanel({ vocabulary, activityEvents, isRunning }: VocabularyPanelProps) {
   return (
     <div className="frosted flex h-full min-h-[120px] flex-col">
-      <div className="frosted flex shrink-0 items-center justify-between border-b border-border px-4 py-2">
+      <div className="panel-heading flex shrink-0 items-center justify-between border-b border-border px-4 py-2">
         <div className="flex items-center gap-2">
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -48,7 +48,7 @@ export function VocabularyPanel({ vocabulary, activityEvents, isRunning }: Vocab
       </div>
       <ScrollArea className="min-h-0 flex-1">
         {vocabulary.length === 0 ? (
-          <div className="absolute inset-0 flex items-center justify-center text-sm text-muted-foreground opacity-50">
+          <div className="absolute inset-0 flex items-center justify-center px-6 text-center text-sm text-muted-foreground opacity-50">
             {isRunning
               ? 'Vocabulary entries will appear here as the solver discovers them...'
               : 'No vocabulary entries yet.'}

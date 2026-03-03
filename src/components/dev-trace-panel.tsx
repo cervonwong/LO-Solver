@@ -97,7 +97,7 @@ export function DevTracePanel({ events, isRunning }: DevTracePanelProps) {
 
   return (
     <div className="flex flex-1 flex-col">
-      <div className="frosted sticky top-0 z-10 flex shrink-0 items-center justify-between border-b border-border px-4 py-2">
+      <div className="panel-heading sticky top-0 z-10 flex shrink-0 items-center justify-between border-b border-border px-4 py-2">
         <div className="flex items-center gap-2">
           <svg
             xmlns="http://www.w3.org/2000/svg"

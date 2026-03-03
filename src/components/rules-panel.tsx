@@ -95,7 +95,7 @@ export function RulesPanel({ rules, activityEvents, isRunning }: RulesPanelProps
 
   return (
     <div className="frosted flex h-full min-h-[120px] flex-col">
-      <div className="frosted flex shrink-0 items-center justify-between border-b border-border px-4 py-2">
+      <div className="panel-heading flex shrink-0 items-center justify-between border-b border-border px-4 py-2">
         <div className="flex items-center gap-2">
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -116,7 +116,7 @@ export function RulesPanel({ rules, activityEvents, isRunning }: RulesPanelProps
       </div>
       <ScrollArea className="min-h-0 flex-1">
         {rules.length === 0 ? (
-          <div className="absolute inset-0 flex items-center justify-center text-sm text-muted-foreground opacity-50">
+          <div className="absolute inset-0 flex items-center justify-center px-6 text-center text-sm text-muted-foreground opacity-50">
             {isRunning
               ? 'Rules will appear here as the solver generates them...'
               : 'No rules yet.'}
