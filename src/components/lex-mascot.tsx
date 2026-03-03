@@ -93,14 +93,24 @@ export function LexMascot() {
 
   return (
     <div className="flex items-start">
-      <Image
-        src={imageSrc}
-        alt="Lex the duck mascot"
-        width={76}
-        height={76}
-        className="shrink-0"
-        priority
-      />
+      <div className="flex flex-col items-center shrink-0 gap-1">
+        <Image
+          src={imageSrc}
+          alt="Lex the duck mascot"
+          width={76}
+          height={76}
+          className="shrink-0"
+          priority
+        />
+        <svg width="40" height="8" viewBox="0 0 40 8" className="shrink-0">
+          <line x1="0" y1="0" x2="0" y2="4" stroke="var(--muted-foreground)" strokeWidth="1" />
+          <line x1="0" y1="4" x2="40" y2="4" stroke="var(--muted-foreground)" strokeWidth="1" />
+          <line x1="40" y1="0" x2="40" y2="4" stroke="var(--muted-foreground)" strokeWidth="1" />
+        </svg>
+        <span className="text-[10px] uppercase tracking-wider text-muted-foreground mt-0.5">
+          Lex the Duck
+        </span>
+      </div>
 
       {/* SVG tail -- sits on top of the bubble's left border via z-10 */}
       <svg
