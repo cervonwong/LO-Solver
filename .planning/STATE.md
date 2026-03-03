@@ -62,9 +62,10 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 ### Pending Todos
 
-2 pending todos:
+3 pending todos:
 - `2026-03-02-investigate-missing-parentid-on-tool-call-trace-events.md` — investigation steps for HIER-01 (Phase 8)
 - `2026-03-02-audit-large-files-for-refactor-opportunities.md` — audit src/ for oversized files to split
+- `2026-03-03-abort-button-doesn-t-stop-triggered-agents-only-the-workflow.md` — abort only stops workflow, not running agents
 
 ### Roadmap Evolution
 
