@@ -2,7 +2,7 @@
 
 ## What This Is
 
-LO-Solver is an AI-powered system for solving Linguistics Olympiad Rosetta Stone problems. It uses a Next.js frontend with a Mastra AI agent orchestration backend. A multi-step workflow coordinates specialized LLM agents to extract structure, generate multi-perspective linguistic hypotheses, verify/improve rules with failure diagnostics, and answer translation questions. An automated evaluation harness proves the agentic workflow outperforms zero-shot LLMs, with a rich observability UI showing hierarchical agent traces, live-updating rules, and formatted results.
+LO-Solver is an AI-powered system for solving Linguistics Olympiad Rosetta Stone problems. It uses a Next.js frontend with a Mastra AI agent orchestration backend. A multi-step workflow coordinates specialized LLM agents to extract structure, generate multi-perspective linguistic hypotheses, verify/improve rules with failure diagnostics, and answer translation questions. An automated evaluation harness proves the agentic workflow outperforms zero-shot LLMs, with a polished observability UI featuring hierarchical agent traces with duck mascots, animated 3-column layout, structured data formatting, workflow abort/reset controls, and live-updating vocabulary and rules panels.
 
 ## Core Value
 
@@ -40,12 +40,17 @@ The ONE thing that must work: **the agentic workflow must produce measurably bet
 - ✓ Formatted final results presentation — v1.0
 - ✓ Hierarchical event streaming system — v1.0
 
+- ✓ Fix trace hierarchy — correct parentId on tool-call events, orphan detection — v1.1
+- ✓ Compact reasoning display — smaller tables, scrollable codeblocks in streamdown — v1.1
+- ✓ Structured data formatting — tool I/O and agent output as labeled lists with raw JSON toggle — v1.1
+- ✓ Agent duck mascots — oversized color-tinted duck icons with animated states — v1.1
+- ✓ Workflow control buttons — abort, new problem, config disable during execution — v1.1
+- ✓ 3-column animated layout — third column for vocab/rules, responsive collapse below 1024px — v1.1
+- ✓ Aborted workflow state — distinct amber state separate from error/failed — v1.1
+
 ### Active
 
-- [ ] Fix trace hierarchy — root cause fix for missing/mismatched parentId on tool-call events
-- [ ] Compact reasoning display — smaller tables, scrollable codeblocks in streamdown rendering
-- [ ] Structured data formatting — tool I/O, agent instructions/output as labeled lists (keep raw JSON toggle)
-- [ ] Agent duck mascots — oversized, overflowing top-left of cards, color-tinted per agent type
+(None — planning next milestone)
 
 ### Out of Scope
 
@@ -55,28 +60,19 @@ The ONE thing that must work: **the agentic workflow must produce measurably bet
 - Deployment / hosting — development-only for now
 - Real-time collaboration features
 
-## Current Milestone: v1.1 UI Polish
-
-**Goal:** Refine the trace panel and results display with hierarchy bug fixes, compact styling, structured data formatting, and expressive agent mascots.
-
-**Target features:**
-- Fix trace hierarchy parentId root cause
-- Compact streamdown tables/codeblocks in reasoning
-- Pretty-print structured data (tool I/O, agent output) as labeled lists
-- Oversized color-tinted duck mascots for agents
-
 ## Problem Statement
 
-(Resolved in v1.0) The workflow now uses multi-perspective hypothesis generation and verified rules. The evaluation harness demonstrates workflow accuracy improvements over zero-shot baselines.
+(Resolved in v1.0) The workflow uses multi-perspective hypothesis generation and verified rules. The evaluation harness demonstrates workflow accuracy improvements over zero-shot baselines. (Resolved in v1.1) The observability UI is polished with correct trace hierarchy, structured data display, workflow controls, and animated layout.
 
 ## Context
 
-Shipped v1.0 with 13,581 LOC TypeScript across 241 files.
+Shipped v1.1 with 14,281 LOC TypeScript.
 Tech stack: TypeScript 5.9.3, Next.js 16.1.6, Mastra 1.8.0, Zod 4.3.6.
 Models: GPT-5-mini (extraction), Gemini 3 Flash (reasoning), GPT-OSS-120B (testing).
 Storage: LibSQL for Mastra state, markdown logs for execution traces, JSON for eval results.
-Frontend: React 19, shadcn/ui, resizable panels, AI SDK streaming.
+Frontend: React 19, shadcn/ui, resizable panels (3-column animated layout), AI SDK streaming.
 Evaluation: 4 Linguini ground-truth problems, CLI runner with --comparison and --problem flags.
+UI: Blueprint/cyanotype design system, duck mascots per agent role, workflow abort/reset controls.
 
 ## Key Decisions
 
@@ -92,6 +88,12 @@ Evaluation: 4 Linguini ground-truth problems, CLI runner with --comparison and -
 | streamWithRetry replacing generateWithRetry | Real-time text streaming needed for hierarchical events | ✓ Good — enabled live agent output display |
 | id/parentId for hierarchical events | Simple nesting model, no deep tree structure needed | ✓ Good — clean agent/tool hierarchy |
 | Three-panel right layout (trace/vocab/rules) | All observability data visible simultaneously | ✓ Good — no tab switching during solve |
+| Register pattern for workflow context | Child page pushes state to layout-level context without prop drilling | ✓ Good — clean separation of concerns |
+| CSS scoping via wrapper class | .reasoning-compact scopes streamdown overrides to trace panel | ✓ Good — no side effects on other streamdown usage |
+| LabeledList with depth limit | Recursive key-value rendering capped at depth 2 | ✓ Good — readable without overwhelming nesting |
+| mask-image for duck tint | Color tint only on opaque pixels, preserving transparent PNG background | ✓ Good — clean visual effect |
+| Conditional panel rendering (2/3 columns) | Render different panel counts vs hide/resize a panel to 0 | ✓ Good — simpler than fighting resizable-panels library |
+| Imperative setLayout() for animation | CSS flex-grow transition with programmatic layout change | ✓ Good — smooth animated column appearance |
 
 ## Constraints
 
@@ -110,4 +112,4 @@ When working on any phase that touches Mastra code (agents, workflows, tools, ev
 
 ---
 
-*Last updated: 2026-03-02 after v1.1 milestone start*
+*Last updated: 2026-03-03 after v1.1 milestone*
