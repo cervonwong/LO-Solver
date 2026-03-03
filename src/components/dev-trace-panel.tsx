@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import Image from 'next/image';
 import { TraceEventCard, ToolCallGroupCard, AgentCard } from '@/components/trace-event-card';
 import {
@@ -59,8 +60,8 @@ export function DevTracePanel({ events, isRunning }: DevTracePanelProps) {
   }
 
   return (
-    <>
-      <div className="panel-heading sticky top-0 z-10 flex shrink-0 items-center justify-between px-4 py-2">
+    <div className="flex flex-1 flex-col">
+      <div className="panel-heading flex shrink-0 items-center justify-between px-4 py-2">
         <div className="flex items-center gap-2">
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -81,12 +82,14 @@ export function DevTracePanel({ events, isRunning }: DevTracePanelProps) {
           </span>
         )}
       </div>
-      <div className="flex flex-col gap-4 p-4">
-        {stepGroups.map((group) => (
-          <StepSection key={group.stepId} group={group} isRunning={isRunning} />
-        ))}
-      </div>
-    </>
+      <ScrollArea className="min-h-0 flex-1">
+        <div className="flex flex-col gap-4 p-4">
+          {stepGroups.map((group) => (
+            <StepSection key={group.stepId} group={group} isRunning={isRunning} />
+          ))}
+        </div>
+      </ScrollArea>
+    </div>
   );
 }
 

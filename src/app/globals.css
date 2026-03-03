@@ -858,11 +858,6 @@
   pointer-events: none;
 }
 
-/* Sticky panel headings need opaque bg so scrolling content doesn't show through */
-.panel-heading.sticky {
-  background: var(--background);
-}
-
 /* Animated panel resize transition — applied during workflow-start layout shift */
 .panel-transition [data-panel] {
   transition: flex-grow 600ms cubic-bezier(0.4, 0, 0.2, 1);

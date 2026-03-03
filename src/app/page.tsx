@@ -558,10 +558,6 @@ function SolverPageInner() {
     }
   }, []);
 
-  // Auto-scroll refs and state for the trace panel
-  const traceEndRef = useRef<HTMLDivElement>(null);
-  const [isAtBottom, setIsAtBottom] = useState(true);
-
   // Collect trace events for the dev trace panel
   const traceEvents = useMemo(() => {
     return allParts.filter(
@@ -579,25 +575,6 @@ function SolverPageInner() {
     const el = document.getElementById(`trace-${stepId}`);
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, []);
-
-  // IntersectionObserver to detect if user scrolled away from bottom
-  useEffect(() => {
-    const sentinel = traceEndRef.current;
-    if (!sentinel) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => setIsAtBottom(entry?.isIntersecting ?? false),
-      { threshold: 0.1 },
-    );
-    observer.observe(sentinel);
-    return () => observer.disconnect();
-  }, []);
-
-  // Auto-scroll when new events arrive and user hasn't scrolled away
-  useEffect(() => {
-    if (isAtBottom && traceEndRef.current) {
-      traceEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [traceEvents.length, isAtBottom]);
 
   // Determine if 3-column mode is active
   const showThirdColumn = hasStarted && isLargeScreen;
@@ -777,36 +754,14 @@ function SolverPageInner() {
         >
           {showThirdColumn ? (
             // Wide screen + started: trace only (vocab/rules in third column)
-            <div className="relative h-full min-h-[120px]">
-              <ScrollArea className="h-full">
-                <DevTracePanel events={traceEvents} isRunning={isRunning} />
-                <div ref={traceEndRef} className="h-px" />
-              </ScrollArea>
-              {!isAtBottom && isRunning && (
-                <button
-                  onClick={() => traceEndRef.current?.scrollIntoView({ behavior: 'smooth' })}
-                  className="hover-hatch-cyan absolute bottom-3 left-1/2 z-10 -translate-x-1/2 border border-accent bg-background/80 px-3 py-1 text-xs uppercase tracking-wider text-accent"
-                >
-                  Jump to latest &#8595;
-                </button>
-              )}
+            <div className="h-full min-h-[120px]">
+              <DevTracePanel events={traceEvents} isRunning={isRunning} />
             </div>
           ) : (
             // Narrow screen OR not started: trace + vocab/rules stacked vertically
             <ResizablePanelGroup orientation="vertical">
-              <ResizablePanel defaultSize="50%" minSize="20%" className="relative min-h-[120px]">
-                <ScrollArea className="h-full">
-                  <DevTracePanel events={traceEvents} isRunning={isRunning} />
-                  <div ref={traceEndRef} className="h-px" />
-                </ScrollArea>
-                {!isAtBottom && isRunning && (
-                  <button
-                    onClick={() => traceEndRef.current?.scrollIntoView({ behavior: 'smooth' })}
-                    className="hover-hatch-cyan absolute bottom-3 left-1/2 z-10 -translate-x-1/2 border border-accent bg-background/80 px-3 py-1 text-xs uppercase tracking-wider text-accent"
-                  >
-                    Jump to latest &#8595;
-                  </button>
-                )}
+              <ResizablePanel defaultSize="50%" minSize="20%" className="min-h-[120px]">
+                <DevTracePanel events={traceEvents} isRunning={isRunning} />
               </ResizablePanel>
 
               {hasStarted && (
