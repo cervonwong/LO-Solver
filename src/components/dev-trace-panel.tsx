@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import { TraceEventCard, ToolCallGroupCard, AgentCard } from '@/components/trace-event-card';
 import {
@@ -24,43 +24,6 @@ interface DevTracePanelProps {
 
 export function DevTracePanel({ events, isRunning }: DevTracePanelProps) {
   const stepGroups = useMemo(() => groupEventsByStep(events), [events]);
-
-  // Auto-scroll refs
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const isAutoScrollRef = useRef(true);
-  const isUserScrollingRef = useRef(false);
-
-  const handleScroll = useCallback(() => {
-    const el = scrollContainerRef.current;
-    if (!el) return;
-
-    // Threshold for "close enough to bottom" -- 50px tolerance
-    const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 50;
-
-    if (atBottom) {
-      // User scrolled back to bottom -- resume auto-scroll
-      isAutoScrollRef.current = true;
-    } else if (!isUserScrollingRef.current) {
-      // User scrolled away from bottom -- disable auto-scroll
-      isAutoScrollRef.current = false;
-    }
-  }, []);
-
-  // Auto-scroll to bottom when new events arrive
-  useEffect(() => {
-    const el = scrollContainerRef.current;
-    if (!el || !isAutoScrollRef.current) return;
-
-    // Use requestAnimationFrame to scroll after DOM update
-    requestAnimationFrame(() => {
-      isUserScrollingRef.current = true;
-      el.scrollTop = el.scrollHeight;
-      // Reset flag after scroll completes
-      requestAnimationFrame(() => {
-        isUserScrollingRef.current = false;
-      });
-    });
-  }, [events.length]);
 
   // Elapsed timer for the header (total workflow time)
   const [headerElapsed, setHeaderElapsed] = useState(0);
@@ -96,7 +59,7 @@ export function DevTracePanel({ events, isRunning }: DevTracePanelProps) {
   }
 
   return (
-    <div className="flex flex-1 flex-col">
+    <>
       <div className="panel-heading sticky top-0 z-10 flex shrink-0 items-center justify-between px-4 py-2">
         <div className="flex items-center gap-2">
           <svg
@@ -118,16 +81,12 @@ export function DevTracePanel({ events, isRunning }: DevTracePanelProps) {
           </span>
         )}
       </div>
-      <div
-        ref={scrollContainerRef}
-        onScroll={handleScroll}
-        className="flex flex-1 flex-col gap-4 overflow-y-auto p-4"
-      >
+      <div className="flex flex-col gap-4 p-4">
         {stepGroups.map((group) => (
           <StepSection key={group.stepId} group={group} isRunning={isRunning} />
         ))}
       </div>
-    </div>
+    </>
   );
 }
 
