@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { WorkflowControlProvider, useWorkflowControl } from '@/contexts/workflow-control-context';
 import { ModelModeToggle } from '@/components/model-mode-toggle';
 import { WorkflowSliders } from '@/components/workflow-sliders';
+import { CreditsBadge } from '@/components/credits-badge';
 
 function NavBar() {
   const { isRunning, hasStarted, stop, handleReset } = useWorkflowControl();
@@ -48,6 +49,7 @@ function NavBar() {
           <div className="h-5 w-px bg-border" />
           <ModelModeToggle disabled={isRunning} />
         </div>
+        <CreditsBadge />
         <div className="h-5 w-px bg-border" />
         <div className="flex items-center gap-2">
           <button
