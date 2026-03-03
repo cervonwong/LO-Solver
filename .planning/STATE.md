@@ -106,9 +106,10 @@ None yet.
 | 22 | Move Eval Results nav link to left side of nav bar | 2026-03-03 | 3b718f4 | [22-move-eval-results-nav-link-to-left-side-](./quick/22-move-eval-results-nav-link-to-left-side-/) |
 | 21 | Combined problem input with overlay empty state and clear button | 2026-03-03 | 1470ab6 | [21-combined-problem-input-with-embedded-exa](./quick/21-combined-problem-input-with-embedded-exa/) |
 | 23 | Replace SkeletonTrace with looping blueprint box-drawing Skeleton | 2026-03-03 | 047db4c | [23-replace-skeletontrace-with-new-skeleton-](./quick/23-replace-skeletontrace-with-new-skeleton-/) |
+| 24 | Fix Dev Trace Panel scrolling and sticky header | 2026-03-03 | 390201f | [24-fix-dev-trace-panel-scrolling-sticky-hea](./quick/24-fix-dev-trace-panel-scrolling-sticky-hea/) |
 
 ## Session Continuity
 
 Last session: 2026-03-03
-Stopped at: Completed 10-02-PLAN.md (Structured Data Formatting - Agent Structured Output)
+Stopped at: Completed quick-24 (Fix Dev Trace Panel scrolling and sticky header)
 Resume file: None
