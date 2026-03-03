@@ -27,7 +27,7 @@
 - [x] **Phase 8: Trace Hierarchy Fix** - Root-cause fix for parentId emission and frontend verification (completed 2026-03-02)
 - [x] **Phase 9: Compact Reasoning Display** - Smaller tables and scrollable codeblocks in streamdown rendering (completed 2026-03-02)
 - [ ] **Phase 10: Structured Data Formatting** - Tool I/O and agent output as labeled lists with raw JSON toggle
-- [ ] **Phase 11: Agent Duck Mascots** - Oversized color-tinted duck icons overflowing agent cards
+- [x] **Phase 11: Agent Duck Mascots** - Oversized color-tinted duck icons overflowing agent cards (completed 2026-03-03)
 
 ## Phase Details
 
@@ -96,7 +96,7 @@ Phases execute in numeric order: 8 -> 9 -> 10 -> 11
 | 8. Trace Hierarchy Fix | v1.1 | 2/2 | Complete | 2026-03-02 |
 | 9. Compact Reasoning Display | v1.1 | 1/1 | Complete | 2026-03-02 |
 | 10. Structured Data Formatting | v1.1 | 0/? | Not started | - |
-| 11. Agent Duck Mascots | v1.1 | 0/? | Not started | - |
+| 11. Agent Duck Mascots | 1/1 | Complete   | 2026-03-03 | - |
 | 12. Workflow Control Buttons | v1.1 | 2/2 | Complete | 2026-03-02 |
 | 13. 3-Column Layout | v1.1 | Complete    | 2026-03-03 | 2026-03-03 |
 
@@ -108,7 +108,7 @@ _v1.1: 6 phases, 6 plans complete. Phases 10, 11 not started._
 **Goal:** Nav bar has Abort and New Problem buttons that control the workflow, all config controls disable during execution, and aborted workflows show a distinct amber state
 **Requirements**: CTRL-01, CTRL-02, CTRL-03, CTRL-04, CTRL-05
 **Depends on:** Phase 11
-**Plans:** 2/2 plans complete
+**Plans:** 1/1 plans complete
 
 Plans:
 - [x] 12-01-PLAN.md — WorkflowControlContext and client layout wrapper for state bridging
