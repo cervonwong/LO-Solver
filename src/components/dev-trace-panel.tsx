@@ -20,10 +20,9 @@ import type { WorkflowTraceEvent } from '@/lib/workflow-events';
 interface DevTracePanelProps {
   events: WorkflowTraceEvent[];
   isRunning: boolean;
-  bottomRef?: React.RefObject<HTMLDivElement | null>;
 }
 
-export function DevTracePanel({ events, isRunning, bottomRef }: DevTracePanelProps) {
+export function DevTracePanel({ events, isRunning }: DevTracePanelProps) {
   const stepGroups = useMemo(() => groupEventsByStep(events), [events]);
 
   // Auto-scroll refs
@@ -97,11 +96,7 @@ export function DevTracePanel({ events, isRunning, bottomRef }: DevTracePanelPro
   }
 
   return (
-    <div
-      ref={scrollContainerRef}
-      onScroll={handleScroll}
-      className="flex h-full flex-col gap-4 overflow-y-auto"
-    >
+    <div className="flex flex-1 flex-col">
       <div className="panel-heading sticky top-0 z-10 flex shrink-0 items-center justify-between px-4 py-2">
         <div className="flex items-center gap-2">
           <svg
@@ -123,11 +118,14 @@ export function DevTracePanel({ events, isRunning, bottomRef }: DevTracePanelPro
           </span>
         )}
       </div>
-      <div className="flex flex-col gap-4 px-4 pb-4">
+      <div
+        ref={scrollContainerRef}
+        onScroll={handleScroll}
+        className="flex flex-1 flex-col gap-4 overflow-y-auto p-4"
+      >
         {stepGroups.map((group) => (
           <StepSection key={group.stepId} group={group} isRunning={isRunning} />
         ))}
-        {bottomRef && <div ref={bottomRef} className="h-px" />}
       </div>
     </div>
   );
