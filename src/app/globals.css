@@ -56,6 +56,8 @@
   --color-surface-3: var(--surface-3);
   --color-border-subtle: var(--border-subtle);
   --color-border-strong: var(--border-strong);
+  --color-role-improver: var(--role-improver);
+  --color-role-improver-muted: var(--role-improver-muted);
 }
 
 :root {
@@ -99,6 +101,10 @@
   --trace-tool-muted: rgba(102, 204, 204, 0.1);
   --trace-vocab: #66ccaa;
   --trace-vocab-muted: rgba(102, 204, 170, 0.1);
+
+  /* Agent role colors (for duck mascot tinting) */
+  --role-improver: #ff6666;
+  --role-improver-muted: rgba(255, 102, 102, 0.1);
 
   --chart-1: #00ffff;
   --chart-2: #e04a4a;
@@ -479,16 +485,23 @@
   transform: translate(-50%, -50%) rotate(-45deg);
 }
 
-/* Hover: separator turns cyan, X-mark turns cyan with glow */
+/* Hover: separator and X-mark turn cyan */
 [data-slot="resizable-handle"]:hover .resize-xmark::before,
 [data-slot="resizable-handle"]:hover .resize-xmark::after {
   background: var(--accent);
-  box-shadow: 0 0 6px rgba(0, 255, 255, 0.4);
 }
 
-/* Make the separator line itself turn cyan on hover */
 [data-slot="resizable-handle"]:hover {
   background: var(--accent);
+}
+
+
+/* Duck mascot color tint — overlay div on top of the duck image */
+.duck-tint {
+  position: absolute;
+  inset: 0;
+  mix-blend-mode: color;
+  pointer-events: none;
 }
 
 /* ============================================
@@ -606,6 +619,58 @@
 
 .animate-spin-duck {
   animation: spin-slow 2s linear infinite;
+}
+
+/* Duck mascot entrance — pop in from scale 0 */
+@keyframes duck-pop-in {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Duck mascot active bob — gentle vertical bounce */
+@keyframes duck-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+/* Duck mascot completion pop — brief scale-up then settle */
+@keyframes duck-complete-pop {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.25);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.animate-duck-pop-in {
+  animation: duck-pop-in 400ms cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+}
+
+.animate-duck-bob {
+  animation: duck-bob 2s ease-in-out infinite;
+}
+
+.animate-duck-complete-pop {
+  animation: duck-complete-pop 350ms ease-out both;
 }
 
 @keyframes strikethrough-fade {
