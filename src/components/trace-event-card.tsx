@@ -10,6 +10,7 @@ import type { ToolCallGroup, AgentGroup } from '@/lib/trace-utils';
 import { getAgentRole } from '@/lib/agent-roles';
 import { Streamdown } from 'streamdown';
 import { code } from '@streamdown/code';
+import { LabeledList } from '@/components/labeled-list';
 
 function ChevronIcon({ open }: { open: boolean }) {
   return (
@@ -93,28 +94,28 @@ export function TraceEventCard({ event }: TraceEventCardProps) {
 
     case 'data-tool-call':
       return (
-        <Collapsible open={open} onOpenChange={setOpen}>
-          <CollapsibleTrigger className="hover-hatch-cyan animate-fade-in border-l-2 border-l-trace-tool flex w-full items-center justify-between border border-border-subtle bg-surface-2 px-3 py-1.5 text-left text-xs">
-            <span className="flex items-center gap-2">
-              <Badge
-                variant="default"
-                className="border-trace-tool text-trace-tool bg-transparent text-[10px]"
-              >
-                TOOL
-              </Badge>
-              <span className="font-medium">{event.data.toolName}</span>
-            </span>
-            <ChevronIcon open={open} />
-          </CollapsibleTrigger>
-          <CollapsibleContent className="animate-collapsible border-x border-b border-border-subtle bg-surface-2 px-3 py-2">
-            <div className="flex flex-col gap-2">
-              <Streamdown className={TRACE_SD_CLASS} plugins={{ code }} controls={false}>{jsonMarkdown('Input', event.data.input)}</Streamdown>
-              <Streamdown className={TRACE_SD_CLASS} plugins={{ code }} controls={false}>
-                {jsonMarkdown('Result', event.data.result)}
-              </Streamdown>
-            </div>
-          </CollapsibleContent>
-        </Collapsible>
+        <RawJsonToggle data={{ input: event.data.input, result: event.data.result }}>
+          <Collapsible open={open} onOpenChange={setOpen}>
+            <CollapsibleTrigger className="hover-hatch-cyan animate-fade-in border-l-2 border-l-trace-tool flex w-full items-center justify-between border border-border-subtle bg-surface-2 px-3 py-1.5 text-left text-xs">
+              <span className="flex items-center gap-2">
+                <Badge
+                  variant="default"
+                  className="border-trace-tool text-trace-tool bg-transparent text-[10px]"
+                >
+                  TOOL
+                </Badge>
+                <span className="font-medium">{event.data.toolName}</span>
+              </span>
+              <ChevronIcon open={open} />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="animate-collapsible border-x border-b border-border-subtle bg-surface-2 px-3 py-2">
+              <div className="flex flex-col gap-2">
+                <LabeledList data={event.data.input} label="Input" />
+                <LabeledList data={event.data.result} label="Result" />
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        </RawJsonToggle>
       );
 
     case 'data-iteration-update':
@@ -223,18 +224,20 @@ function ToolCallDetail({
   const [open, setOpen] = useState(false);
 
   return (
-    <Collapsible open={open} onOpenChange={setOpen}>
-      <CollapsibleTrigger className="hover-hatch-cyan flex w-full items-center justify-between px-3 py-1.5 text-left text-[10px]">
-        <span className="text-muted-foreground">Call #{index}</span>
-        <ChevronIcon open={open} />
-      </CollapsibleTrigger>
-      <CollapsibleContent className="animate-collapsible px-3 py-2">
-        <div className="flex flex-col gap-2">
-          <Streamdown className={TRACE_SD_CLASS} plugins={{ code }} controls={false}>{jsonMarkdown('Input', call.input)}</Streamdown>
-          <Streamdown className={TRACE_SD_CLASS} plugins={{ code }} controls={false}>{jsonMarkdown('Result', call.result)}</Streamdown>
-        </div>
-      </CollapsibleContent>
-    </Collapsible>
+    <RawJsonToggle data={{ input: call.input, result: call.result }}>
+      <Collapsible open={open} onOpenChange={setOpen}>
+        <CollapsibleTrigger className="hover-hatch-cyan flex w-full items-center justify-between px-3 py-1.5 text-left text-[10px]">
+          <span className="text-muted-foreground">Call #{index}</span>
+          <ChevronIcon open={open} />
+        </CollapsibleTrigger>
+        <CollapsibleContent className="animate-collapsible px-3 py-2">
+          <div className="flex flex-col gap-2">
+            <LabeledList data={call.input} label="Input" />
+            <LabeledList data={call.result} label="Result" />
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+    </RawJsonToggle>
   );
 }
 
@@ -851,10 +854,8 @@ function AgentToolCallCard({
         </CollapsibleTrigger>
         <CollapsibleContent forceMount className="data-[state=closed]:hidden pl-6 pr-2 py-1">
           <div className="flex flex-col gap-2">
-            <Streamdown className={TRACE_SD_CLASS} plugins={{ code }} controls={false}>{jsonMarkdown('Input', toolCall.data.input)}</Streamdown>
-            <Streamdown className={TRACE_SD_CLASS} plugins={{ code }} controls={false}>
-              {jsonMarkdown('Result', toolCall.data.result)}
-            </Streamdown>
+            <LabeledList data={toolCall.data.input} label="Input" />
+            <LabeledList data={toolCall.data.result} label="Result" />
           </div>
         </CollapsibleContent>
       </Collapsible>
