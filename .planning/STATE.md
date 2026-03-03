@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: UI Polish
 status: unknown
-last_updated: "2026-03-03T09:02:13Z"
+last_updated: "2026-03-03T09:12:16Z"
 progress:
   total_phases: 5
   completed_phases: 5
@@ -25,7 +25,7 @@ See: .planning/PROJECT.md (updated 2026-03-02)
 Phase: 13 of 13 (3-Column Layout)
 Plan: 1 of 1 complete
 Status: Phase 13 complete, v1.1 milestone complete
-Last activity: 2026-03-03 - Completed quick task 20: Make dev trace header sticky and reduce font sizes
+Last activity: 2026-03-03 - Completed quick task 22: Move Eval Results nav link to left side of nav bar
 
 Progress (v1.1): [██████████] 100%
 
@@ -99,9 +99,10 @@ None yet.
 | 18 | Style resizable handles with blueprint X registration mark | 2026-03-03 | 7a0b8d6 | [18-style-resizable-handles-with-blueprint-x](./quick/18-style-resizable-handles-with-blueprint-x/) |
 | 19 | Add OpenRouter credits display to nav bar | 2026-03-03 | cae2765 | [19-add-openrouter-credits-display-to-nav-ba](./quick/19-add-openrouter-credits-display-to-nav-ba/) |
 | 20 | Make dev trace header sticky and reduce font sizes | 2026-03-03 | 0fd3f16 | [20-make-dev-trace-header-sticky-and-reduce-](./quick/20-make-dev-trace-header-sticky-and-reduce-/) |
+| 22 | Move Eval Results nav link to left side of nav bar | 2026-03-03 | 3b718f4 | [22-move-eval-results-nav-link-to-left-side-](./quick/22-move-eval-results-nav-link-to-left-side-/) |
 
 ## Session Continuity
 
 Last session: 2026-03-03
-Stopped at: Completed quick task 20: Make dev trace header sticky and reduce font sizes
+Stopped at: Completed quick task 22: Move Eval Results nav link to left side of nav bar
 Resume file: None
