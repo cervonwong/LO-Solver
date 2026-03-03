@@ -39,10 +39,10 @@ Requirements for UI Polish milestone. Each maps to roadmap phases.
 
 ### Three-Column Layout
 
-- [ ] **LAYOUT-01**: Idle state shows a 2-column layout with roughly 50/50 proportions (input | trace)
-- [ ] **LAYOUT-02**: When workflow starts, a third column animates in with a gradual transition to ~20/50/30 (input | trace | vocab+rules)
-- [ ] **LAYOUT-03**: All columns are resizable via drag handles, including two vertical handles between the three panels
-- [ ] **LAYOUT-04**: Below 1024px viewport width, the third column collapses and vocab/rules fold back into the trace column as stacked sections
+- [x] **LAYOUT-01**: Idle state shows a 2-column layout with roughly 50/50 proportions (input | trace)
+- [x] **LAYOUT-02**: When workflow starts, a third column animates in with a gradual transition to ~20/50/30 (input | trace | vocab+rules)
+- [x] **LAYOUT-03**: All columns are resizable via drag handles, including two vertical handles between the three panels
+- [x] **LAYOUT-04**: Below 1024px viewport width, the third column collapses and vocab/rules fold back into the trace column as stacked sections
 
 ## Future Requirements
 
@@ -78,10 +78,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CTRL-03 | Phase 12 | Complete |
 | CTRL-04 | Phase 12 | Complete |
 | CTRL-05 | Phase 12 | Complete |
-| LAYOUT-01 | Phase 13 | Pending |
-| LAYOUT-02 | Phase 13 | Pending |
-| LAYOUT-03 | Phase 13 | Pending |
-| LAYOUT-04 | Phase 13 | Pending |
+| LAYOUT-01 | Phase 13 | Complete |
+| LAYOUT-02 | Phase 13 | Complete |
+| LAYOUT-03 | Phase 13 | Complete |
+| LAYOUT-04 | Phase 13 | Complete |
 
 **Coverage:**
 - v1.1 requirements: 19 total
@@ -90,4 +90,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-03-02*
-*Last updated: 2026-03-03 after Phase 13 planning*
+*Last updated: 2026-03-03 after Phase 13 execution*

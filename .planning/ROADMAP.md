@@ -3,7 +3,7 @@
 ## Milestones
 
 - ✅ **v1.0 Prove the Agentic Advantage** — Phases 1-7 (shipped 2026-03-02)
-- 🚧 **v1.1 UI Polish** — Phases 8-11 (in progress)
+- ✅ **v1.1 UI Polish** — Phases 8-13 (shipped 2026-03-03)
 
 ## Phases
 
@@ -97,9 +97,11 @@ Phases execute in numeric order: 8 -> 9 -> 10 -> 11
 | 9. Compact Reasoning Display | v1.1 | 1/1 | Complete | 2026-03-02 |
 | 10. Structured Data Formatting | v1.1 | 0/? | Not started | - |
 | 11. Agent Duck Mascots | v1.1 | 0/? | Not started | - |
+| 12. Workflow Control Buttons | v1.1 | 2/2 | Complete | 2026-03-02 |
+| 13. 3-Column Layout | v1.1 | 1/1 | Complete | 2026-03-03 |
 
 _v1.0: 7 phases, 16 plans. All complete._
-_v1.1: 4 phases, plans TBD._
+_v1.1: 6 phases, 6 plans complete. Phases 10, 11 not started._
 
 ### Phase 12: Add workflow control buttons (Abort, New Problem, Clear) and disable config controls during execution
 
@@ -117,7 +119,7 @@ Plans:
 **Goal:** Solver page transitions from 2-column to 3-column layout when the workflow starts, giving vocabulary and rules their own dedicated column with animated transition and responsive collapse below 1024px
 **Requirements**: LAYOUT-01, LAYOUT-02, LAYOUT-03, LAYOUT-04
 **Depends on:** Phase 12
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 13-01-PLAN.md — 3-column layout with animated workflow-start transition and responsive collapse
+- [x] 13-01-PLAN.md — 3-column layout with animated workflow-start transition and responsive collapse
