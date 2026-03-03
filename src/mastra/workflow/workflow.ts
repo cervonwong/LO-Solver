@@ -117,6 +117,7 @@ const extractionStep = createStep({
         durationMs: step1DurationMs,
         attempt: 1,
         totalAttempts: 1,
+        ...(response.object ? { structuredOutput: response.object as Record<string, unknown> } : {}),
         timestamp: new Date().toISOString(),
       },
     });
@@ -296,6 +297,7 @@ const multiPerspectiveHypothesisStep = createStep({
             durationMs: dispatchDurationMs,
             attempt: 1,
             totalAttempts: 1,
+            ...(dispatcherResponse.object ? { structuredOutput: dispatcherResponse.object as Record<string, unknown> } : {}),
             timestamp: new Date().toISOString(),
           },
         });
@@ -392,6 +394,7 @@ const multiPerspectiveHypothesisStep = createStep({
             durationMs: improverDispatchDurationMs,
             attempt: 1,
             totalAttempts: 1,
+            ...(improverDispatcherResponse.object ? { structuredOutput: improverDispatcherResponse.object as Record<string, unknown> } : {}),
             timestamp: new Date().toISOString(),
           },
         });
@@ -709,6 +712,7 @@ const multiPerspectiveHypothesisStep = createStep({
             durationMs: extractorDurationMs,
             attempt: 1,
             totalAttempts: 1,
+            ...(extractorResponse.object ? { structuredOutput: extractorResponse.object as Record<string, unknown> } : {}),
             timestamp: new Date().toISOString(),
           },
         });
@@ -1042,6 +1046,7 @@ const multiPerspectiveHypothesisStep = createStep({
           durationMs: convergenceExtractorDurationMs,
           attempt: 1,
           totalAttempts: 1,
+          ...(convergenceExtractorResponse.object ? { structuredOutput: convergenceExtractorResponse.object as Record<string, unknown> } : {}),
           timestamp: new Date().toISOString(),
         },
       });
@@ -1319,6 +1324,7 @@ const answerQuestionsStep = createStep({
         durationMs: answererDurationMs,
         attempt: 1,
         totalAttempts: 1,
+        ...(answererResponse.object ? { structuredOutput: answererResponse.object as Record<string, unknown> } : {}),
         timestamp: new Date().toISOString(),
       },
     });

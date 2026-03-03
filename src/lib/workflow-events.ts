@@ -86,6 +86,7 @@ export interface AgentEndEvent {
     durationMs: number;
     attempt: number;
     totalAttempts: number;
+    structuredOutput?: Record<string, unknown>;
     timestamp: string;
   };
 }
