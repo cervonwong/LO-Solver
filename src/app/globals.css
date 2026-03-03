@@ -725,10 +725,25 @@
 }
 
 /* Panel heading — distinct from content surfaces: whiter text, subtle bg, strong blur */
+/* Double-line bottom border (title block): 1px thin + 3px gap + 2px thick via ::after */
 .panel-heading {
+  position: relative;
   background: rgba(255, 255, 255, 0.02);
   backdrop-filter: blur(8px);
   color: rgba(255, 255, 255, 0.95);
+  padding-bottom: 14px !important;
+}
+
+.panel-heading::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 6px;
+  border-top: 1px solid var(--border);
+  border-bottom: 2px solid var(--border);
+  pointer-events: none;
 }
 
 /* Animated panel resize transition — applied during workflow-start layout shift */
