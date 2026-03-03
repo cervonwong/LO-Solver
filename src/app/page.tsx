@@ -73,6 +73,8 @@ function useMascotSync({
       setMascotState('solved');
     } else if (isRunning) {
       setMascotState('solving');
+    } else if (hasStarted) {
+      setMascotState('aborted');
     } else {
       setMascotState('idle');
     }

@@ -12,6 +12,7 @@ const STATE_IMAGE: Record<MascotState, string> = {
   solving: '/lex-thinking.png',
   solved: '/lex-happy.png',
   error: '/lex-defeated.png',
+  aborted: '/lex-neutral.png',
 };
 
 const ALL_IMAGES = [...new Set(Object.values(STATE_IMAGE))];
