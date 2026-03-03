@@ -15,8 +15,10 @@ export async function GET() {
       return NextResponse.json({ remaining: null, error: 'Failed to fetch credits' });
     }
 
-    const data = await res.json();
-    const remaining = data.total_credits - data.total_usage;
+    const json = await res.json();
+    console.log('[credits] OpenRouter response:', JSON.stringify(json));
+    const { total_credits, total_usage } = json.data ?? json;
+    const remaining = total_credits - total_usage;
     return NextResponse.json({ remaining });
   } catch {
     return NextResponse.json({ remaining: null, error: 'Failed to fetch credits' });

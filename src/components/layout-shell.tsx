@@ -49,6 +49,7 @@ function NavBar() {
           <div className="h-5 w-px bg-border" />
           <ModelModeToggle disabled={isRunning} />
         </div>
+        <div className="h-5 w-px bg-border" />
         <CreditsBadge />
         <div className="h-5 w-px bg-border" />
         <div className="flex items-center gap-2">
