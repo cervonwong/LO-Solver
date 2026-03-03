@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: UI Polish
 status: unknown
-last_updated: "2026-03-03T01:09:37.393Z"
+last_updated: "2026-03-03T01:21:26Z"
 progress:
   total_phases: 4
   completed_phases: 4
@@ -25,7 +25,7 @@ See: .planning/PROJECT.md (updated 2026-03-02)
 Phase: 13 of 13 (3-Column Layout)
 Plan: 1 of 1 complete
 Status: Phase 13 complete, v1.1 milestone complete
-Last activity: 2026-03-03 - Completed quick task 14: Style panel headers with cyanotype blueprint title block border
+Last activity: 2026-03-03 - Completed quick task 17: Remove default frosted layer from vocabulary and rules panels
 
 Progress (v1.1): [██████████] 100%
 
@@ -94,9 +94,10 @@ None yet.
 | 13 | Add aborted state to duck mascot speech | 2026-03-03 | 587313d | [13-add-aborted-state-to-duck-mascot-speech-](./quick/13-add-aborted-state-to-duck-mascot-speech-/) |
 | 14 | Style panel headers with cyanotype blueprint title block border | 2026-03-03 | b3f37e2 | [14-style-panel-headers-with-cyanotype-bluep](./quick/14-style-panel-headers-with-cyanotype-bluep/) |
 | 15 | Redesign top bar with reduced height and bottom-border nav links | 2026-03-03 | 80fb39e | [15-redesign-top-bar-with-reduced-height-bot](./quick/15-redesign-top-bar-with-reduced-height-bot/) |
+| 17 | Remove default frosted layer from vocabulary and rules panels | 2026-03-03 | 0d20192 | [17-remove-default-frosted-layer-from-vocabu](./quick/17-remove-default-frosted-layer-from-vocabu/) |
 
 ## Session Continuity
 
 Last session: 2026-03-03
-Stopped at: Completed quick task 14: Style panel headers with cyanotype blueprint title block border
+Stopped at: Completed quick task 17: Remove default frosted layer from vocabulary and rules panels
 Resume file: None
