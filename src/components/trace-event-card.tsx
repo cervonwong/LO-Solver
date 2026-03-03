@@ -268,12 +268,40 @@ function RawJsonToggle({
       </button>
       {showRaw ? (
         <div className="flex flex-col gap-2">
-          <Streamdown className={TRACE_SD_CLASS} plugins={{ code }} controls={false}>{jsonMarkdown('Input', data.input)}</Streamdown>
+          {Object.keys(data.input).length > 0 && (
+            <Streamdown className={TRACE_SD_CLASS} plugins={{ code }} controls={false}>{jsonMarkdown('Input', data.input)}</Streamdown>
+          )}
           <Streamdown className={TRACE_SD_CLASS} plugins={{ code }} controls={false}>{jsonMarkdown('Result', data.result)}</Streamdown>
         </div>
       ) : (
         children
       )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Structured output section for agents with parsed JSON output
+// ---------------------------------------------------------------------------
+
+function StructuredOutputSection({ data }: { data: Record<string, unknown> }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="border-t border-border-subtle pt-2">
+      <RawJsonToggle data={{ input: {}, result: data }}>
+        <Collapsible open={open} onOpenChange={setOpen}>
+          <CollapsibleTrigger className="hover-hatch-cyan flex w-full items-center gap-2 text-left">
+            <span className="text-[10px] font-medium uppercase text-muted-foreground">
+              Structured Output
+            </span>
+            <ChevronIcon open={open} />
+          </CollapsibleTrigger>
+          <CollapsibleContent className="animate-collapsible mt-1">
+            <LabeledList data={data} />
+          </CollapsibleContent>
+        </Collapsible>
+      </RawJsonToggle>
     </div>
   );
 }
@@ -778,6 +806,12 @@ export function AgentCard({ group, depth = 0 }: { group: AgentGroup; depth?: num
                 </div>
               </div>
             )}
+
+            {/* Agent structured output */}
+            {agentEnd?.data.structuredOutput &&
+              Object.keys(agentEnd.data.structuredOutput).length > 0 && (
+                <StructuredOutputSection data={agentEnd.data.structuredOutput} />
+              )}
           </div>
         </CollapsibleContent>
       </Collapsible>
