@@ -656,21 +656,22 @@ export function AgentCard({ group, depth = 0 }: { group: AgentGroup; depth?: num
   const role = getAgentRole(agentStart.data.agentName);
   const isComplete = !!agentEnd && !isActive;
   const duckSrc = isComplete ? '/lex-happy.png' : '/lex-thinking.png';
-  const duckSize = open ? 56 : 24;
+  const duckSize = open ? 44 : 20;
 
   return (
     <div className={`relative ${indentClass}`} style={{ overflow: 'visible' }}>
-      {/* Duck mascot — absolute positioned, overflows top-left */}
+      {/* Duck mascot — absolute positioned, overflows top-left when expanded */}
       <div
         className="animate-duck-pop-in absolute z-10"
         style={{
-          top: open ? '-16px' : '-4px',
-          left: '-8px',
-          transition: 'top 200ms ease, width 200ms ease, height 200ms ease',
+          top: open ? '-10px' : '4px',
+          left: open ? '-12px' : '8px',
+          transition: 'top 200ms ease, left 200ms ease',
         }}
       >
+        {/* Animation wrapper — bob/pop applied here so tint overlay moves in sync */}
         <div
-          className="relative"
+          className={`relative ${isActive ? 'animate-duck-bob' : ''} ${isComplete ? 'animate-duck-complete-pop' : ''}`}
           style={{
             width: duckSize,
             height: duckSize,
@@ -682,15 +683,21 @@ export function AgentCard({ group, depth = 0 }: { group: AgentGroup; depth?: num
             alt=""
             width={duckSize}
             height={duckSize}
-            className={`${isActive ? 'animate-duck-bob' : ''} ${isComplete ? 'animate-duck-complete-pop' : ''}`}
             style={{
               width: duckSize,
               height: duckSize,
               transition: 'width 200ms ease, height 200ms ease',
             }}
           />
-          {/* Color tint overlay */}
-          <div className="duck-tint" style={{ backgroundColor: role.color }} />
+          {/* Color tint overlay — masked to duck silhouette */}
+          <div
+            className="duck-tint"
+            style={{
+              backgroundColor: role.color,
+              maskImage: `url(${duckSrc})`,
+              WebkitMaskImage: `url(${duckSrc})`,
+            }}
+          />
         </div>
       </div>
 
@@ -698,7 +705,7 @@ export function AgentCard({ group, depth = 0 }: { group: AgentGroup; depth?: num
         <CollapsibleTrigger
           className={`hover-hatch-cyan animate-fade-in border-l-2 ${role.borderClass} flex w-full items-center justify-between border border-border-subtle bg-surface-2 text-left text-xs`}
           style={{
-            paddingLeft: open ? '48px' : '32px',
+            paddingLeft: open ? '36px' : '32px',
             paddingRight: '12px',
             paddingTop: '6px',
             paddingBottom: '6px',
