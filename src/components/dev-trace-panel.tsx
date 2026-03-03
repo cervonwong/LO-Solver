@@ -282,7 +282,7 @@ function EventList({
 
 function EmptyState() {
   return (
-    <div className="absolute inset-0 flex flex-col items-center justify-center text-center opacity-50">
+    <div className="flex h-full flex-col items-center justify-center text-center opacity-50">
       <p className="text-sm text-muted-foreground">Enter a problem on the left for Lex to solve!</p>
     </div>
   );
