@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: UI Polish
 status: unknown
-last_updated: "2026-03-03T01:21:26Z"
+last_updated: "2026-03-03T08:56:48Z"
 progress:
   total_phases: 4
   completed_phases: 4
@@ -25,7 +25,7 @@ See: .planning/PROJECT.md (updated 2026-03-02)
 Phase: 13 of 13 (3-Column Layout)
 Plan: 1 of 1 complete
 Status: Phase 13 complete, v1.1 milestone complete
-Last activity: 2026-03-03 - Completed quick task 18: Style resizable handles with blueprint X registration mark
+Last activity: 2026-03-03 - Completed quick task 19: Add OpenRouter credits display to nav bar
 
 Progress (v1.1): [██████████] 100%
 
@@ -97,9 +97,10 @@ None yet.
 | 15 | Redesign top bar with reduced height and bottom-border nav links | 2026-03-03 | 80fb39e | [15-redesign-top-bar-with-reduced-height-bot](./quick/15-redesign-top-bar-with-reduced-height-bot/) |
 | 17 | Remove default frosted layer from vocabulary and rules panels | 2026-03-03 | 0d20192 | [17-remove-default-frosted-layer-from-vocabu](./quick/17-remove-default-frosted-layer-from-vocabu/) |
 | 18 | Style resizable handles with blueprint X registration mark | 2026-03-03 | 7a0b8d6 | [18-style-resizable-handles-with-blueprint-x](./quick/18-style-resizable-handles-with-blueprint-x/) |
+| 19 | Add OpenRouter credits display to nav bar | 2026-03-03 | cae2765 | [19-add-openrouter-credits-display-to-nav-ba](./quick/19-add-openrouter-credits-display-to-nav-ba/) |
 
 ## Session Continuity
 
 Last session: 2026-03-03
-Stopped at: Completed quick task 18: Style resizable handles with blueprint X registration mark
+Stopped at: Completed quick task 19: Add OpenRouter credits display to nav bar
 Resume file: None
