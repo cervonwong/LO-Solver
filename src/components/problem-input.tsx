@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Check, ChevronsUpDown } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -78,24 +78,67 @@ export function ProblemInput({
   const groupOrder = ['uklo', 'onling', 'iol'];
 
   const isDisabled = disabled || loading;
+  const hasContent = !!problemText.trim();
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-muted-foreground">Load example:</span>
+      <div className="relative">
+        <Textarea
+          value={problemText}
+          onChange={(e) => {
+            setProblemText(e.target.value);
+            onTextChange?.(!!e.target.value.trim());
+          }}
+          className="min-h-[200px] resize-y border-border bg-surface-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-accent focus:shadow-[0_0_8px_rgba(0,255,255,0.2)]"
+          disabled={isDisabled}
+        />
+
+        {/* Empty state overlay */}
+        {!hasContent && !loading && (
+          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+            <p className="text-sm text-muted-foreground">
+              Paste a linguistics olympiad problem here
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">or</p>
+            <button
+              type="button"
+              onClick={() => setComboOpen(true)}
+              disabled={isDisabled}
+              className="pointer-events-auto mt-2 border border-border bg-surface-2 px-3 py-1.5 text-xs uppercase tracking-wider text-muted-foreground hover-hatch-cyan"
+            >
+              Choose from our examples
+            </button>
+          </div>
+        )}
+
+        {/* Clear button when textarea has content */}
+        {hasContent && !isDisabled && (
+          <button
+            type="button"
+            title="Clear input"
+            onClick={() => {
+              setProblemText('');
+              setSelectedExample('');
+              onTextChange?.(false);
+            }}
+            className="absolute right-2 top-2 z-10 border border-transparent p-1 text-muted-foreground hover:border-border hover-hatch-cyan"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              height="18"
+              viewBox="0 -960 960 960"
+              width="18"
+              fill="currentColor"
+            >
+              <path d="M312.31-140q-29.92 0-51.12-21.19Q240-182.39 240-212.31V-720h-40v-40h160v-30.77h240V-760h160v40h-40v507.69q0 30.31-21 51.31T647.69-140H312.31ZM680-720H280v507.69q0 14.54 9.23 23.77 9.23 9.23 23.08 9.23h335.38q12.31 0 22.31-10t10-22.69V-720ZM376.16-280h40v-360h-40v360Zm167.68 0h40v-360h-40v360ZM280-720v540-540Z" />
+            </svg>
+          </button>
+        )}
+
+        {/* Invisible popover anchor positioned center of textarea */}
         <Popover open={comboOpen} onOpenChange={setComboOpen}>
           <PopoverTrigger asChild>
-            <button
-              role="combobox"
-              aria-expanded={comboOpen}
-              disabled={isDisabled}
-              className="hover-hatch-cyan flex h-8 items-center justify-between gap-1 border border-border bg-surface-2 px-2 text-xs text-foreground disabled:opacity-50"
-            >
-              {selectedExample
-                ? examples.find((ex) => ex.id === selectedExample)?.label ?? 'Select...'
-                : 'Select a problem...'}
-              <ChevronsUpDown className="h-3 w-3 shrink-0 opacity-50" />
-            </button>
+            <span className="absolute left-1/2 top-1/2" />
           </PopoverTrigger>
           <PopoverContent className="frosted w-[300px] border border-border p-0">
             <Command>
@@ -128,19 +171,7 @@ export function ProblemInput({
             </Command>
           </PopoverContent>
         </Popover>
-      </div>
 
-      <div className="relative">
-        <Textarea
-          value={problemText}
-          onChange={(e) => {
-            setProblemText(e.target.value);
-            onTextChange?.(!!e.target.value.trim());
-          }}
-          placeholder="Paste a linguistics problem here..."
-          className="min-h-[200px] resize-y border-border bg-surface-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-accent focus:shadow-[0_0_8px_rgba(0,255,255,0.2)]"
-          disabled={isDisabled}
-        />
         {/* Plotter loading overlay */}
         {loading && (
           <div className="absolute inset-0 flex items-center justify-center border border-border bg-background/80">
