@@ -50,7 +50,9 @@ The ONE thing that must work: **the agentic workflow must produce measurably bet
 
 ### Active
 
-(None — planning next milestone)
+- [ ] Abort button propagates cancellation to in-flight agent calls
+- [ ] Large source files audited and split into focused modules
+- [ ] Workflow lifecycle toast notifications (start, complete, abort, cost warnings)
 
 ### Out of Scope
 
@@ -59,6 +61,15 @@ The ONE thing that must work: **the agentic workflow must produce measurably bet
 - Multi-user support / authentication — single-user dev tool
 - Deployment / hosting — development-only for now
 - Real-time collaboration features
+
+## Current Milestone: v1.2 Cleanup & Quality
+
+**Goal:** Tighten what's already built — better abort behavior, cleaner codebase, better user feedback.
+
+**Target features:**
+- Abort propagation to in-flight agents (stop wasting API credits)
+- Large file audit and refactoring (split oversized modules)
+- Sonner toast notifications for workflow lifecycle events
 
 ## Problem Statement
 
@@ -112,4 +123,4 @@ When working on any phase that touches Mastra code (agents, workflows, tools, ev
 
 ---
 
-*Last updated: 2026-03-03 after v1.1 milestone*
+*Last updated: 2026-03-03 after v1.2 milestone start*
