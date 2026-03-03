@@ -98,7 +98,7 @@ Phases execute in numeric order: 8 -> 9 -> 10 -> 11
 | 10. Structured Data Formatting | v1.1 | 0/? | Not started | - |
 | 11. Agent Duck Mascots | v1.1 | 0/? | Not started | - |
 | 12. Workflow Control Buttons | v1.1 | 2/2 | Complete | 2026-03-02 |
-| 13. 3-Column Layout | v1.1 | 1/1 | Complete | 2026-03-03 |
+| 13. 3-Column Layout | v1.1 | Complete    | 2026-03-03 | 2026-03-03 |
 
 _v1.0: 7 phases, 16 plans. All complete._
 _v1.1: 6 phases, 6 plans complete. Phases 10, 11 not started._
