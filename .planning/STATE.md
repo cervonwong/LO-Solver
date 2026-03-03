@@ -25,7 +25,7 @@ See: .planning/PROJECT.md (updated 2026-03-02)
 Phase: 13 of 13 (3-Column Layout)
 Plan: 1 of 1 complete
 Status: Phase 13 complete, v1.1 milestone complete
-Last activity: 2026-03-03 - Completed quick task 22: Move Eval Results nav link to left side of nav bar
+Last activity: 2026-03-03 - Completed quick task 21: Combined problem input with overlay empty state and clear button
 
 Progress (v1.1): [██████████] 100%
 
@@ -100,9 +100,10 @@ None yet.
 | 19 | Add OpenRouter credits display to nav bar | 2026-03-03 | cae2765 | [19-add-openrouter-credits-display-to-nav-ba](./quick/19-add-openrouter-credits-display-to-nav-ba/) |
 | 20 | Make dev trace header sticky and reduce font sizes | 2026-03-03 | 0fd3f16 | [20-make-dev-trace-header-sticky-and-reduce-](./quick/20-make-dev-trace-header-sticky-and-reduce-/) |
 | 22 | Move Eval Results nav link to left side of nav bar | 2026-03-03 | 3b718f4 | [22-move-eval-results-nav-link-to-left-side-](./quick/22-move-eval-results-nav-link-to-left-side-/) |
+| 21 | Combined problem input with overlay empty state and clear button | 2026-03-03 | 1470ab6 | [21-combined-problem-input-with-embedded-exa](./quick/21-combined-problem-input-with-embedded-exa/) |
 
 ## Session Continuity
 
 Last session: 2026-03-03
-Stopped at: Completed quick task 22: Move Eval Results nav link to left side of nav bar
+Stopped at: Completed quick task 21: Combined problem input with overlay empty state and clear button
 Resume file: None
