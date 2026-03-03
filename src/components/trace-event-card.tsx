@@ -7,6 +7,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import type { WorkflowTraceEvent, ToolCallEvent } from '@/lib/workflow-events';
 import { formatDuration, getAgentSummary } from '@/lib/trace-utils';
 import type { ToolCallGroup, AgentGroup } from '@/lib/trace-utils';
+import { getAgentRole } from '@/lib/agent-roles';
 import { Streamdown } from 'streamdown';
 import { code } from '@streamdown/code';
 
@@ -651,86 +652,126 @@ export function AgentCard({ group, depth = 0 }: { group: AgentGroup; depth?: num
 
   const indentClass = getIndentClass(depth);
 
+  // Role-based duck mascot
+  const role = getAgentRole(agentStart.data.agentName);
+  const isComplete = !!agentEnd && !isActive;
+  const duckSrc = isComplete ? '/lex-happy.png' : '/lex-thinking.png';
+  const duckSize = open ? 56 : 24;
+
   return (
-    <Collapsible open={open} onOpenChange={setOpen}>
-      <CollapsibleTrigger
-        className={`hover-hatch-cyan animate-fade-in border-l-2 border-l-trace-agent flex w-full items-center justify-between border border-border-subtle bg-surface-2 px-3 py-1.5 text-left text-xs ${indentClass}`}
+    <div className={`relative ${indentClass}`} style={{ overflow: 'visible' }}>
+      {/* Duck mascot — absolute positioned, overflows top-left */}
+      <div
+        className="animate-duck-pop-in absolute z-10"
+        style={{
+          top: open ? '-16px' : '-4px',
+          left: '-8px',
+          transition: 'top 200ms ease, width 200ms ease, height 200ms ease',
+        }}
       >
-        <span className="flex items-center gap-2 min-w-0">
-          <Image src="/lex-mascot.png" alt="" width={16} height={16} className="shrink-0" />
-          <span className="font-medium truncate">{agentStart.data.agentName}</span>
-          <span className="text-muted-foreground shrink-0">({agentStart.data.model})</span>
-          {isActive && (
-            <Image
-              src="/lex-mascot.png"
-              alt=""
-              width={12}
-              height={12}
-              className="animate-spin-duck shrink-0"
-            />
-          )}
-          {agentEnd && !isActive && (
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              height="14"
-              viewBox="0 -960 960 960"
-              width="14"
-              fill="currentColor"
-              className="shrink-0 text-accent"
-            >
-              <path d="M382-267.69 183.23-466.46 211.77-495 382-324.77 748.23-691l28.54 28.54L382-267.69Z" />
-            </svg>
-          )}
-          {agentEnd && agentEnd.data.totalAttempts > 1 && (
-            <Badge variant="outline" className="text-[10px]">
-              Attempt {agentEnd.data.attempt}/{agentEnd.data.totalAttempts}
-            </Badge>
-          )}
-          {!open && displayToolCount > 0 && (
-            <Badge variant="outline" className="text-[10px] text-muted-foreground">
-              {displayToolCount} tool calls
-            </Badge>
-          )}
-          {!open && summary && (
-            <span className="text-[10px] text-muted-foreground truncate">{summary}</span>
-          )}
-        </span>
-        <span className="flex items-center gap-2 shrink-0">
-          {durationMs !== undefined && (
-            <span className="text-muted-foreground">{formatDuration(durationMs)}</span>
-          )}
-          <ChevronIcon open={open} />
-        </span>
-      </CollapsibleTrigger>
-      <CollapsibleContent
-        className={`animate-collapsible border-x border-b border-border-subtle bg-surface-2 ${indentClass}`}
-      >
-        <div className="flex flex-col gap-2 px-3 py-2">
-          {/* Task description */}
-          <div className="text-[11px] text-muted-foreground">
-            <span className="font-medium text-foreground">Task: </span>
-            {agentStart.data.task}
-          </div>
-
-          {/* Render children (interleaved tool calls, bulk groups, sub-agents) */}
-          {renderItems.map((item, i) => (
-            <RenderItem key={i} item={item} depth={depth} />
-          ))}
-
-          {/* Agent reasoning */}
-          {agentEnd?.data.reasoning && (
-            <div className="border-t border-border-subtle pt-2">
-              <span className="text-[10px] font-medium text-muted-foreground uppercase">
-                Reasoning
-              </span>
-              <div className="reasoning-compact mt-1">
-                <Streamdown className={TRACE_SD_CLASS} plugins={{ code }} controls={false}>{agentEnd.data.reasoning}</Streamdown>
-              </div>
-            </div>
-          )}
+        <div
+          className="relative"
+          style={{
+            width: duckSize,
+            height: duckSize,
+            transition: 'width 200ms ease, height 200ms ease',
+          }}
+        >
+          <Image
+            src={duckSrc}
+            alt=""
+            width={duckSize}
+            height={duckSize}
+            className={`${isActive ? 'animate-duck-bob' : ''} ${isComplete ? 'animate-duck-complete-pop' : ''}`}
+            style={{
+              width: duckSize,
+              height: duckSize,
+              transition: 'width 200ms ease, height 200ms ease',
+            }}
+          />
+          {/* Color tint overlay */}
+          <div className="duck-tint" style={{ backgroundColor: role.color }} />
         </div>
-      </CollapsibleContent>
-    </Collapsible>
+      </div>
+
+      <Collapsible open={open} onOpenChange={setOpen}>
+        <CollapsibleTrigger
+          className={`hover-hatch-cyan animate-fade-in border-l-2 ${role.borderClass} flex w-full items-center justify-between border border-border-subtle bg-surface-2 text-left text-xs`}
+          style={{
+            paddingLeft: open ? '48px' : '32px',
+            paddingRight: '12px',
+            paddingTop: '6px',
+            paddingBottom: '6px',
+            transition: 'padding-left 200ms ease',
+          }}
+        >
+          <span className="flex items-center gap-2 min-w-0">
+            <span className="font-medium truncate">{agentStart.data.agentName}</span>
+            <span className="text-muted-foreground shrink-0">({agentStart.data.model})</span>
+            {isActive && <span className="animate-blink text-accent text-[10px]">●</span>}
+            {isComplete && (
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                height="14"
+                viewBox="0 -960 960 960"
+                width="14"
+                fill="currentColor"
+                className="shrink-0 text-accent"
+              >
+                <path d="M382-267.69 183.23-466.46 211.77-495 382-324.77 748.23-691l28.54 28.54L382-267.69Z" />
+              </svg>
+            )}
+            {agentEnd && agentEnd.data.totalAttempts > 1 && (
+              <Badge variant="outline" className="text-[10px]">
+                Attempt {agentEnd.data.attempt}/{agentEnd.data.totalAttempts}
+              </Badge>
+            )}
+            {!open && displayToolCount > 0 && (
+              <Badge variant="outline" className="text-[10px] text-muted-foreground">
+                {displayToolCount} tool calls
+              </Badge>
+            )}
+            {!open && summary && (
+              <span className="text-[10px] text-muted-foreground truncate">{summary}</span>
+            )}
+          </span>
+          <span className="flex items-center gap-2 shrink-0">
+            {durationMs !== undefined && (
+              <span className="text-muted-foreground">{formatDuration(durationMs)}</span>
+            )}
+            <ChevronIcon open={open} />
+          </span>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="animate-collapsible border-x border-b border-border-subtle bg-surface-2">
+          <div className="flex flex-col gap-2 px-3 py-2">
+            {/* Task description */}
+            <div className="text-[11px] text-muted-foreground">
+              <span className="font-medium text-foreground">Task: </span>
+              {agentStart.data.task}
+            </div>
+
+            {/* Render children (interleaved tool calls, bulk groups, sub-agents) */}
+            {renderItems.map((item, i) => (
+              <RenderItem key={i} item={item} depth={depth} />
+            ))}
+
+            {/* Agent reasoning */}
+            {agentEnd?.data.reasoning && (
+              <div className="border-t border-border-subtle pt-2">
+                <span className="text-[10px] font-medium text-muted-foreground uppercase">
+                  Reasoning
+                </span>
+                <div className="reasoning-compact mt-1">
+                  <Streamdown className={TRACE_SD_CLASS} plugins={{ code }} controls={false}>
+                    {agentEnd.data.reasoning}
+                  </Streamdown>
+                </div>
+              </div>
+            )}
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+    </div>
   );
 }
 
