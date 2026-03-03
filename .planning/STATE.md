@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Cleanup & Quality
-status: defining_requirements
+status: ready_to_plan
 last_updated: "2026-03-03"
 progress:
-  total_phases: 0
+  total_phases: 3
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -18,14 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-03)
 
 **Core value:** The agentic workflow must produce measurably better results than zero-shotting the same LLMs without orchestration.
-**Current focus:** v1.2 Cleanup & Quality — abort propagation, file refactoring, toast notifications.
+**Current focus:** v1.2 Phase 14 — Abort Propagation
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 14 of 16 (Abort Propagation) — first of 3 phases in v1.2
 Plan: —
-Status: Defining requirements
-Last activity: 2026-03-03 — Milestone v1.2 started
+Status: Ready to plan
+Last activity: 2026-03-03 — Roadmap created for v1.2
+
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
@@ -37,7 +39,19 @@ Last activity: 2026-03-03 — Milestone v1.2 started
 - Total plans completed: 9
 - Total execution time: ~74min
 
+**v1.2:**
+- Total plans completed: 0
+- Plans defined: TBD (pending phase planning)
+
 ## Accumulated Context
+
+### Decisions
+
+Decisions are logged in PROJECT.md Key Decisions table.
+Recent decisions affecting current work:
+
+- [v1.2 roadmap]: Build order is abort -> refactor -> toasts (research-confirmed; avoids merge conflicts on shared files)
+- [v1.2 roadmap]: `req.signal` reliability must be tested early in Phase 14; cancel endpoint fallback may or may not be needed
 
 ### Pending Todos
 
@@ -54,5 +68,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-03
-Stopped at: Milestone v1.2 initialization
+Stopped at: v1.2 roadmap created, Phase 14 ready to plan
 Resume file: None

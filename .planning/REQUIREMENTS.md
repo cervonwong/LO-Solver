@@ -59,27 +59,27 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ABORT-01 | — | Pending |
-| ABORT-02 | — | Pending |
-| ABORT-03 | — | Pending |
-| ABORT-04 | — | Pending |
-| REFAC-01 | — | Pending |
-| REFAC-02 | — | Pending |
-| REFAC-03 | — | Pending |
-| REFAC-04 | — | Pending |
-| TOAST-01 | — | Pending |
-| TOAST-02 | — | Pending |
-| TOAST-03 | — | Pending |
-| TOAST-04 | — | Pending |
-| TOAST-05 | — | Pending |
-| TOAST-06 | — | Pending |
-| TOAST-07 | — | Pending |
+| ABORT-01 | Phase 14 | Pending |
+| ABORT-02 | Phase 14 | Pending |
+| ABORT-03 | Phase 14 | Pending |
+| ABORT-04 | Phase 14 | Pending |
+| REFAC-01 | Phase 15 | Pending |
+| REFAC-02 | Phase 15 | Pending |
+| REFAC-03 | Phase 15 | Pending |
+| REFAC-04 | Phase 15 | Pending |
+| TOAST-01 | Phase 16 | Pending |
+| TOAST-02 | Phase 16 | Pending |
+| TOAST-03 | Phase 16 | Pending |
+| TOAST-04 | Phase 16 | Pending |
+| TOAST-05 | Phase 16 | Pending |
+| TOAST-06 | Phase 16 | Pending |
+| TOAST-07 | Phase 16 | Pending |
 
 **Coverage:**
 - v1.2 requirements: 15 total
-- Mapped to phases: 0
-- Unmapped: 15 (pending roadmap creation)
+- Mapped to phases: 15
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-03*
-*Last updated: 2026-03-03 after initial definition*
+*Last updated: 2026-03-03 after roadmap creation*
