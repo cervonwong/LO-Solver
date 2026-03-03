@@ -629,7 +629,7 @@ function SolverPageInner() {
   }, [isLargeScreen]);
 
   return (
-    <div className={isTransitioning ? 'panel-transition h-full' : 'h-full'}>
+    <div className={isTransitioning ? 'panel-transition h-full border-t border-border' : 'h-full border-t border-border'}>
       <ResizablePanelGroup orientation="horizontal" className="h-full" groupRef={groupRef}>
         {/* Left panel: Input + Results */}
         <ResizablePanel
