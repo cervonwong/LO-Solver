@@ -14,37 +14,38 @@ function NavBar() {
 
   return (
     <nav className="frosted flex shrink-0 items-center justify-between border border-border px-6 py-1.5">
-      {pathname === '/' ? (
-        <span className="stamp-btn-nav-underline">
+      <div className="flex items-center gap-4">
+        {pathname === '/' ? (
+          <span className="stamp-btn-nav-underline">
+            <svg xmlns="http://www.w3.org/2000/svg" height="14" viewBox="0 -960 960 960" width="14" fill="currentColor" className="inline-block">
+              <path d="M160-240v-480h640v480H160Zm237.62-260H760v-180H397.62v180Zm200.92 220H760v-180H598.54v180Zm-200.92 0h160.92v-180H397.62v180ZM200-280h157.62v-400H200v400Z"/>
+            </svg>
+            {"Lex's Dashboard"}
+          </span>
+        ) : (
+          <Link href="/" className="stamp-btn-nav-underline">
+            <svg xmlns="http://www.w3.org/2000/svg" height="14" viewBox="0 -960 960 960" width="14" fill="currentColor" className="inline-block">
+              <path d="M160-240v-480h640v480H160Zm237.62-260H760v-180H397.62v180Zm200.92 220H760v-180H598.54v180Zm-200.92 0h160.92v-180H397.62v180ZM200-280h157.62v-400H200v400Z"/>
+            </svg>
+            {"Lex's Dashboard"}
+          </Link>
+        )}
+        <Link
+          href="/evals"
+          className={`stamp-btn-nav-underline${isRunning ? ' opacity-50 pointer-events-none' : ''}`}
+          aria-disabled={isRunning || undefined}
+          tabIndex={isRunning ? -1 : undefined}
+        >
+          Eval Results
           <svg xmlns="http://www.w3.org/2000/svg" height="14" viewBox="0 -960 960 960" width="14" fill="currentColor" className="inline-block">
-            <path d="M160-240v-480h640v480H160Zm237.62-260H760v-180H397.62v180Zm200.92 220H760v-180H598.54v180Zm-200.92 0h160.92v-180H397.62v180ZM200-280h157.62v-400H200v400Z"/>
+            <path d="M683.15-460H200v-40h483.15L451.46-731.69 480-760l280 280-280 280-28.54-28.31L683.15-460Z"/>
           </svg>
-          {"Lex's Dashboard"}
-        </span>
-      ) : (
-        <Link href="/" className="stamp-btn-nav-underline">
-          <svg xmlns="http://www.w3.org/2000/svg" height="14" viewBox="0 -960 960 960" width="14" fill="currentColor" className="inline-block">
-            <path d="M160-240v-480h640v480H160Zm237.62-260H760v-180H397.62v180Zm200.92 220H760v-180H598.54v180Zm-200.92 0h160.92v-180H397.62v180ZM200-280h157.62v-400H200v400Z"/>
-          </svg>
-          {"Lex's Dashboard"}
         </Link>
-      )}
+      </div>
       <div className="flex items-center gap-4">
         <div
           className={`flex items-center gap-4${isRunning ? ' opacity-50 pointer-events-none' : ''}`}
         >
-          <Link
-            href="/evals"
-            className="stamp-btn-nav-underline"
-            aria-disabled={isRunning || undefined}
-            tabIndex={isRunning ? -1 : undefined}
-          >
-            Eval Results
-            <svg xmlns="http://www.w3.org/2000/svg" height="14" viewBox="0 -960 960 960" width="14" fill="currentColor" className="inline-block">
-              <path d="M683.15-460H200v-40h483.15L451.46-731.69 480-760l280 280-280 280-28.54-28.31L683.15-460Z"/>
-            </svg>
-          </Link>
-          <div className="h-5 w-px bg-border" />
           <WorkflowSliders disabled={isRunning} />
           <div className="h-5 w-px bg-border" />
           <ModelModeToggle disabled={isRunning} />
