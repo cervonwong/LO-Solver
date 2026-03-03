@@ -393,6 +393,29 @@
   transform: none;
 }
 
+/* Stamp button (nav underline — bottom-border-only nav links) */
+.stamp-btn-nav-underline {
+  font-family: var(--font-heading);
+  background: transparent;
+  color: var(--foreground);
+  border: none;
+  border-bottom: 2px solid var(--foreground);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  cursor: pointer;
+  padding: 4px 8px 3px;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.stamp-btn-nav-underline:hover {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+  text-shadow: 0 0 8px rgba(0, 255, 255, 0.4);
+}
+
 /* Stamp button (secondary white — large, used outside nav) */
 .stamp-btn-secondary {
   font-family: var(--font-heading);
