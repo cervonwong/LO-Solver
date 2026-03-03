@@ -701,6 +701,11 @@
   border-color: rgba(0, 255, 255, 0.15);
 }
 
+/* Animated panel resize transition — applied during workflow-start layout shift */
+.panel-transition [data-panel] {
+  transition: flex-grow 600ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 /* Collapsible animation using grid-rows technique */
 [data-state='open'].animate-collapsible {
   display: grid;
