@@ -21,7 +21,7 @@ Requirements for UI Polish milestone. Each maps to roadmap phases.
 
 - [x] **FMT-01**: Tool input JSON renders as a labeled list with key-value formatting
 - [x] **FMT-02**: Tool output JSON renders as a labeled list with key-value formatting
-- [ ] **FMT-03**: Agent structured output renders as a labeled list with key-value formatting
+- [x] **FMT-03**: Agent structured output renders as a labeled list with key-value formatting
 - [x] **FMT-04**: Each formatted display retains the `{...}` toggle to view original raw JSON
 
 ### Agent Mascots
@@ -69,7 +69,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | STYLE-02 | Phase 9 | Complete |
 | FMT-01 | Phase 10 | Complete |
 | FMT-02 | Phase 10 | Complete |
-| FMT-03 | Phase 10 | Pending |
+| FMT-03 | Phase 10 | Complete |
 | FMT-04 | Phase 10 | Complete |
 | DUCK-01 | Phase 11 | Pending |
 | DUCK-02 | Phase 11 | Pending |
