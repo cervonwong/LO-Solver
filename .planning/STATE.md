@@ -25,7 +25,7 @@ See: .planning/PROJECT.md (updated 2026-03-02)
 Phase: 13 of 13 (3-Column Layout)
 Plan: 1 of 1 complete
 Status: Phase 13 complete, v1.1 milestone complete
-Last activity: 2026-03-03 - Completed quick task 13: Add aborted state to duck mascot speech context with neutral duck and unique text
+Last activity: 2026-03-03 - Completed quick task 15: Redesign top bar with reduced height and bottom-border nav links
 
 Progress (v1.1): [██████████] 100%
 
@@ -92,9 +92,10 @@ None yet.
 | 11 | Fix hover-hatch CSS: use background-image, remove base background override | 2026-03-02 | bca4696 | [11-fix-hover-hatch-css-remove-base-backgrou](./quick/11-fix-hover-hatch-css-remove-base-backgrou/) |
 | 12 | Simplify hover-hatch to hatching-only, add composable hover-hatch-border | 2026-03-02 | 9f66f82 | [12-simplify-hover-hatch-to-hatching-only-ad](./quick/12-simplify-hover-hatch-to-hatching-only-ad/) |
 | 13 | Add aborted state to duck mascot speech | 2026-03-03 | 587313d | [13-add-aborted-state-to-duck-mascot-speech-](./quick/13-add-aborted-state-to-duck-mascot-speech-/) |
+| 15 | Redesign top bar with reduced height and bottom-border nav links | 2026-03-03 | 80fb39e | [15-redesign-top-bar-with-reduced-height-bot](./quick/15-redesign-top-bar-with-reduced-height-bot/) |
 
 ## Session Continuity
 
 Last session: 2026-03-03
-Stopped at: Completed quick task 13: Add aborted state to duck mascot speech
+Stopped at: Completed quick task 15: Redesign top bar with reduced height and bottom-border nav links
 Resume file: None
