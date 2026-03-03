@@ -614,6 +614,32 @@
   animation: plotter-draw 1s ease-out forwards;
 }
 
+/* Skeleton loading — looping blueprint box-drawing */
+@keyframes skeleton-border {
+  0% { stroke-dashoffset: var(--dash-length); opacity: 1; }
+  25% { stroke-dashoffset: 0; opacity: 1; }
+  75% { stroke-dashoffset: 0; opacity: 1; }
+  90% { opacity: 0; }
+  100% { stroke-dashoffset: var(--dash-length); opacity: 0; }
+}
+
+@keyframes skeleton-hatch {
+  0% { stroke-dashoffset: var(--dash-length); opacity: 0; }
+  20% { stroke-dashoffset: var(--dash-length); opacity: 0; }
+  45% { stroke-dashoffset: 0; opacity: 1; }
+  75% { stroke-dashoffset: 0; opacity: 1; }
+  90% { opacity: 0; }
+  100% { stroke-dashoffset: var(--dash-length); opacity: 0; }
+}
+
+.animate-skeleton-border {
+  animation: skeleton-border 3.2s ease-in-out infinite;
+}
+
+.animate-skeleton-hatch {
+  animation: skeleton-hatch 3.2s ease-in-out infinite;
+}
+
 @keyframes spin-slow {
   from {
     transform: rotate(0deg);
