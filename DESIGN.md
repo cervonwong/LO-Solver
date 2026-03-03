@@ -109,6 +109,14 @@ Color mappings: START=`status-active`, DONE=`foreground`, AGENT=`trace-agent`, T
 - Active tab: `border-b-2 border-accent`
 - Pending connector: `border-t border-dashed border-border-subtle`
 
+### Panel Headers
+
+Panel headers use the `.panel-heading` class with a "title block" double-line bottom border (architectural drawing style):
+
+- **Thin line** (1px) + **3px gap** + **thick line** (2px), both in `--border` color
+- Implemented via `::after` pseudo-element (no Tailwind border classes needed)
+- Do NOT add `border-b border-border` to elements using `.panel-heading` -- the border is built into the class
+
 ### Surfaces
 
 Nest surfaces to create depth:
