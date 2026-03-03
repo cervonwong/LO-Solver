@@ -98,7 +98,7 @@ None yet.
 | 17 | Remove default frosted layer from vocabulary and rules panels | 2026-03-03 | 0d20192 | [17-remove-default-frosted-layer-from-vocabu](./quick/17-remove-default-frosted-layer-from-vocabu/) |
 | 18 | Style resizable handles with blueprint X registration mark | 2026-03-03 | 7a0b8d6 | [18-style-resizable-handles-with-blueprint-x](./quick/18-style-resizable-handles-with-blueprint-x/) |
 | 19 | Add OpenRouter credits display to nav bar | 2026-03-03 | cae2765 | [19-add-openrouter-credits-display-to-nav-ba](./quick/19-add-openrouter-credits-display-to-nav-ba/) |
-| 20 | Make dev trace header sticky and reduce font sizes | 2026-03-03 | 145b981 | [20-make-dev-trace-header-sticky-and-reduce-](./quick/20-make-dev-trace-header-sticky-and-reduce-/) |
+| 20 | Make dev trace header sticky and reduce font sizes | 2026-03-03 | 0fd3f16 | [20-make-dev-trace-header-sticky-and-reduce-](./quick/20-make-dev-trace-header-sticky-and-reduce-/) |
 
 ## Session Continuity
 
