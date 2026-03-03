@@ -74,8 +74,8 @@ export function VocabularyPanel({ vocabulary, activityEvents, isRunning }: Vocab
             <TableBody>
               {vocabulary.map((entry) => (
                 <TableRow key={entry.foreignForm} className="animate-slide-in-row">
-                  <TableCell className="text-sm">{entry.foreignForm}</TableCell>
-                  <TableCell className="text-sm">{entry.meaning}</TableCell>
+                  <TableCell className="text-xs">{entry.foreignForm}</TableCell>
+                  <TableCell className="text-xs">{entry.meaning}</TableCell>
                   <TableCell className="text-xs text-muted-foreground">
                     {entry.type ?? '\u2014'}
                   </TableCell>

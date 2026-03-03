@@ -158,7 +158,7 @@ export function RulesPanel({ rules, activityEvents, isRunning }: RulesPanelProps
                     <TableCell className="align-top text-xs text-muted-foreground">
                       {index + 1}
                     </TableCell>
-                    <TableCell className="align-top text-sm">
+                    <TableCell className="align-top text-xs">
                       <div className="flex items-center gap-1.5">
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
