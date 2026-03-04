@@ -37,7 +37,7 @@
 
 **Milestone Goal:** Tighten what's already built — better abort behavior, cleaner codebase, better user feedback.
 
-- [ ] **Phase 14: Abort Propagation** - Abort button stops in-flight LLM calls and preserves correct workflow status
+- [x] **Phase 14: Abort Propagation** - Abort button stops in-flight LLM calls and preserves correct workflow status
 - [ ] **Phase 15: File Refactoring** - Split oversized modules into focused files with no behavior changes
 - [ ] **Phase 16: Toast Notifications** - Sonner toasts for workflow lifecycle events
 
@@ -53,8 +53,8 @@
   3. User can abort during the verify/improve loop and the next iteration does not start
   4. Abort works reliably even if the browser-to-server signal is unreliable (cancel endpoint fallback)
 **Plans**: 2 plans
-- [ ] 14-01-PLAN.md — Backend abort infrastructure: cancel endpoint, signal threading, iteration boundary checks
-- [ ] 14-02-PLAN.md — Frontend abort UX: confirmation dialog, aborting state, visual feedback
+- [x] 14-01-PLAN.md — Backend abort infrastructure: cancel endpoint, signal threading, iteration boundary checks
+- [x] 14-02-PLAN.md — Frontend abort UX: confirmation dialog, aborting state, visual feedback
 
 ### Phase 15: File Refactoring
 **Goal**: Oversized source files split into focused, single-responsibility modules with zero behavior changes
@@ -97,7 +97,7 @@
 | 11. Agent Duck Mascots | v1.1 | 1/1 | Complete | 2026-03-03 |
 | 12. Workflow Control Buttons | v1.1 | 2/2 | Complete | 2026-03-03 |
 | 13. 3-Column Layout | v1.1 | 1/1 | Complete | 2026-03-03 |
-| 14. Abort Propagation | 1/2 | In Progress|  | - |
+| 14. Abort Propagation | v1.2 | 2/2 | Complete | 2026-03-04 |
 | 15. File Refactoring | v1.2 | 0/? | Not started | - |
 | 16. Toast Notifications | v1.2 | 0/? | Not started | - |
 

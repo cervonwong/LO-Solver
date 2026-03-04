@@ -10,7 +10,7 @@ Requirements for v1.2 Cleanup & Quality. Each maps to roadmap phases.
 ### Abort Propagation
 
 - [x] **ABORT-01**: Workflow steps pass `abortSignal` from execute params to all `streamWithRetry`/`generateWithRetry` calls
-- [ ] **ABORT-02**: Aborted workflows display amber "aborted" state in UI, distinct from red "error/failed" state
+- [x] **ABORT-02**: Aborted workflows display amber "aborted" state in UI, distinct from red "error/failed" state
 - [x] **ABORT-03**: Fallback cancel endpoint (`POST /api/solve/cancel`) guarantees abort when `req.signal` is unreliable
 - [x] **ABORT-04**: Verify/improve loop checks `abortSignal.aborted` at iteration boundaries before starting next round
 
@@ -60,7 +60,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | ABORT-01 | Phase 14 | Complete |
-| ABORT-02 | Phase 14 | Pending |
+| ABORT-02 | Phase 14 | Complete |
 | ABORT-03 | Phase 14 | Complete |
 | ABORT-04 | Phase 14 | Complete |
 | REFAC-01 | Phase 15 | Pending |

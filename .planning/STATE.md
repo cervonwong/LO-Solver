@@ -6,9 +6,9 @@ status: executing
 last_updated: "2026-03-04"
 progress:
   total_phases: 3
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 1
+  completed_plans: 2
 ---
 
 # Project State
@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-03)
 
 **Core value:** The agentic workflow must produce measurably better results than zero-shotting the same LLMs without orchestration.
-**Current focus:** v1.2 Phase 14 — Abort Propagation
+**Current focus:** v1.2 Phase 15 — File Refactoring
 
 ## Current Position
 
-Phase: 14 of 16 (Abort Propagation) — first of 3 phases in v1.2
-Plan: 1 of 2 in Phase 14 (COMPLETE)
-Status: Executing
-Last activity: 2026-03-04 — Completed 14-01 (abort signal propagation)
+Phase: 14 of 16 (Abort Propagation) — COMPLETE (all 2 plans done)
+Plan: 2 of 2 in Phase 14 (COMPLETE)
+Status: Phase 14 complete, ready for Phase 15
+Last activity: 2026-03-04 — Completed 14-02 (frontend abort UX)
 
-Progress: [█████░░░░░] 50%
+Progress: [██████████] 100% (Phase 14)
 
 ## Performance Metrics
 
@@ -40,12 +40,13 @@ Progress: [█████░░░░░] 50%
 - Total execution time: ~74min
 
 **v1.2:**
-- Total plans completed: 1
+- Total plans completed: 2
 - Plans defined: 2 (Phase 14)
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
 | 14    | 01   | 7min     | 2     | 7     |
+| 14    | 02   | 38min    | 2     | 3     |
 
 ## Accumulated Context
 
@@ -58,6 +59,9 @@ Recent decisions affecting current work:
 - [v1.2 roadmap]: `req.signal` reliability must be tested early in Phase 14; cancel endpoint fallback may or may not be needed
 - [14-01]: Used `any` for Run type in activeRuns Map (avoids complex Mastra generic params; only used for cancel() calls)
 - [14-01]: Conditional spread pattern for abort signal in tools (exactOptionalPropertyTypes compatibility)
+- [14-02]: Replaced browser confirm() with shadcn AlertDialog for abort confirmation (user-requested during verification)
+- [14-02]: Used solid dark red background (bg-red-950) for abort dialog to match blueprint/cyanotype theme
+- [14-02]: isAborting state lives in page.tsx and syncs to context via useRegisterWorkflowControl
 
 ### Pending Todos
 
@@ -74,5 +78,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-04
-Stopped at: Completed 14-01-PLAN.md (abort signal propagation)
+Stopped at: Completed 14-02-PLAN.md (frontend abort UX) — Phase 14 complete
 Resume file: None
