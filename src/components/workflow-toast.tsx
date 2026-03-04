@@ -1,0 +1,88 @@
+'use client';
+
+import Image from 'next/image';
+import { toast } from 'sonner';
+
+interface WorkflowToastProps {
+  id: string | number;
+  title: string;
+  message: string;
+  accentColorClass: string;
+  mascotImage: string;
+}
+
+export function WorkflowToast({ id, title, message, accentColorClass, mascotImage }: WorkflowToastProps) {
+  return (
+    <div
+      onClick={() => toast.dismiss(id)}
+      className="flex cursor-pointer items-center gap-3 border border-border bg-[rgba(0,40,80,0.95)] p-3 backdrop-blur-sm"
+    >
+      <Image src={mascotImage} alt="" width={32} height={32} className="shrink-0" />
+      <div>
+        <p className={`font-heading text-xs uppercase tracking-wider ${accentColorClass}`}>{title}</p>
+        <p className="font-sans text-xs text-foreground">{message}</p>
+      </div>
+    </div>
+  );
+}
+
+export function showSolveStartToast() {
+  toast.custom(
+    (id) => (
+      <WorkflowToast
+        id={id}
+        title="SOLVING"
+        message="Quack-ulating... my finest duck brains are on it!"
+        accentColorClass="text-accent"
+        mascotImage="/lex-thinking.png"
+      />
+    ),
+    { id: 'solve-start' },
+  );
+}
+
+export function showSolveCompleteToast(ruleCount: number, translationCount: number) {
+  toast.custom(
+    (id) => (
+      <WorkflowToast
+        id={id}
+        title="COMPLETE"
+        message={`${ruleCount} rules validated, ${translationCount} translations`}
+        accentColorClass="text-foreground"
+        mascotImage="/lex-happy.png"
+      />
+    ),
+    { id: 'solve-complete' },
+  );
+}
+
+export function showSolveAbortedToast() {
+  toast.custom(
+    (id) => (
+      <WorkflowToast
+        id={id}
+        title="ABORTED"
+        message="Solve canceled — partial results preserved"
+        accentColorClass="text-foreground"
+        mascotImage="/lex-neutral.png"
+      />
+    ),
+    { id: 'solve-aborted' },
+  );
+}
+
+export function showSolveErrorToast(stepName?: string) {
+  const message = stepName ? `Failed at ${stepName}` : 'Something went wrong — check Mastra Studio';
+  toast.custom(
+    (id) => (
+      <WorkflowToast
+        id={id}
+        title="ERROR"
+        message={message}
+        accentColorClass="text-destructive"
+        mascotImage="/lex-defeated.png"
+      />
+    ),
+    { id: 'solve-error' },
+  );
+}

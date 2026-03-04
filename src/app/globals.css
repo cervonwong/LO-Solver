@@ -123,16 +123,13 @@
 }
 
 @layer base {
-  html {
-    scrollbar-gutter: stable;
-  }
   * {
     @apply border-border outline-ring/50;
   }
   body {
     @apply bg-background text-foreground;
     position: relative;
-    padding: 20px;
+    padding: 20px 20px 0;
     text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
   }
   body::before {
@@ -1058,4 +1055,19 @@
 
 .reasoning-compact [data-streamdown='code-block-body'] {
   max-height: 200px !important;
+}
+
+/* Sonner toast overrides for blueprint theme */
+[data-sonner-toaster] {
+  --normal-bg: transparent;
+  --normal-border: transparent;
+  --normal-text: inherit;
+  font-family: var(--font-sans);
+}
+[data-sonner-toast] {
+  --toast-close-button-start: auto;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
 }
