@@ -25,7 +25,7 @@ See: .planning/PROJECT.md (updated 2026-03-03)
 Phase: 15 of 16 (File Refactoring) — IN PROGRESS (2 of 3 plans done)
 Plan: 2 of 3 in Phase 15 (COMPLETE)
 Status: 15-02 complete, ready for 15-03
-Last activity: 2026-03-04 — Completed 15-02 (trace-event-card split)
+Last activity: 2026-03-04 - Completed quick task 1: Fix abort dialog background zoom glitch
 
 Progress: [██████----] 67% (Phase 15)
 
@@ -79,6 +79,12 @@ Recent decisions affecting current work:
 ### Blockers/Concerns
 
 None.
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 1 | Fix abort dialog background zoom glitch | 2026-03-04 | bfb512f | [1-fix-abort-dialog-background-zoom-glitch](./quick/1-fix-abort-dialog-background-zoom-glitch/) |
 
 ## Session Continuity
 
