@@ -152,7 +152,7 @@ function NavBar() {
       </div>
 
       <Dialog open={abortDialogOpen} onOpenChange={setAbortDialogOpen}>
-        <DialogContent showCloseButton={false} className="max-w-sm border-destructive">
+        <DialogContent showCloseButton={false} className="max-w-sm border-destructive bg-[#3d1a1a]">
           <DialogHeader>
             <DialogTitle className="font-heading uppercase tracking-wider text-destructive">
               Stop Current Solve?
