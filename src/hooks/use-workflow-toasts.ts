@@ -35,6 +35,7 @@ export function useWorkflowToasts({
     isComplete: false,
     isFailed: false,
     isAborted: false,
+    wasRunning: false,
   });
 
   const lastCostBucketRef = useRef(0);
@@ -61,12 +62,13 @@ export function useWorkflowToasts({
       showSolveErrorToast();
     }
 
-    // Aborted: was not aborted, now is
-    if (isAborted && !prev.isAborted) {
+    // Aborted: was not aborted, now is — only if workflow was previously running
+    // (prevents false abort toast on initial start when isRunning hasn't caught up yet)
+    if (isAborted && !prev.isAborted && prev.wasRunning) {
       showSolveAbortedToast();
     }
 
-    prevRef.current = { hasStarted, isComplete, isFailed, isAborted };
+    prevRef.current = { hasStarted, isComplete, isFailed, isAborted, wasRunning: isRunning };
   }, [hasStarted, isComplete, isFailed, isAborted, isRunning, finalRules, answerStepOutput]);
 
   // Watch for cost-update events and fire cost warning toasts

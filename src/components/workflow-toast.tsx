@@ -1,6 +1,7 @@
 'use client';
 
 import Image from 'next/image';
+import { XIcon } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface WorkflowToastProps {
@@ -13,15 +14,18 @@ interface WorkflowToastProps {
 
 export function WorkflowToast({ id, title, message, accentColorClass, mascotImage }: WorkflowToastProps) {
   return (
-    <div
-      onClick={() => toast.dismiss(id)}
-      className="flex cursor-pointer items-center gap-3 border border-border bg-[rgba(0,40,80,0.95)] p-3 backdrop-blur-sm"
-    >
+    <div className="blueprint-card flex items-center gap-3 bg-[rgba(0,40,80,0.95)] p-3">
       <Image src={mascotImage} alt="" width={32} height={32} className="shrink-0" />
-      <div>
+      <div className="min-w-0 flex-1">
         <p className={`font-heading text-xs uppercase tracking-wider ${accentColorClass}`}>{title}</p>
         <p className="font-sans text-xs text-foreground">{message}</p>
       </div>
+      <button
+        onClick={() => toast.dismiss(id)}
+        className="shrink-0 cursor-pointer text-muted-foreground opacity-60 transition-opacity hover:opacity-100"
+      >
+        <XIcon size={14} />
+      </button>
     </div>
   );
 }
