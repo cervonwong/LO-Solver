@@ -28,7 +28,7 @@ Requirements for v1.2 Cleanup & Quality. Each maps to roadmap phases.
 - [x] **TOAST-03**: Toast fires when workflow completes successfully with results
 - [x] **TOAST-04**: Toast fires when workflow is aborted by user
 - [x] **TOAST-05**: Toast fires when workflow encounters an error
-- [ ] **TOAST-06**: Toast fires when cumulative API cost crosses configurable thresholds during a run
+- [x] **TOAST-06**: Toast fires when cumulative API cost crosses configurable thresholds during a run
 - [x] **TOAST-07**: All toasts use stable IDs to prevent duplicates in React Strict Mode
 
 ## Future Requirements
@@ -72,7 +72,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TOAST-03 | Phase 16 | Complete |
 | TOAST-04 | Phase 16 | Complete |
 | TOAST-05 | Phase 16 | Complete |
-| TOAST-06 | Phase 16 | Pending |
+| TOAST-06 | Phase 16 | Complete |
 | TOAST-07 | Phase 16 | Complete |
 
 **Coverage:**

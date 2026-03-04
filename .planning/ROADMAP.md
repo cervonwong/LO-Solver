@@ -39,7 +39,7 @@
 
 - [x] **Phase 14: Abort Propagation** - Abort button stops in-flight LLM calls and preserves correct workflow status
 - [x] **Phase 15: File Refactoring** - Split oversized modules into focused files with no behavior changes (completed 2026-03-04)
-- [ ] **Phase 16: Toast Notifications** - Sonner toasts for workflow lifecycle events
+- [x] **Phase 16: Toast Notifications** - Sonner toasts for workflow lifecycle events (completed 2026-03-04)
 
 ## Phase Details
 
@@ -104,7 +104,7 @@
 | 13. 3-Column Layout | v1.1 | 1/1 | Complete | 2026-03-03 |
 | 14. Abort Propagation | v1.2 | Complete    | 2026-03-04 | 2026-03-04 |
 | 15. File Refactoring | 3/3 | Complete    | 2026-03-04 | - |
-| 16. Toast Notifications | 1/2 | In Progress|  | - |
+| 16. Toast Notifications | 2/2 | Complete   | 2026-03-04 | - |
 
 _v1.0: 7 phases, 16 plans. All complete._
 _v1.1: 6 phases, 9 plans. All complete._

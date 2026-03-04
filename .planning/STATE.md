@@ -8,7 +8,7 @@ progress:
   total_phases: 3
   completed_phases: 2
   total_plans: 7
-  completed_plans: 6
+  completed_plans: 7
 ---
 
 # Project State
@@ -22,12 +22,12 @@ See: .planning/PROJECT.md (updated 2026-03-03)
 
 ## Current Position
 
-Phase: 16 of 16 (Toast Notifications) — IN PROGRESS (1 of 2 plans done)
-Plan: 1 of 2 in Phase 16 (COMPLETE)
-Status: Plan 16-01 complete, toast infrastructure and lifecycle toasts wired
-Last activity: 2026-03-04 - Completed 16-01: toast notifications
+Phase: 16 of 16 (Toast Notifications) — COMPLETE (2 of 2 plans done)
+Plan: 2 of 2 in Phase 16 (COMPLETE)
+Status: Plan 16-02 complete, cost tracking and warning toasts wired
+Last activity: 2026-03-04 - Completed 16-02: cost warning toasts
 
-Progress: [█████░░░░░] 50% (Phase 16)
+Progress: [██████████] 100% (Phase 16)
 
 ## Performance Metrics
 
@@ -51,6 +51,7 @@ Progress: [█████░░░░░] 50% (Phase 16)
 | 15    | 02   | 5min     | 2     | 7     |
 | 15    | 03   | 5min     | 2     | 5     |
 | 16    | 01   | 3min     | 2     | 8     |
+| 16    | 02   | 7min     | 2     | 10    |
 
 ## Accumulated Context
 
@@ -74,6 +75,8 @@ Recent decisions affecting current work:
 - [15-03]: JSX kept inline in page.tsx; hook extraction provides sufficient size reduction
 - [16-01]: Used bg-[rgba(0,40,80,0.95)] for toast background instead of surface-1 (too transparent for floating overlay)
 - [16-01]: Added explicit | undefined to optional props for exactOptionalPropertyTypes compatibility
+- [16-02]: Injected usage: { include: true } at model-call level via openrouter wrapper (not provider-level)
+- [16-02]: Cost accumulates per-step (not per-workflow) to avoid modifying workflow-schemas.ts
 
 ### Pending Todos
 
@@ -96,5 +99,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-04
-Stopped at: Completed 16-01-PLAN.md (toast notifications lifecycle toasts)
+Stopped at: Completed 16-02-PLAN.md (cost warning toasts)
 Resume file: None
