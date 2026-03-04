@@ -1,57 +1,26 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useChat } from '@ai-sdk/react';
-import { DefaultChatTransport } from 'ai';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useGroupRef } from 'react-resizable-panels';
 import { MascotProvider, useMascotState } from '@/contexts/mascot-context';
 import { useRegisterWorkflowControl } from '@/contexts/workflow-control-context';
 import { useMediaQuery } from '@/hooks/use-media-query';
-import { useModelMode } from '@/hooks/use-model-mode';
-import { useWorkflowSettings } from '@/hooks/use-workflow-settings';
+import { useExamples } from '@/hooks/use-examples';
+import { useSolverWorkflow } from '@/hooks/use-solver-workflow';
+import { useWorkflowData } from '@/hooks/use-workflow-data';
+import { useWorkflowProgress } from '@/hooks/use-workflow-progress';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ProblemInput } from '@/components/problem-input';
 import { LexMascot } from '@/components/lex-mascot';
 import { BlueprintCard } from '@/components/blueprint-card';
-import { StepProgress, type StepStatus, type ProgressStep } from '@/components/step-progress';
+import { StepProgress } from '@/components/step-progress';
 import { ResultsPanel } from '@/components/results-panel';
 import { DevTracePanel } from '@/components/dev-trace-panel';
 import { VocabularyPanel } from '@/components/vocabulary-panel';
 import { RulesPanel } from '@/components/rules-panel';
-import type { ActivityEvent } from '@/components/rolling-activity-chips';
-import { getUIStepLabel, type UIStepId } from '@/lib/workflow-events';
-import type {
-  StepId,
-  WorkflowTraceEvent,
-  RulesUpdateEvent,
-  RuleTestResultEvent,
-  PerspectiveStartEvent,
-  PerspectiveCompleteEvent,
-  SynthesisStartEvent,
-  SynthesisCompleteEvent,
-  RoundStartEvent,
-  RoundCompleteEvent,
-} from '@/lib/workflow-events';
-
-interface WorkflowStepData {
-  status: string;
-  output?: Record<string, unknown>;
-}
-
-interface WorkflowData {
-  name: string;
-  status: string;
-  steps: Record<string, WorkflowStepData>;
-}
-
-interface VocabUpdateData {
-  action: 'add' | 'update' | 'remove' | 'clear';
-  entries: Array<{ foreignForm: string; meaning: string; type: string; notes: string }>;
-  totalCount: number;
-  timestamp: string;
-}
+import type { UIStepId } from '@/lib/workflow-events';
 
 function useMascotSync({
   hasStarted,
@@ -92,466 +61,59 @@ export default function SolverPage() {
 }
 
 function SolverPageInner() {
-  const [examples, setExamples] = useState<Array<{ id: string; label: string; type: string }>>([]);
-  const [hasStarted, setHasStarted] = useState(false);
-  const [isAborting, setIsAborting] = useState(false);
-  const [inputOpen, setInputOpen] = useState(true);
-  const [problemText, setProblemText] = useState('');
-  const hasSent = useRef(false);
-  const [modelMode] = useModelMode();
-  const [workflowSettings] = useWorkflowSettings();
+  const { examples } = useExamples();
   const groupRef = useGroupRef();
   const isLargeScreen = useMediaQuery('(min-width: 1024px)');
   const hasAnimated = useRef(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
 
-  useEffect(() => {
-    fetch('/api/examples')
-      .then((res) => res.json())
-      .then((data) => setExamples(data.examples))
-      .catch(() => {});
-  }, []);
+  // Mascot sync needs to be set up before useSolverWorkflow so we can pass onReset
+  const { setMascotState } = useMascotState();
 
-  const transport = useMemo(
-    () =>
-      new DefaultChatTransport({
-        api: '/api/solve',
-        prepareSendMessagesRequest: ({ messages }) => ({
-          body: {
-            inputData: {
-              rawProblemText:
-                (messages[messages.length - 1]?.parts?.[0] as { text?: string } | undefined)
-                  ?.text ?? '',
-              modelMode,
-              maxRounds: workflowSettings.maxRounds,
-              perspectiveCount: workflowSettings.perspectiveCount,
-            },
-          },
-        }),
-      }),
-    [modelMode, workflowSettings],
-  );
+  const {
+    messages,
+    hasStarted,
+    isAborting,
+    isRunning,
+    handleSolve,
+    handleStop,
+    handleReset: workflowReset,
+    problemText,
+    setProblemText,
+    inputOpen,
+    setInputOpen,
+  } = useSolverWorkflow({ onReset: () => setMascotState('idle') });
 
-  const { messages, sendMessage, status, setMessages, stop } = useChat({ transport });
+  const handleReset = useCallback(() => {
+    hasAnimated.current = false;
+    workflowReset();
+  }, [workflowReset]);
 
-  const handleSolve = useCallback(
-    async (text: string) => {
-      if (hasSent.current) return;
-      hasSent.current = true;
-      setHasStarted(true);
-      setInputOpen(false);
-      await sendMessage({ text });
-    },
-    [sendMessage],
-  );
-
-  // Collect all data parts from assistant messages
+  // Derive allParts from messages (wiring between hooks)
   const assistantMessages = messages.filter((m) => m.role === 'assistant');
   const allParts = assistantMessages.flatMap((m) => m.parts ?? []);
 
-  // Extract the latest workflow data part
-  const workflowParts = allParts.filter((p) => 'type' in p && p.type === 'data-workflow') as Array<{
-    type: string;
-    data: WorkflowData;
-  }>;
-  const workflowData = workflowParts.at(-1)?.data;
-  const workflowStatus = workflowData?.status;
-  const steps = workflowData?.steps ?? {};
+  const {
+    steps,
+    workflowStatus,
+    answerStepOutput,
+    finalRules,
+    vocabulary,
+    rulesWithTestStatus,
+    vocabActivityEvents,
+    rulesActivityEvents,
+    traceEvents,
+  } = useWorkflowData(allParts);
 
-  // Build the dynamic progress step list
-  const progressSteps: ProgressStep[] = useMemo(() => {
-    const result: ProgressStep[] = [];
-
-    // Helper to derive status for a backend StepId
-    function getStepStatus(stepId: StepId): StepStatus {
-      const step = steps[stepId];
-      if (!step) return 'pending';
-      if (step.status === 'running') return 'running';
-      if (step.status === 'success') return 'success';
-      if (step.status === 'failed') return 'failed';
-      return 'pending';
-    }
-
-    // Add Extract
-    result.push({
-      id: 'extract-structure',
-      label: getUIStepLabel('extract-structure'),
-      status: getStepStatus('extract-structure'),
-    });
-
-    // Parse round/perspective/synthesis events for multi-perspective progress
-    const roundStartEvents = allParts.filter(
-      (p) => 'type' in p && (p as { type: string }).type === 'data-round-start',
-    ) as unknown as RoundStartEvent[];
-
-    const roundCompleteEvents = allParts.filter(
-      (p) => 'type' in p && (p as { type: string }).type === 'data-round-complete',
-    ) as unknown as RoundCompleteEvent[];
-
-    const perspectiveStartEvents = allParts.filter(
-      (p) => 'type' in p && (p as { type: string }).type === 'data-perspective-start',
-    ) as unknown as PerspectiveStartEvent[];
-
-    const perspectiveCompleteEvents = allParts.filter(
-      (p) => 'type' in p && (p as { type: string }).type === 'data-perspective-complete',
-    ) as unknown as PerspectiveCompleteEvent[];
-
-    const synthesisStartEvents = allParts.filter(
-      (p) => 'type' in p && (p as { type: string }).type === 'data-synthesis-start',
-    ) as unknown as SynthesisStartEvent[];
-
-    const synthesisCompleteEvents = allParts.filter(
-      (p) => 'type' in p && (p as { type: string }).type === 'data-synthesis-complete',
-    ) as unknown as SynthesisCompleteEvent[];
-
-    const hypothesisStepStatus = getStepStatus('multi-perspective-hypothesis');
-    const hypothesisDone = hypothesisStepStatus === 'success' || hypothesisStepStatus === 'failed';
-
-    // Build round-level progress
-    const completedRounds = new Set(roundCompleteEvents.map((e) => e.data.round));
-    const completedPerspectives = new Set(
-      perspectiveCompleteEvents.map((e) => e.data.perspectiveId),
-    );
-    const completedSyntheses = new Set(synthesisCompleteEvents.map((e) => e.data.round));
-
-    // Determine which round is currently running
-    const latestRoundStart = roundStartEvents.at(-1);
-    const latestPerspectiveStart = perspectiveStartEvents.at(-1);
-    const latestSynthesisStart = synthesisStartEvents.at(-1);
-
-    for (const roundEvent of roundStartEvents) {
-      const roundNum = roundEvent.data.round;
-      const roundId: UIStepId = `round-${roundNum}`;
-
-      // Determine round status
-      let roundStatus: StepStatus = 'pending';
-      if (completedRounds.has(roundNum)) {
-        roundStatus = hypothesisDone && hypothesisStepStatus === 'failed' ? 'failed' : 'success';
-      } else if (latestRoundStart && latestRoundStart.data.round === roundNum) {
-        roundStatus = hypothesisDone
-          ? hypothesisStepStatus === 'success'
-            ? 'success'
-            : 'failed'
-          : 'running';
-      }
-
-      result.push({
-        id: roundId,
-        label: getUIStepLabel(roundId),
-        status: roundStatus,
-      });
-
-      // Add perspective sub-steps for this round
-      const roundPerspectives = perspectiveStartEvents.filter((e) => e.data.round === roundNum);
-      for (const perspEvent of roundPerspectives) {
-        const perspId: UIStepId = `perspective-${perspEvent.data.perspectiveId}`;
-        let perspStatus: StepStatus = 'pending';
-        if (completedPerspectives.has(perspEvent.data.perspectiveId)) {
-          perspStatus = 'success';
-        } else if (
-          latestPerspectiveStart &&
-          latestPerspectiveStart.data.perspectiveId === perspEvent.data.perspectiveId
-        ) {
-          perspStatus = hypothesisDone
-            ? hypothesisStepStatus === 'success'
-              ? 'success'
-              : 'failed'
-            : 'running';
-        }
-
-        result.push({
-          id: perspId,
-          label: `  ${getUIStepLabel(perspId)}`,
-          status: perspStatus,
-        });
-      }
-
-      // Add synthesis step for this round (if synthesis has started)
-      const hasSynthesisForRound = synthesisStartEvents.some((e) => e.data.round === roundNum);
-      if (hasSynthesisForRound) {
-        const synthesisId: UIStepId = `synthesis-${roundNum}`;
-        let synthesisStatus: StepStatus = 'pending';
-        if (completedSyntheses.has(roundNum)) {
-          synthesisStatus = 'success';
-        } else if (latestSynthesisStart && latestSynthesisStart.data.round === roundNum) {
-          synthesisStatus = hypothesisDone
-            ? hypothesisStepStatus === 'success'
-              ? 'success'
-              : 'failed'
-            : 'running';
-        }
-
-        result.push({
-          id: synthesisId,
-          label: `  ${getUIStepLabel(synthesisId)}`,
-          status: synthesisStatus,
-        });
-      }
-    }
-
-    // If the multi-perspective step is running but no round events yet, show it as running
-    if (hypothesisStepStatus === 'running' && roundStartEvents.length === 0) {
-      result.push({
-        id: 'multi-perspective-hypothesis',
-        label: getUIStepLabel('multi-perspective-hypothesis'),
-        status: 'running',
-      });
-    }
-
-    // Add Answer
-    result.push({
-      id: 'answer-questions',
-      label: getUIStepLabel('answer-questions'),
-      status: getStepStatus('answer-questions'),
-    });
-
-    return result;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allParts.length, steps]);
-
-  // Extract results data
   const isComplete = workflowStatus === 'success';
   const isFailed = workflowStatus === 'failed' || workflowStatus === 'bailed';
-  const isRunning = status === 'submitted' || status === 'streaming';
   const isAborted = hasStarted && !isRunning && !isComplete && !isFailed;
-  const setMascotState = useMascotSync({ hasStarted, isComplete, isFailed, isRunning });
 
-  // Wrap stop to set isAborting flag before closing the client stream
-  const handleStop = useCallback(() => {
-    setIsAborting(true);
-    stop();
-  }, [stop]);
+  const { displaySteps } = useWorkflowProgress(allParts, steps, { isAborted, isAborting });
 
-  // Clear isAborting when the workflow is no longer running (abort completed)
-  useEffect(() => {
-    if (isAborting && !isRunning) {
-      setIsAborting(false);
-    }
-  }, [isAborting, isRunning]);
-
-  // When aborted or aborting, convert any 'running' steps to 'aborted'
-  const displaySteps: ProgressStep[] =
-    isAborted || isAborting
-      ? progressSteps.map((s) =>
-          s.status === 'running' ? { ...s, status: 'aborted' as StepStatus } : s,
-        )
-      : progressSteps;
-
-  // Derive status message from progress steps
-  const activeStep = progressSteps.find((s) => s.status === 'running');
-  const STATUS_MESSAGES: Record<string, string> = {
-    'extract-structure': 'Extracting problem structure...',
-    'multi-perspective-hypothesis': 'Generating multi-perspective hypotheses...',
-    'answer-questions': 'Applying rules to answer questions...',
-  };
-  const statusMessage =
-    workflowStatus === 'success'
-      ? 'Workflow complete.'
-      : workflowStatus === 'failed' || workflowStatus === 'bailed'
-        ? 'Workflow failed.'
-        : isAborted
-          ? 'Workflow aborted.'
-          : activeStep
-            ? (STATUS_MESSAGES[activeStep.id] ??
-              (activeStep.id.startsWith('round-')
-                ? `Running round ${activeStep.id.split('-')[1]}...`
-                : activeStep.id.startsWith('perspective-')
-                  ? `Exploring ${getUIStepLabel(activeStep.id as UIStepId)}...`
-                  : activeStep.id.startsWith('synthesis-')
-                    ? 'Synthesizing rulesets...'
-                    : 'Processing...'))
-            : status === 'submitted' || status === 'streaming'
-              ? 'Starting workflow...'
-              : undefined;
-
-  const handleReset = useCallback(() => {
-    hasSent.current = false;
-    hasAnimated.current = false;
-    setHasStarted(false);
-    setIsAborting(false);
-    setInputOpen(true);
-    setProblemText('');
-    setMessages([]);
-    setMascotState('idle');
-  }, [setMessages, setMascotState]);
+  useMascotSync({ hasStarted, isComplete, isFailed, isRunning });
 
   useRegisterWorkflowControl({ isRunning, hasStarted, isAborting, stop: handleStop, handleReset });
-
-  const answerStepOutput = steps['answer-questions']?.output;
-  const hypothesisStepOutput = steps['multi-perspective-hypothesis']?.output;
-  const finalRules =
-    (hypothesisStepOutput?.rules as Array<{
-      title: string;
-      description: string;
-      confidence: 'HIGH' | 'MEDIUM' | 'LOW';
-    }>) ?? undefined;
-
-  // Accumulate vocabulary from data-vocabulary-update parts (only merged or untagged)
-  const vocabParts = allParts.filter(
-    (p) =>
-      'type' in p &&
-      p.type === 'data-vocabulary-update' &&
-      (!(p as { data?: { source?: string } }).data?.source ||
-        (p as { data?: { source?: string } }).data?.source === 'merged'),
-  ) as Array<{ type: string; data: VocabUpdateData }>;
-
-  const vocabulary = useMemo(() => {
-    const vocabMap = new Map<
-      string,
-      { foreignForm: string; meaning: string; type: string; notes: string }
-    >();
-    for (const part of vocabParts) {
-      const { action, entries } = part.data;
-      if (action === 'clear') {
-        vocabMap.clear();
-      } else if (action === 'remove') {
-        for (const entry of entries) {
-          vocabMap.delete(entry.foreignForm);
-        }
-      } else {
-        for (const entry of entries) {
-          vocabMap.set(entry.foreignForm, entry);
-        }
-      }
-    }
-    return Array.from(vocabMap.values());
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [vocabParts.length]);
-
-  // Accumulate rules from data-rules-update parts (only merged or untagged)
-  const rulesParts = allParts.filter(
-    (p) =>
-      'type' in p &&
-      p.type === 'data-rules-update' &&
-      (!(p as { data?: { source?: string } }).data?.source ||
-        (p as { data?: { source?: string } }).data?.source === 'merged'),
-  ) as Array<{ type: string; data: RulesUpdateEvent['data'] }>;
-
-  const rules = useMemo(() => {
-    const rulesMap = new Map<
-      string,
-      {
-        title: string;
-        description: string;
-        confidence?: string;
-        testStatus?: 'pass' | 'fail' | 'untested';
-      }
-    >();
-    for (const part of rulesParts) {
-      const { action, entries } = part.data;
-      if (action === 'clear') {
-        rulesMap.clear();
-      } else if (action === 'remove') {
-        for (const entry of entries) {
-          rulesMap.delete(entry.title);
-        }
-      } else {
-        for (const entry of entries) {
-          const existing = rulesMap.get(entry.title);
-          rulesMap.set(entry.title, {
-            ...entry,
-            testStatus: existing?.testStatus ?? 'untested',
-          });
-        }
-      }
-    }
-    return Array.from(rulesMap.values());
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rulesParts.length]);
-
-  // Apply rule test results to rules
-  const ruleTestParts = allParts.filter(
-    (p) => 'type' in p && p.type === 'data-rule-test-result',
-  ) as Array<{ type: string; data: RuleTestResultEvent['data'] }>;
-
-  const rulesWithTestStatus = useMemo(() => {
-    const testResults = new Map<string, { passed: boolean; failingSentences?: string[] }>();
-    for (const part of ruleTestParts) {
-      const entry: { passed: boolean; failingSentences?: string[] } = {
-        passed: part.data.passed,
-      };
-      if (part.data.failingSentences) {
-        entry.failingSentences = part.data.failingSentences;
-      }
-      testResults.set(part.data.ruleTitle, entry);
-    }
-    return rules.map((rule) => {
-      const testResult = testResults.get(rule.title);
-      return {
-        ...rule,
-        testStatus: testResult
-          ? testResult.passed
-            ? ('pass' as const)
-            : ('fail' as const)
-          : (rule.testStatus ?? ('untested' as const)),
-      };
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rules, ruleTestParts.length]);
-
-  // Build vocabulary activity events for rolling chips
-  const vocabActivityEvents = useMemo(() => {
-    const events: ActivityEvent[] = [];
-    for (const part of vocabParts) {
-      const data = part.data;
-      const ts = new Date(data.timestamp).getTime();
-      if (data.action === 'add') {
-        events.push({
-          label: `+${data.entries?.length ?? 1} added`,
-          variant: 'add',
-          timestamp: ts,
-        });
-      } else if (data.action === 'update') {
-        events.push({
-          label: `${data.entries?.length ?? 1} updated`,
-          variant: 'update',
-          timestamp: ts,
-        });
-      } else if (data.action === 'remove') {
-        events.push({
-          label: `${data.entries?.length ?? 1} removed`,
-          variant: 'remove',
-          timestamp: ts,
-        });
-      } else if (data.action === 'clear') {
-        events.push({ label: 'Cleared', variant: 'clear', timestamp: ts });
-      }
-    }
-    return events;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [vocabParts.length]);
-
-  // Build rules activity events for rolling chips
-  const rulesActivityEvents = useMemo(() => {
-    const events: ActivityEvent[] = [];
-    for (const part of rulesParts) {
-      const data = part.data;
-      const ts = new Date(data.timestamp).getTime();
-      if (data.action === 'add') {
-        events.push({
-          label: `+${data.entries?.length ?? 1} added`,
-          variant: 'add',
-          timestamp: ts,
-        });
-      } else if (data.action === 'update') {
-        events.push({
-          label: `${data.entries?.length ?? 1} updated`,
-          variant: 'update',
-          timestamp: ts,
-        });
-      } else if (data.action === 'remove') {
-        events.push({
-          label: `${data.entries?.length ?? 1} removed`,
-          variant: 'remove',
-          timestamp: ts,
-        });
-      } else if (data.action === 'clear') {
-        events.push({ label: 'Rules cleared', variant: 'clear', timestamp: ts });
-      }
-    }
-    return events;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rulesParts.length]);
 
   // Auto-scroll to results when solve completes
   const resultsRef = useRef<HTMLDivElement>(null);
@@ -575,18 +137,6 @@ function SolverPageInner() {
       }, 2000);
     }
   }, []);
-
-  // Collect trace events for the dev trace panel
-  const traceEvents = useMemo(() => {
-    return allParts.filter(
-      (p) =>
-        'type' in p &&
-        typeof (p as { type: string }).type === 'string' &&
-        (p as { type: string }).type.startsWith('data-') &&
-        (p as { type: string }).type !== 'data-workflow',
-    ) as unknown as WorkflowTraceEvent[];
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allParts.length]);
 
   // Scroll-to handler for progress bar step clicks
   const handleStepClick = useCallback((stepId: UIStepId) => {
@@ -691,7 +241,6 @@ function SolverPageInner() {
                     <CollapsibleContent className="pt-4">
                       <StepProgress
                         steps={displaySteps}
-                        statusMessage={statusMessage}
                         onStepClick={handleStepClick}
                       />
                       {isFailed && (
