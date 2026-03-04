@@ -1,19 +1,28 @@
 'use client';
 
-import { useCallback, type ReactNode } from 'react';
+import { useCallback, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { WorkflowControlProvider, useWorkflowControl } from '@/contexts/workflow-control-context';
 import { ModelModeToggle } from '@/components/model-mode-toggle';
 import { WorkflowSliders } from '@/components/workflow-sliders';
 import { CreditsBadge } from '@/components/credits-badge';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 function NavBar() {
   const { isRunning, hasStarted, isAborting, stop, handleReset } = useWorkflowControl();
   const pathname = usePathname();
+  const [abortDialogOpen, setAbortDialogOpen] = useState(false);
 
-  const handleAbort = useCallback(async () => {
-    if (!confirm('Stop the current solve? All in-flight API calls will be cancelled.')) return;
+  const confirmAbort = useCallback(async () => {
+    setAbortDialogOpen(false);
     stop();
     try {
       await fetch('/api/solve/cancel', { method: 'POST' });
@@ -88,7 +97,7 @@ function NavBar() {
           <button
             className="stamp-btn-nav-warning px-3 py-1"
             disabled={!isRunning || isAborting}
-            onClick={handleAbort}
+            onClick={() => setAbortDialogOpen(true)}
           >
             {isAborting ? (
               <>
@@ -141,6 +150,30 @@ function NavBar() {
           </button>
         </div>
       </div>
+
+      <Dialog open={abortDialogOpen} onOpenChange={setAbortDialogOpen}>
+        <DialogContent showCloseButton={false} className="max-w-sm border-destructive">
+          <DialogHeader>
+            <DialogTitle className="font-heading uppercase tracking-wider text-destructive">
+              Stop Current Solve?
+            </DialogTitle>
+            <DialogDescription>
+              All in-flight API calls will be cancelled. Any partial results will be preserved.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <button
+              className="stamp-btn-nav-neutral px-4 py-1.5"
+              onClick={() => setAbortDialogOpen(false)}
+            >
+              Cancel
+            </button>
+            <button className="stamp-btn-nav-warning px-4 py-1.5" onClick={confirmAbort}>
+              Abort Solve
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </nav>
   );
 }
