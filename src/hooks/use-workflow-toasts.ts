@@ -6,6 +6,7 @@ import {
   showSolveCompleteToast,
   showSolveAbortedToast,
   showSolveErrorToast,
+  showCostWarningToast,
 } from '@/components/workflow-toast';
 
 interface UseWorkflowToastsOptions {
@@ -16,6 +17,7 @@ interface UseWorkflowToastsOptions {
   isRunning: boolean;
   finalRules?: Array<{ title: string; description: string; confidence?: string }> | undefined;
   answerStepOutput?: Record<string, unknown> | undefined;
+  allParts: Array<Record<string, unknown>>;
 }
 
 export function useWorkflowToasts({
@@ -26,6 +28,7 @@ export function useWorkflowToasts({
   isRunning,
   finalRules,
   answerStepOutput,
+  allParts,
 }: UseWorkflowToastsOptions) {
   const prevRef = useRef({
     hasStarted: false,
@@ -34,11 +37,14 @@ export function useWorkflowToasts({
     isAborted: false,
   });
 
+  const lastCostBucketRef = useRef(0);
+
   useEffect(() => {
     const prev = prevRef.current;
 
     // Solve started: was not started, now is started and running
     if (hasStarted && !prev.hasStarted) {
+      lastCostBucketRef.current = 0;
       showSolveStartToast();
     }
 
@@ -62,4 +68,24 @@ export function useWorkflowToasts({
 
     prevRef.current = { hasStarted, isComplete, isFailed, isAborted };
   }, [hasStarted, isComplete, isFailed, isAborted, isRunning, finalRules, answerStepOutput]);
+
+  // Watch for cost-update events and fire cost warning toasts
+  useEffect(() => {
+    const costEvents = allParts.filter(
+      (p) => 'type' in p && (p as { type: string }).type === 'data-cost-update',
+    ) as Array<{ type: string; data: { cumulativeCost: number } }>;
+
+    if (costEvents.length === 0) return;
+
+    const latestCost = costEvents[costEvents.length - 1]!.data.cumulativeCost;
+    const latestBucket = Math.floor(latestCost);
+
+    // Fire toast for any new buckets since last check
+    if (latestBucket > lastCostBucketRef.current) {
+      for (let i = lastCostBucketRef.current + 1; i <= latestBucket; i++) {
+        showCostWarningToast(i);
+      }
+      lastCostBucketRef.current = latestBucket;
+    }
+  }, [allParts.length]);
 }

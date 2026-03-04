@@ -122,6 +122,7 @@ function SolverPageInner() {
     isRunning,
     finalRules,
     answerStepOutput,
+    allParts,
   });
 
   useRegisterWorkflowControl({ isRunning, hasStarted, isAborting, stop: handleStop, handleReset });

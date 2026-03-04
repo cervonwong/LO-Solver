@@ -86,3 +86,19 @@ export function showSolveErrorToast(stepName?: string) {
     { id: 'solve-error' },
   );
 }
+
+export function showCostWarningToast(amount: number) {
+  const formatted = `$${amount.toFixed(2)}`;
+  toast.custom(
+    (id) => (
+      <WorkflowToast
+        id={id}
+        title="COST WARNING"
+        message={`${formatted} spent so far`}
+        accentColorClass="text-status-warning"
+        mascotImage="/lex-thinking.png"
+      />
+    ),
+    { id: `cost-warning-${amount}` },
+  );
+}
