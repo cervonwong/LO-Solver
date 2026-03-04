@@ -65,7 +65,10 @@
   2. `trace-event-card.tsx` sub-components live in focused files under `components/trace/`
   3. `page.tsx` is smaller with extracted hooks and sub-components, and the solver page works identically to before
   4. `npx tsc --noEmit` passes with no new errors after all splits
-**Plans**: TBD
+**Plans**: 3 plans
+- [ ] 15-01-PLAN.md — Extract workflow step definitions to individual files under steps/
+- [ ] 15-02-PLAN.md — Split trace-event-card.tsx sub-components into trace/ directory
+- [ ] 15-03-PLAN.md — Extract page.tsx hooks to dedicated hook files
 
 ### Phase 16: Toast Notifications
 **Goal**: Users get non-blocking feedback for workflow lifecycle events without watching the UI constantly
@@ -98,7 +101,7 @@
 | 12. Workflow Control Buttons | v1.1 | 2/2 | Complete | 2026-03-03 |
 | 13. 3-Column Layout | v1.1 | 1/1 | Complete | 2026-03-03 |
 | 14. Abort Propagation | v1.2 | Complete    | 2026-03-04 | 2026-03-04 |
-| 15. File Refactoring | v1.2 | 0/? | Not started | - |
+| 15. File Refactoring | v1.2 | 0/3 | Not started | - |
 | 16. Toast Notifications | v1.2 | 0/? | Not started | - |
 
 _v1.0: 7 phases, 16 plans. All complete._
