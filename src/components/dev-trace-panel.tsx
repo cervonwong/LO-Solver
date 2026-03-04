@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Image from 'next/image';
-import { TraceEventCard, ToolCallGroupCard, AgentCard } from '@/components/trace-event-card';
+import { TraceEventCard } from '@/components/trace/trace-event-card';
+import { ToolCallGroupCard, AgentCard } from '@/components/trace/tool-call-cards';
 import {
   groupEventsByStep,
   groupEventsWithAgents,

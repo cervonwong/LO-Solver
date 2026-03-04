@@ -1,0 +1,338 @@
+'use client';
+
+import { useState } from 'react';
+import { Badge } from '@/components/ui/badge';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { LabeledList } from '@/components/labeled-list';
+import type { ToolCallEvent } from '@/lib/workflow-events';
+import { ChevronIcon, RawJsonToggle } from './shared';
+import {
+  isRuleTestTool,
+  isSentenceTestTool,
+  isStartedStatus,
+  hasVocabularyEntries,
+} from './trace-utils';
+
+// INERT: Tool-call events currently emit `input: { count }`, not the actual entries array.
+// This card activates when events carry `input.entries` — see hasVocabularyEntries().
+// To enable: change vocabulary-tools.ts tool-call events to include the entries data.
+export function VocabularyToolCard({
+  toolCall,
+}: {
+  toolCall: {
+    data: {
+      toolName: string;
+      input: Record<string, unknown>;
+      result: Record<string, unknown>;
+    };
+  };
+}) {
+  const action = toolCall.data.toolName.replace('Vocabulary', '').toUpperCase();
+  const entries = (toolCall.data.input.entries ?? toolCall.data.input.foreignForms ?? []) as Array<
+    Record<string, unknown>
+  >;
+  const isUpdate = toolCall.data.toolName === 'updateVocabulary';
+  const isRemove = toolCall.data.toolName === 'removeVocabulary';
+
+  // For updates, try to extract previous values from result for diff display
+  const previousEntries = isUpdate
+    ? ((toolCall.data.result.previous ?? toolCall.data.result.previousEntries ?? []) as Array<
+        Record<string, unknown>
+      >)
+    : [];
+
+  return (
+    <RawJsonToggle data={toolCall.data}>
+      <div className="flex flex-col gap-0.5 text-[11px]">
+        {entries.length <= 5 ? (
+          entries.map((entry, i) => {
+            const foreignForm = (entry.foreignForm ?? entry) as string;
+            const meaning = entry.meaning as string | undefined;
+            const type = entry.type as string | undefined;
+            const prev = isUpdate && previousEntries[i] ? previousEntries[i] : undefined;
+            const prevMeaning = prev?.meaning as string | undefined;
+            const prevType = prev?.type as string | undefined;
+
+            return (
+              <div
+                key={i}
+                className={`flex items-center gap-2 ${isRemove ? 'line-through text-muted-foreground' : ''}`}
+              >
+                <Badge
+                  variant="outline"
+                  className={`text-[9px] shrink-0 ${
+                    isRemove
+                      ? 'border-status-error text-status-error'
+                      : isUpdate
+                        ? 'border-status-warning text-status-warning'
+                        : 'border-status-success text-status-success'
+                  } bg-transparent`}
+                >
+                  {action}
+                </Badge>
+                <span className="font-medium">{String(foreignForm)}</span>
+                {isUpdate && prev ? (
+                  <>
+                    {prevMeaning && prevMeaning !== meaning && (
+                      <span className="text-muted-foreground">
+                        <span className="line-through opacity-60">{prevMeaning}</span>
+                        {meaning && <span> &rarr; {meaning}</span>}
+                      </span>
+                    )}
+                    {(!prevMeaning || prevMeaning === meaning) && meaning && (
+                      <span className="text-muted-foreground">&rarr; {meaning}</span>
+                    )}
+                    {prevType && prevType !== type && (
+                      <span className="text-muted-foreground">
+                        [<span className="line-through opacity-60">{prevType}</span>
+                        {type && <span> &rarr; {type}</span>}]
+                      </span>
+                    )}
+                    {(!prevType || prevType === type) && type && (
+                      <span className="text-muted-foreground">[{type}]</span>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    {meaning && <span className="text-muted-foreground">&rarr; {meaning}</span>}
+                    {type && <span className="text-muted-foreground">[{type}]</span>}
+                  </>
+                )}
+              </div>
+            );
+          })
+        ) : (
+          <div className="flex items-center gap-2">
+            <Badge
+              variant="outline"
+              className={`text-[9px] shrink-0 ${
+                isRemove
+                  ? 'border-status-error text-status-error'
+                  : isUpdate
+                    ? 'border-status-warning text-status-warning'
+                    : 'border-status-success text-status-success'
+              } bg-transparent`}
+            >
+              {action}
+            </Badge>
+            <span>{entries.length} entries</span>
+          </div>
+        )}
+      </div>
+    </RawJsonToggle>
+  );
+}
+
+export function SentenceTestToolCard({
+  toolCall,
+}: {
+  toolCall: {
+    data: {
+      toolName: string;
+      input: Record<string, unknown>;
+      result: Record<string, unknown>;
+    };
+  };
+}) {
+  const [open, setOpen] = useState(false);
+  const sentenceId = (toolCall.data.input.sentenceId ?? toolCall.data.input.id ?? '?') as string;
+  const result = toolCall.data.result;
+  const status = result.status as string | undefined;
+  const passed = status === 'SENTENCE_OK' || status === 'PASS';
+  const details = result.details as string | undefined;
+  const expected = result.expected as string | undefined;
+  const actual = result.actual as string | undefined;
+
+  return (
+    <RawJsonToggle data={toolCall.data}>
+      <Collapsible open={open} onOpenChange={setOpen}>
+        <CollapsibleTrigger className="hover-hatch-cyan flex w-full items-center gap-2 py-0.5 text-left text-xs">
+          <Badge
+            variant="outline"
+            className={`${passed ? 'border-status-success text-status-success' : 'border-status-error text-status-error'} bg-transparent text-[10px]`}
+          >
+            {passed ? 'PASS' : 'FAIL'}
+          </Badge>
+          <span className="flex-1 truncate">Sentence {sentenceId}</span>
+          <ChevronIcon open={open} />
+        </CollapsibleTrigger>
+        <CollapsibleContent
+          forceMount
+          className="data-[state=closed]:hidden pl-6 pr-2 py-1 text-[11px] text-muted-foreground"
+        >
+          {expected && (
+            <p>
+              <span className="font-medium">Expected:</span> {expected}
+            </p>
+          )}
+          {actual && (
+            <p>
+              <span className="font-medium">Actual:</span> {actual}
+            </p>
+          )}
+          {details && <p className="mt-1">{details}</p>}
+        </CollapsibleContent>
+      </Collapsible>
+    </RawJsonToggle>
+  );
+}
+
+export function BulkToolCallGroup({
+  toolName,
+  toolCalls,
+  depth,
+}: {
+  toolName: string;
+  toolCalls: ToolCallEvent[];
+  depth: number;
+}) {
+  const [open, setOpen] = useState(false);
+
+  // Calculate pass/fail for test tools
+  const isTest = isRuleTestTool(toolName) || isSentenceTestTool(toolName);
+  let passCount = 0;
+  let failCount = 0;
+  if (isTest) {
+    for (const tc of toolCalls) {
+      const status = tc.data.result.status as string | undefined;
+      if (status === 'RULE_OK' || status === 'SENTENCE_OK' || status === 'PASS') passCount++;
+      else failCount++;
+    }
+  }
+
+  const summaryText = isTest
+    ? `${toolCalls.length}: ${passCount} pass, ${failCount} fail`
+    : `${toolCalls.length} calls`;
+
+  return (
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <CollapsibleTrigger className="hover-hatch-cyan flex w-full items-center gap-2 py-0.5 text-left text-xs">
+        <Badge
+          variant="default"
+          className="border-trace-tool text-trace-tool bg-transparent text-[10px]"
+        >
+          TOOL
+        </Badge>
+        <span className="font-medium">{toolName}</span>
+        <span className="text-muted-foreground">({summaryText})</span>
+        <ChevronIcon open={open} />
+      </CollapsibleTrigger>
+      <CollapsibleContent forceMount className="data-[state=closed]:hidden">
+        <div className="flex flex-col gap-0.5 pl-4">
+          {toolCalls.map((tc, i) => (
+            <ToolCallRenderer key={i} toolCall={tc} depth={depth + 1} />
+          ))}
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
+
+export function RuleTestCard({
+  toolCall,
+}: {
+  toolCall: {
+    data: { input: Record<string, unknown>; result: Record<string, unknown> };
+  };
+}) {
+  const [open, setOpen] = useState(false);
+  const title = (toolCall.data.input.title as string) || 'Unknown rule';
+  const result = toolCall.data.result;
+  const status = result.status as string | undefined;
+  const passed = status === 'RULE_OK';
+  const reasoning = result.reasoning as string | undefined;
+  const recommendation = result.recommendation as string | undefined;
+
+  return (
+    <RawJsonToggle data={toolCall.data}>
+      <Collapsible open={open} onOpenChange={setOpen}>
+        <CollapsibleTrigger className="hover-hatch-cyan flex w-full items-center gap-2 py-0.5 text-left text-xs">
+          <Badge
+            variant="outline"
+            className={`${passed ? 'border-status-success text-status-success' : 'border-status-error text-status-error'} bg-transparent text-[10px]`}
+          >
+            {passed ? 'PASS' : 'FAIL'}
+          </Badge>
+          <span className="flex-1 truncate">{title}</span>
+          <ChevronIcon open={open} />
+        </CollapsibleTrigger>
+        <CollapsibleContent
+          forceMount
+          className="data-[state=closed]:hidden pl-6 pr-2 py-1 text-[11px] text-muted-foreground"
+        >
+          {reasoning && <p>{reasoning}</p>}
+          {recommendation && <p className="mt-1 italic">{recommendation}</p>}
+        </CollapsibleContent>
+      </Collapsible>
+    </RawJsonToggle>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// ToolCallRenderer — routes tool calls to specialized or generic renderers
+// ---------------------------------------------------------------------------
+
+// Lives in this file (rather than tool-call-cards.tsx) to avoid circular
+// dependencies: BulkToolCallGroup calls ToolCallRenderer, and ToolCallRenderer
+// calls the specialized card components above.
+
+export function ToolCallRenderer({ toolCall, depth }: { toolCall: ToolCallEvent; depth: number }) {
+  // Skip intermediate "started" status events
+  if (isStartedStatus(toolCall.data.result)) return null;
+
+  if (isRuleTestTool(toolCall.data.toolName)) {
+    return <RuleTestCard toolCall={toolCall} />;
+  }
+
+  if (isSentenceTestTool(toolCall.data.toolName)) {
+    return <SentenceTestToolCard toolCall={toolCall} />;
+  }
+
+  if (hasVocabularyEntries(toolCall)) {
+    return <VocabularyToolCard toolCall={toolCall} />;
+  }
+
+  // Default: generic tool call card with raw JSON toggle
+  return <AgentToolCallCard toolCall={toolCall} />;
+}
+
+// ---------------------------------------------------------------------------
+// AgentToolCallCard — generic fallback for tool calls without specialized UI
+// ---------------------------------------------------------------------------
+
+function AgentToolCallCard({
+  toolCall,
+}: {
+  toolCall: {
+    data: {
+      toolName: string;
+      input: Record<string, unknown>;
+      result: Record<string, unknown>;
+    };
+  };
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <RawJsonToggle data={toolCall.data}>
+      <Collapsible open={open} onOpenChange={setOpen}>
+        <CollapsibleTrigger className="hover-hatch-cyan flex w-full items-center gap-2 py-0.5 text-left text-xs">
+          <Badge
+            variant="default"
+            className="border-trace-tool text-trace-tool bg-transparent text-[10px]"
+          >
+            TOOL
+          </Badge>
+          <span className="font-medium">{toolCall.data.toolName}</span>
+          <ChevronIcon open={open} />
+        </CollapsibleTrigger>
+        <CollapsibleContent forceMount className="data-[state=closed]:hidden pl-6 pr-2 py-1">
+          <div className="flex flex-col gap-2">
+            <LabeledList data={toolCall.data.input} label="Input" />
+            <LabeledList data={toolCall.data.result} label="Result" />
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+    </RawJsonToggle>
+  );
+}
