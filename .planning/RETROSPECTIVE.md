@@ -100,6 +100,51 @@
 
 ---
 
+## Milestone: v1.2 — Cleanup & Quality
+
+**Shipped:** 2026-03-04
+**Phases:** 3 | **Plans:** 7 | **Quick Tasks:** 1
+
+### What Was Built
+- Abort signal propagation through all workflow steps and tester tools with cancel endpoint fallback
+- Shadcn abort confirmation dialog with amber aborting state distinct from error
+- Workflow.ts split from 1,500 lines to 24-line composition file with individual step files under steps/
+- Trace-event-card 898-line monolith split into 5 focused components under trace/
+- Page.tsx hooks extracted to 4 dedicated domain hooks
+- Blueprint-themed Sonner toast notifications for workflow lifecycle events and API cost warnings
+
+### What Worked
+- Sequential dependency chain (abort → refactor → toasts) prevented merge conflicts on shared files
+- File refactoring plans were very safe — purely structural changes with no behavior modifications
+- Cost tracking piggybacked on existing RequestContext/event patterns without new schemas
+- Phase 14-02 verification caught that browser confirm() should be replaced with shadcn Dialog — user feedback during verification improved UX
+- Plans continued to be highly specific with exact file paths, maintaining fast execution
+
+### What Was Inefficient
+- Phase 14-02 took 38min (longest plan) due to user-requested changes during verification (confirm → AlertDialog pivot)
+- ROADMAP.md progress table had formatting drift (missing milestone column values) — carried over from v1.1
+
+### Patterns Established
+- Abort signal threading: pass abortSignal through RequestContext, check at iteration boundaries
+- Cancel endpoint pattern: POST /api/solve/cancel as browser signal fallback
+- Per-step cost accumulation via RequestContext helpers (no schema changes needed)
+- Conditional spread for optional abort signal: `...(signal ? { abortSignal: signal } : {})`
+- Step file organization: each step in its own file, workflow.ts as pure composition
+
+### Key Lessons
+1. Build order matters for refactoring — do feature work first, then split files, then add new features on clean structure
+2. File splitting is low-risk and fast when plans specify exact extraction boundaries
+3. RequestContext is a reliable extensibility mechanism — cost tracking added without any schema changes
+4. Verification-time user feedback (Phase 14-02) can redirect implementation significantly — budget extra time for user-facing phases
+5. Smallest milestone yet (3 phases, 1 day) — focused scope with no scope creep
+
+### Cost Observations
+- Model mix: opus for phase execution, sonnet for quick tasks, haiku for summaries
+- Sessions: ~2 across 1 day
+- Notable: 69min total execution time across 7 plans — fastest milestone yet
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -108,6 +153,7 @@
 |-----------|---------|--------|------------|
 | v1.0 | 196 | 7 | GSD adopted mid-milestone; eval-first development |
 | v1.1 | ~60 | 6 | Quick tasks for polish; 2-min plan execution average |
+| v1.2 | ~30 | 3 | Focused cleanup; sequential dependency chain; fastest milestone |
 
 ### Cumulative Quality
 
@@ -115,10 +161,12 @@
 |-----------|--------------|--------------|-----|
 | v1.0 | 4 Linguini | 22/22 satisfied | 13,581 TS |
 | v1.1 | 4 Linguini | 19/19 satisfied | 14,281 TS |
+| v1.2 | 4 Linguini | 15/15 satisfied | 15,069 TS |
 
 ### Top Lessons (Verified Across Milestones)
 
 1. Eval harness before workflow changes — measurement enables confident iteration
-2. Mirror existing patterns to reduce implementation surface area
-3. Specific plans with exact file paths enable fast execution (verified in v1.1)
-4. Quick tasks handle polish without blocking structural phase work (verified in v1.1)
+2. Mirror existing patterns to reduce implementation surface area (v1.0 tools, v1.2 RequestContext)
+3. Specific plans with exact file paths enable fast execution (verified v1.1, v1.2)
+4. Quick tasks handle polish without blocking structural phase work (verified v1.1, v1.2)
+5. Build order matters — feature work before refactoring before new features on clean structure (verified v1.2)

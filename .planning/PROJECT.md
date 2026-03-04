@@ -48,11 +48,13 @@ The ONE thing that must work: **the agentic workflow must produce measurably bet
 - ✓ 3-column animated layout — third column for vocab/rules, responsive collapse below 1024px — v1.1
 - ✓ Aborted workflow state — distinct amber state separate from error/failed — v1.1
 
+- ✓ Abort button propagates cancellation to in-flight agent calls — v1.2
+- ✓ Large source files audited and split into focused modules — v1.2
+- ✓ Workflow lifecycle toast notifications (start, complete, abort, cost warnings) — v1.2
+
 ### Active
 
-- [ ] Abort button propagates cancellation to in-flight agent calls
-- [ ] Large source files audited and split into focused modules
-- [ ] Workflow lifecycle toast notifications (start, complete, abort, cost warnings)
+(None — all milestones shipped. Start next milestone to define new requirements.)
 
 ### Out of Scope
 
@@ -62,28 +64,20 @@ The ONE thing that must work: **the agentic workflow must produce measurably bet
 - Deployment / hosting — development-only for now
 - Real-time collaboration features
 
-## Current Milestone: v1.2 Cleanup & Quality
-
-**Goal:** Tighten what's already built — better abort behavior, cleaner codebase, better user feedback.
-
-**Target features:**
-- Abort propagation to in-flight agents (stop wasting API credits)
-- Large file audit and refactoring (split oversized modules)
-- Sonner toast notifications for workflow lifecycle events
-
 ## Problem Statement
 
-(Resolved in v1.0) The workflow uses multi-perspective hypothesis generation and verified rules. The evaluation harness demonstrates workflow accuracy improvements over zero-shot baselines. (Resolved in v1.1) The observability UI is polished with correct trace hierarchy, structured data display, workflow controls, and animated layout.
+(Resolved in v1.0) The workflow uses multi-perspective hypothesis generation and verified rules. The evaluation harness demonstrates workflow accuracy improvements over zero-shot baselines. (Resolved in v1.1) The observability UI is polished with correct trace hierarchy, structured data display, workflow controls, and animated layout. (Resolved in v1.2) Abort propagation stops in-flight LLM calls, large files are split into focused modules, and toast notifications provide workflow lifecycle feedback.
 
 ## Context
 
-Shipped v1.1 with 14,281 LOC TypeScript.
+Shipped v1.2 with 15,069 LOC TypeScript.
 Tech stack: TypeScript 5.9.3, Next.js 16.1.6, Mastra 1.8.0, Zod 4.3.6.
 Models: GPT-5-mini (extraction), Gemini 3 Flash (reasoning), GPT-OSS-120B (testing).
 Storage: LibSQL for Mastra state, markdown logs for execution traces, JSON for eval results.
 Frontend: React 19, shadcn/ui, resizable panels (3-column animated layout), AI SDK streaming.
 Evaluation: 4 Linguini ground-truth problems, CLI runner with --comparison and --problem flags.
-UI: Blueprint/cyanotype design system, duck mascots per agent role, workflow abort/reset controls.
+UI: Blueprint/cyanotype design system, duck mascots per agent role, workflow abort/reset controls, Sonner toast notifications.
+Code structure: Workflow steps split into individual files, trace components in focused modules, page hooks extracted to dedicated files.
 
 ## Key Decisions
 
@@ -105,6 +99,11 @@ UI: Blueprint/cyanotype design system, duck mascots per agent role, workflow abo
 | mask-image for duck tint | Color tint only on opaque pixels, preserving transparent PNG background | ✓ Good — clean visual effect |
 | Conditional panel rendering (2/3 columns) | Render different panel counts vs hide/resize a panel to 0 | ✓ Good — simpler than fighting resizable-panels library |
 | Imperative setLayout() for animation | CSS flex-grow transition with programmatic layout change | ✓ Good — smooth animated column appearance |
+| Cancel endpoint fallback for abort | Browser req.signal can be unreliable; explicit POST /api/solve/cancel | ✓ Good — reliable abort regardless of browser behavior |
+| shadcn AlertDialog for abort confirmation | Replaced browser confirm() for themed, non-blocking UX | ✓ Good — consistent blueprint styling |
+| Abort → Refactor → Toast build order | Avoids merge conflicts on shared files (workflow.ts, page.tsx) | ✓ Good — clean sequential dependencies |
+| Per-step cost accumulation | Avoids modifying workflow-schemas.ts; simpler implementation | ✓ Good — cost tracking works without schema changes |
+| Step files split without index.ts re-export | Steps are internal to workflow composition, not public API | ✓ Good — no unnecessary re-exports |
 
 ## Constraints
 
@@ -123,4 +122,4 @@ When working on any phase that touches Mastra code (agents, workflows, tools, ev
 
 ---
 
-*Last updated: 2026-03-03 after v1.2 milestone start*
+*Last updated: 2026-03-04 after v1.2 milestone*

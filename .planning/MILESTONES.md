@@ -1,5 +1,25 @@
 # Milestones
 
+## v1.2 Cleanup & Quality (Shipped: 2026-03-04)
+
+**Phases:** 3 | **Plans:** 7 | **Quick Tasks:** 1 | **LOC:** 15,069 TypeScript
+**Timeline:** 1 day (2026-03-03 → 2026-03-04)
+**Git range:** 5f1cca5..a783785 (34 files changed, +3,626 / -2,794)
+
+**Delivered:** Reliable abort propagation, cleaner codebase through file splitting, and blueprint-themed toast notifications for workflow lifecycle and API cost feedback.
+
+**Key accomplishments:**
+1. Abort signal propagation through all workflow steps and tester tools with cancel endpoint fallback
+2. Shadcn abort confirmation dialog with amber aborting state distinct from error
+3. Workflow.ts split from 1,500 lines to 24-line composition file with individual step files
+4. Trace-event-card 898-line monolith split into 5 focused components
+5. Page.tsx hooks extracted to 4 dedicated domain hooks (useSolverWorkflow, useWorkflowProgress, useWorkflowData, useExamples)
+6. Blueprint-themed Sonner toast notifications for workflow lifecycle events and API cost warnings
+
+**1 quick task:** Fix abort dialog background zoom glitch.
+
+---
+
 ## v1.1 UI Polish (Shipped: 2026-03-03)
 
 **Phases:** 6 | **Plans:** 9 | **Quick Tasks:** 24 | **LOC:** 14,281 TypeScript
