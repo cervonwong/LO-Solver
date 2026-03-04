@@ -88,6 +88,7 @@ interface ExecuteSentenceTestParams {
   mastra: Mastra;
   logFile?: string;
   requestContext?: RequestContext;
+  abortSignal?: AbortSignal | undefined;
 }
 
 /**
@@ -106,6 +107,7 @@ async function executeSentenceTest({
   mastra,
   logFile,
   requestContext,
+  abortSignal,
 }: ExecuteSentenceTestParams): Promise<z.infer<typeof sentenceTestResultSchema>> {
   // Phase 1: Blind Translation - agent does NOT see expected translation
   const prompt = `
@@ -138,6 +140,7 @@ Attempt to translate this sentence step by step using the rules and vocabulary a
   try {
     const result = await generateWithRetry(mastra.getAgentById('sentence-tester'), {
       prompt,
+      ...(abortSignal && { abortSignal }),
       options: {
         maxSteps: 100,
         ...(requestContext && { requestContext }),
@@ -237,6 +240,10 @@ export const testSentenceTool = createTool({
       },
     });
 
+    const abortSignal = (ctx.requestContext as any)?.get?.('abort-signal') as
+      | AbortSignal
+      | undefined;
+
     const result = await executeSentenceTest({
       id,
       content,
@@ -249,6 +256,7 @@ export const testSentenceTool = createTool({
       mastra: ctx.mastra!,
       ...(logFile !== undefined && { logFile }),
       ...(ctx.requestContext && { requestContext: ctx.requestContext as RequestContext }),
+      ...(abortSignal && { abortSignal }),
     });
 
     // Emit completion event with actual result
@@ -327,6 +335,10 @@ export const testSentenceWithRulesetTool = createTool({
       ...(r.confidence !== undefined && { confidence: r.confidence }),
     }));
 
+    const abortSignal = (ctx.requestContext as any)?.get?.('abort-signal') as
+      | AbortSignal
+      | undefined;
+
     const result = await executeSentenceTest({
       id,
       content,
@@ -339,6 +351,7 @@ export const testSentenceWithRulesetTool = createTool({
       mastra: ctx.mastra!,
       ...(logFile !== undefined && { logFile }),
       ...(ctx.requestContext && { requestContext: ctx.requestContext as RequestContext }),
+      ...(abortSignal && { abortSignal }),
     });
 
     // Emit completion event with actual result

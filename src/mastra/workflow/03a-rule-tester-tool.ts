@@ -64,6 +64,7 @@ interface ExecuteRuleTestParams {
   mastra: Mastra;
   logFile?: string;
   requestContext?: RequestContext;
+  abortSignal?: AbortSignal | undefined;
 }
 
 /**
@@ -78,6 +79,7 @@ async function executeRuleTest({
   mastra,
   logFile,
   requestContext,
+  abortSignal,
 }: ExecuteRuleTestParams): Promise<z.infer<typeof ruleTestResultSchema>> {
   // Format all rules, highlighting the one being tested
   const formattedRules = allRules
@@ -129,6 +131,7 @@ ${JSON.stringify(structuredProblem.questions, null, 2)}
   try {
     const result = await generateWithRetry(mastra.getAgentById('rule-tester'), {
       prompt,
+      ...(abortSignal && { abortSignal }),
       options: {
         maxSteps: 100,
         ...(requestContext && { requestContext }),
@@ -228,6 +231,10 @@ export const testRuleTool = createTool({
       },
     });
 
+    const abortSignal = (ctx.requestContext as any)?.get?.('abort-signal') as
+      | AbortSignal
+      | undefined;
+
     const result = await executeRuleTest({
       rule: { title, description },
       allRules,
@@ -236,6 +243,7 @@ export const testRuleTool = createTool({
       mastra: ctx.mastra!,
       ...(logFile !== undefined && { logFile }),
       ...(ctx.requestContext && { requestContext: ctx.requestContext as RequestContext }),
+      ...(abortSignal && { abortSignal }),
     });
 
     // Emit completion event with actual result
@@ -303,6 +311,10 @@ export const testRuleWithRulesetTool = createTool({
       ...(r.confidence !== undefined && { confidence: r.confidence }),
     }));
 
+    const abortSignal = (ctx.requestContext as any)?.get?.('abort-signal') as
+      | AbortSignal
+      | undefined;
+
     const result = await executeRuleTest({
       rule: {
         title: rule.title,
@@ -315,6 +327,7 @@ export const testRuleWithRulesetTool = createTool({
       mastra: ctx.mastra!,
       ...(logFile !== undefined && { logFile }),
       ...(ctx.requestContext && { requestContext: ctx.requestContext as RequestContext }),
+      ...(abortSignal && { abortSignal }),
     });
 
     // Emit completion event with actual result

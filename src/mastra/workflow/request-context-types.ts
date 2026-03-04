@@ -67,4 +67,7 @@ export interface WorkflowRequestContext {
 
   /** Epoch ms when the workflow started, for elapsed-time timestamps */
   'workflow-start-time': number;
+
+  /** Abort signal from the workflow step -- tools read this for cooperative cancellation */
+  'abort-signal'?: AbortSignal;
 }

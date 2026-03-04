@@ -51,7 +51,7 @@ const extractionStep = createStep({
   inputSchema: rawProblemInputSchema,
   outputSchema: structuredProblemSchema,
   stateSchema: workflowStateSchema,
-  execute: async ({ inputData, mastra, bail, state, setState, writer }) => {
+  execute: async ({ inputData, mastra, bail, state, setState, writer, abortSignal }) => {
     // Initialize workflow state at the start of the workflow
     const initialState = initializeWorkflowState();
     const modelMode = inputData.modelMode ?? 'testing';
@@ -90,6 +90,7 @@ const extractionStep = createStep({
       mastra.getAgentById('structured-problem-extractor'),
       {
         prompt: extractPrompt,
+        abortSignal,
         options: {
           maxSteps: 100,
           requestContext,
@@ -183,7 +184,7 @@ const multiPerspectiveHypothesisStep = createStep({
   inputSchema: structuredProblemDataSchema,
   outputSchema: questionAnsweringInputSchema,
   stateSchema: workflowStateSchema,
-  execute: async ({ inputData, mastra, bail, state, setState, writer }) => {
+  execute: async ({ inputData, mastra, bail, state, setState, writer, abortSignal }) => {
     const structuredProblem = inputData;
     const logFile = state.logFile;
     const stepId: StepId = 'multi-perspective-hypothesis';
@@ -218,6 +219,7 @@ const multiPerspectiveHypothesisStep = createStep({
     mainRequestContext.set('step-writer', writer);
     mainRequestContext.set('step-id', stepId);
     mainRequestContext.set('workflow-start-time', state.workflowStartTime);
+    mainRequestContext.set('abort-signal', abortSignal);
 
     let lastTestResults: unknown = null;
     let previousPerspectiveIds: string[] = [];
@@ -230,6 +232,13 @@ const multiPerspectiveHypothesisStep = createStep({
     let finalFeedback: z.infer<typeof verifierFeedbackSchema> | null = null;
 
     for (let round = 1; round <= effectiveMaxRounds; round++) {
+      if (abortSignal?.aborted) {
+        console.log(
+          `${formatTimestamp(state.workflowStartTime)} [Round ${round}] Abort signal detected, stopping iteration.`,
+        );
+        break;
+      }
+
       const isImproverRound = round > 1;
 
       await emitTraceEvent(writer, {
@@ -271,6 +280,7 @@ const multiPerspectiveHypothesisStep = createStep({
           mastra.getAgentById('perspective-dispatcher'),
           {
             prompt: dispatcherPrompt,
+            abortSignal,
             options: {
               maxSteps: 100,
               requestContext: mainRequestContext,
@@ -368,6 +378,7 @@ const multiPerspectiveHypothesisStep = createStep({
           mastra.getAgentById('improver-dispatcher'),
           {
             prompt: improverPrompt,
+            abortSignal,
             options: {
               maxSteps: 100,
               requestContext: mainRequestContext,
@@ -438,6 +449,13 @@ const multiPerspectiveHypothesisStep = createStep({
       // ---------------------------------------------------------------
       // b. HYPOTHESIZE: Run hypothesizers in parallel
       // ---------------------------------------------------------------
+      if (abortSignal?.aborted) {
+        console.log(
+          `${formatTimestamp(state.workflowStartTime)} [Round ${round}] Abort signal detected before hypothesizers, stopping.`,
+        );
+        break;
+      }
+
       const hypothesizePromises = perspectives.map(async (perspective) => {
         await emitTraceEvent(writer, {
           type: 'data-perspective-start',
@@ -467,6 +485,7 @@ const multiPerspectiveHypothesisStep = createStep({
         perspectiveRequestContext.set('step-id', stepId);
         perspectiveRequestContext.set('event-source', 'draft');
         perspectiveRequestContext.set('workflow-start-time', state.workflowStartTime);
+        perspectiveRequestContext.set('abort-signal', abortSignal);
 
         const existingRules = isImproverRound ? Array.from(mainRules.values()) : [];
         const existingVocabulary = isImproverRound ? Array.from(mainVocabulary.values()) : [];
@@ -501,6 +520,7 @@ const multiPerspectiveHypothesisStep = createStep({
           mastra.getAgentById('initial-hypothesizer'),
           {
             prompt: hypothesizerPrompt,
+            abortSignal,
             options: { maxSteps: 100, requestContext: perspectiveRequestContext },
             responseCheck: 'toolActivity',
             onTextChunk: (chunk) => {
@@ -571,6 +591,13 @@ const multiPerspectiveHypothesisStep = createStep({
       // ---------------------------------------------------------------
       // c. VERIFY: Score each perspective's draft store
       // ---------------------------------------------------------------
+      if (abortSignal?.aborted) {
+        console.log(
+          `${formatTimestamp(state.workflowStartTime)} [Round ${round}] Abort signal detected before verifiers, stopping.`,
+        );
+        break;
+      }
+
       const perspectiveResults: PerspectiveResult[] = [];
 
       const verifyPromises = hypothesisResults.map(async ({ perspective, draftStore }) => {
@@ -585,6 +612,7 @@ const multiPerspectiveHypothesisStep = createStep({
         verifyRequestContext.set('step-id', stepId);
         verifyRequestContext.set('event-source', 'draft');
         verifyRequestContext.set('workflow-start-time', state.workflowStartTime);
+        verifyRequestContext.set('abort-signal', abortSignal);
 
         const verifyVocabulary = Array.from(draftStore.vocabulary.values());
         const verifyRules = Array.from(draftStore.rules.values());
@@ -619,6 +647,7 @@ const multiPerspectiveHypothesisStep = createStep({
           mastra.getAgentById('verifier-orchestrator'),
           {
             prompt: verifierPrompt,
+            abortSignal,
             options: { maxSteps: 100, requestContext: verifyRequestContext },
             responseCheck: 'toolActivity',
             onTextChunk: (chunk) => {
@@ -685,6 +714,7 @@ const multiPerspectiveHypothesisStep = createStep({
           mastra.getAgentById('verifier-feedback-extractor'),
           {
             prompt: extractorPrompt,
+            abortSignal,
             options: {
               maxSteps: 100,
               requestContext: verifyRequestContext,
@@ -776,6 +806,13 @@ const multiPerspectiveHypothesisStep = createStep({
       // ---------------------------------------------------------------
       // d. SYNTHESIZE: Merge best rulesets
       // ---------------------------------------------------------------
+      if (abortSignal?.aborted) {
+        console.log(
+          `${formatTimestamp(state.workflowStartTime)} [Round ${round}] Abort signal detected before synthesis, stopping.`,
+        );
+        break;
+      }
+
       // Mark main context as merged source for synthesis events
       mainRequestContext.set('event-source', 'merged');
 
@@ -851,6 +888,7 @@ const multiPerspectiveHypothesisStep = createStep({
         mastra.getAgentById('hypothesis-synthesizer'),
         {
           prompt: synthesizerPrompt,
+          abortSignal,
           options: { maxSteps: 100, requestContext: mainRequestContext },
           responseCheck: 'toolActivity',
           onTextChunk: (chunk) => {
@@ -915,6 +953,13 @@ const multiPerspectiveHypothesisStep = createStep({
       // ---------------------------------------------------------------
       // e. CONVERGENCE CHECK: Verify synthesized rules
       // ---------------------------------------------------------------
+      if (abortSignal?.aborted) {
+        console.log(
+          `${formatTimestamp(state.workflowStartTime)} [Round ${round}] Abort signal detected before convergence check, stopping.`,
+        );
+        break;
+      }
+
       await emitTraceEvent(writer, {
         type: 'data-convergence-start',
         data: { round, timestamp: new Date().toISOString() },
@@ -930,6 +975,7 @@ const multiPerspectiveHypothesisStep = createStep({
       convergenceRequestContext.set('step-id', stepId);
       convergenceRequestContext.set('event-source', 'merged');
       convergenceRequestContext.set('workflow-start-time', state.workflowStartTime);
+      convergenceRequestContext.set('abort-signal', abortSignal);
 
       const convergenceVerifierPrompt = JSON.stringify({
         vocabulary: Array.from(mainVocabulary.values()),
@@ -959,6 +1005,7 @@ const multiPerspectiveHypothesisStep = createStep({
         mastra.getAgentById('verifier-orchestrator'),
         {
           prompt: convergenceVerifierPrompt,
+          abortSignal,
           options: { maxSteps: 100, requestContext: convergenceRequestContext },
           responseCheck: 'toolActivity',
           onTextChunk: (chunk) => {
@@ -1020,6 +1067,7 @@ const multiPerspectiveHypothesisStep = createStep({
         mastra.getAgentById('verifier-feedback-extractor'),
         {
           prompt: convergenceExtractorPrompt,
+          abortSignal,
           options: {
             maxSteps: 100,
             requestContext: convergenceRequestContext,
@@ -1253,7 +1301,7 @@ const answerQuestionsStep = createStep({
   inputSchema: questionAnsweringInputSchema,
   outputSchema: questionsAnsweredSchema,
   stateSchema: workflowStateSchema,
-  execute: async ({ inputData, mastra, bail, state, setState, writer }) => {
+  execute: async ({ inputData, mastra, bail, state, setState, writer, abortSignal }) => {
     const { structuredProblem, rules } = inputData;
     const logFile = state.logFile;
 
@@ -1297,6 +1345,7 @@ const answerQuestionsStep = createStep({
       mastra.getAgentById('question-answerer'),
       {
         prompt: answererPrompt,
+        abortSignal,
         options: {
           maxSteps: 100,
           requestContext,
