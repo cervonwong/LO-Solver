@@ -9,6 +9,7 @@ import { useExamples } from '@/hooks/use-examples';
 import { useSolverWorkflow } from '@/hooks/use-solver-workflow';
 import { useWorkflowData } from '@/hooks/use-workflow-data';
 import { useWorkflowProgress } from '@/hooks/use-workflow-progress';
+import { useWorkflowToasts } from '@/hooks/use-workflow-toasts';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -113,6 +114,16 @@ function SolverPageInner() {
 
   useMascotSync({ hasStarted, isComplete, isFailed, isRunning });
 
+  useWorkflowToasts({
+    hasStarted,
+    isComplete,
+    isFailed,
+    isAborted,
+    isRunning,
+    finalRules,
+    answerStepOutput,
+  });
+
   useRegisterWorkflowControl({ isRunning, hasStarted, isAborting, stop: handleStop, handleReset });
 
   // Auto-scroll to results when solve completes
@@ -189,7 +200,7 @@ function SolverPageInner() {
           minSize="15%"
         >
           <ScrollArea className="h-full">
-            <div className="flex flex-col gap-6 py-6 pr-6">
+            <div className="flex flex-col gap-6 pt-6 pr-6">
               <LexMascot />
 
               <BlueprintCard>
