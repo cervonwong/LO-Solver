@@ -94,6 +94,7 @@ export default function SolverPage() {
 function SolverPageInner() {
   const [examples, setExamples] = useState<Array<{ id: string; label: string; type: string }>>([]);
   const [hasStarted, setHasStarted] = useState(false);
+  const [isAborting, setIsAborting] = useState(false);
   const [inputOpen, setInputOpen] = useState(true);
   const [problemText, setProblemText] = useState('');
   const hasSent = useRef(false);
@@ -315,10 +316,26 @@ function SolverPageInner() {
   const isAborted = hasStarted && !isRunning && !isComplete && !isFailed;
   const setMascotState = useMascotSync({ hasStarted, isComplete, isFailed, isRunning });
 
-  // When aborted, convert any 'running' steps to 'aborted'
-  const displaySteps: ProgressStep[] = isAborted
-    ? progressSteps.map((s) => (s.status === 'running' ? { ...s, status: 'aborted' as StepStatus } : s))
-    : progressSteps;
+  // Wrap stop to set isAborting flag before closing the client stream
+  const handleStop = useCallback(() => {
+    setIsAborting(true);
+    stop();
+  }, [stop]);
+
+  // Clear isAborting when the workflow is no longer running (abort completed)
+  useEffect(() => {
+    if (isAborting && !isRunning) {
+      setIsAborting(false);
+    }
+  }, [isAborting, isRunning]);
+
+  // When aborted or aborting, convert any 'running' steps to 'aborted'
+  const displaySteps: ProgressStep[] =
+    isAborted || isAborting
+      ? progressSteps.map((s) =>
+          s.status === 'running' ? { ...s, status: 'aborted' as StepStatus } : s,
+        )
+      : progressSteps;
 
   // Derive status message from progress steps
   const activeStep = progressSteps.find((s) => s.status === 'running');
@@ -351,13 +368,14 @@ function SolverPageInner() {
     hasSent.current = false;
     hasAnimated.current = false;
     setHasStarted(false);
+    setIsAborting(false);
     setInputOpen(true);
     setProblemText('');
     setMessages([]);
     setMascotState('idle');
   }, [setMessages, setMascotState]);
 
-  useRegisterWorkflowControl({ isRunning, hasStarted, stop, handleReset });
+  useRegisterWorkflowControl({ isRunning, hasStarted, isAborting, stop: handleStop, handleReset });
 
   const answerStepOutput = steps['answer-questions']?.output;
   const hypothesisStepOutput = steps['multi-perspective-hypothesis']?.output;
@@ -606,7 +624,13 @@ function SolverPageInner() {
   }, [isLargeScreen]);
 
   return (
-    <div className={isTransitioning ? 'panel-transition h-full border-t border-border' : 'h-full border-t border-border'}>
+    <div
+      className={
+        isTransitioning
+          ? 'panel-transition h-full border-t border-border'
+          : 'h-full border-t border-border'
+      }
+    >
       <ResizablePanelGroup orientation="horizontal" className="h-full" groupRef={groupRef}>
         {/* Left panel: Input + Results */}
         <ResizablePanel
@@ -739,7 +763,6 @@ function SolverPageInner() {
                   </BlueprintCard>
                 </div>
               )}
-
             </div>
           </ScrollArea>
         </ResizablePanel>
@@ -792,11 +815,7 @@ function SolverPageInner() {
         {showThirdColumn && (
           <>
             <ResizableHandle withHandle />
-            <ResizablePanel
-              id="vocab-rules-panel"
-              defaultSize="30%"
-              minSize="15%"
-            >
+            <ResizablePanel id="vocab-rules-panel" defaultSize="30%" minSize="15%">
               <ResizablePanelGroup orientation="vertical">
                 <ResizablePanel defaultSize="50%" minSize="20%">
                   <VocabularyPanel
@@ -817,7 +836,6 @@ function SolverPageInner() {
             </ResizablePanel>
           </>
         )}
-
       </ResizablePanelGroup>
     </div>
   );

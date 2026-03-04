@@ -13,6 +13,7 @@ import {
 interface WorkflowControlContextValue {
   isRunning: boolean;
   hasStarted: boolean;
+  isAborting: boolean;
   stop: () => void;
   handleReset: () => void;
 }
@@ -20,6 +21,7 @@ interface WorkflowControlContextValue {
 interface RegisterCallbacks {
   setIsRunning: (value: boolean) => void;
   setHasStarted: (value: boolean) => void;
+  setIsAborting: (value: boolean) => void;
   stopRef: React.MutableRefObject<() => void>;
   handleResetRef: React.MutableRefObject<() => void>;
 }
@@ -32,6 +34,7 @@ const noop = () => {};
 export function WorkflowControlProvider({ children }: { children: ReactNode }) {
   const [isRunning, setIsRunning] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
+  const [isAborting, setIsAborting] = useState(false);
   const stopRef = useRef<() => void>(noop);
   const handleResetRef = useRef<() => void>(noop);
 
@@ -46,6 +49,7 @@ export function WorkflowControlProvider({ children }: { children: ReactNode }) {
   const controlValue: WorkflowControlContextValue = {
     isRunning,
     hasStarted,
+    isAborting,
     stop,
     handleReset,
   };
@@ -53,6 +57,7 @@ export function WorkflowControlProvider({ children }: { children: ReactNode }) {
   const registerValue: RegisterCallbacks = {
     setIsRunning,
     setHasStarted,
+    setIsAborting,
     stopRef,
     handleResetRef,
   };
@@ -75,6 +80,7 @@ export function useWorkflowControl() {
 export function useRegisterWorkflowControl(opts: {
   isRunning: boolean;
   hasStarted: boolean;
+  isAborting: boolean;
   stop: () => void;
   handleReset: () => void;
 }) {
@@ -82,7 +88,7 @@ export function useRegisterWorkflowControl(opts: {
   if (!register)
     throw new Error('useRegisterWorkflowControl must be used within WorkflowControlProvider');
 
-  const { setIsRunning, setHasStarted, stopRef, handleResetRef } = register;
+  const { setIsRunning, setHasStarted, setIsAborting, stopRef, handleResetRef } = register;
 
   useEffect(() => {
     setIsRunning(opts.isRunning);
@@ -91,6 +97,10 @@ export function useRegisterWorkflowControl(opts: {
   useEffect(() => {
     setHasStarted(opts.hasStarted);
   }, [opts.hasStarted, setHasStarted]);
+
+  useEffect(() => {
+    setIsAborting(opts.isAborting);
+  }, [opts.isAborting, setIsAborting]);
 
   useEffect(() => {
     stopRef.current = opts.stop;

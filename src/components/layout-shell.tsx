@@ -1,6 +1,6 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { useCallback, type ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { WorkflowControlProvider, useWorkflowControl } from '@/contexts/workflow-control-context';
@@ -9,23 +9,47 @@ import { WorkflowSliders } from '@/components/workflow-sliders';
 import { CreditsBadge } from '@/components/credits-badge';
 
 function NavBar() {
-  const { isRunning, hasStarted, stop, handleReset } = useWorkflowControl();
+  const { isRunning, hasStarted, isAborting, stop, handleReset } = useWorkflowControl();
   const pathname = usePathname();
+
+  const handleAbort = useCallback(async () => {
+    if (!confirm('Stop the current solve? All in-flight API calls will be cancelled.')) return;
+    stop();
+    try {
+      await fetch('/api/solve/cancel', { method: 'POST' });
+    } catch {
+      // Cancel endpoint failure is non-fatal -- stop() already closed client stream
+    }
+  }, [stop]);
 
   return (
     <nav className="frosted flex shrink-0 items-center justify-between border border-border px-6 py-1.5">
       <div className="flex items-center gap-4">
         {pathname === '/' ? (
           <span className="stamp-btn-nav-underline">
-            <svg xmlns="http://www.w3.org/2000/svg" height="14" viewBox="0 -960 960 960" width="14" fill="currentColor" className="inline-block">
-              <path d="M160-240v-480h640v480H160Zm237.62-260H760v-180H397.62v180Zm200.92 220H760v-180H598.54v180Zm-200.92 0h160.92v-180H397.62v180ZM200-280h157.62v-400H200v400Z"/>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              height="14"
+              viewBox="0 -960 960 960"
+              width="14"
+              fill="currentColor"
+              className="inline-block"
+            >
+              <path d="M160-240v-480h640v480H160Zm237.62-260H760v-180H397.62v180Zm200.92 220H760v-180H598.54v180Zm-200.92 0h160.92v-180H397.62v180ZM200-280h157.62v-400H200v400Z" />
             </svg>
             {"Lex's Dashboard"}
           </span>
         ) : (
           <Link href="/" className="stamp-btn-nav-underline">
-            <svg xmlns="http://www.w3.org/2000/svg" height="14" viewBox="0 -960 960 960" width="14" fill="currentColor" className="inline-block">
-              <path d="M160-240v-480h640v480H160Zm237.62-260H760v-180H397.62v180Zm200.92 220H760v-180H598.54v180Zm-200.92 0h160.92v-180H397.62v180ZM200-280h157.62v-400H200v400Z"/>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              height="14"
+              viewBox="0 -960 960 960"
+              width="14"
+              fill="currentColor"
+              className="inline-block"
+            >
+              <path d="M160-240v-480h640v480H160Zm237.62-260H760v-180H397.62v180Zm200.92 220H760v-180H598.54v180Zm-200.92 0h160.92v-180H397.62v180ZM200-280h157.62v-400H200v400Z" />
             </svg>
             {"Lex's Dashboard"}
           </Link>
@@ -37,8 +61,15 @@ function NavBar() {
           tabIndex={isRunning ? -1 : undefined}
         >
           Eval Results
-          <svg xmlns="http://www.w3.org/2000/svg" height="14" viewBox="0 -960 960 960" width="14" fill="currentColor" className="inline-block">
-            <path d="M683.15-460H200v-40h483.15L451.46-731.69 480-760l280 280-280 280-28.54-28.31L683.15-460Z"/>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            height="14"
+            viewBox="0 -960 960 960"
+            width="14"
+            fill="currentColor"
+            className="inline-block"
+          >
+            <path d="M683.15-460H200v-40h483.15L451.46-731.69 480-760l280 280-280 280-28.54-28.31L683.15-460Z" />
           </svg>
         </Link>
       </div>
@@ -56,20 +87,40 @@ function NavBar() {
         <div className="flex items-center gap-2">
           <button
             className="stamp-btn-nav-warning px-3 py-1"
-            disabled={!isRunning}
-            onClick={() => stop()}
+            disabled={!isRunning || isAborting}
+            onClick={handleAbort}
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              height="14"
-              viewBox="0 -960 960 960"
-              width="14"
-              fill="currentColor"
-              className="inline-block -mt-px mr-1"
-            >
-              <path d="M502.77-80Q425.38-80 358-117.12q-67.38-37.11-108.77-103.34l-152-244.31L133.46-501 320-377.77V-780h40v478.54L167.38-430.61l115.77 187.23q35 57.92 93.65 90.65Q435.44-120 502.77-120q106.83 0 182.03-74.42Q760-268.85 760-376.46V-760h40v383.54q0 123.83-86.54 210.14Q626.92-80 502.77-80Zm-35.85-420v-360h40v360h-40Zm146.93 0v-320h40v320h-40ZM463.69-310Z" />
-            </svg>
-            Abort
+            {isAborting ? (
+              <>
+                <svg
+                  className="inline-block -mt-px mr-1 animate-spin"
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                </svg>
+                Aborting...
+              </>
+            ) : (
+              <>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  height="14"
+                  viewBox="0 -960 960 960"
+                  width="14"
+                  fill="currentColor"
+                  className="inline-block -mt-px mr-1"
+                >
+                  <path d="M502.77-80Q425.38-80 358-117.12q-67.38-37.11-108.77-103.34l-152-244.31L133.46-501 320-377.77V-780h40v478.54L167.38-430.61l115.77 187.23q35 57.92 93.65 90.65Q435.44-120 502.77-120q106.83 0 182.03-74.42Q760-268.85 760-376.46V-760h40v383.54q0 123.83-86.54 210.14Q626.92-80 502.77-80Zm-35.85-420v-360h40v360h-40Zm146.93 0v-320h40v320h-40ZM463.69-310Z" />
+                </svg>
+                Abort
+              </>
+            )}
           </button>
           <button
             className="stamp-btn-nav-neutral px-3 py-1"
