@@ -23,13 +23,13 @@ Requirements for v1.2 Cleanup & Quality. Each maps to roadmap phases.
 
 ### Toast Notifications
 
-- [ ] **TOAST-01**: Sonner installed via shadcn; `<Toaster />` added to root layout, styled to blueprint/cyanotype theme
-- [ ] **TOAST-02**: Toast fires when workflow solve starts
-- [ ] **TOAST-03**: Toast fires when workflow completes successfully with results
-- [ ] **TOAST-04**: Toast fires when workflow is aborted by user
-- [ ] **TOAST-05**: Toast fires when workflow encounters an error
+- [x] **TOAST-01**: Sonner installed via shadcn; `<Toaster />` added to root layout, styled to blueprint/cyanotype theme
+- [x] **TOAST-02**: Toast fires when workflow solve starts
+- [x] **TOAST-03**: Toast fires when workflow completes successfully with results
+- [x] **TOAST-04**: Toast fires when workflow is aborted by user
+- [x] **TOAST-05**: Toast fires when workflow encounters an error
 - [ ] **TOAST-06**: Toast fires when cumulative API cost crosses configurable thresholds during a run
-- [ ] **TOAST-07**: All toasts use stable IDs to prevent duplicates in React Strict Mode
+- [x] **TOAST-07**: All toasts use stable IDs to prevent duplicates in React Strict Mode
 
 ## Future Requirements
 
@@ -67,13 +67,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 | REFAC-02 | Phase 15 | Complete |
 | REFAC-03 | Phase 15 | Complete |
 | REFAC-04 | Phase 15 | Complete |
-| TOAST-01 | Phase 16 | Pending |
-| TOAST-02 | Phase 16 | Pending |
-| TOAST-03 | Phase 16 | Pending |
-| TOAST-04 | Phase 16 | Pending |
-| TOAST-05 | Phase 16 | Pending |
+| TOAST-01 | Phase 16 | Complete |
+| TOAST-02 | Phase 16 | Complete |
+| TOAST-03 | Phase 16 | Complete |
+| TOAST-04 | Phase 16 | Complete |
+| TOAST-05 | Phase 16 | Complete |
 | TOAST-06 | Phase 16 | Pending |
-| TOAST-07 | Phase 16 | Pending |
+| TOAST-07 | Phase 16 | Complete |
 
 **Coverage:**
 - v1.2 requirements: 15 total

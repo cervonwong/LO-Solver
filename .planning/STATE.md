@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Cleanup & Quality
-status: unknown
-last_updated: "2026-03-04T05:39:23.131Z"
+status: in-progress
+last_updated: "2026-03-04T07:14:05Z"
 progress:
-  total_phases: 2
+  total_phases: 3
   completed_phases: 2
-  total_plans: 5
-  completed_plans: 5
+  total_plans: 7
+  completed_plans: 6
 ---
 
 # Project State
@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-03)
 
 **Core value:** The agentic workflow must produce measurably better results than zero-shotting the same LLMs without orchestration.
-**Current focus:** v1.2 Phase 15 — File Refactoring (COMPLETE)
+**Current focus:** v1.2 Phase 16 — Toast Notifications (IN PROGRESS)
 
 ## Current Position
 
-Phase: 15 of 16 (File Refactoring) — COMPLETE (3 of 3 plans done)
-Plan: 3 of 3 in Phase 15 (COMPLETE)
-Status: Phase 15 complete, all file refactoring done
-Last activity: 2026-03-04 - Completed 15-03: page.tsx hook extraction
+Phase: 16 of 16 (Toast Notifications) — IN PROGRESS (1 of 2 plans done)
+Plan: 1 of 2 in Phase 16 (COMPLETE)
+Status: Plan 16-01 complete, toast infrastructure and lifecycle toasts wired
+Last activity: 2026-03-04 - Completed 16-01: toast notifications
 
-Progress: [██████████] 100% (Phase 15)
+Progress: [█████░░░░░] 50% (Phase 16)
 
 ## Performance Metrics
 
@@ -40,8 +40,8 @@ Progress: [██████████] 100% (Phase 15)
 - Total execution time: ~74min
 
 **v1.2:**
-- Total plans completed: 5
-- Plans defined: 5 (Phase 14: 2, Phase 15: 3)
+- Total plans completed: 6
+- Plans defined: 7 (Phase 14: 2, Phase 15: 3, Phase 16: 2)
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
@@ -50,6 +50,7 @@ Progress: [██████████] 100% (Phase 15)
 | 15    | 01   | 4min     | 2     | 4     |
 | 15    | 02   | 5min     | 2     | 7     |
 | 15    | 03   | 5min     | 2     | 5     |
+| 16    | 01   | 3min     | 2     | 8     |
 
 ## Accumulated Context
 
@@ -71,6 +72,8 @@ Recent decisions affecting current work:
 - [15-03]: useSolverWorkflow accepts onReset callback rather than importing mascot context (keeps concerns separate)
 - [15-03]: allParts derivation stays in page.tsx to prevent hooks from depending on each other
 - [15-03]: JSX kept inline in page.tsx; hook extraction provides sufficient size reduction
+- [16-01]: Used bg-[rgba(0,40,80,0.95)] for toast background instead of surface-1 (too transparent for floating overlay)
+- [16-01]: Added explicit | undefined to optional props for exactOptionalPropertyTypes compatibility
 
 ### Pending Todos
 
@@ -93,5 +96,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-04
-Stopped at: Completed 15-03-PLAN.md (page.tsx hook extraction) — Phase 15 complete
+Stopped at: Completed 16-01-PLAN.md (toast notifications lifecycle toasts)
 Resume file: None
