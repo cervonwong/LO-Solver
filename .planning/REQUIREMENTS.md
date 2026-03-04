@@ -18,7 +18,7 @@ Requirements for v1.2 Cleanup & Quality. Each maps to roadmap phases.
 
 - [x] **REFAC-01**: `workflow.ts` step definitions extracted to individual `steps/*.ts` files; composition chain remains in `workflow.ts`
 - [x] **REFAC-02**: `trace-event-card.tsx` sub-components extracted to focused files under `components/trace/`
-- [ ] **REFAC-03**: `page.tsx` hooks and logic extracted to dedicated hook files and sub-components
+- [x] **REFAC-03**: `page.tsx` hooks and logic extracted to dedicated hook files and sub-components
 - [x] **REFAC-04**: All refactored modules pass `npx tsc --noEmit` with no new errors
 
 ### Toast Notifications
@@ -65,7 +65,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ABORT-04 | Phase 14 | Complete |
 | REFAC-01 | Phase 15 | Complete |
 | REFAC-02 | Phase 15 | Complete |
-| REFAC-03 | Phase 15 | Pending |
+| REFAC-03 | Phase 15 | Complete |
 | REFAC-04 | Phase 15 | Complete |
 | TOAST-01 | Phase 16 | Pending |
 | TOAST-02 | Phase 16 | Pending |

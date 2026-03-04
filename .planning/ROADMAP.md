@@ -38,7 +38,7 @@
 **Milestone Goal:** Tighten what's already built — better abort behavior, cleaner codebase, better user feedback.
 
 - [x] **Phase 14: Abort Propagation** - Abort button stops in-flight LLM calls and preserves correct workflow status
-- [ ] **Phase 15: File Refactoring** - Split oversized modules into focused files with no behavior changes
+- [x] **Phase 15: File Refactoring** - Split oversized modules into focused files with no behavior changes (completed 2026-03-04)
 - [ ] **Phase 16: Toast Notifications** - Sonner toasts for workflow lifecycle events
 
 ## Phase Details
@@ -101,7 +101,7 @@
 | 12. Workflow Control Buttons | v1.1 | 2/2 | Complete | 2026-03-03 |
 | 13. 3-Column Layout | v1.1 | 1/1 | Complete | 2026-03-03 |
 | 14. Abort Propagation | v1.2 | Complete    | 2026-03-04 | 2026-03-04 |
-| 15. File Refactoring | 2/3 | In Progress|  | - |
+| 15. File Refactoring | 3/3 | Complete   | 2026-03-04 | - |
 | 16. Toast Notifications | v1.2 | 0/? | Not started | - |
 
 _v1.0: 7 phases, 16 plans. All complete._
