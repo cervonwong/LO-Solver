@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Cleanup & Quality
-status: unknown
-last_updated: "2026-03-04T04:26:43.856Z"
+status: in-progress
+last_updated: "2026-03-04T05:17:58Z"
 progress:
-  total_phases: 1
+  total_phases: 2
   completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
+  total_plans: 5
+  completed_plans: 3
 ---
 
 # Project State
@@ -22,12 +22,12 @@ See: .planning/PROJECT.md (updated 2026-03-03)
 
 ## Current Position
 
-Phase: 14 of 16 (Abort Propagation) — COMPLETE (all 2 plans done)
-Plan: 2 of 2 in Phase 14 (COMPLETE)
-Status: Phase 14 complete, ready for Phase 15
-Last activity: 2026-03-04 — Completed 14-02 (frontend abort UX)
+Phase: 15 of 16 (File Refactoring) — IN PROGRESS (1 of 3 plans done)
+Plan: 1 of 3 in Phase 15 (COMPLETE)
+Status: 15-01 complete, ready for 15-02
+Last activity: 2026-03-04 — Completed 15-01 (workflow step extraction)
 
-Progress: [██████████] 100% (Phase 14)
+Progress: [███-------] 33% (Phase 15)
 
 ## Performance Metrics
 
@@ -40,13 +40,14 @@ Progress: [██████████] 100% (Phase 14)
 - Total execution time: ~74min
 
 **v1.2:**
-- Total plans completed: 2
-- Plans defined: 2 (Phase 14)
+- Total plans completed: 3
+- Plans defined: 5 (Phase 14: 2, Phase 15: 3)
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
 | 14    | 01   | 7min     | 2     | 7     |
 | 14    | 02   | 38min    | 2     | 3     |
+| 15    | 01   | 4min     | 2     | 4     |
 
 ## Accumulated Context
 
@@ -62,6 +63,8 @@ Recent decisions affecting current work:
 - [14-02]: Replaced browser confirm() with shadcn AlertDialog for abort confirmation (user-requested during verification)
 - [14-02]: Used solid dark red background (bg-red-950) for abort dialog to match blueprint/cyanotype theme
 - [14-02]: isAborting state lives in page.tsx and syncs to context via useRegisterWorkflowControl
+- [15-01]: Step files use ../ for sibling workflow imports and @/ for external imports
+- [15-01]: No index.ts re-export in steps/ directory since steps are internal to workflow composition
 
 ### Pending Todos
 
@@ -78,5 +81,5 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-04
-Stopped at: Completed 14-02-PLAN.md (frontend abort UX) — Phase 14 complete
+Stopped at: Completed 15-01-PLAN.md (workflow step extraction)
 Resume file: None

@@ -101,7 +101,7 @@
 | 12. Workflow Control Buttons | v1.1 | 2/2 | Complete | 2026-03-03 |
 | 13. 3-Column Layout | v1.1 | 1/1 | Complete | 2026-03-03 |
 | 14. Abort Propagation | v1.2 | Complete    | 2026-03-04 | 2026-03-04 |
-| 15. File Refactoring | v1.2 | 0/3 | Not started | - |
+| 15. File Refactoring | 1/3 | In Progress|  | - |
 | 16. Toast Notifications | v1.2 | 0/? | Not started | - |
 
 _v1.0: 7 phases, 16 plans. All complete._
