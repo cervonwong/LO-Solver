@@ -9,10 +9,10 @@ Requirements for v1.2 Cleanup & Quality. Each maps to roadmap phases.
 
 ### Abort Propagation
 
-- [ ] **ABORT-01**: Workflow steps pass `abortSignal` from execute params to all `streamWithRetry`/`generateWithRetry` calls
+- [x] **ABORT-01**: Workflow steps pass `abortSignal` from execute params to all `streamWithRetry`/`generateWithRetry` calls
 - [ ] **ABORT-02**: Aborted workflows display amber "aborted" state in UI, distinct from red "error/failed" state
-- [ ] **ABORT-03**: Fallback cancel endpoint (`POST /api/solve/cancel`) guarantees abort when `req.signal` is unreliable
-- [ ] **ABORT-04**: Verify/improve loop checks `abortSignal.aborted` at iteration boundaries before starting next round
+- [x] **ABORT-03**: Fallback cancel endpoint (`POST /api/solve/cancel`) guarantees abort when `req.signal` is unreliable
+- [x] **ABORT-04**: Verify/improve loop checks `abortSignal.aborted` at iteration boundaries before starting next round
 
 ### Code Refactoring
 
@@ -59,10 +59,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ABORT-01 | Phase 14 | Pending |
+| ABORT-01 | Phase 14 | Complete |
 | ABORT-02 | Phase 14 | Pending |
-| ABORT-03 | Phase 14 | Pending |
-| ABORT-04 | Phase 14 | Pending |
+| ABORT-03 | Phase 14 | Complete |
+| ABORT-04 | Phase 14 | Complete |
 | REFAC-01 | Phase 15 | Pending |
 | REFAC-02 | Phase 15 | Pending |
 | REFAC-03 | Phase 15 | Pending |

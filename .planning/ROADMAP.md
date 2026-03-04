@@ -97,7 +97,7 @@
 | 11. Agent Duck Mascots | v1.1 | 1/1 | Complete | 2026-03-03 |
 | 12. Workflow Control Buttons | v1.1 | 2/2 | Complete | 2026-03-03 |
 | 13. 3-Column Layout | v1.1 | 1/1 | Complete | 2026-03-03 |
-| 14. Abort Propagation | v1.2 | 0/2 | In progress | - |
+| 14. Abort Propagation | 1/2 | In Progress|  | - |
 | 15. File Refactoring | v1.2 | 0/? | Not started | - |
 | 16. Toast Notifications | v1.2 | 0/? | Not started | - |
 
