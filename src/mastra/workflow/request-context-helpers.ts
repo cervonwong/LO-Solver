@@ -189,6 +189,65 @@ export async function emitToolTraceEvent(
 }
 
 // ---------------------------------------------------------------------------
+// Cost tracking helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Extract total cost from an agent response.
+ * Sums per-step costs for multi-step agents, falls back to top-level cost.
+ * Accepts any object shape (FullOutput, AgentGenerateResult, etc.).
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function extractCostFromResult(result: Record<string, any>): number {
+  let callCost = 0;
+  if (result.steps && Array.isArray(result.steps) && result.steps.length > 0) {
+    for (const step of result.steps) {
+      const stepCost = step?.providerMetadata?.openrouter?.usage?.cost;
+      if (typeof stepCost === 'number') callCost += stepCost;
+    }
+  }
+  if (callCost === 0) {
+    const topCost = result.providerMetadata?.openrouter?.usage?.cost;
+    if (typeof topCost === 'number') callCost = topCost;
+  }
+  return callCost;
+}
+
+/**
+ * Update cumulative cost in a RequestContext and emit data-cost-update events
+ * at each $1 boundary crossing.
+ * Must be called with the full RequestContext (has set()) from step files.
+ */
+export async function updateCumulativeCost(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  requestContext: { get: (key: any) => any; set: (key: any, value: any) => void },
+  writer: StepWriter | undefined,
+  callCost: number,
+): Promise<void> {
+  if (callCost <= 0) return;
+
+  const prevCost = (requestContext.get('cumulative-cost') as number) ?? 0;
+  const newCost = prevCost + callCost;
+  requestContext.set('cumulative-cost', newCost);
+
+  // Check if we crossed a $1 boundary
+  const prevBucket = Math.floor(prevCost);
+  const newBucket = Math.floor(newCost);
+  if (newBucket > prevBucket) {
+    // Emit one event for each $1 boundary crossed (handles >$1 single calls)
+    for (let i = prevBucket + 1; i <= newBucket; i++) {
+      await emitTraceEvent(writer, {
+        type: 'data-cost-update',
+        data: {
+          cumulativeCost: i,
+          timestamp: new Date().toISOString(),
+        },
+      });
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Rules state helpers
 // ---------------------------------------------------------------------------
 

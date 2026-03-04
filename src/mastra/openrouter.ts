@@ -12,13 +12,15 @@ const GPT_OSS_PROVIDER_ORDER = ['clarifai/fp4', 'google-vertex'];
  * gpt-oss models are routed to clarifai/fp4 first, then google-vertex.
  */
 export const openrouter: typeof openrouterBase = ((modelId: string, settings?: object) => {
+  // Enable usage accounting on all models so OpenRouter includes cost in responses
+  const baseSettings = { usage: { include: true }, ...settings };
   if (modelId.includes('gpt-oss')) {
     return openrouterBase(modelId, {
-      ...settings,
+      ...baseSettings,
       provider: { order: GPT_OSS_PROVIDER_ORDER },
     });
   }
-  return openrouterBase(modelId, settings);
+  return openrouterBase(modelId, baseSettings);
 }) as typeof openrouterBase;
 
 /** Model mode for switching between cheap testing and production models. */

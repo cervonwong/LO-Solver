@@ -70,4 +70,7 @@ export interface WorkflowRequestContext {
 
   /** Abort signal from the workflow step -- tools read this for cooperative cancellation */
   'abort-signal'?: AbortSignal;
+
+  /** Cumulative API cost in dollars across all agent calls in this workflow step */
+  'cumulative-cost': number;
 }

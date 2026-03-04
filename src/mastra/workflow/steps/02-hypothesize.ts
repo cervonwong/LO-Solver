@@ -17,6 +17,8 @@ import {
   emitTraceEvent,
   createDraftStore,
   clearAllDraftStores,
+  extractCostFromResult,
+  updateCumulativeCost,
 } from '../request-context-helpers';
 import type { StepId } from '@/lib/workflow-events';
 import { generateEventId } from '@/lib/workflow-events';
@@ -78,6 +80,7 @@ export const multiPerspectiveHypothesisStep = createStep({
     mainRequestContext.set('step-id', stepId);
     mainRequestContext.set('workflow-start-time', state.workflowStartTime);
     mainRequestContext.set('abort-signal', abortSignal);
+    mainRequestContext.set('cumulative-cost', 0);
 
     let lastTestResults: unknown = null;
     let previousPerspectiveIds: string[] = [];
@@ -158,6 +161,10 @@ export const multiPerspectiveHypothesisStep = createStep({
         );
         const dispatchDurationMs = new Date().getTime() - dispatchStartTime.getTime();
         mainRequestContext.set('parent-agent-id', undefined);
+
+        // Track API cost
+        const dispatchCost = extractCostFromResult(dispatcherResponse);
+        await updateCumulativeCost(mainRequestContext, writer, dispatchCost);
 
         await emitTraceEvent(writer, {
           type: 'data-agent-end',
@@ -263,6 +270,10 @@ export const multiPerspectiveHypothesisStep = createStep({
         const improverDispatchDurationMs =
           new Date().getTime() - improverDispatchStartTime.getTime();
         mainRequestContext.set('parent-agent-id', undefined);
+
+        // Track API cost
+        const improverDispatchCost = extractCostFromResult(improverDispatcherResponse);
+        await updateCumulativeCost(mainRequestContext, writer, improverDispatchCost);
 
         await emitTraceEvent(writer, {
           type: 'data-agent-end',
@@ -412,6 +423,10 @@ export const multiPerspectiveHypothesisStep = createStep({
         const hypDurationMs = new Date().getTime() - hypStartTime.getTime();
         perspectiveRequestContext.set('parent-agent-id', undefined);
 
+        // Track API cost (accumulates on mainRequestContext across all perspectives)
+        const hypCost = extractCostFromResult(hypothesizerResponse);
+        await updateCumulativeCost(mainRequestContext, writer, hypCost);
+
         await emitTraceEvent(writer, {
           type: 'data-agent-end',
           data: {
@@ -543,6 +558,10 @@ export const multiPerspectiveHypothesisStep = createStep({
         const verifierDurationMs = new Date().getTime() - verifierStartTime.getTime();
         verifyRequestContext.set('parent-agent-id', undefined);
 
+        // Track API cost
+        const verifyCost = extractCostFromResult(verifierResponse);
+        await updateCumulativeCost(mainRequestContext, writer, verifyCost);
+
         await emitTraceEvent(writer, {
           type: 'data-agent-end',
           data: {
@@ -613,6 +632,10 @@ export const multiPerspectiveHypothesisStep = createStep({
         );
         const extractorDurationMs = new Date().getTime() - extractorStartTime.getTime();
         verifyRequestContext.set('parent-agent-id', undefined);
+
+        // Track API cost
+        const extractorCost = extractCostFromResult(extractorResponse);
+        await updateCumulativeCost(mainRequestContext, writer, extractorCost);
 
         await emitTraceEvent(writer, {
           type: 'data-agent-end',
@@ -791,6 +814,10 @@ export const multiPerspectiveHypothesisStep = createStep({
       const synthesizerDurationMs = new Date().getTime() - synthesizerStartTime.getTime();
       mainRequestContext.set('parent-agent-id', undefined);
 
+      // Track API cost
+      const synthesizerCost = extractCostFromResult(synthesizerResponse);
+      await updateCumulativeCost(mainRequestContext, writer, synthesizerCost);
+
       await emitTraceEvent(writer, {
         type: 'data-agent-end',
         data: {
@@ -912,6 +939,10 @@ export const multiPerspectiveHypothesisStep = createStep({
       const convergenceDurationMs = new Date().getTime() - convergenceStartTime.getTime();
       convergenceRequestContext.set('parent-agent-id', undefined);
 
+      // Track API cost
+      const convergenceCost = extractCostFromResult(convergenceVerifierResponse);
+      await updateCumulativeCost(mainRequestContext, writer, convergenceCost);
+
       await emitTraceEvent(writer, {
         type: 'data-agent-end',
         data: {
@@ -978,6 +1009,10 @@ export const multiPerspectiveHypothesisStep = createStep({
       const convergenceExtractorDurationMs =
         new Date().getTime() - convergenceExtractorStartTime.getTime();
       convergenceRequestContext.set('parent-agent-id', undefined);
+
+      // Track API cost
+      const convergenceExtractorCost = extractCostFromResult(convergenceExtractorResponse);
+      await updateCumulativeCost(mainRequestContext, writer, convergenceExtractorCost);
 
       await emitTraceEvent(writer, {
         type: 'data-agent-end',

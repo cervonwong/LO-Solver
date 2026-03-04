@@ -9,7 +9,7 @@ import {
   formatTimestamp,
 } from '../logging-utils';
 import { streamWithRetry } from '../agent-utils';
-import { emitTraceEvent } from '../request-context-helpers';
+import { emitTraceEvent, extractCostFromResult, updateCumulativeCost } from '../request-context-helpers';
 import type { WorkflowRequestContext } from '../request-context-types';
 import type { StepId } from '@/lib/workflow-events';
 import { generateEventId } from '@/lib/workflow-events';
@@ -45,6 +45,7 @@ export const extractionStep = createStep({
     const requestContext = new RequestContext<WorkflowRequestContext>();
     requestContext.set('model-mode', modelMode as ModelMode);
     requestContext.set('workflow-start-time', initialState.workflowStartTime);
+    requestContext.set('cumulative-cost', 0);
 
     const extractAgentId = generateEventId();
     const extractPrompt = `${inputData.rawProblemText}`;
@@ -82,6 +83,10 @@ export const extractionStep = createStep({
       },
     );
     const step1DurationMs = new Date().getTime() - step1StartTime.getTime();
+
+    // Track API cost
+    const callCost = extractCostFromResult(response);
+    await updateCumulativeCost(requestContext, writer, callCost);
 
     await emitTraceEvent(writer, {
       type: 'data-agent-end',

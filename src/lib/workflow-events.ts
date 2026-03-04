@@ -260,6 +260,14 @@ export interface RulesUpdateEvent {
   };
 }
 
+export interface CostUpdateEvent {
+  type: 'data-cost-update';
+  data: {
+    cumulativeCost: number;
+    timestamp: string;
+  };
+}
+
 export type WorkflowTraceEvent =
   | StepStartEvent
   | StepCompleteEvent
@@ -279,4 +287,5 @@ export type WorkflowTraceEvent =
   | ConvergenceStartEvent
   | ConvergenceCompleteEvent
   | RoundStartEvent
-  | RoundCompleteEvent;
+  | RoundCompleteEvent
+  | CostUpdateEvent;
