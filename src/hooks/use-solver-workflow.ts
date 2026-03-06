@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
 import { useModelMode } from '@/hooks/use-model-mode';
+import { useApiKey } from '@/hooks/use-api-key';
 import { useWorkflowSettings } from '@/hooks/use-workflow-settings';
 
 export function useSolverWorkflow({ onReset }: { onReset?: () => void } = {}) {
@@ -13,6 +14,7 @@ export function useSolverWorkflow({ onReset }: { onReset?: () => void } = {}) {
   const [problemText, setProblemText] = useState('');
   const hasSent = useRef(false);
   const [modelMode] = useModelMode();
+  const [apiKey] = useApiKey();
   const [workflowSettings] = useWorkflowSettings();
 
   const transport = useMemo(
@@ -28,11 +30,12 @@ export function useSolverWorkflow({ onReset }: { onReset?: () => void } = {}) {
               modelMode,
               maxRounds: workflowSettings.maxRounds,
               perspectiveCount: workflowSettings.perspectiveCount,
+              ...(apiKey && { apiKey }),
             },
           },
         }),
       }),
-    [modelMode, workflowSettings],
+    [modelMode, apiKey, workflowSettings],
   );
 
   const { messages, sendMessage, status, setMessages, stop } = useChat({ transport });

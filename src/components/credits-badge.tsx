@@ -5,9 +5,10 @@ import { useApiKey } from '@/hooks/use-api-key';
 
 interface CreditsBadgeProps {
   onClick?: () => void;
+  onServerKeyStatus?: (hasServerKey: boolean) => void;
 }
 
-export function CreditsBadge({ onClick }: CreditsBadgeProps) {
+export function CreditsBadge({ onClick, onServerKeyStatus }: CreditsBadgeProps) {
   const [apiKey] = useApiKey();
   const [remaining, setRemaining] = useState<number | null>(null);
   const [error, setError] = useState(false);
@@ -16,13 +17,19 @@ export function CreditsBadge({ onClick }: CreditsBadgeProps) {
   useEffect(() => {
     async function fetchCredits() {
       try {
-        const res = await fetch('/api/credits');
+        const url = apiKey
+          ? `/api/credits?key=${encodeURIComponent(apiKey)}`
+          : '/api/credits';
+        const res = await fetch(url);
         const data = await res.json();
         if (data.remaining !== null && data.remaining !== undefined) {
           setRemaining(data.remaining);
           setError(false);
         } else {
           setError(true);
+        }
+        if (typeof data.hasServerKey === 'boolean') {
+          onServerKeyStatus?.(data.hasServerKey);
         }
       } catch {
         setError(true);
@@ -33,7 +40,7 @@ export function CreditsBadge({ onClick }: CreditsBadgeProps) {
     fetchCredits();
     const interval = setInterval(fetchCredits, 20_000);
     return () => clearInterval(interval);
-  }, []);
+  }, [apiKey, onServerKeyStatus]);
 
   return (
     <button
