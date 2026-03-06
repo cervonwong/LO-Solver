@@ -145,6 +145,49 @@
 
 ---
 
+## Milestone: v1.3 — User API Key
+
+**Shipped:** 2026-03-06
+**Phases:** 2 | **Plans:** 4 | **Commits:** 26
+
+### What Was Built
+- useApiKey hook with localStorage persistence and cross-tab sync via useSyncExternalStore
+- ApiKeyDialog with enter/edit/clear flows and two-row CreditsBadge integration
+- Per-request OpenRouter provider factory with RequestContext plumbing across all 13 agents
+- Backend key routing with env-key fallback, no-key guard (401), and hasServerKey endpoint
+- Auto-open dialog flow with deferred solve guard and chatId-based transport refresh
+
+### What Worked
+- Copying the useSyncExternalStore pattern from use-model-mode.ts made the hook trivial to implement
+- Provider factory pattern cleanly abstracted the singleton vs per-request distinction
+- State-based key propagation (apiKey in workflow state) worked cleanly despite Mastra's step-local RequestContext
+- Plan specificity continued to enable fast execution (2min for 17-01, 2min for 17-02, 5min for 18-01)
+- Verification checkpoint in 18-02 caught 3 bugs (stale transport, missing sub-context propagation, no-key UX) before milestone completion
+
+### What Was Inefficient
+- 18-02 took ~45min (vs 2-5min for other plans) due to 3 bugs found during verification that required iterative fixes
+- No milestone audit was run — skipped directly to completion since all requirements were checked off
+
+### Patterns Established
+- Provider factory: createOpenRouterProvider(apiKey) wraps base with identical routing and usage tracking
+- Agent model indirection: all agents use getOpenRouterProvider(requestContext) instead of direct openrouter()
+- Solve guard with pendingSolveRef: defer solve until key is saved, avoid callback chains
+- chatId refresh pattern: derive useChat chatId from apiKey to force transport recreation on key change
+- Cross-component coordination via WorkflowControlContext for key state
+
+### Key Lessons
+1. Copy existing hook patterns (useSyncExternalStore + StorageEvent) for new localStorage state — eliminates design decisions
+2. State-based propagation through Zod schemas is the correct Mastra pattern when workflow-level requestContext isn't available to steps
+3. Verification checkpoints catch real bugs — 3 issues found in 18-02 that would have shipped broken
+4. Small milestones (2 phases) with focused scope ship in a single day with minimal overhead
+
+### Cost Observations
+- Model mix: opus for phase execution, haiku for summaries
+- Sessions: 2 across 1 day
+- Notable: 55min total execution time across 4 plans; smallest milestone yet
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -154,6 +197,7 @@
 | v1.0 | 196 | 7 | GSD adopted mid-milestone; eval-first development |
 | v1.1 | ~60 | 6 | Quick tasks for polish; 2-min plan execution average |
 | v1.2 | ~30 | 3 | Focused cleanup; sequential dependency chain; fastest milestone |
+| v1.3 | 26 | 2 | User-facing feature; pattern copying; verification-driven bug fixes |
 
 ### Cumulative Quality
 
@@ -162,6 +206,7 @@
 | v1.0 | 4 Linguini | 22/22 satisfied | 13,581 TS |
 | v1.1 | 4 Linguini | 19/19 satisfied | 14,281 TS |
 | v1.2 | 4 Linguini | 15/15 satisfied | 15,069 TS |
+| v1.3 | 4 Linguini | 9/9 satisfied | 15,656 TS |
 
 ### Top Lessons (Verified Across Milestones)
 
@@ -170,3 +215,5 @@
 3. Specific plans with exact file paths enable fast execution (verified v1.1, v1.2)
 4. Quick tasks handle polish without blocking structural phase work (verified v1.1, v1.2)
 5. Build order matters — feature work before refactoring before new features on clean structure (verified v1.2)
+6. Copy existing patterns for new features — reduces design surface and enables fast execution (verified v1.3)
+7. Verification checkpoints catch real bugs before shipping (verified v1.2, v1.3)
