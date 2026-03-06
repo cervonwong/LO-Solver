@@ -52,17 +52,14 @@ The ONE thing that must work: **the agentic workflow must produce measurably bet
 - ✓ Large source files audited and split into focused modules — v1.2
 - ✓ Workflow lifecycle toast notifications (start, complete, abort, cost warnings) — v1.2
 
+- ✓ User-provided API key entry via nav bar dialog with localStorage persistence — v1.3
+- ✓ Per-request OpenRouter provider factory supporting user-provided keys across all agents — v1.3
+- ✓ Backend env-key fallback with no-key guard and hasServerKey endpoint — v1.3
+- ✓ Auto-open dialog flow with deferred solve guard and chatId-based transport refresh — v1.3
+
 ### Active
 
-**Current Milestone: v1.3 User API Key**
-
-**Goal:** Allow users to provide their own OpenRouter API key so the app can be deployed without embedding a server-side key.
-
-**Target features:**
-- User-provided API key entry via dialog
-- Key stored in browser localStorage
-- Button in nav bar top-right to trigger dialog
-- Backend uses user-provided key when env key is absent
+(No active milestone — all shipped through v1.3)
 
 ### Out of Scope
 
@@ -71,21 +68,25 @@ The ONE thing that must work: **the agentic workflow must produce measurably bet
 - Multi-user support / authentication — single-user dev tool
 - Deployment infrastructure / hosting setup — user key feature enables deployment but infra is separate
 - Real-time collaboration features
+- API key validation via test call — errors surface naturally during solve
+- Auto-prompt dialog on first visit — button-only by design
+- Server-side key storage — localStorage sufficient, no accounts needed
 
 ## Problem Statement
 
-(Resolved in v1.0) The workflow uses multi-perspective hypothesis generation and verified rules. The evaluation harness demonstrates workflow accuracy improvements over zero-shot baselines. (Resolved in v1.1) The observability UI is polished with correct trace hierarchy, structured data display, workflow controls, and animated layout. (Resolved in v1.2) Abort propagation stops in-flight LLM calls, large files are split into focused modules, and toast notifications provide workflow lifecycle feedback.
+(Resolved in v1.0) The workflow uses multi-perspective hypothesis generation and verified rules. The evaluation harness demonstrates workflow accuracy improvements over zero-shot baselines. (Resolved in v1.1) The observability UI is polished with correct trace hierarchy, structured data display, workflow controls, and animated layout. (Resolved in v1.2) Abort propagation stops in-flight LLM calls, large files are split into focused modules, and toast notifications provide workflow lifecycle feedback. (Resolved in v1.3) Users can provide their own OpenRouter API key, enabling deployment without a server-side key.
 
 ## Context
 
-Shipped v1.2 with 15,069 LOC TypeScript.
+Shipped v1.3 with 15,656 LOC TypeScript.
 Tech stack: TypeScript 5.9.3, Next.js 16.1.6, Mastra 1.8.0, Zod 4.3.6.
 Models: GPT-5-mini (extraction), Gemini 3 Flash (reasoning), GPT-OSS-120B (testing).
 Storage: LibSQL for Mastra state, markdown logs for execution traces, JSON for eval results.
 Frontend: React 19, shadcn/ui, resizable panels (3-column animated layout), AI SDK streaming.
 Evaluation: 4 Linguini ground-truth problems, CLI runner with --comparison and --problem flags.
-UI: Blueprint/cyanotype design system, duck mascots per agent role, workflow abort/reset controls, Sonner toast notifications.
+UI: Blueprint/cyanotype design system, duck mascots per agent role, workflow abort/reset controls, Sonner toast notifications, user API key dialog.
 Code structure: Workflow steps split into individual files, trace components in focused modules, page hooks extracted to dedicated files.
+Deployment: App can run without server-side OPENROUTER_API_KEY; users provide their own key via browser dialog.
 
 ## Key Decisions
 
@@ -112,6 +113,11 @@ Code structure: Workflow steps split into individual files, trace components in 
 | Abort → Refactor → Toast build order | Avoids merge conflicts on shared files (workflow.ts, page.tsx) | ✓ Good — clean sequential dependencies |
 | Per-step cost accumulation | Avoids modifying workflow-schemas.ts; simpler implementation | ✓ Good — cost tracking works without schema changes |
 | Step files split without index.ts re-export | Steps are internal to workflow composition, not public API | ✓ Good — no unnecessary re-exports |
+| API key via workflow state (not workflow requestContext) | Mastra steps don't receive workflow-level requestContext | ✓ Good — clean per-step provider creation |
+| Per-step provider creation from state.apiKey | RequestContext is step-local, not transferable | ✓ Good — consistent key propagation |
+| No key validation via test API call | Errors surface naturally during solve | ✓ Good — simpler UX, no false negatives |
+| pendingSolveRef for deferred auto-solve | Avoids complex callback chains from dialog to page | ✓ Good — clean solve-after-key-entry flow |
+| chatId derived from apiKey | Forces useChat transport recreation on key change | ✓ Good — prevents stale credentials |
 
 ## Constraints
 
@@ -130,4 +136,4 @@ When working on any phase that touches Mastra code (agents, workflows, tools, ev
 
 ---
 
-*Last updated: 2026-03-06 after v1.3 milestone start*
+*Last updated: 2026-03-06 after v1.3 milestone*

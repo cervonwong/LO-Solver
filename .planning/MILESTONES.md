@@ -1,5 +1,22 @@
 # Milestones
 
+## v1.3 User API Key (Shipped: 2026-03-06)
+
+**Phases:** 2 | **Plans:** 4 | **LOC:** 15,656 TypeScript
+**Timeline:** 1 day (2026-03-06)
+**Git range:** 5fe820c..f39f090 (48 files changed, +2,985 / -84)
+
+**Delivered:** User-provided OpenRouter API key support with localStorage persistence, per-request provider factory across all agents, and auto-open dialog flow enabling keyless deployment.
+
+**Key accomplishments:**
+1. useApiKey hook with localStorage persistence and cross-tab sync via useSyncExternalStore
+2. ApiKeyDialog with enter/edit/clear flows and two-row CreditsBadge integration with key status indicator
+3. Per-request OpenRouter provider factory with RequestContext plumbing across all 13 agents and 3 workflow steps
+4. Backend key routing with env-key fallback, no-key guard (401), and hasServerKey endpoint
+5. Auto-open dialog flow with deferred solve guard (pendingSolveRef) and chatId-based transport refresh
+
+---
+
 ## v1.2 Cleanup & Quality (Shipped: 2026-03-04)
 
 **Phases:** 3 | **Plans:** 7 | **Quick Tasks:** 1 | **LOC:** 15,069 TypeScript
