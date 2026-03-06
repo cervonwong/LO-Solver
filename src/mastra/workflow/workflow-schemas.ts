@@ -55,6 +55,7 @@ export const workflowStateSchema = z.object({
   maxRounds: z.number().default(3),
   perspectiveCount: z.number().default(3),
   workflowStartTime: z.number().default(0).describe('Epoch ms when workflow started'),
+  apiKey: z.string().optional(),
 });
 
 export type WorkflowState = z.infer<typeof workflowStateSchema>;
@@ -84,6 +85,7 @@ export const rawProblemInputSchema = z.object({
   modelMode: z.enum(['testing', 'production']).default('testing'),
   maxRounds: z.number().min(1).max(5).default(3),
   perspectiveCount: z.number().min(2).max(7).default(3),
+  apiKey: z.string().optional(),
 });
 
 // ---------------------------------------------------------------------------

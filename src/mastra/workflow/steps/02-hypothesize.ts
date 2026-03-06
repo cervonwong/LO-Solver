@@ -5,7 +5,7 @@ import { type VocabularyEntry } from '../vocabulary-tools';
 import type { WorkflowRequestContext, DraftStore } from '../request-context-types';
 import type { Rule } from '../request-context-types';
 import type { ModelMode } from '../../openrouter';
-import { activeModelId } from '../../openrouter';
+import { activeModelId, createOpenRouterProvider } from '../../openrouter';
 import {
   recordStepTiming,
   logAgentOutput,
@@ -81,6 +81,9 @@ export const multiPerspectiveHypothesisStep = createStep({
     mainRequestContext.set('workflow-start-time', state.workflowStartTime);
     mainRequestContext.set('abort-signal', abortSignal);
     mainRequestContext.set('cumulative-cost', 0);
+    if (state.apiKey) {
+      mainRequestContext.set('openrouter-provider', createOpenRouterProvider(state.apiKey));
+    }
 
     let lastTestResults: unknown = null;
     let previousPerspectiveIds: string[] = [];

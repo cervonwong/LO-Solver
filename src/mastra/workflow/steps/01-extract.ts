@@ -1,7 +1,7 @@
 import { createStep } from '@mastra/core/workflows';
 import { RequestContext } from '@mastra/core/request-context';
 import type { ModelMode } from '../../openrouter';
-import { activeModelId } from '../../openrouter';
+import { activeModelId, createOpenRouterProvider } from '../../openrouter';
 import {
   recordStepTiming,
   logAgentOutput,
@@ -32,7 +32,7 @@ export const extractionStep = createStep({
     const modelMode = inputData.modelMode ?? 'testing';
     const maxRounds = inputData.maxRounds ?? 3;
     const perspectiveCount = inputData.perspectiveCount ?? 3;
-    const stateWithMode = { ...initialState, modelMode, maxRounds, perspectiveCount };
+    const stateWithMode = { ...initialState, modelMode, maxRounds, perspectiveCount, apiKey: inputData.apiKey };
     await setState(stateWithMode);
     const logFile = initialState.logFile;
 
@@ -46,6 +46,9 @@ export const extractionStep = createStep({
     requestContext.set('model-mode', modelMode as ModelMode);
     requestContext.set('workflow-start-time', initialState.workflowStartTime);
     requestContext.set('cumulative-cost', 0);
+    if (inputData.apiKey) {
+      requestContext.set('openrouter-provider', createOpenRouterProvider(inputData.apiKey));
+    }
 
     const extractAgentId = generateEventId();
     const extractPrompt = `${inputData.rawProblemText}`;

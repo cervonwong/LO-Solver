@@ -8,6 +8,18 @@ export const maxDuration = 600;
 
 export async function POST(req: Request) {
   const params = await req.json();
+
+  // Extract API key from inputData — key stays in inputData for the workflow schema
+  // but we check availability here for early rejection
+  const apiKey: string | undefined = params.inputData?.apiKey;
+
+  if (!apiKey && !process.env.OPENROUTER_API_KEY) {
+    return new Response(JSON.stringify({ error: 'No API key provided' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
   const workflow = mastra.getWorkflowById('solver-workflow')!;
   const run = await workflow.createRun();
 
@@ -15,7 +27,6 @@ export async function POST(req: Request) {
 
   const workflowStream = run.stream({
     inputData: params.inputData,
-    requestContext: params.requestContext,
   });
 
   const stream = createUIMessageStream({

@@ -2,7 +2,7 @@ import { createStep } from '@mastra/core/workflows';
 import { RequestContext } from '@mastra/core/request-context';
 import type { WorkflowRequestContext } from '../request-context-types';
 import type { ModelMode } from '../../openrouter';
-import { activeModelId } from '../../openrouter';
+import { activeModelId, createOpenRouterProvider } from '../../openrouter';
 import {
   recordStepTiming,
   logWorkflowSummary,
@@ -54,6 +54,9 @@ export const answerQuestionsStep = createStep({
     requestContext.set('model-mode', state.modelMode as ModelMode);
     requestContext.set('workflow-start-time', state.workflowStartTime);
     requestContext.set('cumulative-cost', 0);
+    if (state.apiKey) {
+      requestContext.set('openrouter-provider', createOpenRouterProvider(state.apiKey));
+    }
 
     const answererAgentId = generateEventId();
     await emitTraceEvent(writer, {
