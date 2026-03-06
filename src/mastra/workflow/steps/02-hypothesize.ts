@@ -374,6 +374,8 @@ export const multiPerspectiveHypothesisStep = createStep({
         perspectiveRequestContext.set('event-source', 'draft');
         perspectiveRequestContext.set('workflow-start-time', state.workflowStartTime);
         perspectiveRequestContext.set('abort-signal', abortSignal);
+        const mainProvider = mainRequestContext.get('openrouter-provider');
+        if (mainProvider) perspectiveRequestContext.set('openrouter-provider', mainProvider);
 
         const existingRules = isImproverRound ? Array.from(mainRules.values()) : [];
         const existingVocabulary = isImproverRound ? Array.from(mainVocabulary.values()) : [];
@@ -509,6 +511,8 @@ export const multiPerspectiveHypothesisStep = createStep({
         verifyRequestContext.set('event-source', 'draft');
         verifyRequestContext.set('workflow-start-time', state.workflowStartTime);
         verifyRequestContext.set('abort-signal', abortSignal);
+        const verifyProvider = mainRequestContext.get('openrouter-provider');
+        if (verifyProvider) verifyRequestContext.set('openrouter-provider', verifyProvider);
 
         const verifyVocabulary = Array.from(draftStore.vocabulary.values());
         const verifyRules = Array.from(draftStore.rules.values());
@@ -895,6 +899,8 @@ export const multiPerspectiveHypothesisStep = createStep({
       convergenceRequestContext.set('event-source', 'merged');
       convergenceRequestContext.set('workflow-start-time', state.workflowStartTime);
       convergenceRequestContext.set('abort-signal', abortSignal);
+      const convProvider = mainRequestContext.get('openrouter-provider');
+      if (convProvider) convergenceRequestContext.set('openrouter-provider', convProvider);
 
       const convergenceVerifierPrompt = JSON.stringify({
         vocabulary: Array.from(mainVocabulary.values()),

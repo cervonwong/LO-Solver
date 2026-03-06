@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useApiKey } from '@/hooks/use-api-key';
+import { KeyIcon, KeyAlertIcon } from '@/components/icons/key-icon';
 
 interface CreditsBadgeProps {
   onClick?: () => void;
@@ -13,6 +14,7 @@ export function CreditsBadge({ onClick, onServerKeyStatus }: CreditsBadgeProps) 
   const [remaining, setRemaining] = useState<number | null>(null);
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [hasServerKey, setHasServerKey] = useState<boolean | null>(null);
 
   useEffect(() => {
     async function fetchCredits() {
@@ -28,8 +30,10 @@ export function CreditsBadge({ onClick, onServerKeyStatus }: CreditsBadgeProps) 
         } else {
           setError(true);
         }
-        if (typeof data.hasServerKey === 'boolean') {
-          onServerKeyStatus?.(data.hasServerKey);
+        const serverKey = typeof data.hasServerKey === 'boolean' ? data.hasServerKey : null;
+        setHasServerKey(serverKey);
+        if (serverKey !== null) {
+          onServerKeyStatus?.(serverKey);
         }
       } catch {
         setError(true);
@@ -42,6 +46,8 @@ export function CreditsBadge({ onClick, onServerKeyStatus }: CreditsBadgeProps) 
     return () => clearInterval(interval);
   }, [apiKey, onServerKeyStatus]);
 
+  const hasAnyKey = !!apiKey || hasServerKey === true;
+
   return (
     <button
       type="button"
@@ -50,29 +56,32 @@ export function CreditsBadge({ onClick, onServerKeyStatus }: CreditsBadgeProps) 
     >
       {/* Key status row */}
       <div className="flex items-center gap-1.5">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          height="14"
-          viewBox="0 -960 960 960"
-          width="14"
-          fill="currentColor"
-          className={apiKey ? 'text-accent' : 'text-muted-foreground'}
-        >
-          <path d="M280-400q-33 0-56.5-23.5T200-480q0-33 23.5-56.5T280-560q33 0 56.5 23.5T360-480q0 33-23.5 56.5T280-400Zm0 160q-100 0-170-70T40-480q0-100 70-170t170-70q67 0 121.5 33T492-600h348l120 120-180 180-120-80-80 80-68-68h-20q-36 54-90.5 87T280-248Zm0-40q60 0 109-32.5t69-87.5h114l46 46 82-82 92 62 110-110-60-60H458q-20-55-69-87.5T280-672q-83 0-141.5 58.5T80-472q0 83 58.5 141.5T280-272Z" />
-        </svg>
+        {hasAnyKey ? (
+          <KeyIcon className={apiKey ? 'text-accent' : 'text-muted-foreground'} />
+        ) : (
+          <KeyAlertIcon className="text-status-warning animate-pulse" />
+        )}
         <span
-          className={`font-heading text-xs ${apiKey ? 'text-accent' : 'text-muted-foreground'}`}
+          className={`font-heading text-xs ${
+            hasAnyKey
+              ? apiKey
+                ? 'text-accent'
+                : 'text-muted-foreground'
+              : 'text-status-warning animate-pulse'
+          }`}
         >
           {apiKey ? `sk-...${apiKey.slice(-4)}` : 'Add key'}
         </span>
       </div>
-      {/* Credits row */}
-      <div className="flex items-center gap-1.5">
-        <span className="font-heading text-sm tabular-nums text-accent">
-          {loading ? '--' : error ? 'ERR' : `$${remaining!.toFixed(2)}`}
-        </span>
-        <span className="font-heading text-muted-foreground">left</span>
-      </div>
+      {/* Credits row — hidden when no key is available */}
+      {hasAnyKey && (
+        <div className="flex items-center gap-1.5">
+          <span className="font-heading text-sm tabular-nums text-accent">
+            {loading ? '--' : error ? 'ERR' : `$${remaining!.toFixed(2)}`}
+          </span>
+          <span className="font-heading text-muted-foreground">left</span>
+        </div>
+      )}
     </button>
   );
 }
