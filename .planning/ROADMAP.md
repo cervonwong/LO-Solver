@@ -102,7 +102,7 @@
 | 15. File Refactoring | v1.2 | 3/3 | Complete | 2026-03-04 |
 | 16. Toast Notifications | v1.2 | 2/2 | Complete | 2026-03-04 |
 | 17. Key Entry UI | v1.3 | 2/2 | Complete | 2026-03-06 |
-| 18. Key Routing | v1.3 | 2/2 | Complete | 2026-03-06 |
+| 18. Key Routing | v1.3 | Complete    | 2026-03-06 | 2026-03-06 |
 
 _v1.0: 7 phases, 16 plans. All complete._
 _v1.1: 6 phases, 9 plans. All complete._
