@@ -63,7 +63,9 @@
   3. User can clear the stored API key from the dialog, leaving no key in localStorage
   4. The nav bar button visually distinguishes between "key configured" and "key needed" states
   5. A saved key survives a full page reload and appears pre-filled in the dialog on next open
-**Plans**: TBD
+**Plans**: 2 plans
+- [ ] 17-01-PLAN.md — useApiKey hook and ApiKeyDialog component
+- [ ] 17-02-PLAN.md — Two-row CreditsBadge trigger and nav bar wiring
 
 ### Phase 18: Key Routing
 **Goal**: The stored API key flows through every solve request and the backend handles presence or absence of a key cleanly
@@ -97,7 +99,7 @@
 | 14. Abort Propagation | v1.2 | 2/2 | Complete | 2026-03-04 |
 | 15. File Refactoring | v1.2 | 3/3 | Complete | 2026-03-04 |
 | 16. Toast Notifications | v1.2 | 2/2 | Complete | 2026-03-04 |
-| 17. Key Entry UI | v1.3 | 0/? | Not started | - |
+| 17. Key Entry UI | v1.3 | 0/2 | In progress | - |
 | 18. Key Routing | v1.3 | 0/? | Not started | - |
 
 _v1.0: 7 phases, 16 plans. All complete._
