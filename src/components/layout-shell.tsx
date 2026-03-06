@@ -3,7 +3,12 @@
 import { useCallback, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { WorkflowControlProvider, useWorkflowControl } from '@/contexts/workflow-control-context';
+import {
+  WorkflowControlProvider,
+  useWorkflowControl,
+  useRegisterKeyControl,
+} from '@/contexts/workflow-control-context';
+import { useApiKey } from '@/hooks/use-api-key';
 import { ModelModeToggle } from '@/components/model-mode-toggle';
 import { WorkflowSliders } from '@/components/workflow-sliders';
 import { CreditsBadge } from '@/components/credits-badge';
@@ -22,6 +27,13 @@ function NavBar() {
   const pathname = usePathname();
   const [abortDialogOpen, setAbortDialogOpen] = useState(false);
   const [apiKeyDialogOpen, setApiKeyDialogOpen] = useState(false);
+  const [hasServerKey, setHasServerKey] = useState<boolean | null>(null);
+  const [apiKey] = useApiKey();
+
+  const requiresKeyEntry = !apiKey && hasServerKey === false;
+  const openKeyDialog = useCallback(() => setApiKeyDialogOpen(true), []);
+
+  useRegisterKeyControl({ requiresKeyEntry, openKeyDialog });
 
   const confirmAbort = useCallback(async () => {
     setAbortDialogOpen(false);
@@ -93,7 +105,10 @@ function NavBar() {
           <ModelModeToggle disabled={isRunning} />
         </div>
         <div className="h-5 w-px bg-border" />
-        <CreditsBadge onClick={() => setApiKeyDialogOpen(true)} />
+        <CreditsBadge
+          onClick={() => setApiKeyDialogOpen(true)}
+          onServerKeyStatus={setHasServerKey}
+        />
         <div className="h-5 w-px bg-border" />
         <div className="flex items-center gap-2">
           <button

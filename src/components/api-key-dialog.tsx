@@ -15,6 +15,7 @@ import {
 interface ApiKeyDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onSave?: () => void;
 }
 
 function maskKey(key: string): string {
@@ -22,7 +23,7 @@ function maskKey(key: string): string {
   return `sk-...${key.slice(-4)}`;
 }
 
-export function ApiKeyDialog({ open, onOpenChange }: ApiKeyDialogProps) {
+export function ApiKeyDialog({ open, onOpenChange, onSave }: ApiKeyDialogProps) {
   const [apiKey, setApiKey] = useApiKey();
   const [inputValue, setInputValue] = useState('');
   const [isEditing, setIsEditing] = useState(false);
@@ -46,6 +47,7 @@ export function ApiKeyDialog({ open, onOpenChange }: ApiKeyDialogProps) {
     if (trimmed) {
       setApiKey(trimmed);
       onOpenChange(false);
+      onSave?.();
     }
   };
 

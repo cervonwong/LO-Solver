@@ -91,6 +91,21 @@ export function showSolveErrorToast(stepName?: string) {
   );
 }
 
+export function showApiKeyErrorToast() {
+  toast.custom(
+    (id) => (
+      <WorkflowToast
+        id={id}
+        title="API KEY ERROR"
+        message="Check your key in settings — it may be invalid or expired"
+        accentColorClass="text-destructive"
+        mascotImage="/lex-defeated.png"
+      />
+    ),
+    { id: 'api-key-error' },
+  );
+}
+
 export function showCostWarningToast(amount: number) {
   const formatted = `$${amount.toFixed(2)}`;
   toast.custom(

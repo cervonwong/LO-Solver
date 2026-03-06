@@ -3,7 +3,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useGroupRef } from 'react-resizable-panels';
 import { MascotProvider, useMascotState } from '@/contexts/mascot-context';
-import { useRegisterWorkflowControl } from '@/contexts/workflow-control-context';
+import {
+  useRegisterWorkflowControl,
+  useWorkflowControl,
+} from '@/contexts/workflow-control-context';
+import { useApiKey } from '@/hooks/use-api-key';
 import { useMediaQuery } from '@/hooks/use-media-query';
 import { useExamples } from '@/hooks/use-examples';
 import { useSolverWorkflow } from '@/hooks/use-solver-workflow';
@@ -89,6 +93,32 @@ function SolverPageInner() {
     hasAnimated.current = false;
     workflowReset();
   }, [workflowReset]);
+
+  // Key-guard: auto-open dialog when no key is available, auto-solve after key entry
+  const { requiresKeyEntry, openKeyDialog } = useWorkflowControl();
+  const [apiKey] = useApiKey();
+  const pendingSolveRef = useRef<string | null>(null);
+
+  const guardedHandleSolve = useCallback(
+    async (text: string) => {
+      if (requiresKeyEntry) {
+        pendingSolveRef.current = text;
+        openKeyDialog();
+        return;
+      }
+      await handleSolve(text);
+    },
+    [requiresKeyEntry, openKeyDialog, handleSolve],
+  );
+
+  // Auto-trigger solve when apiKey becomes available after dialog save
+  useEffect(() => {
+    if (apiKey && pendingSolveRef.current) {
+      const text = pendingSolveRef.current;
+      pendingSolveRef.current = null;
+      handleSolve(text);
+    }
+  }, [apiKey, handleSolve]);
 
   // Derive allParts from messages (wiring between hooks)
   const assistantMessages = messages.filter((m) => m.role === 'assistant');
@@ -222,7 +252,7 @@ function SolverPageInner() {
                   <CollapsibleContent className="pt-4">
                     <ProblemInput
                       examples={examples}
-                      onSolve={handleSolve}
+                      onSolve={guardedHandleSolve}
                       disabled={isRunning}
                       value={problemText}
                       onValueChange={setProblemText}
