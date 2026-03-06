@@ -38,7 +38,18 @@ export function useSolverWorkflow({ onReset }: { onReset?: () => void } = {}) {
     [modelMode, apiKey, workflowSettings],
   );
 
-  const { messages, sendMessage, status, setMessages, stop } = useChat({ transport });
+  // Chat id changes when transport-relevant deps change, forcing useChat to
+  // recreate the internal Chat instance (which captures transport at construction).
+  const chatId = useMemo(
+    () =>
+      `solver-${apiKey ? apiKey.slice(-4) : 'none'}-${modelMode}-${workflowSettings.maxRounds}-${workflowSettings.perspectiveCount}`,
+    [apiKey, modelMode, workflowSettings],
+  );
+
+  const { messages, sendMessage, status, setMessages, stop } = useChat({
+    transport,
+    id: chatId,
+  });
 
   const handleSolve = useCallback(
     async (text: string) => {
