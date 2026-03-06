@@ -54,14 +54,22 @@ The ONE thing that must work: **the agentic workflow must produce measurably bet
 
 ### Active
 
-(None — all milestones shipped. Start next milestone to define new requirements.)
+**Current Milestone: v1.3 User API Key**
+
+**Goal:** Allow users to provide their own OpenRouter API key so the app can be deployed without embedding a server-side key.
+
+**Target features:**
+- User-provided API key entry via dialog
+- Key stored in browser localStorage
+- Button in nav bar top-right to trigger dialog
+- Backend uses user-provided key when env key is absent
 
 ### Out of Scope
 
 - Framework migration (no leaving Mastra/Next.js) — stack is settled
 - Building a general-purpose linguistics tool — Rosetta Stone problems only
 - Multi-user support / authentication — single-user dev tool
-- Deployment / hosting — development-only for now
+- Deployment infrastructure / hosting setup — user key feature enables deployment but infra is separate
 - Real-time collaboration features
 
 ## Problem Statement
@@ -122,4 +130,4 @@ When working on any phase that touches Mastra code (agents, workflows, tools, ev
 
 ---
 
-*Last updated: 2026-03-04 after v1.2 milestone*
+*Last updated: 2026-03-06 after v1.3 milestone start*
