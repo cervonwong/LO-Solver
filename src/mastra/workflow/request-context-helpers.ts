@@ -13,6 +13,7 @@ import type { VocabularyEntry } from './vocabulary-tools';
 import type { Mastra } from '@mastra/core/mastra';
 import type { ToolStream } from '@mastra/core/tools';
 import { generateEventId } from '@/lib/workflow-events';
+import { openrouter, type OpenRouterProvider } from '../openrouter';
 
 /**
  * Type for the tool execute context that includes requestContext, mastra, and writer.
@@ -28,6 +29,16 @@ export interface ToolExecuteContext {
 
 // Type alias for the requestContext getter interface
 type RequestContextGetter = { get: (key: keyof WorkflowRequestContext) => unknown } | undefined;
+
+/**
+ * Get the OpenRouter provider from request context.
+ * Returns the per-request provider if set, otherwise falls back to the singleton.
+ */
+export function getOpenRouterProvider(requestContext: RequestContextGetter): OpenRouterProvider {
+  if (!requestContext) return openrouter;
+  const provider = requestContext.get('openrouter-provider') as OpenRouterProvider | undefined;
+  return provider ?? openrouter;
+}
 
 /**
  * Helper to get vocabulary state from request context.

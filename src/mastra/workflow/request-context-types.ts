@@ -1,4 +1,4 @@
-import type { ModelMode } from '../openrouter';
+import type { ModelMode, OpenRouterProvider } from '../openrouter';
 import type { VocabularyEntry } from './vocabulary-tools';
 
 /**
@@ -73,4 +73,7 @@ export interface WorkflowRequestContext {
 
   /** Cumulative API cost in dollars across all agent calls in this workflow step */
   'cumulative-cost': number;
+
+  /** Per-request OpenRouter provider (set when user provides their own API key) */
+  'openrouter-provider'?: OpenRouterProvider;
 }
