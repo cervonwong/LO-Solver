@@ -16,7 +16,7 @@ Requirements for user-provided OpenRouter API key. Each maps to roadmap phases.
 
 ### Key Routing
 
-- [ ] **FLOW-01**: Frontend sends stored API key with solve requests via inputData
+- [x] **FLOW-01**: Frontend sends stored API key with solve requests via inputData
 - [x] **FLOW-02**: Backend creates per-request OpenRouter provider when user key is provided
 - [x] **FLOW-03**: Backend falls back to environment variable key when no user key is sent
 - [x] **FLOW-04**: Backend exposes whether server-side key is configured so frontend knows if user key is required
@@ -44,7 +44,7 @@ None planned.
 | KEY-02 | Phase 17 | Complete |
 | KEY-03 | Phase 17 | Complete |
 | KEY-04 | Phase 17 | Complete |
-| FLOW-01 | Phase 18 | Pending |
+| FLOW-01 | Phase 18 | Complete |
 | FLOW-02 | Phase 18 | Complete |
 | FLOW-03 | Phase 18 | Complete |
 | FLOW-04 | Phase 18 | Complete |

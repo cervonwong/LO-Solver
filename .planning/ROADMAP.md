@@ -5,7 +5,7 @@
 - ✅ **v1.0 Prove the Agentic Advantage** — Phases 1-7 (shipped 2026-03-02)
 - ✅ **v1.1 UI Polish** — Phases 8-13 (shipped 2026-03-03)
 - ✅ **v1.2 Cleanup & Quality** — Phases 14-16 (shipped 2026-03-04)
-- 🚧 **v1.3 User API Key** — Phases 17-18 (in progress)
+- ✅ **v1.3 User API Key** — Phases 17-18 (shipped 2026-03-06)
 
 ## Phases
 
@@ -43,12 +43,12 @@
 
 </details>
 
-### 🚧 v1.3 User API Key (In Progress)
+### ✅ v1.3 User API Key (Shipped 2026-03-06)
 
 **Milestone Goal:** Allow users to provide their own OpenRouter API key so the app can be deployed without embedding a server-side key.
 
 - [x] **Phase 17: Key Entry UI** - Nav bar button and dialog for entering, updating, and clearing the API key with localStorage persistence (completed 2026-03-06)
-- [ ] **Phase 18: Key Routing** - Wire the stored key through the solve pipeline, with backend fallback to env key and graceful error when neither is present
+- [x] **Phase 18: Key Routing** - Wire the stored key through the solve pipeline, with backend fallback to env key and graceful error when neither is present (completed 2026-03-06)
 
 ## Phase Details
 
@@ -101,10 +101,10 @@
 | 14. Abort Propagation | v1.2 | 2/2 | Complete | 2026-03-04 |
 | 15. File Refactoring | v1.2 | 3/3 | Complete | 2026-03-04 |
 | 16. Toast Notifications | v1.2 | 2/2 | Complete | 2026-03-04 |
-| 17. Key Entry UI | 2/2 | Complete    | 2026-03-06 | - |
-| 18. Key Routing | 1/2 | In Progress|  | - |
+| 17. Key Entry UI | v1.3 | 2/2 | Complete | 2026-03-06 |
+| 18. Key Routing | v1.3 | 2/2 | Complete | 2026-03-06 |
 
 _v1.0: 7 phases, 16 plans. All complete._
 _v1.1: 6 phases, 9 plans. All complete._
 _v1.2: 3 phases, 7 plans. All complete._
-_v1.3: 2 phases, 4 plans. In progress._
+_v1.3: 2 phases, 4 plans. All complete._

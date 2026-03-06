@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: User API Key
-status: in-progress
-last_updated: "2026-03-06T13:26:53Z"
+status: complete
+last_updated: "2026-03-06T14:15:00Z"
 progress:
   total_phases: 2
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 4
-  completed_plans: 3
+  completed_plans: 4
 ---
 
 # Project State
@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-06)
 
 **Core value:** The agentic workflow must produce measurably better results than zero-shotting the same LLMs without orchestration.
-**Current focus:** v1.3 User API Key — Phase 18: Key Routing
+**Current focus:** v1.3 User API Key — Complete
 
 ## Current Position
 
 Phase: 18 of 18 (Key Routing)
-Plan: 1 of 2 (18-01 complete)
-Status: Plan 18-01 complete, ready for 18-02
-Last activity: 2026-03-06 — Completed 18-01 (Backend key routing)
+Plan: 2 of 2 (all plans complete)
+Status: Phase 18 complete, milestone v1.3 complete
+Last activity: 2026-03-06 — Completed 18-02 (Frontend key wiring)
 
-Progress: [█████-----] 50% (Phase 18)
+Progress: [██████████] 100% (Phase 18)
 
 ## Performance Metrics
 
@@ -42,6 +42,10 @@ Progress: [█████-----] 50% (Phase 18)
 **v1.2:**
 - Total plans completed: 7
 - Total execution time: ~69min
+
+**v1.3:**
+- Total plans completed: 4
+- Total execution time: ~55min
 
 ## Accumulated Context
 
@@ -58,6 +62,9 @@ Recent decisions affecting current work:
 - [Phase 18-01]: API key flows through workflow state (not workflow-level requestContext) for Mastra compatibility
 - [Phase 18-01]: Provider created per-step from state.apiKey since RequestContext is step-local
 - [Phase 18-01]: Environment key guard allows undefined openrouterBase when no server key configured
+- [Phase 18-02]: Solve guard uses pendingSolveRef pattern for deferred auto-solve after key dialog save
+- [Phase 18-02]: chatId derived from apiKey forces useChat transport recreation on key change
+- [Phase 18-02]: CreditsBadge shows flashing KeyAlertIcon when no key from either source
 
 ### Pending Todos
 
@@ -69,6 +76,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-06T13:26:53Z
-Stopped at: Completed 18-01-PLAN.md (Backend key routing) -- ready for 18-02
+Last session: 2026-03-06T14:15:00Z
+Stopped at: Completed 18-02-PLAN.md (Frontend key wiring) -- milestone v1.3 complete
 Resume file: None
