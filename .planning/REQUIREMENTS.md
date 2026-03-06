@@ -10,8 +10,8 @@ Requirements for user-provided OpenRouter API key. Each maps to roadmap phases.
 ### API Key Entry
 
 - [ ] **KEY-01**: User can open an API key dialog from a button in the nav bar top-right
-- [ ] **KEY-02**: User can enter, update, and clear their OpenRouter API key in the dialog
-- [ ] **KEY-03**: API key persists in browser localStorage across sessions
+- [x] **KEY-02**: User can enter, update, and clear their OpenRouter API key in the dialog
+- [x] **KEY-03**: API key persists in browser localStorage across sessions
 - [ ] **KEY-04**: Button indicates key status (configured vs. needed)
 
 ### Key Routing
@@ -41,8 +41,8 @@ None planned.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | KEY-01 | Phase 17 | Pending |
-| KEY-02 | Phase 17 | Pending |
-| KEY-03 | Phase 17 | Pending |
+| KEY-02 | Phase 17 | Complete |
+| KEY-03 | Phase 17 | Complete |
 | KEY-04 | Phase 17 | Pending |
 | FLOW-01 | Phase 18 | Pending |
 | FLOW-02 | Phase 18 | Pending |

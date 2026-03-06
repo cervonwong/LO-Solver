@@ -99,7 +99,7 @@
 | 14. Abort Propagation | v1.2 | 2/2 | Complete | 2026-03-04 |
 | 15. File Refactoring | v1.2 | 3/3 | Complete | 2026-03-04 |
 | 16. Toast Notifications | v1.2 | 2/2 | Complete | 2026-03-04 |
-| 17. Key Entry UI | v1.3 | 0/2 | In progress | - |
+| 17. Key Entry UI | 1/2 | In Progress|  | - |
 | 18. Key Routing | v1.3 | 0/? | Not started | - |
 
 _v1.0: 7 phases, 16 plans. All complete._
