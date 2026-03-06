@@ -7,6 +7,7 @@ import { WorkflowControlProvider, useWorkflowControl } from '@/contexts/workflow
 import { ModelModeToggle } from '@/components/model-mode-toggle';
 import { WorkflowSliders } from '@/components/workflow-sliders';
 import { CreditsBadge } from '@/components/credits-badge';
+import { ApiKeyDialog } from '@/components/api-key-dialog';
 import {
   Dialog,
   DialogContent,
@@ -20,6 +21,7 @@ function NavBar() {
   const { isRunning, hasStarted, isAborting, stop, handleReset } = useWorkflowControl();
   const pathname = usePathname();
   const [abortDialogOpen, setAbortDialogOpen] = useState(false);
+  const [apiKeyDialogOpen, setApiKeyDialogOpen] = useState(false);
 
   const confirmAbort = useCallback(async () => {
     setAbortDialogOpen(false);
@@ -91,7 +93,7 @@ function NavBar() {
           <ModelModeToggle disabled={isRunning} />
         </div>
         <div className="h-5 w-px bg-border" />
-        <CreditsBadge />
+        <CreditsBadge onClick={() => setApiKeyDialogOpen(true)} />
         <div className="h-5 w-px bg-border" />
         <div className="flex items-center gap-2">
           <button
@@ -174,6 +176,8 @@ function NavBar() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ApiKeyDialog open={apiKeyDialogOpen} onOpenChange={setApiKeyDialogOpen} />
     </nav>
   );
 }
