@@ -68,10 +68,20 @@ export function ApiKeyDialog({ open, onOpenChange }: ApiKeyDialogProps) {
       <DialogContent showCloseButton={false} className="max-w-sm">
         <DialogHeader>
           <DialogTitle className="font-heading uppercase tracking-wider text-accent">
-            OpenRouter API Key
+            Enter OpenRouter API Key
           </DialogTitle>
           <DialogDescription>
-            Enter your OpenRouter API key to use your own account for solves.
+            Your key will be used to pay for your solves. Create an account with at least
+            USD15 at{' '}
+            <a
+              href="https://openrouter.ai/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-accent underline underline-offset-2 hover:text-accent/80"
+            >
+              openrouter.ai
+            </a>
+            .
           </DialogDescription>
         </DialogHeader>
 
