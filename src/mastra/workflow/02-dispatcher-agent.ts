@@ -1,7 +1,8 @@
 import { Agent } from '@mastra/core/agent';
 import { UnicodeNormalizer } from '@mastra/core/processors';
 import { DISPATCHER_INSTRUCTIONS } from './02-dispatcher-instructions';
-import { openrouter, TESTING_MODEL } from '../openrouter';
+import { TESTING_MODEL } from '../openrouter';
+import { getOpenRouterProvider } from './request-context-helpers';
 
 /**
  * Perspective Dispatcher Agent - analyzes structured problem data and generates
@@ -16,7 +17,7 @@ export const dispatcherAgent = new Agent({
     content: DISPATCHER_INSTRUCTIONS,
   },
   model: ({ requestContext }) =>
-    openrouter(
+    getOpenRouterProvider(requestContext)(
       requestContext?.get('model-mode') === 'production'
         ? 'google/gemini-3-flash-preview'
         : TESTING_MODEL,

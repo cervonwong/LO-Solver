@@ -1,7 +1,8 @@
 import { Agent } from '@mastra/core/agent';
 import { UnicodeNormalizer } from '@mastra/core/processors';
 import { QUESTION_ANSWERER_INSTRUCTIONS } from './04-question-answerer-instructions';
-import { openrouter, TESTING_MODEL } from '../openrouter';
+import { TESTING_MODEL } from '../openrouter';
+import { getOpenRouterProvider } from './request-context-helpers';
 
 /**
  * Question Answerer Agent.
@@ -13,7 +14,7 @@ export const questionAnswererAgent = new Agent({
   instructions: QUESTION_ANSWERER_INSTRUCTIONS,
   // model: openrouter('google/gemini-3-pro-preview'),
   model: ({ requestContext }) =>
-    openrouter(
+    getOpenRouterProvider(requestContext)(
       requestContext?.get('model-mode') === 'production'
         ? 'google/gemini-3-flash-preview'
         : TESTING_MODEL,

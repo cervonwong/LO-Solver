@@ -1,6 +1,7 @@
 import { Agent } from '@mastra/core/agent';
 import { z } from 'zod';
-import { openrouter, TESTING_MODEL } from '../openrouter';
+import { TESTING_MODEL } from '../openrouter';
+import { getOpenRouterProvider } from './request-context-helpers';
 
 const RULE_TESTER_SYSTEM_PROMPT = `
 You are a specialized linguistic rule validator. Your job is to test a SINGLE rule against a linguistic dataset to determine if the rule is correct, consistent, and sufficient.
@@ -52,7 +53,7 @@ export const ruleTesterAgent = new Agent({
   name: '[Step 3] Rule Tester Agent',
   instructions: RULE_TESTER_SYSTEM_PROMPT,
   model: ({ requestContext }) =>
-    openrouter(
+    getOpenRouterProvider(requestContext)(
       requestContext?.get('model-mode') === 'production' ? 'openai/gpt-5-mini' : TESTING_MODEL,
     ),
   tools: {},

@@ -3,7 +3,8 @@ import { UnicodeNormalizer } from '@mastra/core/processors';
 import { INITIAL_HYPOTHESIZER_INSTRUCTIONS } from './02-initial-hypothesizer-instructions';
 import { RULES_TOOLS_INSTRUCTIONS } from './rules-tools-prompt';
 import { VOCABULARY_TOOLS_INSTRUCTIONS } from './vocabulary-tools-prompt';
-import { openrouter, TESTING_MODEL } from '../openrouter';
+import { TESTING_MODEL } from '../openrouter';
+import { getOpenRouterProvider } from './request-context-helpers';
 import { rulesTools } from './rules-tools';
 import { vocabularyTools } from './vocabulary-tools';
 import { testRuleWithRulesetTool } from './03a-rule-tester-tool';
@@ -28,7 +29,7 @@ export const initialHypothesizerAgent = new Agent({
     content: instructions,
   },
   model: ({ requestContext }) =>
-    openrouter(
+    getOpenRouterProvider(requestContext)(
       requestContext?.get('model-mode') === 'production'
         ? 'google/gemini-3-flash-preview'
         : TESTING_MODEL,

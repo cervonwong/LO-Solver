@@ -1,7 +1,8 @@
 import { Agent } from '@mastra/core/agent';
 import { UnicodeNormalizer } from '@mastra/core/processors';
 import { IMPROVER_DISPATCHER_INSTRUCTIONS } from './02-improver-dispatcher-instructions';
-import { openrouter, TESTING_MODEL } from '../openrouter';
+import { TESTING_MODEL } from '../openrouter';
+import { getOpenRouterProvider } from './request-context-helpers';
 
 /**
  * Improver Dispatcher Agent - analyzes gaps and weaknesses in the current ruleset
@@ -16,7 +17,7 @@ export const improverDispatcherAgent = new Agent({
     content: IMPROVER_DISPATCHER_INSTRUCTIONS,
   },
   model: ({ requestContext }) =>
-    openrouter(
+    getOpenRouterProvider(requestContext)(
       requestContext?.get('model-mode') === 'production'
         ? 'google/gemini-3-flash-preview'
         : TESTING_MODEL,

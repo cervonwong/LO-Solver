@@ -2,7 +2,8 @@ import { Agent } from '@mastra/core/agent';
 import { UnicodeNormalizer } from '@mastra/core/processors';
 import { RULES_IMPROVER_INSTRUCTIONS } from './03b-rules-improver-instructions';
 import { VOCABULARY_TOOLS_INSTRUCTIONS } from './vocabulary-tools-prompt';
-import { openrouter, TESTING_MODEL } from '../openrouter';
+import { TESTING_MODEL } from '../openrouter';
+import { getOpenRouterProvider } from './request-context-helpers';
 import { vocabularyTools } from './vocabulary-tools';
 import { testRuleWithRulesetTool } from './03a-rule-tester-tool';
 import { testSentenceWithRulesetTool } from './03a-sentence-tester-tool';
@@ -27,7 +28,7 @@ export const rulesImproverAgent = new Agent({
   },
   // model: openrouter('google/gemini-3-pro-preview'),
   model: ({ requestContext }) =>
-    openrouter(
+    getOpenRouterProvider(requestContext)(
       requestContext?.get('model-mode') === 'production'
         ? 'google/gemini-3-flash-preview'
         : TESTING_MODEL,

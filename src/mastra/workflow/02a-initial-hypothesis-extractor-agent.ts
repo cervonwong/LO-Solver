@@ -3,7 +3,8 @@
 import { Agent } from '@mastra/core/agent';
 import { UnicodeNormalizer } from '@mastra/core/processors';
 import { INITIAL_HYPOTHESIS_EXTRACTOR_INSTRUCTIONS } from './02a-initial-hypothesis-extractor-instructions';
-import { openrouter, TESTING_MODEL } from '../openrouter';
+import { TESTING_MODEL } from '../openrouter';
+import { getOpenRouterProvider } from './request-context-helpers';
 
 export const initialHypothesisExtractorAgent = new Agent({
   id: 'initial-hypothesis-extractor',
@@ -13,7 +14,7 @@ export const initialHypothesisExtractorAgent = new Agent({
     content: INITIAL_HYPOTHESIS_EXTRACTOR_INSTRUCTIONS,
   },
   model: ({ requestContext }) =>
-    openrouter(
+    getOpenRouterProvider(requestContext)(
       requestContext?.get('model-mode') === 'production' ? 'openai/gpt-5-mini' : TESTING_MODEL,
     ),
   tools: {},
