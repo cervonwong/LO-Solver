@@ -40,21 +40,21 @@ None planned.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| KEY-01 | — | Pending |
-| KEY-02 | — | Pending |
-| KEY-03 | — | Pending |
-| KEY-04 | — | Pending |
-| FLOW-01 | — | Pending |
-| FLOW-02 | — | Pending |
-| FLOW-03 | — | Pending |
-| FLOW-04 | — | Pending |
-| FLOW-05 | — | Pending |
+| KEY-01 | Phase 17 | Pending |
+| KEY-02 | Phase 17 | Pending |
+| KEY-03 | Phase 17 | Pending |
+| KEY-04 | Phase 17 | Pending |
+| FLOW-01 | Phase 18 | Pending |
+| FLOW-02 | Phase 18 | Pending |
+| FLOW-03 | Phase 18 | Pending |
+| FLOW-04 | Phase 18 | Pending |
+| FLOW-05 | Phase 18 | Pending |
 
 **Coverage:**
 - v1.3 requirements: 9 total
-- Mapped to phases: 0
-- Unmapped: 9 ⚠️
+- Mapped to phases: 9
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-03-06*
-*Last updated: 2026-03-06 after initial definition*
+*Last updated: 2026-03-06 after roadmap creation*
