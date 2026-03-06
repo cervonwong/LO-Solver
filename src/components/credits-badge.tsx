@@ -57,17 +57,13 @@ export function CreditsBadge({ onClick, onServerKeyStatus }: CreditsBadgeProps) 
       {/* Key status row */}
       <div className="flex items-center gap-1.5">
         {hasAnyKey ? (
-          <KeyIcon className={apiKey ? 'text-accent' : 'text-muted-foreground'} />
+          <KeyIcon className="text-muted-foreground" />
         ) : (
           <KeyAlertIcon className="text-status-warning animate-pulse" />
         )}
         <span
           className={`font-heading text-xs ${
-            hasAnyKey
-              ? apiKey
-                ? 'text-accent'
-                : 'text-muted-foreground'
-              : 'text-status-warning animate-pulse'
+            hasAnyKey ? 'text-muted-foreground' : 'text-status-warning animate-pulse'
           }`}
         >
           {apiKey ? `sk-...${apiKey.slice(-4)}` : 'Add key'}
