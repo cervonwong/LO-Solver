@@ -47,7 +47,7 @@
 
 **Milestone Goal:** Allow users to provide their own OpenRouter API key so the app can be deployed without embedding a server-side key.
 
-- [ ] **Phase 17: Key Entry UI** - Nav bar button and dialog for entering, updating, and clearing the API key with localStorage persistence
+- [x] **Phase 17: Key Entry UI** - Nav bar button and dialog for entering, updating, and clearing the API key with localStorage persistence (completed 2026-03-06)
 - [ ] **Phase 18: Key Routing** - Wire the stored key through the solve pipeline, with backend fallback to env key and graceful error when neither is present
 
 ## Phase Details
@@ -99,7 +99,7 @@
 | 14. Abort Propagation | v1.2 | 2/2 | Complete | 2026-03-04 |
 | 15. File Refactoring | v1.2 | 3/3 | Complete | 2026-03-04 |
 | 16. Toast Notifications | v1.2 | 2/2 | Complete | 2026-03-04 |
-| 17. Key Entry UI | 1/2 | In Progress|  | - |
+| 17. Key Entry UI | 2/2 | Complete   | 2026-03-06 | - |
 | 18. Key Routing | v1.3 | 0/? | Not started | - |
 
 _v1.0: 7 phases, 16 plans. All complete._

@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.3
 milestone_name: User API Key
 status: active
-last_updated: "2026-03-06T09:07:06.763Z"
+last_updated: "2026-03-06T09:26:25Z"
 progress:
   total_phases: 2
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 1
+  completed_plans: 2
 ---
 
 # Project State
@@ -22,12 +22,12 @@ See: .planning/PROJECT.md (updated 2026-03-06)
 
 ## Current Position
 
-Phase: 17 of 18 (Key Entry UI)
-Plan: 1 of 2 (complete)
-Status: Executing
-Last activity: 2026-03-06 — Completed 17-01 (useApiKey hook + ApiKeyDialog)
+Phase: 17 of 18 (Key Entry UI) -- COMPLETE
+Plan: 2 of 2 (complete)
+Status: Phase 17 complete, ready for Phase 18
+Last activity: 2026-03-06 — Completed 17-02 (CreditsBadge key status + dialog wiring)
 
-Progress: [█████░░░░░] 50%
+Progress: [██████████] 100% (Phase 17)
 
 ## Performance Metrics
 
@@ -53,6 +53,8 @@ Recent decisions affecting current work:
 - No key validation via test API call: errors surface naturally during solve
 - Button-only entry (no auto-prompt on first visit)
 - [Phase 17]: Followed use-model-mode.ts useSyncExternalStore pattern for API key hook
+- [Phase 17-02]: Dialog title changed to "Enter OpenRouter API Key" per user feedback
+- [Phase 17-02]: Dialog description updated with pricing guidance and openrouter.ai external link
 
 ### Pending Todos
 
@@ -64,6 +66,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-06T09:05:51Z
-Stopped at: Completed 17-01-PLAN.md (useApiKey hook + ApiKeyDialog)
+Last session: 2026-03-06T09:26:25Z
+Stopped at: Completed 17-02-PLAN.md (CreditsBadge key status + dialog wiring) -- Phase 17 complete
 Resume file: None
