@@ -77,7 +77,9 @@
   3. When no user key is sent, the backend falls back to the environment variable key without error
   4. The frontend can query whether a server-side key is configured and reflects this in the UI (e.g., key dialog knows if user key is optional or required)
   5. Submitting a solve request with no key from either source produces a clear, user-readable error rather than a cryptic API failure
-**Plans**: TBD
+**Plans**: 2 plans
+- [ ] 18-01-PLAN.md — Backend provider factory, RequestContext plumbing, agent model updates, API route wiring
+- [ ] 18-02-PLAN.md — Frontend key transmission, CreditsBadge hasServerKey integration, auto-open dialog flow
 
 ## Progress
 
@@ -100,9 +102,9 @@
 | 15. File Refactoring | v1.2 | 3/3 | Complete | 2026-03-04 |
 | 16. Toast Notifications | v1.2 | 2/2 | Complete | 2026-03-04 |
 | 17. Key Entry UI | 2/2 | Complete    | 2026-03-06 | - |
-| 18. Key Routing | v1.3 | 0/? | Not started | - |
+| 18. Key Routing | v1.3 | 0/2 | Not started | - |
 
 _v1.0: 7 phases, 16 plans. All complete._
 _v1.1: 6 phases, 9 plans. All complete._
 _v1.2: 3 phases, 7 plans. All complete._
-_v1.3: 2 phases, TBD plans. In progress._
+_v1.3: 2 phases, 4 plans. In progress._
