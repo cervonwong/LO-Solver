@@ -1,216 +1,315 @@
 # Feature Research
 
-**Domain:** Abort propagation, file refactoring, and toast notifications for an existing AI agent workflow app (LO-Solver v1.2)
-**Researched:** 2026-03-03
-**Confidence:** HIGH
+**Domain:** Claude Code native solver workflow (replicating Mastra LO-Solver pipeline)
+**Researched:** 2026-03-07
+**Confidence:** MEDIUM
 
 ## Feature Landscape
 
-### Table Stakes (Users Expect These)
+This maps each feature from the existing Mastra-based LO-Solver pipeline to Claude Code's native capabilities (skills, subagents, slash commands, file I/O). The question for each feature: is it straightforward, does it require workarounds, or is it not possible?
 
-These are the minimum behaviors expected once the v1.2 milestone claims "better abort behavior, cleaner codebase, better user feedback."
+### Table Stakes (Must Replicate for Parity)
+
+Features the existing Mastra workflow already implements. Without these, the Claude Code version is strictly worse than the Mastra version.
 
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| Abort stops in-flight LLM calls | Abort button already exists; users expect it to actually stop API spend, not just hide the UI | MEDIUM | `streamWithRetry` already accepts `abortSignal` but workflow steps never pass one. The plumbing exists -- need to wire it through. |
-| Abort signal checked between workflow steps | Mastra `Run.cancel()` prevents subsequent steps but running steps continue unless they check the signal | LOW | Mastra already does this at the step boundary level via `.then()` chain. Need to verify `handleWorkflowStream` passes the signal. |
-| Toast on workflow start | User clicks Solve and needs confirmation something happened, especially since the collapsible input closes | LOW | Single `toast()` call on submit. |
-| Toast on workflow complete (success) | Workflow takes 2-10+ minutes; user may switch tabs. Need a non-blocking notification. | LOW | Fire on `workflowStatus === 'completed'`. |
-| Toast on workflow abort | Confirm abort action was received. Currently only the step progress bar changes color. | LOW | Fire when `stop()` is called and status transitions. |
-| Toast on workflow error/failure | Distinguish between abort (intentional) and failure (unexpected) | LOW | Fire on `workflowStatus === 'failed'`. |
-| Large files identified and split | 1,399-line `workflow.ts` and 898-line `trace-event-card.tsx` are maintenance liabilities | HIGH | `workflow.ts` contains 3 step definitions plus the workflow composition. Each step is a natural extraction unit. |
-| Extracted modules re-export cleanly | After splitting, imports across the codebase should not break; barrel files preserve ergonomics | LOW | Re-export from the original path or a shared index. |
+| Slash command entry point (`/solve`) | User needs a single invocation to start the solver | LOW | Create `.claude/skills/solve/SKILL.md`. Accepts `$ARGUMENTS` for problem text or file path. Straightforward -- this is what skills are designed for. |
+| Problem input (paste or file) | User must provide the Rosetta Stone problem text | LOW | Skill receives `$ARGUMENTS`; Claude reads a file path or uses inline text. Can prompt the user via `AskUserQuestion` if no input provided. |
+| Extraction step (parse raw problem into structured data) | Core pipeline step -- extract context, dataset, questions from raw text | LOW | Claude (Opus 4.6) performs extraction directly. Write structured JSON to a file (e.g., `claude-code/state/extracted.json`). No subagent needed -- main agent handles this inline. |
+| Hypothesis generation (linguistic rules + vocabulary) | Core pipeline step -- produce initial rule hypotheses | MEDIUM | The main agent reasons about the problem and writes rules/vocabulary to JSON files. The Mastra version uses a two-agent chain (reasoner + extractor); Claude Code does this in one pass since Opus 4.6 can both reason and produce structured output. |
+| Multi-perspective dispatch | Mastra version generates 2-7 independent linguistic perspectives then runs parallel hypothesizers | MEDIUM | Orchestrator generates perspectives, then spawns parallel subagents (one per perspective). Each subagent writes its draft rules/vocabulary to a perspective-specific file in `claude-code/state/drafts/`. |
+| Parallel hypothesis generation (one agent per perspective) | Each perspective explores independently, preventing groupthink | MEDIUM | Spawn N subagents in parallel using the Agent tool. Each gets a system prompt with its assigned perspective plus the extracted problem. Each writes output to its own draft file. Subagents run concurrently by default when launched together. **Key constraint:** subagents cannot spawn other subagents, so the main orchestrator must do all spawning. |
+| Verification (test each rule and sentence) | Rules must be tested against the dataset before answering | MEDIUM | A subagent (or the main agent) systematically tests each rule against each sentence in the dataset. In Mastra, this uses tool calls to dedicated tester agents; in Claude Code, the verifier subagent reasons through each test case itself. No separate tool-call-within-subagent needed -- the verifier produces a structured feedback JSON. |
+| Iterative improve loop (up to 4 iterations) | Rules that fail verification need revision | HIGH | The main orchestrator runs a sequential loop: verify -> check results -> if not converged, improve -> re-verify. **This is the hardest feature to replicate.** Claude Code has no native loop construct; the main agent must implement this as a manual loop in its reasoning. The orchestrator skill's instructions must explicitly describe the loop logic. |
+| Synthesis (merge best perspective results) | After parallel hypothesizers, the best rules must be selected | MEDIUM | A subagent or the main agent reads all perspective draft files, compares test pass rates, and merges the best rules into the main state files. File-based communication makes this straightforward. |
+| Answer step (apply rules to translate questions) | Final step -- produce answers using validated rules | LOW | The main agent (or a subagent) reads the final rules/vocabulary and structured problem, then generates answers. Writes to a results file. |
+| Structured data passing between steps | Each step's output feeds the next step's input | MEDIUM | **File-based JSON communication.** Each step reads/writes to files in `claude-code/state/`. This is the canonical Claude Code pattern for inter-agent data passing. Schema definitions live in CLAUDE.md or skill instructions rather than Zod schemas. |
+| Results output (terminal + markdown file) | User needs to see final answers | LOW | Write a formatted markdown file to `claude-code/results/`. Also display results inline in the Claude Code terminal. |
+| All agents use Opus 4.6 | PROJECT.md requirement | LOW | Main conversation uses Opus 4.6 by default. Subagents inherit with `model: inherit` (default) or explicitly set `model: opus`. |
 
-### Differentiators (Competitive Advantage)
+### Differentiators (Advantages of Claude Code Native)
 
-Features that go beyond the minimum v1.2 scope but add notable quality.
+Features that make the Claude Code version potentially *better* than the Mastra version, not just equivalent.
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| Cost-warning toast when API spend gets high | Workflow calls multiple LLMs; a toast at estimated cost thresholds protects the developer's wallet | MEDIUM | Requires token counting from agent responses. Could estimate from model pricing. Deferred -- no token tracking infrastructure today. |
-| Abort drains gracefully with partial results | Instead of hard-cutting, let the current agent finish and return partial rules/vocab | HIGH | Would require workflow-level "soft abort" flag in RequestContext. The partial-result display already works (rules/vocab panels update live). Not in scope for v1.2 but architecturally possible. |
-| Toast with "undo" for abort | Sonner supports action buttons; could offer a brief "undo" window before propagating the abort | LOW | Sonner's `toast()` accepts an `action` prop. Nice UX touch but adds confusion about timing. |
-| Progress toast with elapsed time | Long-running workflow shows a persistent toast with elapsed time that updates | MEDIUM | Sonner supports `toast.loading()` with promises. Could replace or complement the step progress bar. Probably redundant given the existing progress bar. |
-| Custom toast styling matching blueprint theme | Sonner can be styled with CSS. Matching the cyanotype design system keeps visual consistency. | LOW | Sonner `<Toaster />` accepts `toastOptions` with `className` and `style` overrides. shadcn/ui Sonner component already handles this. |
+| Single-model coherence (Opus 4.6 everywhere) | Mastra uses GPT-5-mini for extraction and Gemini 3 Flash for reasoning. Claude Code uses Opus 4.6 for everything -- potentially higher quality at each step since Opus 4.6 is a frontier model. | LOW | No model routing complexity. Every step gets the best model. The tradeoff is cost (Opus 4.6 is expensive), but for quality comparison this is an advantage. |
+| No framework overhead | No Mastra, no OpenRouter, no API key management, no streaming infrastructure. Just Claude reasoning about the problem. | LOW | Eliminates an entire category of bugs (provider errors, streaming failures, schema validation issues, abort propagation). |
+| Conversational iteration | After initial solve, user can ask follow-up questions, request re-verification, or adjust specific rules -- all in the same conversation context. | LOW | Mastra workflow is fire-and-forget. Claude Code naturally supports conversation continuation. This is a major UX advantage. |
+| Transparent reasoning | Every step's reasoning is visible in the Claude Code terminal. No separate trace UI needed. | LOW | Users see the full chain of thought, tool calls, and subagent activity. Built into Claude Code's UI. |
+| Worktree isolation for parallel hypothesizers | Each parallel hypothesizer can run in its own git worktree, preventing file write conflicts | LOW | Set `isolation: worktree` on hypothesizer subagents. Worktrees auto-clean if no changes. |
+| Persistent memory across solves | A solver subagent with `memory: project` can accumulate patterns and insights across problems | MEDIUM | Over time, the solver learns common linguistic patterns (e.g., "Austronesian languages typically use reduplication for plurals"). This could improve accuracy on subsequent problems. |
+| Resume/continue sessions | If a solve is interrupted or the user wants to revisit results, `/resume` or `--continue` picks up where it left off | LOW | Built-in Claude Code feature. No implementation needed. |
+| Eval comparison in same session | User can run the solver on a problem, see results, then compare against zero-shot in the same session | MEDIUM | Main agent can do a zero-shot solve (just answer directly without the pipeline) and compare. No separate eval harness needed for quick comparisons. |
+| Dynamic context injection | Skill can use `` !`command` `` syntax to inject problem text from files at invocation time | LOW | Example: `/solve problems/problem-1.txt` with skill using `` !`cat $ARGUMENTS` `` to inject content. |
 
-### Anti-Features (Commonly Requested, Often Problematic)
+### Anti-Features (Do Not Attempt)
+
+Features that seem useful but would fight Claude Code's architecture or create unnecessary complexity.
 
 | Feature | Why Requested | Why Problematic | Alternative |
 |---------|---------------|-----------------|-------------|
-| Force-kill LLM requests server-side | "I want abort to be instant" | HTTP connections to OpenRouter cannot be forcibly terminated mid-response from the server. AbortSignal is cooperative -- the fetch cancels, but OpenRouter may still bill for the completion. | Pass AbortSignal to all agent calls; accept that billing granularity is per-request, not per-token. The signal prevents *new* requests and stops *reading* the stream. |
-| Split every file over 200 lines | "Smaller files are always better" | Many files (e.g., `workflow-schemas.ts` at 405 lines, `agent-utils.ts` at 331 lines) are cohesive single-concern modules. Splitting them would scatter related logic across files for no readability gain. | Apply a heuristic: split files with *multiple distinct responsibilities*, not just high line counts. Target files with 2+ distinct step/component definitions. |
-| Toast for every trace event | "Show toasts for agent start/end/tool calls" | The workflow fires dozens of events per run. Toasting each one would flood the screen and obscure important notifications. | Reserve toasts for workflow-level lifecycle events only (start, complete, abort, error). The trace panel handles granular events. |
-| Microservice-style file splitting | "Each function in its own file" | Over-decomposition causes import spaghetti and makes code harder to navigate. A 50-line file with 3 imports from siblings is worse than a 200-line file with everything in one place. | Split by *responsibility boundary*, not by function. One file per workflow step, one file per UI component. |
-| Replace Radix toast with Sonner | "Radix toast is already in package-lock" | Radix toast is a transitive dependency (from shadcn/ui), not directly used. No toast component is currently rendered. There is nothing to replace. | Install Sonner fresh via `npx shadcn@latest add sonner`. This is the shadcn-recommended toast solution. |
+| Real-time event streaming to a frontend | Mastra version has a polished trace UI with live updates | Claude Code has no web frontend. Building one would mean building a separate server, WebSocket layer, and React app -- duplicating what Mastra already does. | The Claude Code terminal IS the UI. Transparent reasoning replaces event streaming. |
+| Vocabulary/Rules CRUD tools | Mastra version has 5 vocabulary tools and 5 rules tools that agents call | Claude Code subagents cannot call custom MCP tools without extra wiring. Implementing these as MCP servers adds massive complexity for minimal gain when agents can just read/write JSON files directly. | Agents read/write JSON files directly. File I/O replaces tool calls. |
+| Agent-to-agent direct communication | Agent Teams let agents message each other, which sounds ideal for verify/improve coordination | Agent Teams are designed for sustained parallelism across sessions, not tight sequential loops. Using them for a 4-iteration verify/improve cycle adds coordination overhead that exceeds the loop's complexity. | Sequential subagent dispatch from main orchestrator. Simpler and more reliable. |
+| Nested subagent spawning | Having a verifier subagent spawn tester sub-subagents | Subagents cannot spawn other subagents. This is a hard architectural constraint in Claude Code (confirmed by GitHub issue #4182). | Main orchestrator handles all subagent spawning. Flatten the hierarchy. |
+| Zod schema validation at boundaries | Mastra uses Zod schemas to validate data between steps | Claude Code agents don't have a TypeScript runtime for schema validation. JSON files can be validated by the agent reading and checking them, but formal schema validation requires a Bash script/Node.js call. | Agent-level validation: the skill instructions specify the expected JSON shape. Claude checks it naturally. Add a lightweight validation script for critical boundaries if needed. |
+| Cost tracking per step | Mastra tracks API cost per step | Claude Code's cost tracking is session-level, not per-subagent. There's no API to query per-invocation cost from within a skill. | Accept session-level cost display in Claude Code's built-in UI. |
+| Abort/cancel mid-solve | Mastra has explicit abort propagation | Ctrl+C interrupts Claude Code. Background subagents can be stopped. But there's no programmatic abort-and-resume. | Ctrl+C is sufficient. If a subagent is backgrounded, it can be killed. |
+| Frontend results viewer | Mastra has a polished results page with formatted answers and confidence levels | Building a web frontend defeats the purpose of "Claude Code native." | Markdown file output. The results file IS the viewer. |
 
 ## Feature Dependencies
 
 ```
-[Abort signal in RequestContext]
+[Slash command entry point (/solve)]
     |
-    +--requires--> [Understand handleWorkflowStream abort flow]
-    |                  (How does useChat stop() reach workflow steps?)
+    v
+[Problem input (paste or file)]
     |
-    +--requires--> [Pass AbortSignal to streamWithRetry calls]
-                       (11 call sites in workflow.ts need the signal)
-
-[Toast notifications]
+    v
+[Extraction step]
     |
-    +--requires--> [Install Sonner + Toaster component]
+    v
+[Multi-perspective dispatch]
     |
-    +--requires--> [Style Toaster to match blueprint theme]
+    +-----> [Parallel hypothesis generation] (N subagents)
+    |           |
+    |           v
+    |       [Per-perspective draft files]
     |
-    +--then-enables--> [Toast on start / complete / abort / error]
-
-[File refactoring]
+    v
+[Synthesis (merge best drafts)]
     |
-    +--independent--> [Split workflow.ts into per-step files]
+    v
+[Verification loop] <----+
+    |                      |
+    +--- converged? NO ----+
     |
-    +--independent--> [Split trace-event-card.tsx into sub-components]
+    v (YES)
+[Answer step]
     |
-    +--independent--> [Split page.tsx hooks/logic into custom hooks]
-
-[Abort propagation] --conflicts-with--> [File refactoring of workflow.ts]
-    (Do not refactor workflow.ts AND add abort signals in the same phase.
-     One changes structure, the other changes behavior. Do them sequentially.)
+    v
+[Results output (terminal + file)]
 ```
 
 ### Dependency Notes
 
-- **Abort signal requires understanding the `handleWorkflowStream` -> step execution path:** The `useChat` hook's `stop()` function cancels the client-side fetch. On the server, `handleWorkflowStream` should receive this as a request abort. Need to verify whether Mastra propagates this to `step.execute()` as an AbortSignal available in the step context, or if a manual approach (storing an AbortController in RequestContext) is needed.
-- **Toast installation is a prerequisite for all toast features:** Sonner is not currently installed. The shadcn/ui Sonner component (`npx shadcn@latest add sonner`) handles the setup including the `<Toaster />` provider.
-- **File refactoring conflicts with abort propagation timing:** Both touch `workflow.ts` heavily. Refactoring first (structural change) then adding abort (behavioral change) is safer than doing both at once. Alternatively, add abort first (smaller diff, behavior-only) then refactor (purely structural).
-- **Toast features are fully independent** of abort and refactoring. Can be done in any order.
+- **Extraction requires problem input:** Cannot extract structure from nothing. Extraction writes `extracted.json`.
+- **Multi-perspective dispatch requires extraction:** The dispatcher analyzes the extracted structured problem to determine which linguistic angles to explore.
+- **Parallel hypothesizers require dispatch:** Each subagent needs its assigned perspective from the dispatcher output.
+- **Synthesis requires all hypothesizer outputs:** Must wait for all parallel subagents to complete before merging.
+- **Verification requires synthesis:** Tests the merged ruleset against the dataset.
+- **Improve loop requires verification:** Only runs if verification finds issues. Loops back to re-verify.
+- **Answer step requires converged rules:** Must have a validated ruleset before answering questions.
+- **Results output requires answers:** Final step, writes formatted markdown.
+
+### Key Claude Code Constraints Affecting Dependencies
+
+1. **Subagents cannot spawn subagents.** The main orchestrator must spawn all subagents directly. This flattens what was a deep call tree in Mastra (orchestrator -> verifier-orchestrator -> rule-tester-tool -> rule-tester-agent) into a flat fan-out from the main agent.
+
+2. **No native loop construct.** The verify/improve loop must be encoded in the skill instructions as explicit prose: "Repeat steps N-M up to 4 times until verification passes or iterations are exhausted." The main agent follows these instructions using its reasoning capabilities.
+
+3. **File-based state is the communication primitive.** All data flows through JSON files in `claude-code/state/`. This replaces Mastra's RequestContext, workflow state, and Zod-validated schemas.
+
+4. **Subagent results return to the main conversation context.** Running many subagents with large outputs can consume significant context. Subagents should return concise summaries and write detailed data to files.
 
 ## MVP Definition
 
-### Must Have (v1.2 Scope)
+### Launch With (v1.4.0)
 
-- [x] Abort signal propagated to all `streamWithRetry` calls in workflow steps -- stops API spend on abort
-- [x] Sonner toast on workflow start, complete, abort, and error -- non-blocking lifecycle feedback
-- [x] `workflow.ts` split into per-step modules (extraction, hypothesis, answer) -- largest file goes from 1,399 lines to ~200-400 each
-- [x] `page.tsx` logic extracted into custom hooks -- 824 lines is manageable but state/effect logic is dense
+Minimum viable Claude Code solver that can solve a Linguistics Olympiad problem end-to-end.
 
-### Add If Time Permits (v1.2 Stretch)
+- [ ] `/solve` skill with problem input handling (paste text or `@file` reference) -- entry point
+- [ ] Extraction step (main agent parses problem, writes `extracted.json`) -- foundation for all later steps
+- [ ] Single-perspective hypothesis generation (skip multi-perspective for MVP) -- simplest path to rules
+- [ ] Verification step (main agent tests rules against dataset) -- catches bad rules
+- [ ] Single improve iteration (if verification finds issues) -- basic self-correction
+- [ ] Answer step (apply rules to questions) -- the actual deliverable
+- [ ] Results written to `claude-code/results/` as markdown -- persistent output
 
-- [ ] `trace-event-card.tsx` split into renderer sub-components -- 898 lines with multiple card type renderers
-- [ ] Custom Sonner styling matching blueprint/cyanotype theme -- functional toasts first, styled toasts second
-- [ ] Abort signal checked mid-step (between agent calls within a step) -- prevents starting the *next* agent call when abort is signaled
+### Add After Validation (v1.4.x)
 
-### Future Consideration (v1.3+)
+Features to add once the single-perspective pipeline works.
 
-- [ ] Cost-warning toasts based on token tracking -- requires instrumentation not yet built
-- [ ] Graceful abort with partial result preservation -- complex workflow state management
-- [ ] `page.tsx` further decomposition into layout + controller pattern -- only needed if more features are added to the solver page
+- [ ] Multi-perspective dispatch with parallel subagents -- when single-perspective quality needs improvement
+- [ ] Synthesis step (merge multiple perspective results) -- required for multi-perspective
+- [ ] Full verify/improve loop (up to 4 iterations) -- when single iteration isn't enough
+- [ ] Persistent memory for cross-problem learning -- when solving multiple problems
+- [ ] Eval comparison mode (pipeline vs zero-shot in same session) -- when measuring quality
+
+### Future Consideration (v2+)
+
+Features to defer until the core pipeline is proven.
+
+- [ ] Agent Teams for sustained parallel work -- only if parallel subagents prove insufficient
+- [ ] MCP server for vocabulary/rules tools -- only if file-based I/O proves insufficient
+- [ ] Custom hook-based validation at step boundaries -- only if agent-level validation proves unreliable
+- [ ] Automated eval harness that runs multiple problems -- only if manual comparison is too slow
 
 ## Feature Prioritization Matrix
 
 | Feature | User Value | Implementation Cost | Priority |
 |---------|------------|---------------------|----------|
-| Abort propagation to agent calls | HIGH (saves money) | MEDIUM (11 call sites, need to find signal source) | P1 |
-| Toast on workflow lifecycle events | MEDIUM (quality of life) | LOW (install + 4 toast calls) | P1 |
-| Split `workflow.ts` into step files | MEDIUM (maintainability) | MEDIUM (careful extraction, re-exports) | P1 |
-| Split `page.tsx` into hooks | MEDIUM (maintainability) | MEDIUM (extract state + effects) | P2 |
-| Split `trace-event-card.tsx` | LOW (internal quality) | MEDIUM (identify sub-components) | P2 |
-| Custom toast theme styling | LOW (aesthetics) | LOW (CSS overrides) | P2 |
-| Mid-step abort checking | MEDIUM (faster stop) | LOW (add signal checks between agent calls) | P2 |
-| Cost-warning toasts | MEDIUM (wallet protection) | HIGH (token tracking infra) | P3 |
-| Graceful abort with partial results | LOW (nice to have) | HIGH (state management) | P3 |
+| `/solve` skill entry point | HIGH | LOW | P1 |
+| Extraction step | HIGH | LOW | P1 |
+| Single-perspective hypothesis | HIGH | MEDIUM | P1 |
+| Verification step | HIGH | MEDIUM | P1 |
+| Single improve iteration | HIGH | MEDIUM | P1 |
+| Answer step | HIGH | LOW | P1 |
+| Results markdown output | HIGH | LOW | P1 |
+| Multi-perspective dispatch | MEDIUM | MEDIUM | P2 |
+| Parallel hypothesis subagents | MEDIUM | MEDIUM | P2 |
+| Synthesis (merge perspectives) | MEDIUM | MEDIUM | P2 |
+| Full verify/improve loop (4 iters) | MEDIUM | HIGH | P2 |
+| Persistent memory | LOW | MEDIUM | P3 |
+| Eval comparison mode | MEDIUM | MEDIUM | P3 |
+| Conversational follow-up | MEDIUM | LOW | P3 |
 
 **Priority key:**
-- P1: Must have for v1.2 milestone
-- P2: Should have, add when possible within v1.2
-- P3: Nice to have, defer to future milestones
+- P1: Must have for launch -- the core pipeline
+- P2: Should have -- multi-perspective and iterative improvement (what makes the agentic approach better than zero-shot)
+- P3: Nice to have -- quality-of-life and measurement features
 
-## Implementation Details
+## Implementation Pattern Analysis
 
-### Abort Signal Propagation
+### How the Orchestrator Skill Works
 
-**Current state:** The abort button calls `useChat`'s `stop()`, which aborts the client-side fetch request. On the server, `handleWorkflowStream` wraps a Mastra workflow run. Mastra's `Run.cancel()` triggers AbortSignal to notify running steps. However, the workflow steps in `workflow.ts` never read or forward any abort signal to `streamWithRetry`.
+The `/solve` skill is the single entry point. It runs in the main conversation context (not forked) so it can maintain state across the full pipeline. The skill content is a detailed playbook that tells Claude:
 
-**What needs to happen:**
-1. Determine how `handleWorkflowStream` exposes the abort signal (check if `step.execute()` receives it in its context, or if it needs to be wired manually)
-2. If Mastra provides the signal in the step's execute context, read it and pass to every `streamWithRetry` call
-3. If Mastra does NOT provide it, create an AbortController, store it in RequestContext, and wire the cancellation manually from the API route
-4. `streamWithRetry` and `generateWithRetry` already handle AbortSignal correctly (check before retry, merge with timeout signal, abort during backoff). No changes needed in `agent-utils.ts`.
+1. Read the problem text
+2. Extract structured data, write to file
+3. Generate perspectives (or skip for MVP)
+4. Spawn parallel hypothesizer subagents (or do inline for MVP)
+5. Read draft results, synthesize best rules
+6. Run verification, check results
+7. If verification fails and iterations remain, improve rules and re-verify
+8. Answer questions using final rules
+9. Write results to markdown file
 
-**Key risk:** Mastra v1.8.0 may not propagate the signal to step execution contexts. The [GitHub issue #11063](https://github.com/mastra-ai/mastra/issues/11063) about sub-workflow signal propagation is still open. Need to verify with docs or testing.
+**Confidence:** HIGH -- this pattern is well-documented in Claude Code official docs and aligns with the skill system's design intent.
 
-**Call sites to update (11 in workflow.ts):**
-- Line 89: extractionStep streamWithRetry
-- Line 270: dispatcherResponse
-- Line 367: improverDispatcherResponse
-- Line 500: hypothesizerResponse
-- Line 618: verifierResponse
-- Line 684: extractorResponse
-- Line 850: synthesizerResponse
-- Line 958: convergenceVerifierResponse
-- Line 1019: convergenceExtractorResponse
-- Line 1296: answererResponse
-- Plus the tester tool calls in `03a-rule-tester-tool.ts` and `03a-sentence-tester-tool.ts`
+### How Parallel Subagent Execution Works
 
-### Toast Notifications
+Define hypothesizer subagent in `.claude/agents/hypothesizer.md`:
+```yaml
+---
+name: hypothesizer
+description: Generate linguistic rules for a specific perspective
+tools: Read, Write, Grep, Glob
+model: inherit
+---
+System prompt with instructions for analyzing the problem from a specific
+linguistic angle and writing rules/vocabulary to a designated output file.
+```
 
-**Library:** Sonner via shadcn/ui (`npx shadcn@latest add sonner`)
+The main orchestrator spawns multiple instances with different prompts:
+```
+Use the hypothesizer subagent to analyze the problem from a morphological
+perspective. Read the problem from claude-code/state/extracted.json.
+Write your rules to claude-code/state/drafts/morphological.json.
+```
 
-**Installation:**
-1. `npx shadcn@latest add sonner` -- installs sonner, creates `src/components/ui/sonner.tsx`
-2. Add `<Toaster />` to root layout (`src/app/layout.tsx`)
-3. Import and call `toast()` from `sonner` in `page.tsx`
+Multiple subagents launch concurrently when dispatched together.
 
-**Toast events:**
-| Event | Toast Type | Message | Trigger |
-|-------|-----------|---------|---------|
-| Workflow start | `toast()` (default) | "Solving problem..." | `handleSolve` callback |
-| Workflow complete | `toast.success()` | "Workflow complete" with duration | `workflowStatus === 'completed'` |
-| Workflow aborted | `toast.warning()` | "Workflow aborted" | `stop()` called + status transition |
-| Workflow error | `toast.error()` | "Workflow failed" with error message | `workflowStatus === 'failed'` |
+**Confidence:** HIGH -- official docs confirm parallel subagent dispatch. File-based output is the recommended communication pattern.
 
-**Styling:** Sonner's `<Toaster />` component accepts `theme`, `toastOptions`, and CSS class overrides. For the cyanotype theme: dark theme base, override background to `var(--card)`, border to `var(--border)`, text to `var(--foreground)`, and accent colors per toast type.
+### How Structured Data Passes Between Steps
 
-### File Refactoring Targets
+All inter-step data flows through JSON files:
+- `claude-code/state/extracted.json` -- extraction output
+- `claude-code/state/perspectives.json` -- dispatcher output
+- `claude-code/state/drafts/{perspective-id}.json` -- per-perspective hypotheses
+- `claude-code/state/rules.json` -- synthesized/merged rules
+- `claude-code/state/vocabulary.json` -- synthesized/merged vocabulary
+- `claude-code/state/verification.json` -- verification feedback
+- `claude-code/results/{timestamp}-results.md` -- final answers
 
-**`workflow.ts` (1,399 lines) -- PRIMARY TARGET**
+The skill instructions specify the JSON shape for each file. Claude reads and writes these files using the Read and Write tools.
 
-Current structure (3 monolithic step definitions + composition):
-- Lines 1-47: Imports
-- Lines 48-134: `extractionStep` (~86 lines)
-- Lines 136-1158: `multiPerspectiveHypothesisStep` (~1,022 lines, the real problem)
-- Lines 1159-1384: `answerQuestionsStep` (~225 lines)
-- Lines 1386-1399: Workflow composition
+**Confidence:** HIGH -- file-based communication is the documented canonical pattern for subagent data passing.
 
-Recommended split:
-| New File | Content | Approx Lines |
-|----------|---------|-------------|
-| `01-extraction-step.ts` | `extractionStep` definition | ~100 |
-| `02-hypothesis-step.ts` | `multiPerspectiveHypothesisStep` definition | ~1,050 |
-| `04-answer-step.ts` | `answerQuestionsStep` definition | ~240 |
-| `workflow.ts` | Imports steps, composes workflow chain, exports | ~30 |
+### How Iterative Loops Work
 
-Note: `multiPerspectiveHypothesisStep` at 1,022 lines is still large after extraction. It contains dispatch, hypothesize, verify, synthesize, and convergence logic in nested loops. Further splitting into sub-functions (not separate steps) within that file is advisable but is a secondary concern.
+This is the trickiest part. Claude Code has no `for` loop or `while` loop construct. The orchestrator skill must encode the loop in natural language:
 
-**`trace-event-card.tsx` (898 lines) -- SECONDARY TARGET**
+```markdown
+## Verification Loop (up to 4 iterations)
 
-Contains rendering logic for multiple card types (agent, tool, rule-test, iteration, etc.). Each card type renderer could be its own component file.
+After synthesis, verify the rules:
 
-**`page.tsx` (824 lines) -- SECONDARY TARGET**
+1. Read rules from claude-code/state/rules.json
+2. Test each rule against each sentence in the dataset
+3. Write verification results to claude-code/state/verification.json
+4. Check the conclusion field:
+   - If "ALL_RULES_PASS": proceed to answering questions
+   - If "NEEDS_IMPROVEMENT" or "MAJOR_ISSUES" and iteration < 4:
+     a. Read the verification feedback
+     b. Revise failing rules based on the feedback
+     c. Write updated rules to claude-code/state/rules.json
+     d. Go back to step 1 (increment iteration counter)
+   - If iteration >= 4: proceed to answering with current best rules
+```
 
-Dense with state management, effects, memoized computations, and layout. Custom hooks can extract:
-- Progress step computation logic
-- Trace event processing
-- Vocabulary/rules data extraction from message parts
-- Layout animation logic
+Claude follows these instructions using its reasoning capabilities. The loop state (iteration count, convergence status) is tracked in a state file or by the agent's own memory within the conversation.
+
+**Confidence:** MEDIUM -- this depends on Claude's ability to faithfully follow multi-step loop instructions. The pattern works in GSD's executor agent (which handles complex multi-step plans), but a 4-iteration loop with conditional branching is at the edge of reliable instruction-following. Mitigation: keep each iteration's instructions explicit and simple. Write the iteration counter to a file so the agent can read its own state.
+
+### How Results Get Written
+
+The skill instructs Claude to write a formatted markdown file:
+
+```markdown
+## Write Results
+
+Write the final answers to claude-code/results/{problem-name}.md with:
+
+# LO-Solver Results: {problem name}
+## Answers
+For each question:
+- Question ID and input text
+- Answer
+- Confidence level
+- Working steps showing rule application
+## Rules Used
+List all validated rules
+## Verification Summary
+Final pass rate and conclusion
+```
+
+**Confidence:** HIGH -- file writing is a core Claude Code capability.
+
+## Capability Mapping: Mastra vs Claude Code
+
+| Mastra Concept | Claude Code Equivalent | Gap? |
+|---------------|----------------------|------|
+| Workflow steps (`.then()`) | Skill instructions (sequential prose) | No -- natural mapping |
+| RequestContext (shared mutable state) | JSON files in `claude-code/state/` | No -- different mechanism, same purpose |
+| Agent `generate()` / `stream()` | Main agent reasoning or subagent delegation | No -- Claude IS the LLM |
+| Zod schema validation | Agent-level structural checking + optional Node.js validation scripts | Minor -- less formal but functional |
+| OpenRouter model routing | Built-in model selection (`model: opus/sonnet/haiku`) | No -- simpler in Claude Code |
+| Vocabulary/Rules CRUD tools | Direct file read/write on JSON files | No -- simpler approach |
+| Real-time event streaming | Terminal output (built-in transparency) | Yes -- no web UI, but terminal is adequate |
+| Parallel execution via Promise.all | Parallel subagent dispatch | No -- native capability |
+| DraftStore isolation | Per-perspective JSON files or worktree isolation | No -- file-based isolation is cleaner |
+| Two-agent chain (reasoner + extractor) | Single Opus 4.6 pass (reason and extract in one) | No -- Opus 4.6 handles both |
+| Abort signal propagation | Ctrl+C / Ctrl+B | Partial -- less granular but functional |
+| Cost tracking per step | Session-level cost display | Yes -- no per-step breakdown |
+| Eval harness with scoring | Manual comparison or scripted eval | Yes -- no automated eval in v1.4 |
 
 ## Sources
 
-- [Mastra Run.cancel() documentation](https://mastra.ai/reference/workflows/run-methods/cancel) -- Step cancellation uses AbortSignal; steps must actively check it. HIGH confidence.
-- [Mastra GitHub Issue #11063 -- AbortSignal not propagated to sub-workflows](https://github.com/mastra-ai/mastra/issues/11063) -- Open issue, signals don't cascade to child workflows. MEDIUM confidence (may be fixed in newer versions).
-- [Mastra GitHub Issue #10874 -- AbortSignal propagation to sub-agents](https://github.com/mastra-ai/mastra/issues/10874) -- CLOSED March 2, 2026. Agent network abort propagation merged in PR #13491. HIGH confidence.
-- [AI SDK Stopping Streams documentation](https://ai-sdk.dev/docs/advanced/stopping-streams) -- `useChat` `stop()` cancels client fetch, server receives via `abortSignal` on request. HIGH confidence.
-- [Sonner GitHub repository](https://github.com/emilkowalski/sonner) -- Opinionated React toast library, TypeScript-first. HIGH confidence.
-- [shadcn/ui Sonner integration](https://www.shadcn.io/ui/sonner) -- Official shadcn integration via `npx shadcn@latest add sonner`. HIGH confidence.
-- Codebase analysis of `workflow.ts`, `agent-utils.ts`, `page.tsx`, `trace-event-card.tsx` -- direct inspection. HIGH confidence.
+- [Claude Code Subagents Documentation](https://code.claude.com/docs/en/sub-agents) -- Official docs on subagent creation, parallel execution, file-based communication, and limitations (no nested spawning). **HIGH confidence.**
+- [Claude Code Skills Documentation](https://code.claude.com/docs/en/skills) -- Official docs on skill creation, SKILL.md format, `context: fork`, dynamic injection, and argument passing. **HIGH confidence.**
+- [Claude Code Common Workflows](https://code.claude.com/docs/en/common-workflows) -- Official patterns for multi-step workflows, plan mode, and worktree isolation. **HIGH confidence.**
+- [Claude Code Sub-Agent Best Practices (claudefa.st)](https://claudefa.st/blog/guide/agents/sub-agent-best-practices) -- Community patterns for sequential vs parallel dispatch, data passing, and routing rules. **MEDIUM confidence.**
+- [Claude Code Agent Teams Guide (claudefa.st)](https://claudefa.st/blog/guide/agents/agent-teams) -- Overview of Agent Teams for sustained parallelism. **MEDIUM confidence.**
+- [Task Tool vs Subagents (ibuildwith.ai)](https://www.ibuildwith.ai/blog/task-tool-vs-subagents-how-agents-work-in-claude-code/) -- Clarification on Agent tool mechanics and structured data passing. **MEDIUM confidence.**
+- [Parallel Subagents (Tim Dietrich)](https://timdietrich.me/blog/claude-code-parallel-subagents/) -- Practical examples of parallel subagent execution. **MEDIUM confidence.**
+- [Structured Output Feature Request (GitHub #20625)](https://github.com/anthropics/claude-code/issues/20625) -- Confirms structured output for subagents is not yet supported as a formal API; file-based JSON is the current approach. **HIGH confidence (official issue tracker).**
+- [Sub-Agent Nesting Limitation (GitHub #4182)](https://github.com/anthropics/claude-code/issues/4182) -- Confirms subagents cannot spawn other subagents by design. **HIGH confidence (official issue tracker).**
+- [Best Practices for Claude Code](https://code.claude.com/docs/en/best-practices) -- Official patterns for verification loops and agentic coding. **HIGH confidence.**
 
 ---
-*Feature research for: LO-Solver v1.2 Cleanup & Quality milestone*
-*Researched: 2026-03-03*
+*Feature research for: Claude Code native solver workflow (v1.4)*
+*Researched: 2026-03-07*

@@ -1,175 +1,207 @@
 # Pitfalls Research
 
-**Domain:** Adding abort propagation, file refactoring, and toast notifications to an existing Mastra/Next.js streaming workflow app
-**Researched:** 2026-03-03
-**Confidence:** HIGH
+**Domain:** Claude Code native multi-agent solver workflow (converting Mastra orchestration to Claude Code subagents)
+**Researched:** 2026-03-07
+**Confidence:** HIGH (verified against official Claude Code docs, GitHub issues, and GSD workflow patterns)
 
 ## Critical Pitfalls
 
-### Pitfall 1: Client-Side `stop()` Does Not Cancel Backend Workflow Execution
+### Pitfall 1: Parallel Task Tool Calls Silently Emit Only 1 of N
 
 **What goes wrong:**
-The current abort button calls `useChat`'s `stop()`, which only closes the client-side HTTP stream reader. The Mastra workflow, all in-flight `streamWithRetry` agent calls, and their OpenRouter LLM requests continue running on the server until completion. The user sees "aborted" in the UI, but API credits keep burning for minutes afterward. The `handleWorkflowStream` function in `@mastra/ai-sdk` does not pass any abort signal or expose the `run` object for cancellation.
+When the orchestrator tries to spawn multiple subagents in parallel (e.g., 3 parallel hypothesizers), Claude Code may emit only 1 of the intended N Task tool calls. The model writes text suggesting it is launching 3 agents, but only 1 actually executes. The "results" for the other 2 are hallucinated -- plausible-looking but fabricated output that was never computed. This is a confirmed open bug (issues #22508, #29181) affecting Opus 4.6 on Claude Code. The problem worsens on subsequent attempts within the same conversation.
 
 **Why it happens:**
-`stop()` from `useChat` aborts the client-side `fetch` ReadableStream reader. In the AI SDK's streaming model, this *should* propagate as an aborted `req.signal` to the server-side route handler. However, `handleWorkflowStream` ignores `req.signal` entirely -- it calls `run.stream()` without forwarding any abort signal. Even if it did, the three workflow steps (`extractionStep`, `multiPerspectiveHypothesisStep`, `answerQuestionsStep`) destructure `{ inputData, mastra, bail, state, setState, writer }` but never destructure or use `abortSignal` -- the parameter that Mastra provides for cooperative cancellation. Additionally, none of the 11 `streamWithRetry` calls in `workflow.ts` pass an `abortSignal` option.
+The root cause is unclear (model-side vs client-side), but the symptom is that the model's stop_reason is `null` on messages that should contain multiple parallel tool calls. The tool call emission pipeline appears to truncate after the first Task call. This is not a prompt engineering problem -- it is a platform bug in how parallel Task tool use is dispatched.
 
 **How to avoid:**
-1. In the API route (`/api/solve/route.ts`), stop using `handleWorkflowStream` as a black box. Instead, manually call `workflow.createRun()` and `run.stream()`, then listen for `req.signal` abort to call `run.cancel()`.
-2. In each workflow step's `execute` function, destructure `abortSignal` from the context and pass it to every `streamWithRetry` call. The `streamWithRetry` and `generateWithRetry` functions already accept `abortSignal` -- they just never receive one from the workflow steps.
-3. Between sequential agent calls within a step (the multi-perspective step has ~20 sequential agent invocations), check `abortSignal.aborted` and call `abort()` to bail early.
+1. Do NOT rely on the model spontaneously emitting multiple parallel Task calls in a single message. Instead, have the orchestrator explicitly spawn subagents one at a time in a sequential loop, collecting each result before spawning the next.
+2. Alternatively, use explicit sequential dispatch with file-based output: spawn agent 1, wait for its file output, spawn agent 2, etc. The GSD workflow's `execute-phase.md` uses exactly this pattern -- it spawns one Task per plan and waits for completion before checking results.
+3. If parallelism is essential, use Claude Code Agent Teams (experimental) which coordinate across separate sessions, bypassing the single-message parallel Task limitation.
+4. For the LO-Solver specifically: the multi-perspective hypothesis step currently runs 3 parallel hypothesizers. Convert to sequential dispatch (hypothesizer 1 -> collect -> hypothesizer 2 -> collect -> hypothesizer 3 -> collect -> compare results). Accept the latency cost in exchange for correctness.
 
 **Warning signs:**
-- After clicking abort, Mastra Studio shows the workflow still running
-- OpenRouter dashboard shows API calls continuing after abort
-- Server console logs show agent output arriving after the client disconnected
+- The orchestrator says "spawning 3 agents" but only one subagent viewer appears in Ctrl+O
+- Results from "parallel" agents arrive instantly (they were hallucinated, not computed)
+- Results for different perspectives are suspiciously similar or share the same vocabulary entries
+- The orchestrator's response mentions results from agents that never wrote any output files
 
 **Phase to address:**
-Phase 1 (Abort Propagation) -- this is the primary purpose of the abort feature and should be implemented first, before any other changes.
+Phase 1 (Orchestrator skeleton) -- the dispatch model (sequential vs parallel) is an architectural decision that must be locked in before writing subagent definitions.
 
 ---
 
-### Pitfall 2: Missing `abortSignal` Checks Between Sequential Agent Calls Within a Step
+### Pitfall 2: Subagents Cannot Spawn Subagents (No Nesting)
 
 **What goes wrong:**
-Even after threading `abortSignal` through to `streamWithRetry`, the multi-perspective hypothesis step (`multiPerspectiveHypothesisStep`) runs a complex loop: dispatcher -> N parallel hypothesizers -> N parallel verifiers -> synthesizer -> convergence verifier -> possibly more rounds. If the abort signal fires between two of these phases (e.g., after the dispatcher returns but before hypothesizers start), the next `streamWithRetry` call will check the signal and throw, but only because `streamWithRetry` has `callerSignal?.throwIfAborted()` at the top. The real danger is the *control flow code between agent calls*: map/emit/store operations, draft store creation, `for` loops iterating perspectives, etc. These can take non-trivial time and will not be interrupted unless explicitly checked.
+The current Mastra workflow has a deep call chain: Orchestrator -> Step 2 (multi-perspective) -> Dispatcher Agent -> N Hypothesizer Agents -> (each uses) Rule Tester Tool -> (which calls) Rule Tester Agent. If this hierarchy is naively translated to Claude Code subagents, the hypothesizer subagent would need to spawn a rule-tester subagent. This fails silently -- subagents do not have access to the Task tool and cannot spawn other subagents. The hypothesizer would either skip testing entirely or hallucinate test results.
 
 **Why it happens:**
-Developers thread the abort signal through to the deepest async calls (the LLM request) but forget to check it at the *orchestration level* -- the loop control, the "should we start another round" decision, the "should we start the next perspective" decision.
+Claude Code enforces a single level of delegation by design. The Task tool is only available to the main conversation (or the main agent in `--agent` mode). Subagents receive a filtered tool set that excludes Task. This is documented in the official Claude Code subagent docs: "Subagents cannot spawn other subagents."
 
 **How to avoid:**
-Add `abortSignal.aborted` checks at every loop boundary and before every expensive operation:
-- Before each round iteration starts
-- Before starting each perspective's hypothesizer
-- Before starting the convergence verification
-- Before starting the answer step
-- Between the verifier and improver within a perspective's verify/improve loop
-
-Create a small helper: `function throwIfAborted(signal: AbortSignal) { if (signal.aborted) throw new Error('Workflow aborted'); }` and call it at each checkpoint.
+1. Flatten the agent hierarchy to one level. The orchestrator (main conversation) must be the only entity that spawns subagents. The verify/improve loop must be orchestrated by the main agent, not delegated to a verifier subagent that in turn spawns testers.
+2. Structure as: Orchestrator -> [Extractor Subagent] -> Orchestrator -> [Hypothesizer Subagent 1] -> Orchestrator -> [Hypothesizer Subagent 2] -> ... -> Orchestrator -> [Verifier Subagent] -> Orchestrator (evaluates results, decides if another improve round is needed) -> [Improver Subagent] -> repeat.
+3. Any operation that currently uses "tool calls within agent calls" (like the verifier orchestrator calling rule-tester tools) must be folded into a single subagent's system prompt with explicit instructions to perform the testing internally, or the testing logic must be moved to the orchestrator level.
 
 **Warning signs:**
-- Abort during the multi-perspective step still runs 1-2 more agent calls before stopping
-- Abort takes 30-60 seconds to actually stop all work despite the signal being set immediately
+- A subagent's system prompt instructs it to "spawn" or "delegate to" another agent
+- A subagent references the Task tool in its instructions
+- Test results appear in a subagent's output without corresponding file I/O evidence that testing actually occurred
 
 **Phase to address:**
-Phase 1 (Abort Propagation) -- must be done as part of the abort signal threading work.
+Phase 1 (Orchestrator skeleton) -- the flat hierarchy constraint shapes the entire architecture.
 
 ---
 
-### Pitfall 3: Breaking the Re-Export Contract When Splitting `workflow.ts` Into Modules
+### Pitfall 3: Subagent Return Values Are Unstructured Text, Not Typed Data
 
 **What goes wrong:**
-`workflow.ts` (1,399 lines) is imported by `src/mastra/index.ts` as `import { solverWorkflow } from './workflow/workflow'`. The workflow is also indirectly consumed by `handleWorkflowStream` via the Mastra instance's workflow registry. If the file is split and the export location of `solverWorkflow` changes, the import in `mastra/index.ts` breaks. More subtly, if step definitions are moved to separate files but their closures over shared helpers (like `streamWithRetry`, `emitTraceEvent`, or `RequestContext` types) are not correctly resolved, TypeScript will compile but the runtime behavior will differ -- particularly if a step references a function that was in the same file scope but is now imported from a different module.
+In the Mastra workflow, agents return structured Zod-validated objects (e.g., `structuredProblemDataSchema`, `dispatcherOutputSchema`). Data flows through typed schemas between steps. In Claude Code, a subagent returns free-form text to the orchestrator. If the orchestrator expects JSON and the subagent returns markdown, or if the subagent wraps JSON in a code fence, or if the subagent adds commentary before/after the JSON, parsing fails. The orchestrator cannot use Zod validation on subagent returns because there is no structured output enforcement in the Task tool.
 
 **Why it happens:**
-Large files often have implicit coupling through shared local scope. In `workflow.ts`, all three steps share: (1) imported helpers at the top, (2) inline closures that capture `mastra`, `writer`, `state` from the step context, and (3) type imports. When splitting, it is tempting to move each step to its own file without auditing what each step actually references from the shared scope. TypeScript catches missing imports, but it does not catch subtle issues like module initialization order or circular references between step files.
+Claude Code subagents communicate via natural language text. There is no schema enforcement, no structured output mode, and no JSON-mode for the Task tool return. The Claude API supports structured outputs (tool_use with JSON schema), but the Task tool in Claude Code does not expose this capability to subagent returns.
 
 **How to avoid:**
-1. Keep `solverWorkflow` (the `createWorkflow(...).then().then().then().commit()` chain) in the original `workflow.ts` file as the composition root. Move only the step *definitions* (`extractionStep`, `multiPerspectiveHypothesisStep`, `answerQuestionsStep`) to separate files.
-2. Maintain the existing import path for `solverWorkflow` so `mastra/index.ts` does not need to change.
-3. After each file split, run `npx tsc --noEmit` immediately -- do not batch multiple splits. The project has no test framework, so the TypeScript compiler is the primary safety net.
-4. Verify the eval harness still works (`npm run eval -- --problem 1`) after the refactor -- this is the only runtime validation available.
+1. Use file-based data passing instead of relying on return text. Each subagent writes its output to a designated JSON file (e.g., `claude-code/workspace/extraction-result.json`). The orchestrator reads the file after the subagent completes. This is the GSD pattern: subagents write SUMMARY.md files, and the orchestrator reads them after completion.
+2. Include explicit formatting instructions in each subagent's system prompt: "Write your complete output to `{output_file}` as valid JSON matching this schema: {...}. Do not include any text before or after the JSON. Do not wrap in code fences."
+3. Add defensive parsing in the orchestrator: try JSON.parse on the file contents, and if it fails, try extracting JSON from code fences, then try extracting from the first `{` to the last `}`.
+4. For the LO-Solver: define a workspace directory (`claude-code/workspace/`) with a naming convention for intermediate files: `01-extraction.json`, `02-perspective-1.json`, `02-perspective-2.json`, etc.
 
 **Warning signs:**
-- `npx tsc --noEmit` shows new errors after splitting
-- Runtime `TypeError: X is not a function` or `Cannot read properties of undefined` when agents are invoked
-- Workflow status shows `failed` in Mastra Studio after a refactor that compiled clean
+- The orchestrator says "parsing the extraction result" and then produces garbled or missing data
+- A subagent's output file contains markdown commentary mixed with JSON
+- The orchestrator skips a step because it couldn't parse the previous step's output
+- Rule or vocabulary data is partially lost between steps
 
 **Phase to address:**
-Phase 2 (File Refactoring) -- must be done carefully with compiler checks after each change.
+Phase 1 (Orchestrator skeleton) -- the data-passing contract (file paths, naming, format) must be defined before writing any subagent.
 
 ---
 
-### Pitfall 4: Sonner Toasts Firing Multiple Times in Streaming Data Flows
+### Pitfall 4: Context Window Exhaustion in the Orchestrator
 
 **What goes wrong:**
-The solver page derives workflow state from streaming data parts (`allParts` array). When using `useEffect` to trigger toasts on state changes (e.g., `isComplete`, `isAborted`, `isFailed`), React Strict Mode in development causes effects to run twice, producing duplicate toasts. Additionally, the streaming nature means state variables transition through intermediate values (e.g., `workflowStatus` goes from `undefined` -> `'running'` -> `'success'`), and poorly guarded effects will fire toasts on each intermediate transition.
+The orchestrator (main conversation) accumulates context from every subagent's return text. With 4 solver steps, each returning substantial output (extracted problem data, multiple hypothesis sets with rules and vocabulary, verification results, final answers), the orchestrator's 200K token context window fills up. Performance degrades around 147K-152K tokens due to the lost-in-the-middle problem. By the time the verify/improve loop runs its 3rd or 4th iteration, the orchestrator has lost critical context from earlier steps, leading to degraded decision-making about whether to continue iterating.
 
 **Why it happens:**
-Sonner's `toast()` function is imperative -- each call creates a new toast. In a streaming UI where state is derived from an ever-growing array of data parts (`allParts`), the `useMemo` dependencies change on every new chunk, which can retrigger effects. The existing code already uses `// eslint-disable-next-line react-hooks/exhaustive-deps` with `allParts.length` as a dependency hack. Adding toast effects tied to these derived states without careful deduplication will produce ghost toasts.
+Each subagent's return text is injected into the orchestrator's conversation. The orchestrator also has ~30-40K tokens of system prompt, tool definitions, and environment context loaded before any work begins. With 4 main steps plus up to 4 verify/improve iterations, the conversation grows rapidly. Unlike Mastra (which uses RequestContext -- a separate mutable state store), Claude Code has no out-of-band state mechanism.
 
 **How to avoid:**
-1. Use refs to track whether each toast has already been shown: `const shownToasts = useRef(new Set<string>())`. Before calling `toast()`, check if the toast ID has been shown.
-2. Use Sonner's built-in `toast.id` parameter for idempotent updates: `toast.success('Workflow complete', { id: 'workflow-complete' })`. Calling `toast()` with the same `id` updates the existing toast rather than creating a new one.
-3. Derive toast triggers from *transition detection* (prev vs. current state) using a ref that stores the previous state, not from absolute state values.
-4. Keep toast logic in a single `useEffect` or a custom hook (`useWorkflowToasts`) that consolidates all toast-related state watching.
+1. Keep subagent returns minimal. Subagents write full results to files, but return only a brief summary to the orchestrator (e.g., "Extraction complete. 12 dataset pairs, 4 questions. Results in claude-code/workspace/01-extraction.json").
+2. Use the file system as the shared state store. Each subagent reads its inputs from files and writes its outputs to files. The orchestrator only needs to know file paths and pass/fail status.
+3. Run `/compact` between major phases if the orchestrator detects high context usage.
+4. Design the verify/improve loop to be self-contained: the verifier subagent reads rules from a file, tests them, writes results to a file. The orchestrator only reads the pass/fail summary, not the full verification trace.
 
 **Warning signs:**
-- Two "Workflow complete" toasts appear simultaneously
-- Toast appears when the page first renders before any workflow has run
-- Cost warning toasts repeat on every streaming chunk
+- The orchestrator starts "forgetting" the problem statement or earlier extraction results
+- Verify/improve iterations produce worse results than earlier iterations
+- The orchestrator's responses become shorter or less coherent in later steps
+- Auto-compaction triggers during the workflow, losing critical context
 
 **Phase to address:**
-Phase 3 (Toast Notifications) -- fundamental to correct toast implementation.
+Phase 1 (Orchestrator skeleton) -- context management strategy must be baked into the architecture from the start.
 
 ---
 
-### Pitfall 5: `req.signal` Not Propagating Through Next.js Route Handlers to the Workflow
+### Pitfall 5: The classifyHandoffIfNeeded Bug Causes False Failures
 
 **What goes wrong:**
-Even after modifying the API route to use `req.signal`, Next.js does not reliably propagate client disconnection as an aborted `req.signal` in all deployment modes. This is a known issue (vercel/next.js#48682, vercel/next.js#50364). In development with `next dev` (Turbopack), the signal behavior may differ from production. The `maxDuration = 600` (10 minutes) in the route means the connection stays alive for a long time. If `req.signal` never fires, `run.cancel()` is never called, and the abort button becomes cosmetic.
+Every Task tool subagent reports "failed" even when all work completes successfully. The error message is `classifyHandoffIfNeeded is not defined`. This fires 100% of the time across all sessions, all platforms, and all agent types. It has been an open bug since at least Claude Code v2.1.27 (issues #22087, #22312, #22544, #22567, #22573, #23307, #24181). The error occurs in the completion handler AFTER all tool calls finish, so the actual work is always done. But if the orchestrator naively treats "failed" as an actual failure, it will abort the workflow or retry work that already completed.
 
 **Why it happens:**
-Next.js route handlers wrap the underlying Node.js request, and client disconnection detection depends on the runtime (Node.js vs Edge) and the deployment target. The AI SDK team has documented this as a recurring issue. Turbopack may handle it differently than Webpack.
+A function `classifyHandoffIfNeeded` is referenced in Claude Code's agent completion/handoff code path but was never defined or imported in the bundled `cli.js`. This is a Claude Code runtime bug, not a user error. Built-in agents (Explore, Plan) are also affected.
 
 **How to avoid:**
-1. Do not rely solely on `req.signal`. Implement a secondary abort mechanism: a dedicated API endpoint (`POST /api/solve/cancel`) that the frontend calls when the user clicks abort. This endpoint stores the `runId` and triggers `run.cancel()` directly.
-2. Store the `run` object or `runId` in a server-side map keyed by some session/request identifier, so the cancel endpoint can look it up.
-3. Test abort behavior in both `next dev` and `next build && next start` to verify `req.signal` works in each mode.
+1. The orchestrator MUST implement spot-check logic for every subagent completion. When a Task reports "failed" with error containing "classifyHandoffIfNeeded", do NOT treat it as a failure. Instead:
+   - Check that the expected output file exists on disk
+   - Check that the file contains valid content (not empty, parseable)
+   - If spot-checks pass, treat as successful and proceed
+2. The GSD workflow (`execute-phase.md`) already implements this exact pattern. Copy it: check for SUMMARY.md existence, check for git commits, check for Self-Check marker.
+3. For the LO-Solver: after each subagent completes, verify its output file exists and contains valid JSON before proceeding.
 
 **Warning signs:**
-- Abort works in one environment but not another
-- `req.signal.aborted` is always `false` even after the client disconnects
-- Adding `console.log` to the abort listener shows it never fires
+- Every single subagent reports "failed" even though output files appear on disk
+- The orchestrator enters an infinite retry loop because it keeps getting "failed" status
+- The workflow aborts after the first step even though extraction completed successfully
 
 **Phase to address:**
-Phase 1 (Abort Propagation) -- the architecture must account for unreliable `req.signal` from the start.
+Phase 1 (Orchestrator skeleton) -- the spot-check pattern must be built into the orchestrator's subagent dispatch logic from day one.
 
 ---
 
-### Pitfall 6: `page.tsx` Refactoring Breaks the Register Pattern for Workflow Control
+### Pitfall 6: Verify/Improve Loop Lacks Stopping Criteria, Runs Indefinitely
 
 **What goes wrong:**
-`page.tsx` (824 lines) is a candidate for refactoring. It uses a "register pattern" where the child page pushes workflow state (`isRunning`, `hasStarted`, `stop`, `handleReset`) into a layout-level context (`WorkflowControlProvider`) via `useRegisterWorkflowControl`. If the page is split into sub-components, the hook that calls `useRegisterWorkflowControl` must remain in the component that owns the `useChat` hook and the derived state -- it cannot be moved to a child component that does not have access to the `stop` function or the `status` from `useChat`. Splitting the file incorrectly moves the registration call away from the state owner, breaking the abort button in the nav bar.
+The Mastra workflow has a hard-coded 4-iteration cap on the verify/improve loop. In a Claude Code native implementation, the orchestrator runs the loop by spawning verifier and improver subagents in sequence. Without explicit stopping criteria, the evaluator keeps finding minor issues and the improver keeps tweaking, but quality plateaus well before the loop stops. Each iteration consumes ~20-30K tokens of orchestrator context and ~5-10 minutes of wall time. Without a cap, the workflow burns through context and money.
 
 **Why it happens:**
-React hooks cannot be conditionally called or moved between components without changing their execution context. The `useRegisterWorkflowControl` call is tightly coupled to the component that owns `useChat` because it needs `stop` and `isRunning` from that hook's return value.
+In a framework-based workflow, iteration limits are enforced by code (`for (let i = 0; i < MAX_ITERATIONS; i++)`). In a prompt-based orchestrator, the iteration count is a natural language instruction that the model may or may not respect, especially as context grows and earlier instructions are pushed out of the attention window.
 
 **How to avoid:**
-1. Keep `useChat`, `useRegisterWorkflowControl`, and all state derivation (`isRunning`, `isComplete`, `isAborted`) in the main `SolverPageInner` component. Extract only *render subtrees* (JSX) into separate components, not hook logic.
-2. If extracting hooks, create a custom hook (e.g., `useSolverWorkflow`) that encapsulates both `useChat` and `useRegisterWorkflowControl` and returns all derived state. This hook must stay in the same component that renders.
-3. After any refactor of `page.tsx`, verify: (a) abort button in nav still works, (b) reset button clears state, (c) mascot state transitions work.
+1. Track iteration count in a file (e.g., `claude-code/workspace/verify-improve-state.json` with `{ "iteration": 2, "maxIterations": 4 }`). The orchestrator reads this file before each iteration and increments it after.
+2. Define explicit pass/fail thresholds: "If 80% or more rules pass verification, accept the result. If fewer than 50% pass after 4 iterations, output partial results with a warning."
+3. Include the iteration count in every verifier and improver prompt: "This is iteration 3 of 4. Focus on the most impactful remaining failures."
+4. Use the state file as the source of truth, not the orchestrator's memory of how many iterations have run.
 
 **Warning signs:**
-- Abort button in the nav bar does nothing after refactoring
-- `useWorkflowControl must be used within WorkflowControlProvider` error
-- Mascot stays in "solving" state after abort
+- The workflow runs for 30+ minutes on a problem that should take 10-15
+- The orchestrator says "running one more iteration" for the 6th time
+- Rules that were passing in iteration 2 start failing in iteration 4 (regression from over-optimization)
+- Context auto-compaction triggers during the verify/improve loop
 
 **Phase to address:**
-Phase 2 (File Refactoring) -- must be verified as part of `page.tsx` splitting.
+Phase 3 (Verify/Improve loop) -- must be designed with explicit state tracking from the start.
 
 ---
 
-### Pitfall 7: Abort Error Propagation Causes Workflow Status to Show "Failed" Instead of "Aborted"
+### Pitfall 7: Subagent System Prompts Are Thin -- No Claude Code System Prompt Inheritance
 
 **What goes wrong:**
-When `streamWithRetry` receives an aborted signal, it throws an error. If this error is not caught and handled distinctly from other errors at the step level, the step fails with an error status. Mastra marks the workflow as `failed` (not `canceled`), and the frontend shows the red error state instead of the amber abort state. The existing frontend code determines abort status via inference: `const isAborted = hasStarted && !isRunning && !isComplete && !isFailed` -- meaning if the workflow reports `failed`, the abort state is never reached.
+Subagents receive ONLY their custom system prompt plus basic environment details (working directory). They do NOT receive the full Claude Code system prompt, CLAUDE.md contents, or any parent conversation context. A subagent definition that says "follow the patterns in CLAUDE.md" or "use the conventions described in the project" will fail because the subagent has no access to that information. If the extraction subagent's prompt says "parse the problem into structured form" without specifying the exact output format, the subagent has no reference for what "structured form" means.
 
 **Why it happens:**
-Abort errors and genuine failures both propagate as thrown exceptions. Without explicit handling, they are indistinguishable. Mastra's `run.cancel()` sets the workflow status to `canceled`, but if the step throws an error *before* the cancellation status is recorded, the error status wins.
+This is by design for context efficiency -- each subagent gets a fresh 200K context window with only its own system prompt. But developers coming from framework-based workflows (where shared schemas and type definitions are imported) forget that subagents have no implicit shared context.
 
 **How to avoid:**
-1. In each step's `execute` function, wrap the main logic in a try/catch that checks `abortSignal.aborted` in the catch block. If aborted, call `abort()` (the Mastra-provided function) instead of rethrowing the error.
-2. Ensure the frontend checks for `canceled` workflow status in addition to the current inference logic. Add `workflowStatus === 'canceled'` to the abort detection.
-3. Order matters: call `run.cancel()` from the API route *before* the step's error propagates, or handle the race condition gracefully.
+1. Each subagent's system prompt (the markdown body of the agent definition file) must be FULLY self-contained. Include the complete output schema inline, not by reference. Include all formatting rules, not "follow project conventions."
+2. Use the `skills` field in subagent frontmatter to inject relevant skill content. But note: this adds to context consumption.
+3. For the LO-Solver: each subagent's `.md` file should include a complete specification of its input format, output format, and expected behavior. Do not rely on the subagent "knowing" what a Rule or VocabularyEntry looks like.
+4. Include example input/output in the system prompt if the format is complex.
 
 **Warning signs:**
-- Clicking abort shows "Workflow failed" (red) instead of "Workflow aborted" (amber)
-- Error details show "AbortError" or "This operation was aborted" in the trace panel
-- The mascot shows the error state instead of the aborted state after user-initiated abort
+- A subagent produces output in a different format than the orchestrator expects
+- A subagent ignores project conventions (e.g., naming patterns, file structure)
+- A subagent asks "what format should I use?" in its return text
+- Different subagents produce inconsistent schemas for the same data type
 
 **Phase to address:**
-Phase 1 (Abort Propagation) -- correct status mapping is essential for the abort feature to feel right.
+Phase 2 (Subagent definitions) -- each subagent's prompt must be comprehensive and self-contained.
+
+---
+
+### Pitfall 8: File I/O Race Conditions When Multiple Subagents Write to the Same Directory
+
+**What goes wrong:**
+If two subagents run concurrently (despite Pitfall 1, Claude Code may still dispatch some work in parallel via background mode), they can write to overlapping files or read files that another subagent is mid-write. The workspace directory becomes corrupted -- partial JSON files, interleaved writes, or one subagent overwriting another's output.
+
+**Why it happens:**
+Claude Code subagents share the same filesystem and working directory. There is no file locking, no transaction mechanism, and no isolation between concurrent subagents. Even sequential subagents can collide if the orchestrator spawns the next one before the previous one's file writes have flushed.
+
+**How to avoid:**
+1. Use distinct file paths for every subagent's output. Never have two subagents write to the same file. Convention: `{step}-{perspective}-{type}.json` (e.g., `02-morphological-rules.json`, `02-syntactic-rules.json`).
+2. If using the `isolation: worktree` option, each subagent gets its own git worktree copy. But this is heavy and the worktree is cleaned up if no changes are made -- not suitable for read-then-write patterns.
+3. Wait for each subagent to fully complete (Task tool blocks by default in foreground mode) before spawning the next one.
+4. After each subagent completes, verify its output file exists and is valid before proceeding.
+
+**Warning signs:**
+- JSON parse errors on files that should be well-formed
+- Output files contain content from a different step's subagent
+- Files are empty or truncated
+- The orchestrator reads stale data from a previous run
+
+**Phase to address:**
+Phase 1 (Orchestrator skeleton) -- file naming conventions and write isolation must be established before any subagent writes files.
 
 ---
 
@@ -177,86 +209,99 @@ Phase 1 (Abort Propagation) -- correct status mapping is essential for the abort
 
 | Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
 |----------|-------------------|----------------|-----------------|
-| Wrapping `handleWorkflowStream` with abort logic instead of replacing it | Minimal changes to API route | If `@mastra/ai-sdk` adds abort support, the custom wrapper becomes dead code or conflicts | Never -- the function does not expose the `run` object, making it impossible to call `run.cancel()`. Must replace with manual workflow execution. |
-| Putting all toast logic inline in `page.tsx` | Quick to implement | Adds 50-80 lines to an already 824-line file, making the refactoring target worse | Only if toasts are implemented before the file refactoring phase |
-| Using `toast()` without IDs | Simpler API calls | Duplicate toasts in development (Strict Mode) and potential duplicates from streaming re-renders | Never -- always use toast IDs for workflow lifecycle events |
-| Skipping abort checks between parallel perspective runs | Fewer code changes | Abort during multi-perspective phase still runs all N perspectives to completion | Acceptable for MVP if abort at least stops the next round from starting |
+| Embedding full schemas in every subagent prompt | Self-contained subagents | Schema changes require updating N subagent files | Always -- until a shared skill is created with schema definitions that subagents can load via `skills:` field |
+| Hardcoding file paths in subagent prompts | Simple, no path resolution needed | Path changes require updating all subagent definitions | Acceptable for v1.4 where the solver is a standalone feature |
+| Sequential subagent dispatch instead of parallel | Avoids parallel Task tool bug | 3x slower for multi-perspective hypothesis | Always for v1.4 -- correctness over speed. Parallel can be added when the platform bug is fixed. |
+| Using untyped JSON files instead of schema-validated files | No build step, no type generation | Silent data corruption if schema drifts | Acceptable for v1.4 as a proof-of-concept. Add validation in a later milestone. |
+| Orchestrator reads entire output files instead of summaries | Simpler implementation | Context window fills faster | Only for small problems. Must switch to summary-only returns for production use. |
 
 ## Integration Gotchas
 
 | Integration | Common Mistake | Correct Approach |
 |-------------|----------------|------------------|
-| Mastra `run.cancel()` + `handleWorkflowStream` | Trying to call `run.cancel()` without access to the `run` object (it is hidden inside `handleWorkflowStream`) | Replace `handleWorkflowStream` with manual `createRun()` + `run.stream()` + `run.cancel()` in the API route |
-| `useChat` `stop()` + server abort | Assuming `stop()` triggers `req.signal` abort reliably in Next.js | Implement a separate `/api/solve/cancel` endpoint as a fallback mechanism |
-| Sonner `<Toaster />` + dark theme + blueprint design | Using default Sonner styles that clash with the cyanotype theme (rounded corners, white background) | Pass `theme="dark"` and custom `toastOptions.className` to match `--background`, `--border`, `--accent` CSS variables, set `--radius: 0` |
-| `streamWithRetry` + `abortSignal` + retry logic | Forgetting that abort during the backoff delay between retries should also cancel | Already handled -- `streamWithRetry` listens for abort during backoff via `callerSignal?.addEventListener('abort', onAbort)` |
-| File refactoring + TypeScript path aliases | Moving files but not updating `@/` path aliases, or creating circular imports between split step files | Each step file should import from shared utility files, never from other step files. Run `npx tsc --noEmit` after every file move. |
+| Claude Code Task tool + expected "success" status | Treating Task result "failed" as an actual failure | Check for classifyHandoffIfNeeded error, then spot-check output files. Treat as success if files are valid. |
+| Subagent system prompt + CLAUDE.md | Assuming subagent inherits CLAUDE.md content | Subagents get only their own system prompt. Include all relevant instructions inline or via `skills:` field. |
+| Subagent + structured data output | Expecting subagent to return valid JSON in its text response | Have subagents write JSON to files. Read files from orchestrator. Never parse return text as structured data. |
+| Orchestrator + verify/improve loop state | Tracking iteration count in the orchestrator's memory | Use a state file (`verify-improve-state.json`) as source of truth. Orchestrator reads/writes the file each iteration. |
+| Multiple subagents + shared workspace | Having subagents write to overlapping file paths | Use unique file names per subagent per step. Never share output files between concurrent subagents. |
+| Subagent + `maxTurns` | Not setting `maxTurns`, allowing a subagent to loop indefinitely on a hard problem | Set `maxTurns` appropriate to the task (e.g., 30 for extraction, 50 for hypothesis generation). Subagent stops and returns partial results at the limit. |
+| GSD executor pattern + LO-Solver orchestrator | Trying to use GSD's `gsd-executor` agent type for solver subagents | Create dedicated solver subagent definitions in `.claude/agents/`. GSD agents are for project management, not domain-specific orchestration. |
 
 ## Performance Traps
 
 | Trap | Symptoms | Prevention | When It Breaks |
 |------|----------|------------|----------------|
-| Toast re-rendering on every streaming chunk | UI jank, excessive React re-renders, toast counter incrementing | Decouple toast triggers from `allParts.length` -- use a ref to track the last processed state transition | Immediately visible in development with any problem |
-| Server-side `run` object memory leak if cancel endpoint stores runs in a Map | Memory grows with each workflow invocation, never cleaned up | Use a `WeakRef` or TTL-based map, clean up entries after workflow completion or a timeout | After ~50 workflow runs without server restart |
-| Barrel file re-exports pulling in entire workflow module | Slower dev server startup, larger server bundles | Keep step files as direct imports in `workflow.ts`, do not create a barrel `index.ts` for step files | Not a practical concern at current codebase size (14K LOC) |
+| Orchestrator context bloat from subagent returns | Later steps produce lower-quality output, orchestrator "forgets" problem details | Subagents return 1-2 sentence summaries to orchestrator, write full data to files | After 3-4 subagent round-trips (~100K tokens consumed) |
+| Unnecessary re-reading of large problem text | Each subagent re-reads the full problem from scratch, wasting tokens | Extract once, store as structured JSON, subsequent subagents read the extracted version | Not a performance cliff, but wastes ~2-5K tokens per subagent |
+| Auto-compaction during verify/improve loop | Critical rules or vocabulary dropped from orchestrator memory mid-loop | Keep loop state in files, minimize orchestrator context, run `/compact` between major phases (not mid-loop) | When orchestrator context exceeds ~150K tokens |
+| Spawning heavyweight subagents for lightweight tasks | A simple "check if iteration count < 4" takes 30 seconds because a full subagent spins up | Keep control flow decisions in the orchestrator. Only spawn subagents for substantive LLM work (extraction, hypothesis, verification). | Immediately -- every subagent has ~20K tokens of startup overhead |
+
+## Security Mistakes
+
+| Mistake | Risk | Prevention |
+|---------|------|------------|
+| Subagent with `bypassPermissions` and Bash access | Subagent could execute arbitrary commands without approval | Use `permissionMode: default` or `acceptEdits`. Only grant Bash if needed and with PreToolUse validation hooks. |
+| Writing problem data with sensitive content to unprotected workspace files | Problem data could contain real linguistic examples that are copyrighted | Store workspace files in a gitignored directory (`claude-code/workspace/` added to `.gitignore`) |
+| Subagent writing to project source files | A misconfigured subagent could modify `src/` or `.planning/` files | Use `disallowedTools: Write, Edit` for subagents that should only produce output files, or restrict to specific paths via hooks |
 
 ## UX Pitfalls
 
 | Pitfall | User Impact | Better Approach |
 |---------|-------------|-----------------|
-| Toast for "workflow started" appearing before the UI shows any progress | Confusing -- toast says started but progress bar is empty | Delay the "started" toast until the first step-start event is received, or emit it synchronously with the progress bar update |
-| Abort toast appearing immediately while backend keeps running | User thinks abort worked, but API costs continue | Show a "Cancelling..." toast that updates to "Aborted" when backend confirms cancellation, or add a subtle "stopping background work..." indicator |
-| Cost warning toast showing raw dollar amounts without context | "$0.12" means nothing to a user who does not know typical costs | Show relative context: "This run has used $0.12 so far (above average)" or use thresholds that are meaningful |
-| Multiple error/abort toasts when abort races with a genuine failure | User sees both "Workflow failed" and "Workflow aborted" toasts | Use mutually exclusive toast IDs and clear the other when one fires |
+| No progress visibility during subagent execution | User sees nothing for minutes while a subagent works silently | Have the orchestrator print status messages between subagent dispatches: "Step 1/4: Extracting problem structure..." |
+| Outputting raw JSON to terminal | Unreadable wall of text when results are displayed | Format final results as markdown with clear sections: Questions, Answers, Rules Used, Confidence |
+| Not saving intermediate results | If the workflow fails at step 3, all step 1-2 work is lost | Write intermediate results to files at each step. User can inspect partial results or restart from a checkpoint. |
+| Hiding the verify/improve loop from the user | User does not know if rules are improving or stagnating | Print a summary after each iteration: "Iteration 2/4: 15/20 rules passing (up from 12/20)" |
 
 ## "Looks Done But Isn't" Checklist
 
-- [ ] **Abort propagation:** The abort button stops the client stream -- verify the backend workflow ALSO stops by checking Mastra Studio or server logs
-- [ ] **Abort propagation:** After abort, no new OpenRouter API calls appear in the dashboard -- verify with a real problem that takes 2+ minutes
-- [ ] **Abort propagation:** Workflow status shows "canceled" (not "failed") in Mastra storage after abort -- check via Mastra Studio
-- [ ] **Abort propagation:** Aborting during the backoff delay of a retry correctly cancels the retry -- verify by inducing a retry then aborting during the wait
-- [ ] **File refactoring:** All existing imports in the codebase still resolve after splitting -- `npx tsc --noEmit` returns only the pre-existing CSS module error
-- [ ] **File refactoring:** The eval harness still passes on at least one problem after refactoring -- `npm run eval -- --problem 1` completes without errors
-- [ ] **File refactoring:** Mastra Studio still shows the workflow graph correctly after refactoring -- step IDs must remain unchanged
-- [ ] **Toast notifications:** Toasts appear exactly once per lifecycle event, not duplicated -- test in development mode (Strict Mode is on)
-- [ ] **Toast notifications:** Toasts match the blueprint design system (no rounded corners, correct colors) -- visual inspection against DESIGN.md
-- [ ] **Toast notifications:** Toast for "workflow complete" does not fire when navigating to the page with cached data -- only on fresh workflow runs
+- [ ] **Orchestrator dispatch:** Verify that ALL subagent results come from actual subagent execution (check output files exist) -- not hallucinated by the orchestrator
+- [ ] **Schema consistency:** After each subagent writes its output file, verify the JSON parses successfully and contains the expected top-level keys
+- [ ] **Iteration cap:** Run the verify/improve loop on a hard problem and verify it stops at exactly 4 iterations, not 3 or 5
+- [ ] **Context health:** After a full workflow run, check that the orchestrator can still accurately describe the original problem (context not lost to compaction)
+- [ ] **File cleanup:** After a workflow run, verify that workspace files from a PREVIOUS run do not contaminate the current run -- stale files must be cleared at startup
+- [ ] **Subagent independence:** Each subagent should produce the same output regardless of what order other subagents ran -- test by running steps out of order
+- [ ] **Error recovery:** Simulate a subagent failure (e.g., truncated output file) and verify the orchestrator reports the error clearly rather than hallucinating results
 
 ## Recovery Strategies
 
 | Pitfall | Recovery Cost | Recovery Steps |
 |---------|---------------|----------------|
-| Backend keeps running after abort | LOW | Add `run.cancel()` call to the cancel endpoint. Existing `streamWithRetry` already handles `abortSignal` correctly -- just need to thread it through. |
-| Workflow shows "failed" instead of "aborted" | LOW | Add `abortSignal.aborted` check in catch blocks, call `abort()` instead of rethrowing. Update frontend to check for `canceled` status. |
-| File refactoring breaks imports | LOW | TypeScript catches at compile time. Fix imports and re-run `npx tsc --noEmit`. |
-| File refactoring breaks runtime behavior | MEDIUM | No test framework -- must run eval harness (`npm run eval -- --problem 1`) and manually verify in the UI. Rollback via git if multiple files are affected. |
-| Duplicate toasts | LOW | Add toast IDs to all `toast()` calls. Takes 5 minutes to fix. |
-| `req.signal` does not propagate | MEDIUM | Implement the `/api/solve/cancel` fallback endpoint. Requires storing the `run` object server-side and exposing a `runId` to the frontend. |
-| Toast styling clashes with theme | LOW | Override Sonner's CSS variables or pass `toastOptions.className` with blueprint design tokens. |
+| Parallel Task tool only emits 1 of N | LOW | Switch to sequential dispatch. No architectural change needed, just run subagents one at a time. |
+| Nested subagent fails silently | MEDIUM | Flatten the hierarchy. Requires restructuring the orchestrator to handle verify/improve loop directly instead of delegating to a verifier sub-orchestrator. |
+| Unstructured return text breaks parsing | LOW | Switch to file-based data passing. Each subagent writes a JSON file, orchestrator reads the file. |
+| Context window exhaustion | MEDIUM | Reduce return text to summaries. Add `/compact` calls between major phases. Restructure prompts to be more concise. May require rewriting subagent definitions. |
+| classifyHandoffIfNeeded false failures | LOW | Add spot-check logic (file existence + valid JSON check) after every Task tool call. Copy the pattern from GSD's execute-phase.md. |
+| Verify/improve loop runs too long | LOW | Add state file with iteration counter and max. Orchestrator reads before each iteration. |
+| Subagent produces wrong output format | LOW | Update subagent system prompt with explicit schema and examples. No architectural change. |
+| File I/O race condition | LOW | Ensure sequential dispatch. Use unique file names per subagent. Add file existence verification after each subagent. |
 
 ## Pitfall-to-Phase Mapping
 
 | Pitfall | Prevention Phase | Verification |
 |---------|------------------|--------------|
-| Client `stop()` does not cancel backend | Phase 1: Abort Propagation | Mastra Studio shows workflow as "canceled" after abort |
-| Missing abort checks between agent calls | Phase 1: Abort Propagation | Abort during multi-perspective step stops within seconds, not minutes |
-| `req.signal` unreliable in Next.js | Phase 1: Abort Propagation | Abort works in both `next dev` and production build |
-| Abort shows "failed" instead of "aborted" | Phase 1: Abort Propagation | UI shows amber abort state, not red error state |
-| Breaking re-export contract | Phase 2: File Refactoring | `npx tsc --noEmit` passes, `solverWorkflow` import in `mastra/index.ts` unchanged |
-| Register pattern breaks in page split | Phase 2: File Refactoring | Nav bar abort/reset buttons still functional after refactor |
-| Duplicate toasts from streaming re-renders | Phase 3: Toast Notifications | Each lifecycle event produces exactly one toast in Strict Mode |
+| Parallel Task tool bug (#1) | Phase 1: Orchestrator skeleton | Sequential dispatch produces correct results for all perspectives |
+| No nested subagents (#2) | Phase 1: Orchestrator skeleton | Architecture diagram shows single level of delegation only |
+| Unstructured return values (#3) | Phase 1: Orchestrator skeleton | Output file naming convention documented, all files parseable as valid JSON |
+| Context window exhaustion (#4) | Phase 1: Orchestrator skeleton | Full workflow run completes without auto-compaction triggering |
+| classifyHandoffIfNeeded bug (#5) | Phase 1: Orchestrator skeleton | Orchestrator correctly proceeds after every "failed" Task result |
+| Verify/improve loop no cap (#6) | Phase 3: Verify/Improve loop | Loop stops at exactly MAX_ITERATIONS, state file shows correct count |
+| Thin subagent prompts (#7) | Phase 2: Subagent definitions | Each subagent produces output matching the expected schema without referencing external files for format guidance |
+| File I/O race conditions (#8) | Phase 1: Orchestrator skeleton | No file naming collisions across all subagent outputs in a full run |
 
 ## Sources
 
-- [Mastra `run.cancel()` reference](https://mastra.ai/reference/workflows/run-methods/cancel) -- HIGH confidence, official docs
-- [AI SDK stopping streams documentation](https://ai-sdk.dev/docs/advanced/stopping-streams) -- HIGH confidence, official docs
-- [AI SDK issue #9707: `chat.stop()` abort signal not detected on backend](https://github.com/vercel/ai/issues/9707) -- HIGH confidence, documented bug
-- [Next.js discussion #48682: detecting client disconnections in route handlers](https://github.com/vercel/next.js/discussions/48682) -- HIGH confidence, known limitation
-- [Mastra issue #11063: AbortSignal not propagated to sub-workflows](https://github.com/mastra-ai/mastra/issues/11063) -- MEDIUM confidence, was fixed but worth monitoring
-- [Sonner issue #322: duplicate toasts in React Strict Mode](https://github.com/emilkowalski/sonner/issues/322) -- HIGH confidence, documented behavior
-- [Sonner documentation](https://sonner.emilkowal.ski/toast) -- HIGH confidence, official docs
-- Codebase analysis of `workflow.ts`, `agent-utils.ts`, `page.tsx`, `route.ts`, `workflow-control-context.tsx` -- HIGH confidence, direct source reading
+- [Claude Code official subagent documentation](https://code.claude.com/docs/en/sub-agents) -- HIGH confidence, official docs
+- [GitHub issue #29181: Model emits only 1 Task tool call per message](https://github.com/anthropics/claude-code/issues/29181) -- HIGH confidence, confirmed bug
+- [GitHub issue #22508: Parallel Task calls, Claude states intent for 16 but only emits 1](https://github.com/anthropics/claude-code/issues/22508) -- HIGH confidence, confirmed bug
+- [GitHub issue #24181: Task tool agents always report "failed" -- classifyHandoffIfNeeded](https://github.com/anthropics/claude-code/issues/24181) -- HIGH confidence, confirmed bug, 100% reproduction rate
+- [GitHub issue #22087: classifyHandoffIfNeeded SubagentStop hook failure](https://github.com/anthropics/claude-code/issues/22087) -- HIGH confidence, confirmed bug
+- [Claude Code context window management guide](https://www.morphllm.com/claude-code-context-window) -- MEDIUM confidence, third-party but well-sourced
+- [Claude Code sub-agents: parallel vs sequential patterns](https://claudefa.st/blog/guide/agents/sub-agent-best-practices) -- MEDIUM confidence, third-party best practices
+- [GSD execute-phase.md workflow](/.claude/get-shit-done/workflows/execute-phase.md) -- HIGH confidence, proven in-repo pattern for subagent orchestration with spot-check logic
+- [GSD execute-plan.md workflow](/.claude/get-shit-done/workflows/execute-plan.md) -- HIGH confidence, proven pattern for file-based state passing and subagent dispatch
+- Codebase analysis of existing Mastra workflow (`src/mastra/workflow/`) -- HIGH confidence, direct source reading
 
 ---
-*Pitfalls research for: LO-Solver v1.2 Cleanup & Quality milestone*
-*Researched: 2026-03-03*
+*Pitfalls research for: LO-Solver v1.4 Claude Code Native Solver*
+*Researched: 2026-03-07*
