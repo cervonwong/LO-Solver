@@ -85,7 +85,8 @@
   1. `claude-code/.claude/` directory exists with the correct structure for agent definitions
   2. All agent definition files specify Opus 4.6 as the model
   3. A CLAUDE.md file in `claude-code/` describes project context, file conventions, and workspace directory purpose
-**Plans**: TBD
+**Plans**: 1 plan
+- [ ] 20-01-PLAN.md — Create directory structure, agent skeletons, skill shell, CLAUDE.md, and workspace format reference
 
 ### Phase 21: Pipeline Agents
 **Goal**: The extraction and hypothesis agents exist as standalone Claude Code subagent definitions that produce correctly structured output
