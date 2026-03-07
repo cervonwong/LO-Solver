@@ -59,7 +59,20 @@ The ONE thing that must work: **the agentic workflow must produce measurably bet
 
 ### Active
 
-(No active milestone — all shipped through v1.3)
+**Current Milestone: v1.4 Claude Code Native Solver**
+
+**Goal:** Rebuild the LO-Solver workflow as a Claude Code native experience using skills, subagents, and system prompts — running alongside the existing Mastra implementation.
+
+- [ ] Document the current Mastra workflow pipeline in detail for reference
+- [ ] Research Claude Code skill, subagent, and system prompt capabilities
+- [ ] Create slash command entry point for solver
+- [ ] Implement orchestrator agent that asks for problem input (paste or file)
+- [ ] Implement extraction agent (parse problem into structured form)
+- [ ] Implement parallel multi-perspective hypothesizer agents
+- [ ] Implement verify/improve loop (up to 4 iterations)
+- [ ] Implement answer agent (apply validated rules to questions)
+- [ ] Output results to terminal and markdown file
+- [ ] All agents use Opus 4.6
 
 ### Out of Scope
 
@@ -74,7 +87,7 @@ The ONE thing that must work: **the agentic workflow must produce measurably bet
 
 ## Problem Statement
 
-(Resolved in v1.0) The workflow uses multi-perspective hypothesis generation and verified rules. The evaluation harness demonstrates workflow accuracy improvements over zero-shot baselines. (Resolved in v1.1) The observability UI is polished with correct trace hierarchy, structured data display, workflow controls, and animated layout. (Resolved in v1.2) Abort propagation stops in-flight LLM calls, large files are split into focused modules, and toast notifications provide workflow lifecycle feedback. (Resolved in v1.3) Users can provide their own OpenRouter API key, enabling deployment without a server-side key.
+(Resolved in v1.0) The workflow uses multi-perspective hypothesis generation and verified rules. The evaluation harness demonstrates workflow accuracy improvements over zero-shot baselines. (Resolved in v1.1) The observability UI is polished with correct trace hierarchy, structured data display, workflow controls, and animated layout. (Resolved in v1.2) Abort propagation stops in-flight LLM calls, large files are split into focused modules, and toast notifications provide workflow lifecycle feedback. (Resolved in v1.3) Users can provide their own OpenRouter API key, enabling deployment without a server-side key. (v1.4) Rebuild the solver as a Claude Code native workflow using skills, subagents, and system prompts — running in a dedicated `claude-code/` directory alongside the existing Mastra implementation.
 
 ## Context
 
@@ -136,4 +149,4 @@ When working on any phase that touches Mastra code (agents, workflows, tools, ev
 
 ---
 
-*Last updated: 2026-03-06 after v1.3 milestone*
+*Last updated: 2026-03-07 after v1.4 milestone start*
