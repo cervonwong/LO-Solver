@@ -97,7 +97,8 @@
   2. A hypothesizer agent can generate linguistic rules and vocabulary from a specific perspective and write to `workspace/hypothesis-{n}.json`
   3. Multiple hypothesizer instances can be dispatched sequentially with different perspectives, each writing to its own numbered draft file
   4. Each agent's prompt is fully self-contained with explicit input/output format specifications (no reliance on inherited context)
-**Plans**: TBD
+**Plans**: 1 plan
+- [ ] 21-01-PLAN.md -- Write extractor and hypothesizer agent system prompts
 
 ### Phase 22: Orchestrator and Entry Point
 **Goal**: A user can trigger the solver via `/solve` and the orchestrator dispatches subagents in pipeline order with file-based state
