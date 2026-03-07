@@ -58,7 +58,7 @@
 
 - [x] **Phase 19: Workflow Documentation** - Document existing Mastra pipeline as reference for Claude Code agents (completed 2026-03-07)
 - [x] **Phase 20: Infrastructure Setup** - Create directory structure, agent conventions, and project context (completed 2026-03-07)
-- [ ] **Phase 21: Pipeline Agents** - Define extractor and hypothesizer subagents with self-contained prompts
+- [x] **Phase 21: Pipeline Agents** - Define extractor and hypothesizer subagents with self-contained prompts (completed 2026-03-07)
 - [ ] **Phase 22: Orchestrator and Entry Point** - Build slash command, orchestrator agent, and pipeline dispatch logic
 - [ ] **Phase 23: Verify-Improve Loop and Answer** - Implement iterative verification, improvement, and final answer agents
 - [ ] **Phase 24: Output and Integration** - Terminal results display, markdown solution file, workspace preservation
@@ -158,7 +158,7 @@
 | 18. Key Routing | v1.3 | 2/2 | Complete | 2026-03-06 |
 | 19. Workflow Documentation | 1/1 | Complete    | 2026-03-07 | - |
 | 20. Infrastructure Setup | 1/1 | Complete    | 2026-03-07 | - |
-| 21. Pipeline Agents | v1.4 | 0/? | Not started | - |
+| 21. Pipeline Agents | 1/1 | Complete   | 2026-03-07 | - |
 | 22. Orchestrator and Entry Point | v1.4 | 0/? | Not started | - |
 | 23. Verify-Improve Loop and Answer | v1.4 | 0/? | Not started | - |
 | 24. Output and Integration | v1.4 | 0/? | Not started | - |

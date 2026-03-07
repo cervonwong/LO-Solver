@@ -22,14 +22,14 @@
 
 ### Extraction
 
-- [ ] **EXTR-01**: Extractor agent parses raw problem into structured JSON (context, dataset, questions)
-- [ ] **EXTR-02**: Structured output written to `workspace/extracted.json`
+- [x] **EXTR-01**: Extractor agent parses raw problem into structured JSON (context, dataset, questions)
+- [x] **EXTR-02**: Structured output written to `workspace/extracted.json`
 
 ### Hypothesis
 
-- [ ] **HYPO-01**: Multiple hypothesizer agents dispatched in parallel, each with a different linguistic perspective
-- [ ] **HYPO-02**: Each hypothesizer writes rules + vocabulary to its own draft file (`workspace/hypothesis-{n}.json`)
-- [ ] **HYPO-03**: Best hypothesis selected by orchestrator based on test results
+- [x] **HYPO-01**: Multiple hypothesizer agents dispatched in parallel, each with a different linguistic perspective
+- [x] **HYPO-02**: Each hypothesizer writes rules + vocabulary to its own draft file (`workspace/hypothesis-{n}.json`)
+- [x] **HYPO-03**: Best hypothesis selected by orchestrator based on test results
 
 ### Verification
 
@@ -92,11 +92,11 @@
 | INFR-01 | Phase 20 | Complete |
 | INFR-02 | Phase 20 | Complete |
 | INFR-03 | Phase 20 | Complete |
-| EXTR-01 | Phase 21 | Pending |
-| EXTR-02 | Phase 21 | Pending |
-| HYPO-01 | Phase 21 | Pending |
-| HYPO-02 | Phase 21 | Pending |
-| HYPO-03 | Phase 21 | Pending |
+| EXTR-01 | Phase 21 | Complete |
+| EXTR-02 | Phase 21 | Complete |
+| HYPO-01 | Phase 21 | Complete |
+| HYPO-02 | Phase 21 | Complete |
+| HYPO-03 | Phase 21 | Complete |
 | ORCH-01 | Phase 22 | Pending |
 | ORCH-02 | Phase 22 | Pending |
 | ORCH-03 | Phase 22 | Pending |
