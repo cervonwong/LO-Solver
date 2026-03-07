@@ -1,0 +1,123 @@
+# Requirements: LO-Solver v1.4 Claude Code Native Solver
+
+**Defined:** 2026-03-07
+**Core Value:** The agentic workflow must produce measurably better results than zero-shotting the same LLMs without orchestration.
+
+## v1.4 Requirements
+
+### Documentation
+
+- [ ] **DOCS-01**: Document the current Mastra workflow pipeline in detail (steps, agents, data flow, prompts, tools)
+- [ ] **DOCS-02**: Document each agent's role, inputs, outputs, and system prompt summary
+- [ ] **DOCS-03**: Document the verification loop mechanics (iteration flow, pass/fail logic, improvement strategy)
+- [ ] **DOCS-04**: Written as a reference markdown file in `claude-code/` for the new agents to reference
+
+### Orchestration
+
+- [ ] **ORCH-01**: User can trigger solver via `/solve` slash command in Claude Code
+- [ ] **ORCH-02**: Orchestrator asks for problem input (paste text or provide file path)
+- [ ] **ORCH-03**: Orchestrator dispatches subagents in pipeline order with file-based state
+- [ ] **ORCH-04**: Each agent reads predecessor files and writes its own named output file
+- [ ] **ORCH-05**: Orchestrator selects best hypothesis by comparing test pass rates from files
+
+### Extraction
+
+- [ ] **EXTR-01**: Extractor agent parses raw problem into structured JSON (context, dataset, questions)
+- [ ] **EXTR-02**: Structured output written to `workspace/extracted.json`
+
+### Hypothesis
+
+- [ ] **HYPO-01**: Multiple hypothesizer agents dispatched in parallel, each with a different linguistic perspective
+- [ ] **HYPO-02**: Each hypothesizer writes rules + vocabulary to its own draft file (`workspace/hypothesis-{n}.json`)
+- [ ] **HYPO-03**: Best hypothesis selected by orchestrator based on test results
+
+### Verification
+
+- [ ] **VERI-01**: Verifier agent tests each rule and sentence against the dataset
+- [ ] **VERI-02**: Verifier writes test results to `workspace/verification-{iteration}.json`
+- [ ] **VERI-03**: Verify/improve loop runs up to 4 iterations
+
+### Improvement
+
+- [ ] **IMPR-01**: Improver agent reads verification failures and revises rules
+- [ ] **IMPR-02**: Improved rules written to `workspace/improved-{iteration}.json`
+
+### Answer
+
+- [ ] **ANSR-01**: Answerer agent applies validated rules to translate questions
+- [ ] **ANSR-02**: Final answers written to `workspace/answers.json`
+
+### Output
+
+- [ ] **OUTP-01**: Results displayed in terminal (rules, vocabulary, answers)
+- [ ] **OUTP-02**: Full solution written to markdown file with all intermediate steps
+- [ ] **OUTP-03**: All intermediate JSON files preserved in workspace for debugging
+
+### Infrastructure
+
+- [ ] **INFR-01**: `claude-code/` directory with `.claude/` containing all agent/skill definitions
+- [ ] **INFR-02**: All agents use Opus 4.6
+- [ ] **INFR-03**: CLAUDE.md with project context and conventions
+
+## Future Requirements
+
+### Evaluation
+
+- **EVAL-01**: Compare Claude Code solver output against Mastra solver on same problems
+- **EVAL-02**: Integration with existing eval harness for automated scoring
+
+### Optimization
+
+- **OPT-01**: Prompt tuning based on eval results
+- **OPT-02**: Context budget management for long problems
+
+## Out of Scope
+
+| Feature | Reason |
+|---------|--------|
+| Replacing the Mastra workflow | Parallel implementation, not a replacement |
+| UI/frontend for Claude Code solver | Terminal-only output; existing Next.js UI stays with Mastra |
+| Agent Teams (experimental) | Confirmed unstable, known limitations, not needed |
+| Streaming/real-time events | Claude Code subagents don't support event streaming to parent |
+| Custom tool definitions | Subagents use Claude Code's built-in tools (Read, Write, Bash, etc.) |
+
+## Traceability
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| DOCS-01 | Phase 19 | Pending |
+| DOCS-02 | Phase 19 | Pending |
+| DOCS-03 | Phase 19 | Pending |
+| DOCS-04 | Phase 19 | Pending |
+| INFR-01 | Phase 20 | Pending |
+| INFR-02 | Phase 20 | Pending |
+| INFR-03 | Phase 20 | Pending |
+| EXTR-01 | Phase 21 | Pending |
+| EXTR-02 | Phase 21 | Pending |
+| HYPO-01 | Phase 21 | Pending |
+| HYPO-02 | Phase 21 | Pending |
+| HYPO-03 | Phase 21 | Pending |
+| ORCH-01 | Phase 22 | Pending |
+| ORCH-02 | Phase 22 | Pending |
+| ORCH-03 | Phase 22 | Pending |
+| ORCH-04 | Phase 22 | Pending |
+| ORCH-05 | Phase 22 | Pending |
+| VERI-01 | Phase 23 | Pending |
+| VERI-02 | Phase 23 | Pending |
+| VERI-03 | Phase 23 | Pending |
+| IMPR-01 | Phase 23 | Pending |
+| IMPR-02 | Phase 23 | Pending |
+| ANSR-01 | Phase 23 | Pending |
+| ANSR-02 | Phase 23 | Pending |
+| OUTP-01 | Phase 24 | Pending |
+| OUTP-02 | Phase 24 | Pending |
+| OUTP-03 | Phase 24 | Pending |
+
+**Coverage:**
+- v1.4 requirements: 27 total
+- Mapped to phases: 27
+- Unmapped: 0 ✓
+
+---
+*Requirements defined: 2026-03-07*
+*Last updated: 2026-03-07 after initial definition*
