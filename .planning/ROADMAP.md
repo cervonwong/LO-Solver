@@ -74,7 +74,8 @@
   2. Each agent's role, inputs, outputs, and prompt summary are documented in that file
   3. The verification loop mechanics (iteration flow, pass/fail logic, improvement strategy) are described with enough detail to reimplement
   4. The document is self-contained -- reading it alone is sufficient to understand what the Claude Code agents must replicate
-**Plans**: TBD
+**Plans**: 1 plan
+- [ ] 19-01-PLAN.md — Write comprehensive pipeline reference document (claude-code/PIPELINE.md)
 
 ### Phase 20: Infrastructure Setup
 **Goal**: The `claude-code/` directory is ready for agent development with conventions, project context, and directory structure in place
@@ -153,7 +154,7 @@
 | 16. Toast Notifications | v1.2 | 2/2 | Complete | 2026-03-04 |
 | 17. Key Entry UI | v1.3 | 2/2 | Complete | 2026-03-06 |
 | 18. Key Routing | v1.3 | 2/2 | Complete | 2026-03-06 |
-| 19. Workflow Documentation | v1.4 | 0/? | Not started | - |
+| 19. Workflow Documentation | v1.4 | 0/1 | Planned | - |
 | 20. Infrastructure Setup | v1.4 | 0/? | Not started | - |
 | 21. Pipeline Agents | v1.4 | 0/? | Not started | - |
 | 22. Orchestrator and Entry Point | v1.4 | 0/? | Not started | - |
