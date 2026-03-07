@@ -55,9 +55,9 @@
 
 ### Infrastructure
 
-- [ ] **INFR-01**: `claude-code/` directory with `.claude/` containing all agent/skill definitions
-- [ ] **INFR-02**: All agents use Opus 4.6
-- [ ] **INFR-03**: CLAUDE.md with project context and conventions
+- [x] **INFR-01**: `claude-code/` directory with `.claude/` containing all agent/skill definitions
+- [x] **INFR-02**: All agents use Opus 4.6
+- [x] **INFR-03**: CLAUDE.md with project context and conventions
 
 ## Future Requirements
 
@@ -89,9 +89,9 @@
 | DOCS-02 | Phase 19 | Complete |
 | DOCS-03 | Phase 19 | Complete |
 | DOCS-04 | Phase 19 | Complete |
-| INFR-01 | Phase 20 | Pending |
-| INFR-02 | Phase 20 | Pending |
-| INFR-03 | Phase 20 | Pending |
+| INFR-01 | Phase 20 | Complete |
+| INFR-02 | Phase 20 | Complete |
+| INFR-03 | Phase 20 | Complete |
 | EXTR-01 | Phase 21 | Pending |
 | EXTR-02 | Phase 21 | Pending |
 | HYPO-01 | Phase 21 | Pending |
