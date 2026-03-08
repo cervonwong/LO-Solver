@@ -123,7 +123,10 @@
   3. The verify/improve loop runs up to 4 iterations, stopping early if all rules pass
   4. An answerer agent applies the validated rules to translate questions and writes results to `workspace/answers.json`
   5. All intermediate JSON files follow the workspace naming convention and are valid JSON
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 23-01-PLAN.md — Write verifier, improver, and answerer agent system prompts
+- [ ] 23-02-PLAN.md — Write Step 5 orchestration logic in SKILL.md
 
 ### Phase 24: Output and Integration
 **Goal**: The solver produces readable results in the terminal and a complete markdown solution file with all intermediate steps preserved
@@ -161,7 +164,7 @@
 | 20. Infrastructure Setup | 1/1 | Complete    | 2026-03-07 | - |
 | 21. Pipeline Agents | 1/1 | Complete    | 2026-03-07 | - |
 | 22. Orchestrator and Entry Point | 1/1 | Complete    | 2026-03-08 | - |
-| 23. Verify-Improve Loop and Answer | v1.4 | 0/? | Not started | - |
+| 23. Verify-Improve Loop and Answer | v1.4 | 0/2 | Not started | - |
 | 24. Output and Integration | v1.4 | 0/? | Not started | - |
 
 _v1.0: 7 phases, 16 plans. All complete._
