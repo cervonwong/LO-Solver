@@ -34,18 +34,18 @@
 ### Verification
 
 - [x] **VERI-01**: Verifier agent tests each rule and sentence against the dataset
-- [ ] **VERI-02**: Verifier writes test results to `workspace/verification-{iteration}.json`
-- [ ] **VERI-03**: Verify/improve loop runs up to 4 iterations
+- [x] **VERI-02**: Verifier writes test results to `workspace/verification-{iteration}.json`
+- [x] **VERI-03**: Verify/improve loop runs up to 4 iterations
 
 ### Improvement
 
 - [x] **IMPR-01**: Improver agent reads verification failures and revises rules
-- [ ] **IMPR-02**: Improved rules written to `workspace/improved-{iteration}.json`
+- [x] **IMPR-02**: Improved rules written to `workspace/improved-{iteration}.json`
 
 ### Answer
 
 - [x] **ANSR-01**: Answerer agent applies validated rules to translate questions
-- [ ] **ANSR-02**: Final answers written to `workspace/answers.json`
+- [x] **ANSR-02**: Final answers written to `workspace/answers.json`
 
 ### Output
 
@@ -103,12 +103,12 @@
 | ORCH-04 | Phase 22 | Complete |
 | ORCH-05 | Phase 22 | Complete |
 | VERI-01 | Phase 23 | Complete |
-| VERI-02 | Phase 23 | Pending |
-| VERI-03 | Phase 23 | Pending |
+| VERI-02 | Phase 23 | Complete |
+| VERI-03 | Phase 23 | Complete |
 | IMPR-01 | Phase 23 | Complete |
-| IMPR-02 | Phase 23 | Pending |
+| IMPR-02 | Phase 23 | Complete |
 | ANSR-01 | Phase 23 | Complete |
-| ANSR-02 | Phase 23 | Pending |
+| ANSR-02 | Phase 23 | Complete |
 | OUTP-01 | Phase 24 | Pending |
 | OUTP-02 | Phase 24 | Pending |
 | OUTP-03 | Phase 24 | Pending |
