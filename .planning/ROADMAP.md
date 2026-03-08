@@ -163,7 +163,9 @@ Plans:
   1. CLAUDE.md notes the verifier Sonnet exception alongside the Opus default
   2. REQUIREMENTS.md wording reflects actual design (markdown files, sequential dispatch) with notes on design evolution
   3. ROADMAP SC5 references markdown files instead of "valid JSON"
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 26-01-PLAN.md — Fix stale documentation across CLAUDE.md, REQUIREMENTS.md, and ROADMAP.md
 
 ## Progress
 
