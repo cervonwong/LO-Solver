@@ -20,6 +20,21 @@ interface CliArgs {
   concurrency: number;
   problem: string | undefined;
   comparison: boolean;
+  maxRounds: number;
+  perspectiveCount: number;
+}
+
+function printHelp(): void {
+  console.log(`Usage: npm run eval -- [options]
+
+Options:
+  --mode <testing|production>   Model mode (default: testing)
+  --concurrency <N>             Parallel problem execution (default: 1)
+  --problem <id>                Run a single problem by ID
+  --comparison                  Run with zero-shot comparison
+  --rounds <N>                  Max verify/improve rounds, 1-5 (default: 3)
+  --perspectives <N>            Number of hypothesis perspectives, 2-7 (default: 3)
+  --help                        Show this help message`);
 }
 
 function parseArgs(): CliArgs {
@@ -28,10 +43,15 @@ function parseArgs(): CliArgs {
   let concurrency = 1;
   let problem: string | undefined;
   let comparison = false;
+  let maxRounds = 3;
+  let perspectiveCount = 3;
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
-    if (arg === '--mode') {
+    if (arg === '--help') {
+      printHelp();
+      process.exit(0);
+    } else if (arg === '--mode') {
       const val = args[i + 1];
       if (val !== 'testing' && val !== 'production') {
         console.error('Error: --mode must be "testing" or "production"');
@@ -57,13 +77,31 @@ function parseArgs(): CliArgs {
       i++;
     } else if (arg === '--comparison') {
       comparison = true;
+    } else if (arg === '--rounds') {
+      const val = args[i + 1];
+      const parsed = val !== undefined ? parseInt(val, 10) : NaN;
+      if (Number.isNaN(parsed) || parsed < 1 || parsed > 5) {
+        console.error('Error: --rounds must be an integer between 1 and 5');
+        process.exit(1);
+      }
+      maxRounds = parsed;
+      i++;
+    } else if (arg === '--perspectives') {
+      const val = args[i + 1];
+      const parsed = val !== undefined ? parseInt(val, 10) : NaN;
+      if (Number.isNaN(parsed) || parsed < 2 || parsed > 7) {
+        console.error('Error: --perspectives must be an integer between 2 and 7');
+        process.exit(1);
+      }
+      perspectiveCount = parsed;
+      i++;
     } else {
       console.error(`Unknown argument: ${arg}`);
       process.exit(1);
     }
   }
 
-  return { mode, concurrency, problem, comparison };
+  return { mode, concurrency, problem, comparison, maxRounds, perspectiveCount };
 }
 
 // ---------------------------------------------------------------------------
@@ -133,11 +171,14 @@ function getGitCommit(): string | undefined {
 // ---------------------------------------------------------------------------
 
 async function main(): Promise<void> {
-  const { mode, concurrency, problem: problemFilter, comparison } = parseArgs();
+  const { mode, concurrency, problem: problemFilter, comparison, maxRounds, perspectiveCount } =
+    parseArgs();
 
   console.log(`\nEval runner starting`);
   console.log(`  Mode: ${mode}`);
   console.log(`  Concurrency: ${concurrency}`);
+  console.log(`  Rounds: ${maxRounds}`);
+  console.log(`  Perspectives: ${perspectiveCount}`);
   console.log(`  Comparison: ${comparison}`);
   if (problemFilter !== undefined) {
     console.log(`  Problem filter: ${problemFilter}`);
@@ -174,8 +215,8 @@ async function main(): Promise<void> {
         inputData: {
           rawProblemText: evalProblem.rawProblemText,
           modelMode: mode,
-          maxRounds: 3,
-          perspectiveCount: 3,
+          maxRounds,
+          perspectiveCount,
         },
       });
     })();
