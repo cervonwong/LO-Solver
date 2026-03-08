@@ -1,9 +1,6 @@
-import { Agent } from '@mastra/core/agent';
-import { UnicodeNormalizer } from '@mastra/core/processors';
+import { createWorkflowAgent } from './agent-factory';
 import { RULES_IMPROVER_INSTRUCTIONS } from './03b-rules-improver-instructions';
 import { VOCABULARY_TOOLS_INSTRUCTIONS } from './vocabulary-tools-prompt';
-import { TESTING_MODEL } from '../openrouter';
-import { getOpenRouterProvider } from './request-context-helpers';
 import { vocabularyTools } from './vocabulary-tools';
 import { testRuleWithRulesetTool } from './03a-rule-tester-tool';
 import { testSentenceWithRulesetTool } from './03a-sentence-tester-tool';
@@ -19,34 +16,14 @@ const instructions = RULES_IMPROVER_INSTRUCTIONS.replace(
  * Uses static vocabulary tools that read state from requestContext.
  * Has access to testing tools to validate revised rules before committing.
  */
-export const rulesImproverAgent = new Agent({
+export const rulesImproverAgent = createWorkflowAgent({
   id: 'rules-improver',
   name: '[Step 3] Rules Improver Agent',
-  instructions: {
-    role: 'system',
-    content: instructions,
-  },
-  // model: openrouter('google/gemini-3-pro-preview'),
-  model: ({ requestContext }) =>
-    getOpenRouterProvider(requestContext)(
-      requestContext?.get('model-mode') === 'production'
-        ? 'google/gemini-3-flash-preview'
-        : TESTING_MODEL,
-    ),
+  instructions: { role: 'system', content: instructions },
+  productionModel: 'google/gemini-3-flash-preview',
   tools: {
     ...vocabularyTools,
-    // Testing tools renamed for simpler agent usage:
-    // - testRule: actually testRuleWithRulesetTool (accepts ruleset param)
-    // - testSentence: actually testSentenceWithRulesetTool (accepts ruleset param)
     testRule: testRuleWithRulesetTool,
     testSentence: testSentenceWithRulesetTool,
   },
-  inputProcessors: [
-    new UnicodeNormalizer({
-      stripControlChars: false,
-      preserveEmojis: true,
-      collapseWhitespace: true,
-      trim: true,
-    }),
-  ],
 });

@@ -1,8 +1,5 @@
-import { Agent } from '@mastra/core/agent';
-import { UnicodeNormalizer } from '@mastra/core/processors';
+import { createWorkflowAgent } from './agent-factory';
 import { VERIFIER_ORCHESTRATOR_INSTRUCTIONS } from './03a-verifier-orchestrator-instructions';
-import { TESTING_MODEL } from '../openrouter';
-import { getOpenRouterProvider } from './request-context-helpers';
 import { testRuleTool } from './03a-rule-tester-tool';
 import { testSentenceTool } from './03a-sentence-tester-tool';
 
@@ -10,27 +7,13 @@ import { testSentenceTool } from './03a-sentence-tester-tool';
  * Verifier Orchestrator Agent - tests rules and sentences against the dataset.
  * Uses static tester tools that read context from requestContext.
  */
-export const verifierOrchestratorAgent = new Agent({
+export const verifierOrchestratorAgent = createWorkflowAgent({
   id: 'verifier-orchestrator',
   name: '[Step 3] Verifier Orchestrator Agent',
   instructions: VERIFIER_ORCHESTRATOR_INSTRUCTIONS,
-  // model: openrouter('google/gemini-3-pro-preview'),
-  model: ({ requestContext }) =>
-    getOpenRouterProvider(requestContext)(
-      requestContext?.get('model-mode') === 'production'
-        ? 'google/gemini-3-flash-preview'
-        : TESTING_MODEL,
-    ),
+  productionModel: 'google/gemini-3-flash-preview',
   tools: {
     testRule: testRuleTool,
     testSentence: testSentenceTool,
   },
-  inputProcessors: [
-    new UnicodeNormalizer({
-      stripControlChars: false,
-      preserveEmojis: true,
-      collapseWhitespace: true,
-      trim: true,
-    }),
-  ],
 });
