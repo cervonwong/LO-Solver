@@ -71,7 +71,7 @@
 
 **Milestone Goal:** Clean up the codebase without changing functionality, then rewrite all agent prompts using the latest model-specific best practices from OpenAI, Google, and Anthropic.
 
-- [ ] **Phase 27: Dead Code & Type Safety** - Remove deprecated files, dead exports, and replace all `any` types
+- [x] **Phase 27: Dead Code & Type Safety** - Remove deprecated files, dead exports, and replace all `any` types (completed 2026-03-08)
 - [ ] **Phase 28: Agent Factory** - Create `createWorkflowAgent()` factory and migrate all 13 agents
 - [ ] **Phase 29: Hypothesize Step Split** - Split 1,240-line `02-hypothesize.ts` into 4 sub-phase files
 - [ ] **Phase 30: Mastra Prompt Engineering** - Rewrite GPT-5-mini and Gemini 3 Flash prompts with eval verification
@@ -90,7 +90,7 @@
   3. `shared-memory.ts` is either removed (if unused) or its purpose is documented with an inline comment explaining its consumers
   4. `npx tsc --noEmit` reports zero `any` annotations in workflow code (only the pre-existing CSS module error remains)
   5. `npm run eval -- --problem linguini-1` passes with identical scores to pre-cleanup baseline
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 27-01-PLAN.md — Delete deprecated files, install Knip, clean unused exports
@@ -200,7 +200,7 @@ Phases execute in numeric order: 27 -> 28 -> 29 -> 30 -> 31 -> 32
 | 24. Output and Integration | v1.4 | 1/1 | Complete | 2026-03-08 |
 | 25. Fix Step 4c Verifier Orchestration | v1.4 | 1/1 | Complete | 2026-03-08 |
 | 26. Documentation Consistency Cleanup | v1.4 | 1/1 | Complete | 2026-03-08 |
-| 27. Dead Code & Type Safety | 1/2 | In Progress|  | - |
+| 27. Dead Code & Type Safety | 2/2 | Complete   | 2026-03-08 | - |
 | 28. Agent Factory | v1.5 | 0/? | Not started | - |
 | 29. Hypothesize Step Split | v1.5 | 0/? | Not started | - |
 | 30. Mastra Prompt Engineering | v1.5 | 0/? | Not started | - |

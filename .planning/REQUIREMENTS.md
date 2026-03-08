@@ -9,9 +9,9 @@ Requirements for the refactoring and prompt engineering milestone. Each maps to 
 
 ### Cleanup
 
-- [ ] **CLN-01**: Deprecated agent files (`02a-initial-hypothesis-extractor-*`) and their `index.ts` registration are removed
-- [ ] **CLN-02**: Unused exports and dead code identified by Knip audit are removed (with full `src/` grep verification before each deletion)
-- [ ] **CLN-03**: `shared-memory.ts` audited and removed if unused
+- [x] **CLN-01**: Deprecated agent files (`02a-initial-hypothesis-extractor-*`) and their `index.ts` registration are removed
+- [x] **CLN-02**: Unused exports and dead code identified by Knip audit are removed (with full `src/` grep verification before each deletion)
+- [x] **CLN-03**: `shared-memory.ts` audited and removed if unused
 - [x] **CLN-04**: All 4 `any` type annotations in workflow code replaced with explicit typed alternatives
 
 ### Structure
@@ -62,9 +62,9 @@ Requirements for the refactoring and prompt engineering milestone. Each maps to 
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CLN-01 | Phase 27 | Pending |
-| CLN-02 | Phase 27 | Pending |
-| CLN-03 | Phase 27 | Pending |
+| CLN-01 | Phase 27 | Complete |
+| CLN-02 | Phase 27 | Complete |
+| CLN-03 | Phase 27 | Complete |
 | CLN-04 | Phase 27 | Complete |
 | STR-04 | Phase 28 | Pending |
 | STR-05 | Phase 28 | Pending |
