@@ -56,7 +56,7 @@ export const workflowStateSchema = z.object({
   apiKey: z.string().optional(),
 });
 
-export type WorkflowState = z.infer<typeof workflowStateSchema>;
+type WorkflowState = z.infer<typeof workflowStateSchema>;
 
 // Initialize workflow state - returns initial state object
 export const initializeWorkflowState = (): WorkflowState => {

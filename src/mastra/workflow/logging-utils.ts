@@ -7,7 +7,7 @@ import * as path from 'path';
 import { z } from 'zod';
 
 // Step timing type (matches workflow state)
-export interface StepTiming {
+interface StepTiming {
   stepName: string;
   agentName: string;
   endTime: string; // HH:MM:SS in GMT+8
