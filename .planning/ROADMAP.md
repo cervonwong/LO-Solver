@@ -63,7 +63,7 @@
 - [x] **Phase 23: Verify-Improve Loop and Answer** - Implement iterative verification, improvement, and final answer agents (completed 2026-03-08)
 - [x] **Phase 24: Output and Integration** - Terminal results display, markdown solution file, workspace preservation (completed 2026-03-08)
 - [x] **Phase 25: Fix Step 4c Verifier Orchestration** - Rewrite Step 4c to use per-call verifier pattern, fix pass rate extraction and convergence check (completed 2026-03-08)
-- [ ] **Phase 26: Documentation Consistency Cleanup** - Fix model exception note, stale requirement wording, and ROADMAP stale text
+- [x] **Phase 26: Documentation Consistency Cleanup** - Fix model exception note, stale requirement wording, and ROADMAP stale text (completed 2026-03-08)
 
 ## Phase Details
 
@@ -196,7 +196,7 @@ Plans:
 | 23. Verify-Improve Loop and Answer | 2/2 | Complete    | 2026-03-08 | - |
 | 24. Output and Integration | 1/1 | Complete    | 2026-03-08 | - |
 | 25. Fix Step 4c Verifier Orchestration | 1/1 | Complete    | 2026-03-08 | - |
-| 26. Documentation Consistency Cleanup | v1.4 | 0/0 | Pending | - |
+| 26. Documentation Consistency Cleanup | 1/1 | Complete   | 2026-03-08 | - |
 
 _v1.0: 7 phases, 16 plans. All complete._
 _v1.1: 6 phases, 9 plans. All complete._
