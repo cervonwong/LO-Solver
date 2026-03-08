@@ -328,3 +328,94 @@ Created only when errors occur during a run. Contains timestamped error entries.
 **Message:** Sentence #8 could not be parsed -- contains an unknown diacritic not in the vocabulary.
 **Recovered:** Yes -- sentence marked as FAIL with diagnostic note, verification continued.
 ```
+
+---
+
+## solution-complete.md
+
+Produced by the /solve skill in Step 6. Consolidates rules, vocabulary, verification history, and answers into a single results document. References the problem file instead of including it inline.
+
+```markdown
+# Complete Solution
+
+> Problem: See problem.md
+
+## Rules
+
+### 1. Verb-initial word order (VSO)
+
+Taloki sentences follow Verb-Subject-Object order: the inflected verb comes first, then the subject pronoun, then the object noun.
+
+**Evidence:** All dataset sentences (#1-#6) place the verb form before the pronoun and noun.
+**Confidence:** HIGH
+**Verification:** PASS
+
+### 2. Tense/aspect suffixes
+
+Verbs take suffixes marking tense and aspect:
+- `-ti` marks simple past ("ate", "saw")
+- `-su` marks future ("will eat", "will see")
+- `-ra` marks perfective past -- completed actions ("caught" rather than generic past)
+
+**Evidence:** `-ti` in #1, #3; `-su` in #2, #5; `-ra` in #4, #6.
+**Confidence:** MEDIUM
+**Verification:** FAIL
+**Failure reason:** The distinction between `-ti` (simple past) and `-ra` (perfective) is not fully predictive -- sentence #6 `kala-ra ko siga` translates as "You caught the bird" but the rule does not explain why "catch" is used instead of "eat" when the root `kala` means "eat".
+
+### 3. Subject pronouns
+
+Subject pronouns appear between the verb and object:
+- `na` = first person (I/me)
+- `ko` = second person (you)
+- `la` = third person (he/she)
+
+**Evidence:** Consistent across all 6 sentences.
+**Confidence:** HIGH
+**Verification:** PASS
+
+## Vocabulary
+
+| Form | Meaning | Type | Notes |
+|------|---------|------|-------|
+| kala | eat | verb-root | #1, #3 |
+| mira | see | verb-root | #2, #5 |
+| vene | catch | verb-root | #4 |
+| boro | fish | noun | #1, #2, #5 |
+| siga | bird | noun | #3, #4, #6 |
+| na | I/me | pronoun | First person |
+| ko | you | pronoun | Second person |
+| la | he/she | pronoun | Third person |
+
+## Verification Summary
+
+- Iteration 0 (initial): 78%
+- Iteration 1: 89%
+- Iteration 2: 100%
+- Final: 100%
+
+## Answers
+
+### Q1: Taloki -> English
+
+**Input:** Vene-ti la boro
+**Translation:** He/she caught the fish
+**Confidence:** HIGH
+
+### Q2: English -> Taloki
+
+**Input:** You will eat the bird
+**Translation:** Kala-su ko siga
+**Confidence:** HIGH
+
+### Q3: Taloki -> English
+
+**Input:** Mira-ra na siga
+**Translation:** I spotted the bird
+**Confidence:** MEDIUM
+
+## Pipeline Notes
+
+> This section is only included if errors occurred during the pipeline.
+
+- hypothesizer (perspective-3): Agent did not produce output within the time limit. (Recovered: yes)
+```
