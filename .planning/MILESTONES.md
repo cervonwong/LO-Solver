@@ -1,5 +1,23 @@
 # Milestones
 
+## v1.4 Claude Code Native Solver (Shipped: 2026-03-08)
+
+**Phases:** 8 | **Plans:** 9 | **LOC:** 3,494 markdown (claude-code/)
+**Timeline:** 2 days (2026-03-07 → 2026-03-08)
+**Git range:** v1.3..ce9c7a1 (63 files changed, +12,524 / -964)
+
+**Delivered:** Claude Code native solver running alongside the existing Mastra implementation — 6 subagent definitions, /solve skill with full pipeline orchestration, iterative verify-improve loop, and terminal output display, all using file-based state in a workspace directory.
+
+**Key accomplishments:**
+1. Comprehensive pipeline reference document (PIPELINE.md, 621 lines) documenting all 12 Mastra agents, 14 tools, and 6 data types
+2. 6 Claude Code native agent definitions (extractor, hypothesizer, verifier, improver, synthesizer, answerer) with self-contained prompts
+3. /solve skill with full pipeline orchestration — multi-round hypothesis loop, synthesis, and convergence checking
+4. Iterative verify-improve loop with per-call verifier pattern and blind translation comparison
+5. Terminal output display and markdown solution file generation
+6. Closed all integration gaps via Phases 25-26 (Step 4c verifier orchestration, documentation consistency)
+
+---
+
 ## v1.3 User API Key (Shipped: 2026-03-06)
 
 **Phases:** 2 | **Plans:** 4 | **LOC:** 15,656 TypeScript

@@ -188,6 +188,53 @@
 
 ---
 
+## Milestone: v1.4 — Claude Code Native Solver
+
+**Shipped:** 2026-03-08
+**Phases:** 8 | **Plans:** 9 | **Commits:** 62
+
+### What Was Built
+- Comprehensive pipeline reference document (PIPELINE.md, 621 lines) documenting the full Mastra solver for Claude Code agents
+- 6 Claude Code native agent definitions (extractor, hypothesizer, verifier, improver, synthesizer, answerer) with self-contained prompts
+- /solve skill with full pipeline orchestration — multi-round hypothesis loop, synthesis, convergence checking
+- Iterative verify-improve loop with per-call verifier pattern and blind translation comparison
+- Terminal output display and markdown solution file generation
+- Gap closure phases (25-26) fixing Step 4c verifier orchestration and documentation consistency
+
+### What Worked
+- Pipeline reference document (Phase 19) was invaluable — agents could be written by reading PIPELINE.md alone, with no need to reference Mastra source code
+- Writing agent prompts as standalone markdown files was extremely fast — 2-3 minutes per plan, no build system or compilation needed
+- Per-call verifier pattern (one rule or one sentence per agent call) emerged naturally and was consistently applied across Steps 4c, 4f, and 5c
+- Audit-driven gap closure: the v1.4 audit found INT-01 (Step 4c monolithic verifier) and INT-02 (CLAUDE.md model exception) which were cleanly fixed by Phases 25-26
+- The 21-minute total execution time across 9 plans is the fastest per-plan rate across all milestones
+
+### What Was Inefficient
+- Audit was initially run before gap closure phases — had to re-run after Phases 25-26 were completed
+- Phase 24 "Plans: TBD" lingered in the roadmap until execution time, when it became a single 1-plan phase
+- Sequential agent dispatch (due to parallel Task tool bug) limits hypothesis diversity — workaround is functional but not ideal
+- SUMMARY.md files lacked `one_liner` frontmatter field, requiring manual accomplishment extraction during milestone completion
+
+### Patterns Established
+- Agent definition pattern: markdown system prompt with explicit Domain Context, Input, Task, Output Format, Do NOT, and Error Handling sections
+- Workspace-based state: agents read/write markdown files in a workspace directory, orchestrator validates by file existence
+- Per-call verifier pattern: one rule/sentence per verifier call, orchestrator aggregates and writes verification files
+- Blind translation comparison in orchestrator: normalize, lowercase, strip punctuation before comparing
+- Error handling via errors.md: agents write structured error logs to workspace/errors.md
+
+### Key Lessons
+1. A thorough reference document enables fast agent development — invest time in Phase 1 documentation
+2. Markdown-only deliverables (no code compilation) enable sub-3-minute plan execution times
+3. Audit → gap closure → re-audit is the correct sequence for catching integration issues
+4. Per-call agent patterns are composable — the same verifier pattern works identically across 3 different orchestration steps
+5. File-based state (markdown workspace files) is simpler than structured JSON for agent interop
+
+### Cost Observations
+- Model mix: opus for planning/execution, haiku for summaries (no sonnet needed — all content was markdown)
+- Sessions: ~3 across 2 days
+- Notable: 21min total execution time across 9 plans — 2.3min average, fastest milestone
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -198,6 +245,7 @@
 | v1.1 | ~60 | 6 | Quick tasks for polish; 2-min plan execution average |
 | v1.2 | ~30 | 3 | Focused cleanup; sequential dependency chain; fastest milestone |
 | v1.3 | 26 | 2 | User-facing feature; pattern copying; verification-driven bug fixes |
+| v1.4 | 62 | 8 | Markdown-only deliverables; 2.3min/plan average; audit-driven gap closure |
 
 ### Cumulative Quality
 
@@ -207,6 +255,7 @@
 | v1.1 | 4 Linguini | 19/19 satisfied | 14,281 TS |
 | v1.2 | 4 Linguini | 15/15 satisfied | 15,069 TS |
 | v1.3 | 4 Linguini | 9/9 satisfied | 15,656 TS |
+| v1.4 | 4 Linguini | 27/27 satisfied | 15,656 TS + 3,494 MD |
 
 ### Top Lessons (Verified Across Milestones)
 
@@ -217,3 +266,5 @@
 5. Build order matters — feature work before refactoring before new features on clean structure (verified v1.2)
 6. Copy existing patterns for new features — reduces design surface and enables fast execution (verified v1.3)
 7. Verification checkpoints catch real bugs before shipping (verified v1.2, v1.3)
+8. Invest in reference documentation before implementation — it pays for itself across all subsequent phases (verified v1.4)
+9. Audit-driven gap closure catches integration issues that static verification misses (verified v1.4)

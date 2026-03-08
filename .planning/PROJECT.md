@@ -2,7 +2,7 @@
 
 ## What This Is
 
-LO-Solver is an AI-powered system for solving Linguistics Olympiad Rosetta Stone problems. It uses a Next.js frontend with a Mastra AI agent orchestration backend. A multi-step workflow coordinates specialized LLM agents to extract structure, generate multi-perspective linguistic hypotheses, verify/improve rules with failure diagnostics, and answer translation questions. An automated evaluation harness proves the agentic workflow outperforms zero-shot LLMs, with a polished observability UI featuring hierarchical agent traces with duck mascots, animated 3-column layout, structured data formatting, workflow abort/reset controls, and live-updating vocabulary and rules panels.
+LO-Solver is an AI-powered system for solving Linguistics Olympiad Rosetta Stone problems. It has two solver implementations: a **Mastra workflow** (Next.js frontend, OpenRouter LLMs, real-time UI) and a **Claude Code native solver** (subagent-based, terminal-only, file-based state). Both use the same multi-step pipeline: extract structure, generate multi-perspective linguistic hypotheses, verify/improve rules with failure diagnostics, and answer translation questions. An automated evaluation harness proves the agentic workflow outperforms zero-shot LLMs, with a polished observability UI featuring hierarchical agent traces with duck mascots, animated 3-column layout, structured data formatting, workflow abort/reset controls, and live-updating vocabulary and rules panels.
 
 ## Core Value
 
@@ -57,22 +57,16 @@ The ONE thing that must work: **the agentic workflow must produce measurably bet
 - ✓ Backend env-key fallback with no-key guard and hasServerKey endpoint — v1.3
 - ✓ Auto-open dialog flow with deferred solve guard and chatId-based transport refresh — v1.3
 
+- ✓ Comprehensive pipeline reference document (PIPELINE.md) for Claude Code agents — v1.4
+- ✓ 6 Claude Code native agent definitions with self-contained prompts — v1.4
+- ✓ /solve skill with full pipeline orchestration and multi-round hypothesis loop — v1.4
+- ✓ Per-call verifier pattern with blind translation comparison — v1.4
+- ✓ Terminal output display and markdown solution file generation — v1.4
+- ✓ File-based workspace state (markdown files, not JSON) — v1.4
+
 ### Active
 
-**Current Milestone: v1.4 Claude Code Native Solver**
-
-**Goal:** Rebuild the LO-Solver workflow as a Claude Code native experience using skills, subagents, and system prompts — running alongside the existing Mastra implementation.
-
-- [ ] Document the current Mastra workflow pipeline in detail for reference
-- [ ] Research Claude Code skill, subagent, and system prompt capabilities
-- [ ] Create slash command entry point for solver
-- [ ] Implement orchestrator agent that asks for problem input (paste or file)
-- [ ] Implement extraction agent (parse problem into structured form)
-- [ ] Implement parallel multi-perspective hypothesizer agents
-- [ ] Implement verify/improve loop (up to 4 iterations)
-- [ ] Implement answer agent (apply validated rules to questions)
-- [ ] Output results to terminal and markdown file
-- [ ] All agents use Opus 4.6
+(No active milestone — planning next)
 
 ### Out of Scope
 
@@ -87,18 +81,20 @@ The ONE thing that must work: **the agentic workflow must produce measurably bet
 
 ## Problem Statement
 
-(Resolved in v1.0) The workflow uses multi-perspective hypothesis generation and verified rules. The evaluation harness demonstrates workflow accuracy improvements over zero-shot baselines. (Resolved in v1.1) The observability UI is polished with correct trace hierarchy, structured data display, workflow controls, and animated layout. (Resolved in v1.2) Abort propagation stops in-flight LLM calls, large files are split into focused modules, and toast notifications provide workflow lifecycle feedback. (Resolved in v1.3) Users can provide their own OpenRouter API key, enabling deployment without a server-side key. (v1.4) Rebuild the solver as a Claude Code native workflow using skills, subagents, and system prompts — running in a dedicated `claude-code/` directory alongside the existing Mastra implementation.
+(Resolved in v1.0) The workflow uses multi-perspective hypothesis generation and verified rules. The evaluation harness demonstrates workflow accuracy improvements over zero-shot baselines. (Resolved in v1.1) The observability UI is polished with correct trace hierarchy, structured data display, workflow controls, and animated layout. (Resolved in v1.2) Abort propagation stops in-flight LLM calls, large files are split into focused modules, and toast notifications provide workflow lifecycle feedback. (Resolved in v1.3) Users can provide their own OpenRouter API key, enabling deployment without a server-side key. (Resolved in v1.4) Claude Code native solver implemented with 6 subagents, /solve skill, and file-based workspace — running alongside the Mastra implementation in `claude-code/`.
 
 ## Context
 
-Shipped v1.3 with 15,656 LOC TypeScript.
+Shipped v1.4 with 15,656 LOC TypeScript + 3,494 LOC markdown (Claude Code solver).
 Tech stack: TypeScript 5.9.3, Next.js 16.1.6, Mastra 1.8.0, Zod 4.3.6.
-Models: GPT-5-mini (extraction), Gemini 3 Flash (reasoning), GPT-OSS-120B (testing).
-Storage: LibSQL for Mastra state, markdown logs for execution traces, JSON for eval results.
+Models (Mastra): GPT-5-mini (extraction), Gemini 3 Flash (reasoning), GPT-OSS-120B (testing).
+Models (Claude Code): Opus 4.6 (all agents except verifier), Sonnet (verifier, cost efficiency).
+Storage: LibSQL for Mastra state, markdown logs for execution traces, JSON for eval results, markdown workspace files for Claude Code solver.
 Frontend: React 19, shadcn/ui, resizable panels (3-column animated layout), AI SDK streaming.
 Evaluation: 4 Linguini ground-truth problems, CLI runner with --comparison and --problem flags.
 UI: Blueprint/cyanotype design system, duck mascots per agent role, workflow abort/reset controls, Sonner toast notifications, user API key dialog.
 Code structure: Workflow steps split into individual files, trace components in focused modules, page hooks extracted to dedicated files.
+Claude Code solver: 6 agent definitions in `claude-code/.claude/agents/`, /solve skill, workspace-based state, PIPELINE.md reference doc.
 Deployment: App can run without server-side OPENROUTER_API_KEY; users provide their own key via browser dialog.
 
 ## Key Decisions
@@ -131,6 +127,13 @@ Deployment: App can run without server-side OPENROUTER_API_KEY; users provide th
 | No key validation via test API call | Errors surface naturally during solve | ✓ Good — simpler UX, no false negatives |
 | pendingSolveRef for deferred auto-solve | Avoids complex callback chains from dialog to page | ✓ Good — clean solve-after-key-entry flow |
 | chatId derived from apiKey | Forces useChat transport recreation on key change | ✓ Good — prevents stale credentials |
+| Framework-agnostic pipeline doc | PIPELINE.md uses no Mastra-specific concepts | ✓ Good — Claude Code agents reference it directly |
+| Markdown workspace files (not JSON) | Agents read/write markdown naturally; simpler than structured JSON | ✓ Good — 7 file types, all markdown |
+| Sequential agent dispatch (not parallel) | Parallel Task tool calls are bugged (issues #22508, #29181) | ✓ Good — deterministic execution order |
+| Always synthesize (never pick single winner) | Merging perspectives produces richer rulesets | ✓ Good — synthesizer combines best of each |
+| Per-call verifier pattern | One rule or one sentence per verifier call; orchestrator aggregates | ✓ Good — consistent across Steps 4c, 4f, 5c |
+| Verifier uses Sonnet (not Opus) | High call volume per solve; cost control | ✓ Good — adequate accuracy at lower cost |
+| File existence as validation | Spot-check output file exists rather than parsing return status | ✓ Good — simple, reliable completion check |
 
 ## Constraints
 
@@ -149,4 +152,4 @@ When working on any phase that touches Mastra code (agents, workflows, tools, ev
 
 ---
 
-*Last updated: 2026-03-07 after v1.4 milestone start*
+*Last updated: 2026-03-08 after v1.4 milestone*
