@@ -19,9 +19,9 @@ Requirements for the refactoring and prompt engineering milestone. Each maps to 
 - [ ] **STR-01**: `02-hypothesize.ts` (1,240 lines) split into 4 sub-phase files (dispatch, hypothesize, verify, synthesize) with a thin coordinator
 - [ ] **STR-02**: Sub-phase files are import-only leaves (no circular dependencies between them)
 - [ ] **STR-03**: `mainRules` and `mainVocabulary` Maps passed by reference (not copied) to sub-phases
-- [ ] **STR-04**: Agent factory `createWorkflowAgent()` created handling 3 agent variants (reasoning, extraction, tester)
+- [x] **STR-04**: Agent factory `createWorkflowAgent()` created handling 3 agent variants (reasoning, extraction, tester)
 - [ ] **STR-05**: All 13 agent definitions migrated to use the factory
-- [ ] **STR-06**: Factory preserves dynamic `({ requestContext }) => ...` model resolution pattern
+- [x] **STR-06**: Factory preserves dynamic `({ requestContext }) => ...` model resolution pattern
 - [ ] **STR-07**: Testing/production model switching verified working after factory migration
 
 ### Frontend
@@ -66,9 +66,9 @@ Requirements for the refactoring and prompt engineering milestone. Each maps to 
 | CLN-02 | Phase 27 | Complete |
 | CLN-03 | Phase 27 | Complete |
 | CLN-04 | Phase 27 | Complete |
-| STR-04 | Phase 28 | Pending |
+| STR-04 | Phase 28 | Complete |
 | STR-05 | Phase 28 | Pending |
-| STR-06 | Phase 28 | Pending |
+| STR-06 | Phase 28 | Complete |
 | STR-07 | Phase 28 | Pending |
 | STR-01 | Phase 29 | Pending |
 | STR-02 | Phase 29 | Pending |

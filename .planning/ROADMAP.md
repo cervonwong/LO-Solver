@@ -105,7 +105,7 @@ Plans:
   2. All 12 `*-agent.ts` files use the factory (no raw `new Agent()` constructor calls remain)
   3. Running with `--mode testing` and `--mode production` logs different model IDs in execution output, confirming dynamic model resolution works
   4. `npm run eval -- --problem linguini-1` passes with identical scores to pre-factory baseline
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 
 Plans:
 - [ ] 28-01-PLAN.md — Create factory function, config type, and extract tester instructions
@@ -202,7 +202,7 @@ Phases execute in numeric order: 27 -> 28 -> 29 -> 30 -> 31 -> 32
 | 25. Fix Step 4c Verifier Orchestration | v1.4 | 1/1 | Complete | 2026-03-08 |
 | 26. Documentation Consistency Cleanup | v1.4 | 1/1 | Complete | 2026-03-08 |
 | 27. Dead Code & Type Safety | 2/2 | Complete   | 2026-03-08 | - |
-| 28. Agent Factory | v1.5 | 0/2 | Not started | - |
+| 28. Agent Factory | 1/2 | In Progress|  | - |
 | 29. Hypothesize Step Split | v1.5 | 0/? | Not started | - |
 | 30. Mastra Prompt Engineering | v1.5 | 0/? | Not started | - |
 | 31. Claude Code Prompt Engineering | v1.5 | 0/? | Not started | - |
