@@ -110,7 +110,8 @@
   3. The orchestrator dispatches subagents sequentially in pipeline order, with each agent reading predecessor files and writing its own output file
   4. The orchestrator selects the best hypothesis by comparing test pass rates from hypothesis files
   5. The orchestrator validates subagent completion via spot-check (output file exists and contains valid JSON) rather than relying on return status
-**Plans**: TBD
+**Plans**: 1 plan
+- [ ] 22-01-PLAN.md — Write synthesizer agent prompt and /solve skill orchestrator logic
 
 ### Phase 23: Verify-Improve Loop and Answer
 **Goal**: The solver can iteratively verify rules against the dataset, improve failing rules, and produce final translated answers
