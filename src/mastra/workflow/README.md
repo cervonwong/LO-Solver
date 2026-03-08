@@ -22,8 +22,7 @@ flowchart TB
 
     subgraph Step2["Step 2: Initial Hypothesis"]
         SD --> IH[Initial Hypothesizer Agent]
-        IH --> IHE[Initial Hypothesis Extractor Agent]
-        IHE --> RULES1[Rules + Vocabulary]
+        IH --> RULES1[Rules + Vocabulary]
     end
 
     subgraph Step3["Step 3: Verify-Improve Loop (max 4x)"]
@@ -47,7 +46,6 @@ flowchart TB
 | ---------------------------- | ------------------------------------------- | ---------------------------------------------------- |
 | Structured Problem Extractor | `01-structured-problem-extractor-agent.ts`  | Parses raw text into context, dataset, and questions |
 | Initial Hypothesizer         | `02-initial-hypothesizer-agent.ts`          | Generates first set of grammar rules                 |
-| Initial Hypothesis Extractor | `02a-initial-hypothesis-extractor-agent.ts` | Extracts JSON from hypothesizer's output             |
 | Verifier Orchestrator        | `03a-verifier-orchestrator-agent.ts`        | Tests rules using testRule/testSentence tools        |
 | Verifier Feedback Extractor  | `03a2-verifier-feedback-extractor-agent.ts` | Extracts structured feedback from verifier           |
 | Rule Tester                  | `03a-rule-tester-agent.ts`                  | Tests a single rule against dataset                  |
@@ -131,11 +129,9 @@ workflow/
 ├── vocabulary-tools.ts                   # Vocabulary management tools
 ├── vocabulary-tools-prompt.ts            # Vocabulary tool instructions
 ├── logging-utils.ts                      # Test result logging utilities
-├── shared-memory.ts                      # Shared memory utilities
 │
 ├── 01-structured-problem-extractor-*.ts  # Step 1: Parse raw input
 ├── 02-initial-hypothesizer-*.ts          # Step 2: Generate initial rules
-├── 02a-initial-hypothesis-extractor-*.ts # Step 2: Extract rules JSON
 ├── 03a-verifier-orchestrator-*.ts        # Step 3a: Verify rules
 ├── 03a2-verifier-feedback-extractor-*.ts # Step 3a: Extract feedback
 ├── 03a-rule-tester-*.ts                  # Testing tool: single rule

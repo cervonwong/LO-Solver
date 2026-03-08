@@ -1,5 +1,4 @@
 import { initialHypothesizerAgent } from './02-initial-hypothesizer-agent';
-import { initialHypothesisExtractorAgent } from './02a-initial-hypothesis-extractor-agent';
 import { dispatcherAgent } from './02-dispatcher-agent';
 import { synthesizerAgent } from './02-synthesizer-agent';
 import { improverDispatcherAgent } from './02-improver-dispatcher-agent';
@@ -20,7 +19,6 @@ import { testSentenceTool, testSentenceWithRulesetTool } from './03a-sentence-te
 export const workflowAgents = {
   structuredProblemExtractorAgent,
   initialHypothesizerAgent,
-  initialHypothesisExtractorAgent, // DEPRECATED: kept for backward compat with verify-improve loop
   dispatcherAgent,
   synthesizerAgent,
   improverDispatcherAgent,
