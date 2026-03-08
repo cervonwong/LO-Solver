@@ -85,7 +85,7 @@
 **Requirements**: INFR-01, INFR-02, INFR-03
 **Success Criteria** (what must be TRUE):
   1. `claude-code/.claude/` directory exists with the correct structure for agent definitions
-  2. All agent definition files specify Opus 4.6 as the model
+  2. All agent definition files specify Opus 4.6 as the model (verifier uses Sonnet for cost efficiency)
   3. A CLAUDE.md file in `claude-code/` describes project context, file conventions, and workspace directory purpose
 **Plans**: 1 plan
 - [ ] 20-01-PLAN.md — Create directory structure, agent skeletons, skill shell, CLAUDE.md, and workspace format reference
@@ -95,8 +95,8 @@
 **Depends on**: Phase 20
 **Requirements**: EXTR-01, EXTR-02, HYPO-01, HYPO-02, HYPO-03
 **Success Criteria** (what must be TRUE):
-  1. An extractor agent can parse a raw Linguistics Olympiad problem into structured JSON and write it to `workspace/extracted.json`
-  2. A hypothesizer agent can generate linguistic rules and vocabulary from a specific perspective and write to `workspace/hypothesis-{n}.json`
+  1. An extractor agent can parse a raw Linguistics Olympiad problem into structured markdown and write it to `workspace/problem.md`
+  2. A hypothesizer agent can generate linguistic rules and vocabulary from a specific perspective and write to `workspace/hypotheses/round-{R}/perspective-{N}.md`
   3. Multiple hypothesizer instances can be dispatched sequentially with different perspectives, each writing to its own numbered draft file
   4. Each agent's prompt is fully self-contained with explicit input/output format specifications (no reliance on inherited context)
 **Plans**: 1 plan
@@ -111,7 +111,7 @@
   2. The orchestrator asks for problem input (paste text or file path) if not provided as an argument
   3. The orchestrator dispatches subagents sequentially in pipeline order, with each agent reading predecessor files and writing its own output file
   4. The orchestrator selects the best hypothesis by comparing test pass rates from hypothesis files
-  5. The orchestrator validates subagent completion via spot-check (output file exists and contains valid JSON) rather than relying on return status
+  5. The orchestrator validates subagent completion via spot-check (output file exists and contains expected content) rather than relying on return status
 **Plans**: 1 plan
 - [ ] 22-01-PLAN.md — Write synthesizer agent prompt and /solve skill orchestrator logic
 
@@ -120,11 +120,11 @@
 **Depends on**: Phase 22
 **Requirements**: VERI-01, VERI-02, VERI-03, IMPR-01, IMPR-02, ANSR-01, ANSR-02
 **Success Criteria** (what must be TRUE):
-  1. A verifier agent tests each rule and sentence against the dataset and writes structured results to `workspace/verification-{iteration}.json`
-  2. An improver agent reads verification failures and writes revised rules to `workspace/improved-{iteration}.json`
+  1. A verifier agent tests each rule and sentence against the dataset and writes structured results to `workspace/verification-{iteration}.md`
+  2. An improver agent reads verification failures and writes revised rules to `workspace/improved-{iteration}.md`
   3. The verify/improve loop runs up to 4 iterations, stopping early if all rules pass
-  4. An answerer agent applies the validated rules to translate questions and writes results to `workspace/answers.json`
-  5. All intermediate JSON files follow the workspace naming convention and are valid JSON
+  4. An answerer agent applies the validated rules to translate questions and writes results to `workspace/answers.md`
+  5. All intermediate markdown files follow the workspace naming convention
 **Plans**: 2 plans
 Plans:
 - [ ] 23-01-PLAN.md — Write verifier, improver, and answerer agent system prompts
@@ -137,7 +137,7 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. After solving, the terminal displays the discovered rules, vocabulary, and final answers in a readable format
   2. A markdown solution file is written containing all intermediate steps (extraction, hypotheses, verification rounds, final answers)
-  3. All intermediate JSON files remain in the workspace directory for debugging and inspection
+  3. All intermediate markdown files remain in the workspace directory for debugging and inspection
 **Plans**: TBD
 
 ### Phase 25: Fix Step 4c Verifier Orchestration
