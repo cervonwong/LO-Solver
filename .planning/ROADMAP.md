@@ -72,7 +72,7 @@
 **Milestone Goal:** Clean up the codebase without changing functionality, then rewrite all agent prompts using the latest model-specific best practices from OpenAI, Google, and Anthropic.
 
 - [x] **Phase 27: Dead Code & Type Safety** - Remove deprecated files, dead exports, and replace all `any` types (completed 2026-03-08)
-- [ ] **Phase 28: Agent Factory** - Create `createWorkflowAgent()` factory and migrate all 12 agents
+- [x] **Phase 28: Agent Factory** - Create `createWorkflowAgent()` factory and migrate all 12 agents (completed 2026-03-08)
 - [ ] **Phase 29: Hypothesize Step Split** - Split 1,240-line `02-hypothesize.ts` into 4 sub-phase files
 - [ ] **Phase 30: Mastra Prompt Engineering** - Rewrite GPT-5-mini and Gemini 3 Flash prompts with eval verification
 - [ ] **Phase 31: Claude Code Prompt Engineering** - Rewrite all 6 Claude Code agent prompts per Anthropic best practices
@@ -105,7 +105,7 @@ Plans:
   2. All 12 `*-agent.ts` files use the factory (no raw `new Agent()` constructor calls remain)
   3. Running with `--mode testing` and `--mode production` logs different model IDs in execution output, confirming dynamic model resolution works
   4. `npm run eval -- --problem linguini-1` passes with identical scores to pre-factory baseline
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 28-01-PLAN.md — Create factory function, config type, and extract tester instructions
@@ -202,7 +202,7 @@ Phases execute in numeric order: 27 -> 28 -> 29 -> 30 -> 31 -> 32
 | 25. Fix Step 4c Verifier Orchestration | v1.4 | 1/1 | Complete | 2026-03-08 |
 | 26. Documentation Consistency Cleanup | v1.4 | 1/1 | Complete | 2026-03-08 |
 | 27. Dead Code & Type Safety | 2/2 | Complete   | 2026-03-08 | - |
-| 28. Agent Factory | 1/2 | In Progress|  | - |
+| 28. Agent Factory | 2/2 | Complete   | 2026-03-08 | - |
 | 29. Hypothesize Step Split | v1.5 | 0/? | Not started | - |
 | 30. Mastra Prompt Engineering | v1.5 | 0/? | Not started | - |
 | 31. Claude Code Prompt Engineering | v1.5 | 0/? | Not started | - |

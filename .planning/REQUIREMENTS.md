@@ -20,9 +20,9 @@ Requirements for the refactoring and prompt engineering milestone. Each maps to 
 - [ ] **STR-02**: Sub-phase files are import-only leaves (no circular dependencies between them)
 - [ ] **STR-03**: `mainRules` and `mainVocabulary` Maps passed by reference (not copied) to sub-phases
 - [x] **STR-04**: Agent factory `createWorkflowAgent()` created handling 3 agent variants (reasoning, extraction, tester)
-- [ ] **STR-05**: All 13 agent definitions migrated to use the factory
+- [x] **STR-05**: All 13 agent definitions migrated to use the factory
 - [x] **STR-06**: Factory preserves dynamic `({ requestContext }) => ...` model resolution pattern
-- [ ] **STR-07**: Testing/production model switching verified working after factory migration
+- [x] **STR-07**: Testing/production model switching verified working after factory migration
 
 ### Frontend
 
@@ -67,9 +67,9 @@ Requirements for the refactoring and prompt engineering milestone. Each maps to 
 | CLN-03 | Phase 27 | Complete |
 | CLN-04 | Phase 27 | Complete |
 | STR-04 | Phase 28 | Complete |
-| STR-05 | Phase 28 | Pending |
+| STR-05 | Phase 28 | Complete |
 | STR-06 | Phase 28 | Complete |
-| STR-07 | Phase 28 | Pending |
+| STR-07 | Phase 28 | Complete |
 | STR-01 | Phase 29 | Pending |
 | STR-02 | Phase 29 | Pending |
 | STR-03 | Phase 29 | Pending |
