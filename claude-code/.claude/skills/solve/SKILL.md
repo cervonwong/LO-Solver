@@ -85,20 +85,102 @@ After the hypothesizer completes:
 - If it does not exist on first attempt: retry once with the same instructions
 - If retry also fails: print `"Perspective {P} failed -- continuing with remaining perspectives"` and append the error to `{WORKSPACE}/errors.md`
 
-### Step 4c: Dispatch Verifiers
+### Step 4c: Verify Perspectives
 
 For each perspective P that produced an output file, **sequentially**:
 
 Print: `"Verifying perspective {P}: {perspective_name}..."`
 
-Use the **verifier** agent:
-- Read the hypothesis from: `{WORKSPACE}/hypotheses/round-{N}/perspective-{P}.md`
-- Read the problem from: `{WORKSPACE}/problem.md`
-- Write verification results to: `{WORKSPACE}/hypotheses/round-{N}/verification-{P}.md`
+This is the multi-call verification orchestration. The /solve skill itself orchestrates individual verifier calls and aggregates results.
 
-After the verifier completes:
-- Check that the verification file exists
-- If it does not exist: print `"Verification of perspective {P} failed -- continuing"` and append the error to `{WORKSPACE}/errors.md`
+**Step 4c.1: Extract rules and sentences from perspective and problem**
+
+Read `{WORKSPACE}/hypotheses/round-{N}/perspective-{P}.md` to get the list of rule titles (each `### {title}` under `## Rules`).
+Read `{WORKSPACE}/problem.md` to get dataset sentences and questions.
+
+**Step 4c.2: Test rules (one per call)**
+
+For each rule title in the perspective:
+1. Use the **verifier** agent in rule test mode:
+   - Test type: "rule"
+   - Rule title: {rule_title}
+   - Solution file: {WORKSPACE}/hypotheses/round-{N}/perspective-{P}.md
+   - Problem file: {WORKSPACE}/problem.md
+   - Output file: a temporary result (read back immediately)
+2. Read the verifier's output to get the Status (PASS/FAIL/NEEDS_UPDATE)
+3. Record the result: rule title, status, reasoning
+
+**Step 4c.3: Test sentences (one per call, blind translation)**
+
+For each dataset sentence (from the `## Dataset` table in problem.md):
+1. Use the **verifier** agent in sentence test mode:
+   - Test type: "sentence"
+   - Sentence: the foreign text to translate
+   - Direction: the translation direction (based on which column is source vs target)
+   - Solution file: {WORKSPACE}/hypotheses/round-{N}/perspective-{P}.md
+   - Problem file: {WORKSPACE}/problem.md
+   - Output file: a temporary result
+2. Read the verifier's output to get the blind Translation
+3. Normalize both the verifier's translation and the expected translation:
+   - Trim whitespace
+   - Convert to lowercase
+   - Remove leading/trailing punctuation
+4. Compare: PASS if normalized strings match, FAIL otherwise
+5. Record: sentence number, expected, got, PASS/FAIL
+
+For each question in problem.md (from `## Questions`):
+1. Use the **verifier** agent in sentence test mode (same as above but no expected answer)
+2. Read the verifier's blind translation
+3. Record: question ID, translation (for coverage logging only -- questions do not count toward pass rate)
+
+**Step 4c.4: Aggregate and write verification file**
+
+Compute:
+- rules_passed = count of rules with PASS status
+- rules_failed = count of rules with FAIL or NEEDS_UPDATE status
+- sentences_passed = count of dataset sentences with PASS status
+- sentences_failed = count of dataset sentences with FAIL status
+- pass_rate = round(100 * (rules_passed + sentences_passed) / (rules_total + sentences_total))
+
+Note: questions are NOT included in the pass rate denominator (they have no expected answer).
+
+Write `{WORKSPACE}/hypotheses/round-{N}/verification-{P}.md` with this structure:
+
+```
+# Verification: Perspective {P}
+
+## Summary
+
+- Rules tested: {rules_total}
+- Rules passed: {rules_passed}
+- Rules failed: {rules_failed}
+- Sentences tested: {sentences_total}
+- Sentences passed: {sentences_passed}
+- Sentences failed: {sentences_failed}
+- Pass rate: {pass_rate}%
+
+## Rule Results
+
+### {Rule title}
+**Status:** {PASS|FAIL|NEEDS_UPDATE}
+**Notes:** {reasoning from verifier}
+
+(repeat for each rule)
+
+## Sentence Results
+
+| # | {Foreign} | Expected {Target} | Generated {Target} | Status | Notes |
+|---|-----------|-------------------|---------------------|--------|-------|
+(one row per dataset sentence)
+
+## Question Coverage
+
+| # | Direction | Translation | Notes |
+|---|-----------|-------------|-------|
+(one row per question -- for logging, not pass rate)
+```
+
+If the verification file could not be written (e.g., all verifier calls failed): print `"Verification of perspective {P} failed -- continuing"` and append the error to `{WORKSPACE}/errors.md`
 
 ### Step 4d: Read Pass Rates and Print Summary
 
