@@ -7,6 +7,7 @@
 - ✅ **v1.2 Cleanup & Quality** — Phases 14-16 (shipped 2026-03-04)
 - ✅ **v1.3 User API Key** — Phases 17-18 (shipped 2026-03-06)
 - ✅ **v1.4 Claude Code Native Solver** — Phases 19-26 (shipped 2026-03-08)
+- 📋 **v1.5 Refactor & Prompt Engineering** — Phases 27-32 (in progress)
 
 ## Phases
 
@@ -66,7 +67,109 @@
 
 </details>
 
+### v1.5 Refactor & Prompt Engineering (In Progress)
+
+**Milestone Goal:** Clean up the codebase without changing functionality, then rewrite all agent prompts using the latest model-specific best practices from OpenAI, Google, and Anthropic.
+
+- [ ] **Phase 27: Dead Code & Type Safety** - Remove deprecated files, dead exports, and replace all `any` types
+- [ ] **Phase 28: Agent Factory** - Create `createWorkflowAgent()` factory and migrate all 13 agents
+- [ ] **Phase 29: Hypothesize Step Split** - Split 1,240-line `02-hypothesize.ts` into 4 sub-phase files
+- [ ] **Phase 30: Mastra Prompt Engineering** - Rewrite GPT-5-mini and Gemini 3 Flash prompts with eval verification
+- [ ] **Phase 31: Claude Code Prompt Engineering** - Rewrite all 6 Claude Code agent prompts per Anthropic best practices
+- [ ] **Phase 32: Frontend Cleanup** - Extract DevTracePanel inline handlers and clean up trace component types
+
+## Phase Details
+
+### Phase 27: Dead Code & Type Safety
+**Goal**: The codebase contains only live, typed code with no deprecated files or untyped escape hatches
+**Depends on**: Nothing (first phase of v1.5)
+**Requirements**: CLN-01, CLN-02, CLN-03, CLN-04
+**Success Criteria** (what must be TRUE):
+  1. No files matching `02a-initial-hypothesis-extractor-*` exist in the workflow directory, and no `index.ts` references them
+  2. Running Knip reports zero unused exports in `src/` (or all remaining are false positives documented with justification)
+  3. `shared-memory.ts` is either removed (if unused) or its purpose is documented with an inline comment explaining its consumers
+  4. `npx tsc --noEmit` reports zero `any` annotations in workflow code (only the pre-existing CSS module error remains)
+  5. `npm run eval -- --problem linguini-1` passes with identical scores to pre-cleanup baseline
+**Plans**: TBD
+
+Plans:
+- [ ] 27-01: TBD
+
+### Phase 28: Agent Factory
+**Goal**: A single factory function produces all 13 workflow agents, eliminating boilerplate while preserving dynamic model resolution
+**Depends on**: Phase 27
+**Requirements**: STR-04, STR-05, STR-06, STR-07
+**Success Criteria** (what must be TRUE):
+  1. `agent-factory.ts` exists with a `createWorkflowAgent()` function that handles reasoning, extraction, and tester agent variants
+  2. All 13 `*-agent.ts` files use the factory (no raw `new Agent()` constructor calls remain)
+  3. Running with `--mode testing` and `--mode production` logs different model IDs in execution output, confirming dynamic model resolution works
+  4. `npm run eval -- --problem linguini-1` passes with identical scores to pre-factory baseline
+**Plans**: TBD
+
+Plans:
+- [ ] 28-01: TBD
+
+### Phase 29: Hypothesize Step Split
+**Goal**: The 1,240-line hypothesize step is decomposed into focused sub-phase files that are independently readable without any behavioral change
+**Depends on**: Phase 28
+**Requirements**: STR-01, STR-02, STR-03
+**Success Criteria** (what must be TRUE):
+  1. Four sub-phase files exist (`02a-dispatch.ts`, `02b-hypothesize.ts`, `02c-verify.ts`, `02d-synthesize.ts`), each under 350 lines
+  2. `02-hypothesize.ts` is reduced to a thin coordinator (under 200 lines) that imports and calls sub-phase functions
+  3. No sub-phase file imports from another sub-phase file (import-only leaves verified by grep)
+  4. `npm run eval -- --comparison` produces identical scores to the pre-split baseline, confirming zero behavioral regression
+**Plans**: TBD
+
+Plans:
+- [ ] 29-01: TBD
+
+### Phase 30: Mastra Prompt Engineering
+**Goal**: All 13 Mastra agent prompts are rewritten using model-specific best practices with eval-verified non-regression
+**Depends on**: Phase 29
+**Requirements**: PE-01, PE-02, PE-03, PE-05, PE-06, PE-07
+**Success Criteria** (what must be TRUE):
+  1. A numeric eval baseline (translation-accuracy and rule-quality scores) is captured and saved before any prompt changes
+  2. All 5 GPT-5-mini agent prompts use static-first structure, explicit JSON schema descriptions, and literal instruction-following directives
+  3. All 6 Gemini 3 Flash agent prompts use XML-delimited sections with no chain-of-thought scaffolding and no temperature overrides
+  4. Confidence/conclusion vocabulary is consistent across all 13 Mastra agent prompts (no mixed terminology like "confident"/"certain"/"sure")
+  5. At least one `--mode production` eval run per model family confirms no production-model-specific regressions
+**Plans**: TBD
+
+Plans:
+- [ ] 30-01: TBD
+
+### Phase 31: Claude Code Prompt Engineering
+**Goal**: All 6 Claude Code agent prompts follow Anthropic best practices for Claude Opus 4.6 with XML structure and explicit tool guidance
+**Depends on**: Phase 30
+**Requirements**: PE-04
+**Success Criteria** (what must be TRUE):
+  1. All 6 Claude Code `.md` agent files use XML-tagged sections (`<instructions>`, `<context>`, `<input>`, `<task>`) instead of markdown headings for structural boundaries
+  2. Each agent prompt opens with a role definition as the first sentence before any other content
+  3. Prompts place long data/context before the task description (data-first ordering per Anthropic guidance)
+  4. Tool use instructions specify conditions and expected behavior rather than blanket "ALWAYS" directives
+**Plans**: TBD
+
+Plans:
+- [ ] 31-01: TBD
+
+### Phase 32: Frontend Cleanup
+**Goal**: Trace panel components use named, typed event handlers instead of inline callbacks
+**Depends on**: Nothing (independent of other v1.5 phases)
+**Requirements**: FE-01, FE-02
+**Success Criteria** (what must be TRUE):
+  1. DevTracePanel has zero inline arrow functions in JSX event handler props (all extracted to named functions)
+  2. All trace component props use explicitly named interface types (no inline `{ foo: string; bar: number }` prop definitions)
+  3. The trace panel renders identically in the browser with all event types visible (data-tool-call, data-vocabulary-update, data-rules-update confirmed in dev mode)
+**Plans**: TBD
+
+Plans:
+- [ ] 32-01: TBD
+
 ## Progress
+
+**Execution Order:**
+Phases execute in numeric order: 27 -> 28 -> 29 -> 30 -> 31 -> 32
+(Phase 32 is independent and can run in parallel with 30-31 if desired)
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 | --- | --- | --- | --- | --- |
@@ -96,9 +199,16 @@
 | 24. Output and Integration | v1.4 | 1/1 | Complete | 2026-03-08 |
 | 25. Fix Step 4c Verifier Orchestration | v1.4 | 1/1 | Complete | 2026-03-08 |
 | 26. Documentation Consistency Cleanup | v1.4 | 1/1 | Complete | 2026-03-08 |
+| 27. Dead Code & Type Safety | v1.5 | 0/? | Not started | - |
+| 28. Agent Factory | v1.5 | 0/? | Not started | - |
+| 29. Hypothesize Step Split | v1.5 | 0/? | Not started | - |
+| 30. Mastra Prompt Engineering | v1.5 | 0/? | Not started | - |
+| 31. Claude Code Prompt Engineering | v1.5 | 0/? | Not started | - |
+| 32. Frontend Cleanup | v1.5 | 0/? | Not started | - |
 
 _v1.0: 7 phases, 16 plans. All complete._
 _v1.1: 6 phases, 9 plans. All complete._
 _v1.2: 3 phases, 7 plans. All complete._
 _v1.3: 2 phases, 4 plans. All complete._
 _v1.4: 8 phases, 9 plans. All complete._
+_v1.5: 6 phases. Planning._
