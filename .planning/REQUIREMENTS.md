@@ -14,11 +14,11 @@
 
 ### Orchestration
 
-- [ ] **ORCH-01**: User can trigger solver via `/solve` slash command in Claude Code
-- [ ] **ORCH-02**: Orchestrator asks for problem input (paste text or provide file path)
-- [ ] **ORCH-03**: Orchestrator dispatches subagents in pipeline order with file-based state
-- [ ] **ORCH-04**: Each agent reads predecessor files and writes its own named output file
-- [ ] **ORCH-05**: Orchestrator selects best hypothesis by comparing test pass rates from files
+- [x] **ORCH-01**: User can trigger solver via `/solve` slash command in Claude Code
+- [x] **ORCH-02**: Orchestrator asks for problem input (paste text or provide file path)
+- [x] **ORCH-03**: Orchestrator dispatches subagents in pipeline order with file-based state
+- [x] **ORCH-04**: Each agent reads predecessor files and writes its own named output file
+- [x] **ORCH-05**: Orchestrator selects best hypothesis by comparing test pass rates from files
 
 ### Extraction
 
@@ -97,11 +97,11 @@
 | HYPO-01 | Phase 21 | Complete |
 | HYPO-02 | Phase 21 | Complete |
 | HYPO-03 | Phase 21 | Complete |
-| ORCH-01 | Phase 22 | Pending |
-| ORCH-02 | Phase 22 | Pending |
-| ORCH-03 | Phase 22 | Pending |
-| ORCH-04 | Phase 22 | Pending |
-| ORCH-05 | Phase 22 | Pending |
+| ORCH-01 | Phase 22 | Complete |
+| ORCH-02 | Phase 22 | Complete |
+| ORCH-03 | Phase 22 | Complete |
+| ORCH-04 | Phase 22 | Complete |
+| ORCH-05 | Phase 22 | Complete |
 | VERI-01 | Phase 23 | Pending |
 | VERI-02 | Phase 23 | Pending |
 | VERI-03 | Phase 23 | Pending |
