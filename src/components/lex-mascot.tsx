@@ -102,12 +102,12 @@ export function LexMascot() {
           className="shrink-0"
           priority
         />
-        <svg width="40" height="8" viewBox="0 0 40 8" className="shrink-0">
+        <svg width="76" height="8" viewBox="0 0 76 8" className="shrink-0">
           <line x1="0" y1="0" x2="0" y2="4" stroke="var(--muted-foreground)" strokeWidth="1" />
-          <line x1="0" y1="4" x2="40" y2="4" stroke="var(--muted-foreground)" strokeWidth="1" />
-          <line x1="40" y1="0" x2="40" y2="4" stroke="var(--muted-foreground)" strokeWidth="1" />
+          <line x1="0" y1="4" x2="76" y2="4" stroke="var(--muted-foreground)" strokeWidth="1" />
+          <line x1="76" y1="0" x2="76" y2="4" stroke="var(--muted-foreground)" strokeWidth="1" />
         </svg>
-        <span className="text-[10px] uppercase tracking-wider text-muted-foreground mt-0.5">
+        <span className="text-[10px] uppercase tracking-wider text-muted-foreground mt-0.5 font-heading">
           Lex the Duck
         </span>
       </div>

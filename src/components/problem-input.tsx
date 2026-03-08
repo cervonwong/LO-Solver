@@ -95,8 +95,8 @@ export function ProblemInput({
 
         {/* Empty state overlay */}
         {!hasContent && !loading && (
-          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-            <p className="text-sm text-muted-foreground">
+          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center font-heading">
+            <p className="text-lg text-muted-foreground">
               Paste a linguistics olympiad problem here
             </p>
             <p className="mt-1 text-xs text-muted-foreground">or</p>
@@ -104,7 +104,7 @@ export function ProblemInput({
               type="button"
               onClick={() => setComboOpen(true)}
               disabled={isDisabled}
-              className="pointer-events-auto mt-2 border border-border bg-surface-2 px-3 py-1.5 text-xs uppercase tracking-wider text-muted-foreground hover-hatch-cyan"
+              className="pointer-events-auto mt-2 border border-border bg-surface-2 px-3 py-1.5 text-xs tracking-wider text-muted-foreground hover-hatch-cyan"
             >
               Choose from our examples
             </button>
