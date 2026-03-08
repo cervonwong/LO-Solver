@@ -9,7 +9,7 @@ export interface MessageSegment {
  * 5 message variants per MascotState (25 total).
  * Each variant is an array of MessageSegment with optional accent spans.
  */
-export const MASCOT_MESSAGES: Record<MascotState, MessageSegment[][]> = {
+const MASCOT_MESSAGES: Record<MascotState, MessageSegment[][]> = {
   idle: [
     [
       { text: "I'm Lex, the Linguistics Olympiad Problem solving duck! " },

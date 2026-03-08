@@ -12,7 +12,7 @@ interface WorkflowToastProps {
   mascotImage: string;
 }
 
-export function WorkflowToast({ id, title, message, accentColorClass, mascotImage }: WorkflowToastProps) {
+function WorkflowToast({ id, title, message, accentColorClass, mascotImage }: WorkflowToastProps) {
   return (
     <div className="blueprint-card flex items-center gap-3 bg-[rgba(0,40,80,0.95)] p-3">
       <Image src={mascotImage} alt="" width={32} height={32} className="shrink-0" />
@@ -88,21 +88,6 @@ export function showSolveErrorToast(stepName?: string) {
       />
     ),
     { id: 'solve-error' },
-  );
-}
-
-export function showApiKeyErrorToast() {
-  toast.custom(
-    (id) => (
-      <WorkflowToast
-        id={id}
-        title="API KEY ERROR"
-        message="Check your key in settings — it may be invalid or expired"
-        accentColorClass="text-destructive"
-        mascotImage="/lex-defeated.png"
-      />
-    ),
-    { id: 'api-key-error' },
   );
 }
 

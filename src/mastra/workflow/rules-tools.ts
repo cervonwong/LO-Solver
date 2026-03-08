@@ -10,9 +10,6 @@ import {
 } from './request-context-helpers';
 import { formatTimestamp } from './logging-utils';
 
-export { ruleSchema } from './workflow-schemas';
-export type RuleEntry = Rule;
-
 /**
  * getRules - Read all rules from the rules store
  * Use this at the end of your task to verify rules state after updates.
@@ -295,5 +292,3 @@ export const rulesTools = {
   removeRules,
   clearRules,
 };
-
-export type RulesTools = typeof rulesTools;

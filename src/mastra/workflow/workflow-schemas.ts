@@ -2,8 +2,6 @@ import { z } from 'zod';
 import { vocabularyEntrySchema } from './vocabulary-tools';
 import { getLogFilePath, initializeLogFile } from './logging-utils';
 
-export const MAX_VERIFY_IMPROVE_ITERATIONS = 4;
-
 // ---------------------------------------------------------------------------
 // Core schemas (defined first since other schemas reference them)
 // ---------------------------------------------------------------------------
@@ -136,7 +134,7 @@ export const structuredProblemSchema = z.object({
 // Rules extraction schema (used by hypothesis extractor)
 // ---------------------------------------------------------------------------
 
-export const rulesSchema = z.object({
+const rulesSchema = z.object({
   success: z
     .boolean()
     .describe(
@@ -240,26 +238,6 @@ export const questionsAnsweredSchema = z.object({
 // Hypothesis-test loop schemas
 // ---------------------------------------------------------------------------
 
-// Combined schema for the hypothesis-test loop
-// This schema carries all the data needed for both the hypothesizer and tester
-// Vocabulary is managed via workflow state, not passed in this schema
-export const hypothesisTestLoopSchema = z.object({
-  // The original structured problem data (immutable through the loop)
-  structuredProblem: structuredProblemDataSchema,
-  // The current hypothesized rules (null on first iteration, updated each iteration)
-  rules: rulesArraySchema.nullable(),
-  // The test results from the previous iteration (null on first iteration, updated each iteration)
-  testResults: verifierFeedbackSchema.nullable(),
-  // The current iteration count (for tracking purposes, not passed to agents)
-  iterationCount: z.number(),
-});
-
-// Schema for initial hypothesis step input
-export const initialHypothesisInputSchema = structuredProblemDataSchema;
-
-// Schema for initial hypothesis step output (includes rules, vocabulary, and loop state)
-export const initialHypothesisOutputSchema = hypothesisTestLoopSchema;
-
 // ---------------------------------------------------------------------------
 // Verification metadata schemas (used by multi-perspective step output and evals)
 // ---------------------------------------------------------------------------
@@ -354,8 +332,6 @@ export const dispatcherOutputSchema = z.object({
   perspectives: z.array(perspectiveSchema).nullable(),
 });
 
-export type DispatcherOutput = z.infer<typeof dispatcherOutputSchema>;
-
 /**
  * Result of one perspective's hypothesis + verification scoring.
  */
@@ -375,18 +351,6 @@ export const perspectiveResultSchema = z.object({
 export type PerspectiveResult = z.infer<typeof perspectiveResultSchema>;
 
 /**
- * Synthesis input: what the synthesizer receives to merge perspectives.
- * Actual rules and vocabulary for each perspective are in draft stores
- * accessed via RequestContext, not passed in this schema.
- */
-export const synthesisInputSchema = z.object({
-  structuredProblem: structuredProblemDataSchema,
-  perspectiveResults: z.array(perspectiveResultSchema),
-});
-
-export type SynthesisInput = z.infer<typeof synthesisInputSchema>;
-
-/**
  * Improver-dispatcher output: gap analysis for round 2+ of the multi-perspective loop.
  */
 export const improverDispatcherOutputSchema = z.object({
@@ -404,4 +368,3 @@ export const improverDispatcherOutputSchema = z.object({
     .describe('New or refined perspectives to explore'),
 });
 
-export type ImproverDispatcherOutput = z.infer<typeof improverDispatcherOutputSchema>;

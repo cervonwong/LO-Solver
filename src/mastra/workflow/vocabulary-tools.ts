@@ -335,5 +335,3 @@ export const vocabularyTools = {
   removeVocabulary,
   clearVocabulary,
 };
-
-export type VocabularyTools = typeof vocabularyTools;

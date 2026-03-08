@@ -142,23 +142,6 @@ export async function emitTraceEvent(
 }
 
 /**
- * Helper to get the ID of the currently-executing agent from request context.
- * Returns undefined if no agent is active.
- */
-export function getParentAgentId(requestContext: RequestContextGetter): string | undefined {
-  if (!requestContext) return undefined;
-  return requestContext.get('parent-agent-id') as string | undefined;
-}
-
-/**
- * Helper to get the current step ID from request context.
- */
-export function getStepId(requestContext: RequestContextGetter): string | undefined {
-  if (!requestContext) return undefined;
-  return requestContext.get('step-id') as string | undefined;
-}
-
-/**
  * Emit a trace event from a tool via the step writer stored in requestContext.
  * This bypasses the broken ctx.writer?.custom() path (Mastra does not pass
  * outputWriter to tools when called from workflow steps).
@@ -292,13 +275,6 @@ export function getRulesState(requestContext: RequestContextGetter): Map<string,
   return state;
 }
 
-/**
- * Helper to get rules as an array from the main rules Map.
- */
-export function getRulesArray(requestContext: RequestContextGetter): Rule[] {
-  return Array.from(getRulesState(requestContext).values());
-}
-
 // ---------------------------------------------------------------------------
 // Draft store helpers
 // ---------------------------------------------------------------------------
@@ -365,68 +341,6 @@ export function createDraftStore(
 }
 
 /**
- * Get a specific draft store by perspective ID.
- * Throws if the draft store does not exist.
- */
-export function getDraftStore(
-  requestContext: RequestContextGetter,
-  perspectiveId: string,
-): DraftStore {
-  const stores = getDraftStoresMap(requestContext);
-  const store = stores.get(perspectiveId);
-  if (!store) {
-    throw new Error(`Draft store not found for perspective '${perspectiveId}'`);
-  }
-  return store;
-}
-
-/**
- * Get all draft stores.
- */
-export function getAllDraftStores(requestContext: RequestContextGetter): Map<string, DraftStore> {
-  return getDraftStoresMap(requestContext);
-}
-
-/**
- * Merge a draft store's vocabulary and rules into the main stores.
- * Overwrites by key. Removes the draft store entry after merge.
- */
-export function mergeDraftToMain(
-  requestContext: RequestContextGetter,
-  perspectiveId: string,
-): void {
-  if (!requestContext) {
-    throw new Error('requestContext is required for draft store merge');
-  }
-  const stores = getDraftStoresMap(requestContext);
-  const draft = stores.get(perspectiveId);
-  if (!draft) {
-    throw new Error(`Draft store not found for perspective '${perspectiveId}'`);
-  }
-
-  // Merge vocabulary into main
-  const mainVocab = requestContext.get('vocabulary-state') as
-    | Map<string, VocabularyEntry>
-    | undefined;
-  if (mainVocab) {
-    for (const [key, entry] of draft.vocabulary) {
-      mainVocab.set(key, entry);
-    }
-  }
-
-  // Merge rules into main
-  const mainRules = requestContext.get('rules-state') as Map<string, Rule> | undefined;
-  if (mainRules) {
-    for (const [key, rule] of draft.rules) {
-      mainRules.set(key, rule);
-    }
-  }
-
-  // Remove the draft store
-  stores.delete(perspectiveId);
-}
-
-/**
  * Clear all draft stores.
  */
 export function clearAllDraftStores(requestContext: RequestContextGetter): void {
@@ -434,22 +348,3 @@ export function clearAllDraftStores(requestContext: RequestContextGetter): void 
   stores.clear();
 }
 
-/**
- * Get the vocabulary Map from a specific draft store.
- */
-export function getDraftVocabularyState(
-  requestContext: RequestContextGetter,
-  perspectiveId: string,
-): Map<string, VocabularyEntry> {
-  return getDraftStore(requestContext, perspectiveId).vocabulary;
-}
-
-/**
- * Get the rules Map from a specific draft store.
- */
-export function getDraftRulesState(
-  requestContext: RequestContextGetter,
-  perspectiveId: string,
-): Map<string, Rule> {
-  return getDraftStore(requestContext, perspectiveId).rules;
-}

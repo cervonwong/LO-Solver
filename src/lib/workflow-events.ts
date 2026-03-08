@@ -8,7 +8,7 @@ export type UIStepId =
   | `verify-${number}`
   | `improve-${number}`;
 
-export const STEP_LABELS: Record<StepId, string> = {
+const STEP_LABELS: Record<StepId, string> = {
   'extract-structure': 'Extract',
   'multi-perspective-hypothesis': 'Hypothesize',
   'answer-questions': 'Answer',

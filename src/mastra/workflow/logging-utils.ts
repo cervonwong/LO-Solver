@@ -15,7 +15,7 @@ export interface StepTiming {
 }
 
 // Get log directory from environment or default
-export const getLogDirectory = (): string =>
+const getLogDirectory = (): string =>
   process.env.LOG_DIRECTORY || path.join(process.cwd(), 'logs');
 
 // Generate timestamped log file path
@@ -33,7 +33,7 @@ export const getLogFilePath = (): string => {
 };
 
 // Format time in GMT+8
-export const formatTimeGMT8 = (date: Date): string => {
+const formatTimeGMT8 = (date: Date): string => {
   const gmt8 = new Date(date.getTime() + 8 * 60 * 60 * 1000);
   const hours = String(gmt8.getUTCHours()).padStart(2, '0');
   const minutes = String(gmt8.getUTCMinutes()).padStart(2, '0');
@@ -114,7 +114,7 @@ interface ReasoningChunk {
 }
 
 // Format reasoning for logging
-export const formatReasoning = (
+const formatReasoning = (
   reasoning: string | ReasoningChunk[] | null | undefined,
 ): string | null => {
   if (!reasoning) return null;

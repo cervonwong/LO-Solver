@@ -2,7 +2,7 @@
 
 import { useCallback, useSyncExternalStore } from 'react';
 
-export interface WorkflowSettings {
+interface WorkflowSettings {
   maxRounds: number; // 1-5, default 3
   perspectiveCount: number; // 2-7, default 3
 }

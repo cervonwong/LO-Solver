@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/table';
 import { RollingActivityChips, type ActivityEvent } from '@/components/rolling-activity-chips';
 
-export interface RuleEntry {
+interface RuleEntry {
   title: string;
   description: string;
   confidence?: string;

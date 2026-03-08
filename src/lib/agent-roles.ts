@@ -1,4 +1,4 @@
-export type AgentRoleGroup =
+type AgentRoleGroup =
   | 'extractor'
   | 'hypothesizer'
   | 'tester'
@@ -6,7 +6,7 @@ export type AgentRoleGroup =
   | 'answerer'
   | 'default';
 
-export interface AgentRole {
+interface AgentRole {
   group: AgentRoleGroup;
   /** CSS color value for tint overlay and border */
   color: string;

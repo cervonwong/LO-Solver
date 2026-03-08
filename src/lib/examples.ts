@@ -1,6 +1,6 @@
 import { EXAMPLE_PROBLEMS, type ExampleProblemMeta, type LinguiniQuestion } from '@examples/index';
 
-export { EXAMPLE_PROBLEMS, type ExampleProblemMeta };
+export { EXAMPLE_PROBLEMS };
 
 /** Derive the UI display label from example metadata. */
 export function getExampleLabel(e: ExampleProblemMeta): string {

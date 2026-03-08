@@ -1,3 +1,7 @@
+// Knip: workflowAgents is consumed by src/mastra/index.ts via spread operator.
+// Individual agent exports may appear unused to static analysis but are
+// required for Mastra runtime registration.
+
 import { initialHypothesizerAgent } from './02-initial-hypothesizer-agent';
 import { dispatcherAgent } from './02-dispatcher-agent';
 import { synthesizerAgent } from './02-synthesizer-agent';
@@ -10,10 +14,6 @@ import { verifierOrchestratorAgent } from './03a-verifier-orchestrator-agent';
 import { verifierFeedbackExtractorAgent } from './03a2-verifier-feedback-extractor-agent';
 import { ruleTesterAgent } from './03a-rule-tester-agent';
 import { sentenceTesterAgent } from './03a-sentence-tester-agent';
-import { vocabularyTools } from './vocabulary-tools';
-import { rulesTools } from './rules-tools';
-import { testRuleTool, testRuleWithRulesetTool } from './03a-rule-tester-tool';
-import { testSentenceTool, testSentenceWithRulesetTool } from './03a-sentence-tester-tool';
 
 // All agents for the solver workflow, registered for observability
 export const workflowAgents = {
@@ -29,14 +29,4 @@ export const workflowAgents = {
   ruleTesterAgent,
   sentenceTesterAgent,
   questionAnswererAgent,
-};
-
-// All tools for the solver workflow, for reference
-export const workflowTools = {
-  ...vocabularyTools,
-  ...rulesTools,
-  testRule: testRuleTool,
-  testSentence: testSentenceTool,
-  testRuleWithRuleset: testRuleWithRulesetTool,
-  testSentenceWithRuleset: testSentenceWithRulesetTool,
 };
