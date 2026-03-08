@@ -6,7 +6,7 @@
 - ✅ **v1.1 UI Polish** — Phases 8-13 (shipped 2026-03-03)
 - ✅ **v1.2 Cleanup & Quality** — Phases 14-16 (shipped 2026-03-04)
 - ✅ **v1.3 User API Key** — Phases 17-18 (shipped 2026-03-06)
-- 🚧 **v1.4 Claude Code Native Solver** — Phases 19-24 (in progress)
+- 🚧 **v1.4 Claude Code Native Solver** — Phases 19-26 (in progress)
 
 ## Phases
 
@@ -62,6 +62,8 @@
 - [x] **Phase 22: Orchestrator and Entry Point** - Build slash command, orchestrator agent, and pipeline dispatch logic (completed 2026-03-08)
 - [x] **Phase 23: Verify-Improve Loop and Answer** - Implement iterative verification, improvement, and final answer agents (completed 2026-03-08)
 - [x] **Phase 24: Output and Integration** - Terminal results display, markdown solution file, workspace preservation (completed 2026-03-08)
+- [ ] **Phase 25: Fix Step 4c Verifier Orchestration** - Rewrite Step 4c to use per-call verifier pattern, fix pass rate extraction and convergence check
+- [ ] **Phase 26: Documentation Consistency Cleanup** - Fix model exception note, stale requirement wording, and ROADMAP stale text
 
 ## Phase Details
 
@@ -138,6 +140,29 @@ Plans:
   3. All intermediate JSON files remain in the workspace directory for debugging and inspection
 **Plans**: TBD
 
+### Phase 25: Fix Step 4c Verifier Orchestration
+**Goal**: Step 4c uses per-call verifier pattern matching Step 5c, producing correct verification files for hypothesis comparison
+**Depends on**: Phase 24
+**Requirements**: ORCH-03, ORCH-04, VERI-01
+**Gap Closure**: Closes INT-01 integration gap and Step 4c flow gap from v1.4 audit
+**Success Criteria** (what must be TRUE):
+  1. Step 4c dispatches verifier per-rule and per-sentence (not monolithic), matching Step 5c's pattern
+  2. Step 4c assembles verification-{P}.md with ## Summary and Pass rate from individual test results
+  3. Step 4d can extract per-perspective pass rates from the corrected output format
+  4. Step 4f convergence check produces consistent output format
+**Plans**: TBD
+
+### Phase 26: Documentation Consistency Cleanup
+**Goal**: All documentation files accurately reflect the implemented design decisions
+**Depends on**: Phase 24
+**Requirements**: INFR-02
+**Gap Closure**: Closes INT-02 integration gap and tech debt items from v1.4 audit
+**Success Criteria** (what must be TRUE):
+  1. CLAUDE.md notes the verifier Sonnet exception alongside the Opus default
+  2. REQUIREMENTS.md wording reflects actual design (markdown files, sequential dispatch) with notes on design evolution
+  3. ROADMAP SC5 references markdown files instead of "valid JSON"
+**Plans**: TBD
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -166,9 +191,11 @@ Plans:
 | 22. Orchestrator and Entry Point | 1/1 | Complete    | 2026-03-08 | - |
 | 23. Verify-Improve Loop and Answer | 2/2 | Complete    | 2026-03-08 | - |
 | 24. Output and Integration | 1/1 | Complete    | 2026-03-08 | - |
+| 25. Fix Step 4c Verifier Orchestration | v1.4 | 0/0 | Pending | - |
+| 26. Documentation Consistency Cleanup | v1.4 | 0/0 | Pending | - |
 
 _v1.0: 7 phases, 16 plans. All complete._
 _v1.1: 6 phases, 9 plans. All complete._
 _v1.2: 3 phases, 7 plans. All complete._
 _v1.3: 2 phases, 4 plans. All complete._
-_v1.4: 6 phases, plans TBD._
+_v1.4: 8 phases, plans TBD._

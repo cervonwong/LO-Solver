@@ -16,8 +16,8 @@
 
 - [x] **ORCH-01**: User can trigger solver via `/solve` slash command in Claude Code
 - [x] **ORCH-02**: Orchestrator asks for problem input (paste text or provide file path)
-- [x] **ORCH-03**: Orchestrator dispatches subagents in pipeline order with file-based state
-- [x] **ORCH-04**: Each agent reads predecessor files and writes its own named output file
+- [ ] **ORCH-03**: Orchestrator dispatches subagents in pipeline order with file-based state
+- [ ] **ORCH-04**: Each agent reads predecessor files and writes its own named output file
 - [x] **ORCH-05**: Orchestrator selects best hypothesis by comparing test pass rates from files
 
 ### Extraction
@@ -33,7 +33,7 @@
 
 ### Verification
 
-- [x] **VERI-01**: Verifier agent tests each rule and sentence against the dataset
+- [ ] **VERI-01**: Verifier agent tests each rule and sentence against the dataset
 - [x] **VERI-02**: Verifier writes test results to `workspace/verification-{iteration}.json`
 - [x] **VERI-03**: Verify/improve loop runs up to 4 iterations
 
@@ -56,7 +56,7 @@
 ### Infrastructure
 
 - [x] **INFR-01**: `claude-code/` directory with `.claude/` containing all agent/skill definitions
-- [x] **INFR-02**: All agents use Opus 4.6
+- [ ] **INFR-02**: All agents use Opus 4.6
 - [x] **INFR-03**: CLAUDE.md with project context and conventions
 
 ## Future Requirements
@@ -90,7 +90,7 @@
 | DOCS-03 | Phase 19 | Complete |
 | DOCS-04 | Phase 19 | Complete |
 | INFR-01 | Phase 20 | Complete |
-| INFR-02 | Phase 20 | Complete |
+| INFR-02 | Phase 20, 26 | Pending |
 | INFR-03 | Phase 20 | Complete |
 | EXTR-01 | Phase 21 | Complete |
 | EXTR-02 | Phase 21 | Complete |
@@ -99,10 +99,10 @@
 | HYPO-03 | Phase 21 | Complete |
 | ORCH-01 | Phase 22 | Complete |
 | ORCH-02 | Phase 22 | Complete |
-| ORCH-03 | Phase 22 | Complete |
-| ORCH-04 | Phase 22 | Complete |
+| ORCH-03 | Phase 22, 25 | Pending |
+| ORCH-04 | Phase 22, 25 | Pending |
 | ORCH-05 | Phase 22 | Complete |
-| VERI-01 | Phase 23 | Complete |
+| VERI-01 | Phase 23, 25 | Pending |
 | VERI-02 | Phase 23 | Complete |
 | VERI-03 | Phase 23 | Complete |
 | IMPR-01 | Phase 23 | Complete |
@@ -116,8 +116,10 @@
 **Coverage:**
 - v1.4 requirements: 27 total
 - Mapped to phases: 27
-- Unmapped: 0 ✓
+- Unmapped: 0
+- Pending (gap closure): 4 (ORCH-03, ORCH-04, VERI-01, INFR-02)
+- Complete: 23
 
 ---
 *Requirements defined: 2026-03-07*
-*Last updated: 2026-03-07 after initial definition*
+*Last updated: 2026-03-08 after gap closure phase assignments*
