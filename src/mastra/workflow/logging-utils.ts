@@ -107,16 +107,22 @@ export const logWorkflowSummary = (
   fs.appendFileSync(logFile, content);
 };
 
+/** Shape of a single reasoning chunk returned by LLM providers. */
+interface ReasoningChunk {
+  payload?: { text?: string };
+  text?: string;
+}
+
 // Format reasoning for logging
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const formatReasoning = (reasoning: any): string | null => {
+export const formatReasoning = (
+  reasoning: string | ReasoningChunk[] | null | undefined,
+): string | null => {
   if (!reasoning) return null;
   if (typeof reasoning === 'string') return reasoning;
   if (!Array.isArray(reasoning)) return null;
 
   const result = reasoning
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    .map((chunk: any) => chunk.payload?.text || chunk.text || '')
+    .map((chunk: ReasoningChunk) => chunk.payload?.text || chunk.text || '')
     .filter((text: string) => text && text !== '[REDACTED]')
     .join('');
 
@@ -129,8 +135,7 @@ export const logAgentOutput = (
   stepName: string,
   agentName: string,
   output: unknown,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  reasoning?: any,
+  reasoning?: string | ReasoningChunk[] | null,
   startTime?: number,
 ): void => {
   let content = `${formatTimestamp(startTime)} ## ${stepName}\n\n**Agent:** ${agentName}\n\n`;

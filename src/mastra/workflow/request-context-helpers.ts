@@ -203,13 +203,24 @@ export async function emitToolTraceEvent(
 // Cost tracking helpers
 // ---------------------------------------------------------------------------
 
+/** Shape of the cost-related metadata nested in agent results. */
+interface AgentResultCostInfo {
+  steps?: Array<{
+    providerMetadata?: {
+      openrouter?: { usage?: { cost?: number } };
+    };
+  }>;
+  providerMetadata?: {
+    openrouter?: { usage?: { cost?: number } };
+  };
+}
+
 /**
  * Extract total cost from an agent response.
  * Sums per-step costs for multi-step agents, falls back to top-level cost.
  * Accepts any object shape (FullOutput, AgentGenerateResult, etc.).
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function extractCostFromResult(result: Record<string, any>): number {
+export function extractCostFromResult(result: AgentResultCostInfo): number {
   let callCost = 0;
   if (result.steps && Array.isArray(result.steps) && result.steps.length > 0) {
     for (const step of result.steps) {
@@ -224,14 +235,19 @@ export function extractCostFromResult(result: Record<string, any>): number {
   return callCost;
 }
 
+/** Typed read/write interface for RequestContext in cost-tracking helpers. */
+type RequestContextReadWrite = {
+  get: (key: keyof WorkflowRequestContext) => unknown;
+  set: <K extends keyof WorkflowRequestContext>(key: K, value: WorkflowRequestContext[K]) => void;
+};
+
 /**
  * Update cumulative cost in a RequestContext and emit data-cost-update events
  * at each $1 boundary crossing.
  * Must be called with the full RequestContext (has set()) from step files.
  */
 export async function updateCumulativeCost(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  requestContext: { get: (key: any) => any; set: (key: any, value: any) => void },
+  requestContext: RequestContextReadWrite,
   writer: StepWriter | undefined,
   callCost: number,
 ): Promise<void> {
