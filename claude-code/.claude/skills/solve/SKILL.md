@@ -211,12 +211,96 @@ After the synthesizer completes:
 
 Print: `"Checking convergence..."`
 
-Use the **verifier** agent:
-- Read the hypothesis from: `{WORKSPACE}/solution.md`
-- Read the problem from: `{WORKSPACE}/problem.md`
-- Write verification results to: `{WORKSPACE}/verification.md`
+This is the multi-call verification orchestration for the merged solution. The /solve skill itself orchestrates individual verifier calls and aggregates results.
 
-After the verifier completes, read `{WORKSPACE}/verification.md` and check the `## Summary` section:
+**Step 4f.1: Extract rules and sentences from solution and problem**
+
+Read `{WORKSPACE}/solution.md` to get the list of rule titles (each `### {title}` under `## Rules`).
+Read `{WORKSPACE}/problem.md` to get dataset sentences and questions.
+
+**Step 4f.2: Test rules (one per call)**
+
+For each rule title in the solution:
+1. Use the **verifier** agent in rule test mode:
+   - Test type: "rule"
+   - Rule title: {rule_title}
+   - Solution file: {WORKSPACE}/solution.md
+   - Problem file: {WORKSPACE}/problem.md
+   - Output file: a temporary result (read back immediately)
+2. Read the verifier's output to get the Status (PASS/FAIL/NEEDS_UPDATE)
+3. Record the result: rule title, status, reasoning
+
+**Step 4f.3: Test sentences (one per call, blind translation)**
+
+For each dataset sentence (from the `## Dataset` table in problem.md):
+1. Use the **verifier** agent in sentence test mode:
+   - Test type: "sentence"
+   - Sentence: the foreign text to translate
+   - Direction: the translation direction (based on which column is source vs target)
+   - Solution file: {WORKSPACE}/solution.md
+   - Problem file: {WORKSPACE}/problem.md
+   - Output file: a temporary result
+2. Read the verifier's output to get the blind Translation
+3. Normalize both the verifier's translation and the expected translation:
+   - Trim whitespace
+   - Convert to lowercase
+   - Remove leading/trailing punctuation
+4. Compare: PASS if normalized strings match, FAIL otherwise
+5. Record: sentence number, expected, got, PASS/FAIL
+
+For each question in problem.md (from `## Questions`):
+1. Use the **verifier** agent in sentence test mode (same as above but no expected answer)
+2. Read the verifier's blind translation
+3. Record: question ID, translation (for coverage logging only -- questions do not count toward pass rate)
+
+**Step 4f.4: Aggregate and write verification file**
+
+Compute:
+- rules_passed = count of rules with PASS status
+- rules_failed = count of rules with FAIL or NEEDS_UPDATE status
+- sentences_passed = count of dataset sentences with PASS status
+- sentences_failed = count of dataset sentences with FAIL status
+- pass_rate = round(100 * (rules_passed + sentences_passed) / (rules_total + sentences_total))
+
+Note: questions are NOT included in the pass rate denominator (they have no expected answer).
+
+Write `{WORKSPACE}/verification.md` with this structure:
+
+```
+# Final Verification
+
+## Summary
+
+- Rules tested: {rules_total}
+- Rules passed: {rules_passed}
+- Rules failed: {rules_failed}
+- Sentences tested: {sentences_total}
+- Sentences passed: {sentences_passed}
+- Sentences failed: {sentences_failed}
+- Pass rate: {pass_rate}%
+
+## Rule Results
+
+### {Rule title}
+**Status:** {PASS|FAIL|NEEDS_UPDATE}
+**Notes:** {reasoning from verifier}
+
+(repeat for each rule)
+
+## Sentence Results
+
+| # | {Foreign} | Expected {Target} | Generated {Target} | Status | Notes |
+|---|-----------|-------------------|---------------------|--------|-------|
+(one row per dataset sentence)
+
+## Question Coverage
+
+| # | Direction | Translation | Notes |
+|---|-----------|-------------|-------|
+(one row per question -- for logging, not pass rate)
+```
+
+After writing verification.md, read the `## Summary` section and check the pass rate:
 
 - If pass rate is **100%** (all rules pass, all sentences pass):
   - Print: `"Converged! All rules pass verification."`
