@@ -23,40 +23,40 @@
 ### Extraction
 
 - [x] **EXTR-01**: Extractor agent parses raw problem into structured JSON (context, dataset, questions)
-- [x] **EXTR-02**: Structured output written to `workspace/extracted.json`
+- [x] **EXTR-02**: Structured output written to `workspace/problem.md` (changed from extracted.json: markdown format adopted for all workspace files)
 
 ### Hypothesis
 
-- [x] **HYPO-01**: Multiple hypothesizer agents dispatched in parallel, each with a different linguistic perspective
-- [x] **HYPO-02**: Each hypothesizer writes rules + vocabulary to its own draft file (`workspace/hypothesis-{n}.json`)
+- [x] **HYPO-01**: Multiple hypothesizer agents dispatched sequentially, each with a different linguistic perspective (changed from parallel: deterministic perspective ordering)
+- [x] **HYPO-02**: Each hypothesizer writes rules + vocabulary to its own draft file (`workspace/hypotheses/round-{R}/perspective-{N}.md`) (changed from hypothesis-{n}.json: markdown format, round-based directory structure)
 - [x] **HYPO-03**: Best hypothesis selected by orchestrator based on test results
 
 ### Verification
 
 - [x] **VERI-01**: Verifier agent tests each rule and sentence against the dataset
-- [x] **VERI-02**: Verifier writes test results to `workspace/verification-{iteration}.json`
+- [x] **VERI-02**: Verifier writes test results to `workspace/verification-{iteration}.md` (changed from .json: markdown format adopted for all workspace files)
 - [x] **VERI-03**: Verify/improve loop runs up to 4 iterations
 
 ### Improvement
 
 - [x] **IMPR-01**: Improver agent reads verification failures and revises rules
-- [x] **IMPR-02**: Improved rules written to `workspace/improved-{iteration}.json`
+- [x] **IMPR-02**: Improved rules written to `workspace/improved-{iteration}.md` (changed from .json: markdown format adopted for all workspace files)
 
 ### Answer
 
 - [x] **ANSR-01**: Answerer agent applies validated rules to translate questions
-- [x] **ANSR-02**: Final answers written to `workspace/answers.json`
+- [x] **ANSR-02**: Final answers written to `workspace/answers.md` (changed from answers.json: markdown format adopted for all workspace files)
 
 ### Output
 
 - [x] **OUTP-01**: Results displayed in terminal (rules, vocabulary, answers)
 - [x] **OUTP-02**: Full solution written to markdown file with all intermediate steps
-- [x] **OUTP-03**: All intermediate JSON files preserved in workspace for debugging
+- [x] **OUTP-03**: All intermediate markdown files preserved in workspace for debugging (changed from JSON: markdown format adopted for all workspace files)
 
 ### Infrastructure
 
 - [x] **INFR-01**: `claude-code/` directory with `.claude/` containing all agent/skill definitions
-- [ ] **INFR-02**: All agents use Opus 4.6
+- [x] **INFR-02**: All agents use Opus 4.6 (exception: verifier uses Sonnet for cost efficiency)
 - [x] **INFR-03**: CLAUDE.md with project context and conventions
 
 ## Future Requirements
@@ -90,7 +90,7 @@
 | DOCS-03 | Phase 19 | Complete |
 | DOCS-04 | Phase 19 | Complete |
 | INFR-01 | Phase 20 | Complete |
-| INFR-02 | Phase 20, 26 | Pending |
+| INFR-02 | Phase 20, 26 | Complete |
 | INFR-03 | Phase 20 | Complete |
 | EXTR-01 | Phase 21 | Complete |
 | EXTR-02 | Phase 21 | Complete |
@@ -117,8 +117,8 @@
 - v1.4 requirements: 27 total
 - Mapped to phases: 27
 - Unmapped: 0
-- Pending (gap closure): 4 (ORCH-03, ORCH-04, VERI-01, INFR-02)
-- Complete: 23
+- Pending (gap closure): 0
+- Complete: 27
 
 ---
 *Requirements defined: 2026-03-07*

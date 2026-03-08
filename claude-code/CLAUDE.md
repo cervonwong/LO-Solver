@@ -4,7 +4,7 @@ This project reimplements the LO-Solver's Mastra-based pipeline as a Claude Code
 
 ## Model
 
-All solver agents use Opus 4.6. Every agent definition file MUST include `model: opus` in its YAML frontmatter.
+All solver agents use Opus 4.6 (exception: verifier uses Sonnet for cost efficiency). Every agent definition file MUST include `model: opus` in its YAML frontmatter.
 
 ## Pipeline
 
