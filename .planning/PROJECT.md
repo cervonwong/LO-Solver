@@ -66,7 +66,18 @@ The ONE thing that must work: **the agentic workflow must produce measurably bet
 
 ### Active
 
-(No active milestone — planning next)
+## Current Milestone: v1.5 Refactor & Prompt Engineering
+
+**Goal:** Clean up the codebase without changing functionality, then rewrite all agent prompts using the latest model-specific best practices from OpenAI, Google, and Anthropic.
+
+**Target features:**
+- Dead code removal and unused export cleanup
+- Split `02-hypothesize.ts` (1,240 lines) into sub-phase files
+- Agent factory pattern reducing boilerplate across 13 agent definitions
+- Schema and request-context-helpers reorganization into domain files
+- Frontend component cleanup (DevTracePanel, event handlers)
+- Type safety improvements (replace `any` with explicit interfaces)
+- Prompt engineering: rewrite all 19 agent prompts (13 Mastra + 6 Claude Code) using latest vendor guides
 
 ### Out of Scope
 
@@ -152,4 +163,4 @@ When working on any phase that touches Mastra code (agents, workflows, tools, ev
 
 ---
 
-*Last updated: 2026-03-08 after v1.4 milestone*
+*Last updated: 2026-03-08 after v1.5 milestone started*
