@@ -91,6 +91,7 @@ When creating or modifying UI components, **read `DESIGN.md` first** and follow 
 - Agent display names: `[Step N] Name` (e.g., `[Step 2] Initial Hypothesizer Agent`)
 - All agents use `UnicodeNormalizer` input processor
 - Models chosen per agent: GPT-5-mini for extraction/testing, Gemini 3 Flash for reasoning
+- Do not run `npm run dev` or other long-running servers; the user manages them manually
 - Do not run npm scripts automatically; verify with `npx tsc --noEmit` after code changes
 - Treat `mastra.db*` and `logs/` as ephemeral — do not commit or delete without being asked
 - Comments should be neutral, describing current behavior (no "Better"/"Improved"/"Enhanced")
