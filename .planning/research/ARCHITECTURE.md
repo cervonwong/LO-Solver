@@ -1,437 +1,668 @@
 # Architecture Research
 
-**Domain:** Claude Code native solver workflow for Linguistics Olympiad problems
-**Researched:** 2026-03-07
+**Domain:** Mastra workflow refactoring and prompt engineering — LO-Solver v1.5
+**Researched:** 2026-03-08
 **Confidence:** HIGH
 
-## System Overview
+## Overview
+
+This document maps the integration points for v1.5 refactoring changes: file splitting in `02-hypothesize.ts`, agent factory pattern, schema reorganization, and `request-context-helpers.ts` decomposition. All analysis is grounded in direct inspection of the existing codebase.
+
+---
+
+## Current System Layout
 
 ```
-claude-code/
-├─────────────────────────────────────────────────────────────────────┐
-│                     Entry Layer (Skill)                             │
-│  ┌───────────────────────────────────────────────────────────────┐  │
-│  │  /solve Skill (SKILL.md)                                     │  │
-│  │  Orchestrates the full pipeline, dispatches subagents         │  │
-│  └──────────────┬────────────────────────────────────────────────┘  │
-│                 │                                                   │
-├─────────────────┼───────────────────────────────────────────────────┤
-│                 │         Agent Layer (Subagents)                   │
-│  ┌──────────┐   │   ┌──────────────┐  ┌──────────────┐             │
-│  │ extractor│◄──┤   │hypothesizer-1│  │hypothesizer-N│ (parallel)  │
-│  └────┬─────┘   │   └──────┬───────┘  └──────┬───────┘             │
-│       │         │          │                  │                     │
-│       │    ┌────┴──────┐   └────────┬─────────┘                    │
-│       │    │ verifier  │◄───────────┘                              │
-│       │    └────┬──────┘                                           │
-│       │         │                                                  │
-│       │    ┌────┴──────┐                                           │
-│       │    │ improver  │ (loop back to verifier, max N rounds)     │
-│       │    └────┬──────┘                                           │
-│       │         │                                                  │
-│       │    ┌────┴──────┐                                           │
-│       │    │ answerer  │                                           │
-│       │    └───────────┘                                           │
-├───────┼─────────────────────────────────────────────────────────────┤
-│       │              Data Layer (Files)                             │
-│  ┌────┴─────────────────────────────────────────────────────────┐  │
-│  │  claude-code/workspace/                                      │  │
-│  │  ├── problem.md         (input problem text)                 │  │
-│  │  ├── extracted.json     (structured problem data)            │  │
-│  │  ├── perspectives.json  (dispatcher output)                  │  │
-│  │  ├── hypothesis-*.json  (per-perspective rules + vocab)      │  │
-│  │  ├── verification.json  (test results)                       │  │
-│  │  ├── rules.json         (current best rules)                 │  │
-│  │  ├── vocabulary.json    (current vocabulary)                 │  │
-│  │  └── answers.md         (final output)                       │  │
-│  └──────────────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────────────┘
+src/mastra/workflow/
+├── [agent files]              # 13 agent definitions (24-93 lines each)
+│   ├── 01-structured-problem-extractor-agent.ts
+│   ├── 02-dispatcher-agent.ts
+│   ├── 02-improver-dispatcher-agent.ts
+│   ├── 02-initial-hypothesizer-agent.ts
+│   ├── 02-synthesizer-agent.ts
+│   ├── 02a-initial-hypothesis-extractor-agent.ts  (DEPRECATED)
+│   ├── 03a-rule-tester-agent.ts
+│   ├── 03a-sentence-tester-agent.ts
+│   ├── 03a-verifier-orchestrator-agent.ts
+│   ├── 03a2-verifier-feedback-extractor-agent.ts
+│   ├── 03b-rules-improver-agent.ts
+│   ├── 03b2-rules-improvement-extractor-agent.ts
+│   └── 04-question-answerer-agent.ts
+├── [instructions files]       # One per agent (50-161 lines each)
+├── [tool files]               # vocabulary-tools.ts, rules-tools.ts, tester tools
+├── agent-utils.ts             # generateWithRetry + streamWithRetry (331 lines)
+├── logging-utils.ts           # Markdown log writers (302 lines)
+├── request-context-helpers.ts # All context accessors + cost tracking + draft stores (440 lines)
+├── request-context-types.ts   # WorkflowRequestContext interface (79 lines)
+├── workflow-schemas.ts        # All Zod schemas + initializeWorkflowState (407 lines)
+├── index.ts                   # Re-exports agents and tools
+├── shared-memory.ts           # (unclear purpose, needs audit)
+├── workflow.ts                # Workflow composition (pipeline assembly)
+└── steps/
+    ├── 01-extract.ts          # Step 1: extraction (166 lines)
+    ├── 02-hypothesize.ts      # Step 2: full hypothesis loop (1,240 lines) <-- PRIMARY TARGET
+    └── 03-answer.ts           # Step 3: question answering (179 lines)
 ```
 
-### Component Responsibilities
+---
 
-| Component | Responsibility | Implementation |
-|-----------|----------------|----------------|
-| `/solve` Skill | Entry point, orchestration, iteration loop, file I/O coordination | `claude-code/.claude/skills/solve/SKILL.md` with `context: fork` and `agent: solve-orchestrator` |
-| `solve-orchestrator` agent | Coordinates the pipeline: dispatches subagents in sequence, manages verify/improve loop, reads/writes workspace files | `claude-code/.claude/agents/solve-orchestrator.md` |
-| `lo-extractor` agent | Parses raw problem text into structured form (context, dataset, questions) | `claude-code/.claude/agents/lo-extractor.md` |
-| `lo-hypothesizer` agent | Generates linguistic rules and vocabulary from a specific perspective | `claude-code/.claude/agents/lo-hypothesizer.md` |
-| `lo-verifier` agent | Tests every rule and sentence against the dataset, produces structured feedback | `claude-code/.claude/agents/lo-verifier.md` |
-| `lo-improver` agent | Revises rules based on verification feedback | `claude-code/.claude/agents/lo-improver.md` |
-| `lo-answerer` agent | Applies validated rules to translate question sentences | `claude-code/.claude/agents/lo-answerer.md` |
-| workspace files | Intermediate JSON/MD files that pass data between agents | `claude-code/workspace/` directory |
-
-## Recommended Project Structure
+## System Overview — After Refactoring
 
 ```
-claude-code/
-├── .claude/
-│   ├── agents/
-│   │   ├── solve-orchestrator.md    # Main orchestrator (runs the pipeline)
-│   │   ├── lo-extractor.md          # Step 1: Parse problem
-│   │   ├── lo-hypothesizer.md       # Step 2: Generate rules per perspective
-│   │   ├── lo-verifier.md           # Step 3a: Test rules against data
-│   │   ├── lo-improver.md           # Step 3b: Fix rules from feedback
-│   │   └── lo-answerer.md           # Step 4: Answer questions
-│   ├── skills/
-│   │   └── solve/
-│   │       ├── SKILL.md             # Entry point: /solve command
-│   │       └── examples/            # Example problems for reference
-│   │           ├── georgian.md
-│   │           └── turkish.md
-│   └── settings.json                # Project-level settings
-├── workspace/                        # Working directory for solve runs
-│   └── .gitkeep
-├── prompts/                          # Reusable prompt fragments
-│   ├── linguistics-patterns.md       # Common Linguistics Olympiad patterns
-│   ├── rule-format.md                # How rules should be structured
-│   └── vocabulary-format.md          # How vocabulary entries should look
-└── CLAUDE.md                         # Project instructions for this subdirectory
+src/mastra/workflow/
+├── agents/                    # (optional: move agent files here)
+│   └── ...                    # or leave flat with factory pattern applied
+│
+├── steps/
+│   ├── 01-extract.ts          # (unchanged)
+│   ├── 02-hypothesize.ts      # Thin coordinator — orchestrates sub-phases
+│   ├── 02a-dispatch.ts        # Sub-phase: dispatch (rounds 1 and 2+)
+│   ├── 02b-hypothesize.ts     # Sub-phase: parallel hypothesizer execution
+│   ├── 02c-verify.ts          # Sub-phase: per-perspective verification scoring
+│   ├── 02d-synthesize.ts      # Sub-phase: synthesis + convergence check
+│   └── 03-answer.ts           # (unchanged)
+│
+├── schemas/                   # (optional: schema split by domain)
+│   ├── workflow-state.ts      # workflowStateSchema, initializeWorkflowState
+│   ├── problem.ts             # structuredProblemDataSchema, structuredProblemSchema
+│   ├── hypothesis.ts          # dispatcher, perspective, hypothesis-loop schemas
+│   ├── verification.ts        # verifierFeedbackSchema, roundResult, verificationMetadata
+│   └── answers.ts             # questionsAnsweredSchema, questionAnsweringInputSchema
+│   (or keep as single workflow-schemas.ts — see Architecture note below)
+│
+├── context/                   # (optional: context helper split by domain)
+│   ├── vocabulary.ts          # getVocabularyState, getVocabularyArray
+│   ├── rules.ts               # getRulesState, getRulesArray, getCurrentRules
+│   ├── draft-stores.ts        # createDraftStore, getDraftStore, mergeDraftToMain, clearAllDraftStores
+│   ├── trace.ts               # emitTraceEvent, emitToolTraceEvent
+│   ├── cost.ts                # extractCostFromResult, updateCumulativeCost
+│   └── accessors.ts           # getLogFile, getWorkflowStartTime, getParentAgentId, etc.
+│   (or keep as single request-context-helpers.ts — see Architecture note below)
+│
+├── agent-factory.ts           # createWorkflowAgent() factory
+├── agent-utils.ts             # (unchanged)
+├── logging-utils.ts           # (unchanged)
+├── openrouter.ts              # (unchanged — lives in src/mastra/)
+├── request-context-helpers.ts # (kept or decomposed)
+├── request-context-types.ts   # (unchanged)
+├── vocabulary-tools.ts        # (unchanged)
+├── rules-tools.ts             # (unchanged)
+├── workflow-schemas.ts        # (kept or decomposed)
+└── index.ts                   # (re-export agents — updated if factory applied)
 ```
 
-### Structure Rationale
+---
 
-- **`.claude/agents/`**: Each solver agent is a separate markdown file with YAML frontmatter. Claude Code loads these at session start and dispatches via the Agent tool's `agent_type` parameter. One file per agent role keeps prompts focused and independently editable.
-- **`.claude/skills/solve/`**: The `/solve` skill is the user-facing entry point. It triggers the orchestrator agent via `context: fork` + `agent: solve-orchestrator`. The skill handles argument parsing (problem text, file reference, or interactive paste).
-- **`workspace/`**: Ephemeral per-run data directory. Subagents cannot spawn other subagents in Claude Code, so the orchestrator writes intermediate results to JSON files, then reads them back when composing the next subagent's prompt. This is the file-based equivalent of Mastra's RequestContext.
-- **`prompts/`**: Shared prompt fragments referenced by multiple agents via Read tool. Avoids duplicating the linguistics pattern catalog and format specifications across agent system prompts.
-- **`CLAUDE.md`**: Project-level instructions specific to the solver workflow (separate from the main repo's CLAUDE.md).
+## Component Responsibilities
+
+### What Each Piece Does Today (and After Refactoring)
+
+| Component | Today | After Refactoring |
+|-----------|-------|-------------------|
+| `02-hypothesize.ts` | 1,240-line monolith: dispatch + hypothesize + verify + synthesize + convergence loop | Thin coordinator: imports sub-phase functions, calls them in sequence, manages round loop |
+| `02a-dispatch.ts` | Does not exist | Sub-phase: resolve perspectives from dispatcher or improver-dispatcher agent |
+| `02b-hypothesize.ts` | Does not exist | Sub-phase: parallel hypothesizer execution per perspective |
+| `02c-verify.ts` | Does not exist | Sub-phase: per-perspective verification + feedback extraction |
+| `02d-synthesize.ts` | Does not exist | Sub-phase: vocabulary merge, synthesizer call, convergence check |
+| `workflow-schemas.ts` | Single file, 407 lines, all schemas | Either stays flat or splits into domain files |
+| `request-context-helpers.ts` | Single file, 440 lines, all helpers | Either stays flat or splits into domain files |
+| Agent files (13 files) | ~24-93 lines each; duplicated constructor boilerplate | Same behaviour with factory reducing 15-20 lines per agent |
+| `agent-factory.ts` | Does not exist | `createWorkflowAgent()` — centralized Agent constructor |
+
+---
 
 ## Architectural Patterns
 
-### Pattern 1: File-Mediated Data Flow (replaces RequestContext)
+### Pattern 1: Sub-Phase Function Extraction (02-hypothesize.ts split)
 
-**What:** Subagents pass data via workspace JSON files instead of in-memory state. The orchestrator writes input files before spawning each subagent, and reads output files after each completes.
+**What:** The 1,240-line step is reorganized into a thin coordinator plus four sub-phase modules. Each sub-phase exports a single async function that receives exactly the data it needs and returns exactly what the coordinator needs.
 
-**When to use:** Always. Claude Code subagents run in isolated contexts with no shared memory. Files are the only reliable inter-agent communication channel.
+**When to use:** When a step contains multiple logically independent phases each large enough to warrant their own file (target: ~200-300 lines per sub-phase).
+
+**Interface contract — sub-phases must accept and return plain data, not the step's full closure scope:**
+
+```typescript
+// 02a-dispatch.ts — new file
+export async function runDispatchPhase(params: {
+  structuredProblem: StructuredProblemData;
+  round: number;
+  effectivePerspectiveCount: number;
+  mainRules: Map<string, Rule>;
+  mainVocabulary: Map<string, VocabularyEntry>;
+  lastTestResults: unknown;
+  previousPerspectiveIds: string[];
+  modelMode: ModelMode;
+  requestContext: RequestContext<WorkflowRequestContext>;
+  writer: StepWriter | undefined;
+  abortSignal: AbortSignal | undefined;
+  logFile: string;
+  workflowStartTime: number;
+  mastra: Mastra;  // or typed agent getter
+}): Promise<{ perspectives: Perspective[]; timing: StepTiming } | null>
+
+// 02b-hypothesize.ts — new file
+export async function runHypothesizePhase(params: {
+  perspectives: Perspective[];
+  round: number;
+  isImproverRound: boolean;
+  structuredProblem: StructuredProblemData;
+  mainRequestContext: RequestContext<WorkflowRequestContext>;
+  draftStores: Map<string, DraftStore>;
+  mainRules: Map<string, Rule>;
+  mainVocabulary: Map<string, VocabularyEntry>;
+  modelMode: ModelMode;
+  writer: StepWriter | undefined;
+  abortSignal: AbortSignal | undefined;
+  logFile: string;
+  workflowStartTime: number;
+  mastra: Mastra;
+}): Promise<HypothesisResult[]>
+
+// 02c-verify.ts — new file
+export async function runVerifyPhase(params: {
+  hypothesisResults: HypothesisResult[];
+  round: number;
+  structuredProblem: StructuredProblemData;
+  mainRequestContext: RequestContext<WorkflowRequestContext>;
+  modelMode: ModelMode;
+  writer: StepWriter | undefined;
+  abortSignal: AbortSignal | undefined;
+  logFile: string;
+  workflowStartTime: number;
+  mastra: Mastra;
+}): Promise<PerspectiveResult[]>
+
+// 02d-synthesize.ts — new file
+export async function runSynthesizePhase(params: {
+  perspectiveResults: PerspectiveResult[];
+  sortedResults: PerspectiveResult[];
+  draftStores: Map<string, DraftStore>;
+  mainRules: Map<string, Rule>;
+  mainVocabulary: Map<string, VocabularyEntry>;
+  structuredProblem: StructuredProblemData;
+  round: number;
+  mainRequestContext: RequestContext<WorkflowRequestContext>;
+  modelMode: ModelMode;
+  writer: StepWriter | undefined;
+  abortSignal: AbortSignal | undefined;
+  logFile: string;
+  workflowStartTime: number;
+  mastra: Mastra;
+}): Promise<{
+  converged: boolean;
+  convergencePassRate: number;
+  convergenceConclusion: 'ALL_RULES_PASS' | 'NEEDS_IMPROVEMENT' | 'MAJOR_ISSUES';
+  lastTestResults: VerifierFeedback | null;
+  finalFeedback: VerifierFeedback | null;
+}>
+```
+
+**Critical constraint: shared mutable state.** The `mainRules` and `mainVocabulary` Maps are mutated across sub-phases (hypothesizers write to drafts, synthesize writes to main). Sub-phases must receive the live Map references, not copies. The coordinator holds the Maps and passes references into each sub-phase call.
 
 **Trade-offs:**
-- Pro: Simple, debuggable (inspect files mid-run), resilient to context compaction
-- Pro: Human-readable intermediate state makes debugging easier than Mastra's opaque RequestContext
-- Con: Slightly slower than in-memory (negligible vs LLM call latency)
-- Con: Orchestrator must serialize/deserialize between each step
+- Pro: Each sub-phase is independently readable, reviewable, and testable
+- Pro: Reduces cognitive load for prompt engineering changes in sub-phases
+- Con: Function signatures are verbose (many parameters); consider a `RoundContext` object
+- Con: Requires careful naming to avoid ambiguity between the step file and sub-phase files
 
-**Example -- orchestrator dispatches extractor, then reads the result:**
+---
 
+### Pattern 2: Agent Factory
+
+**What:** A `createWorkflowAgent()` factory centralizes the repeated `new Agent({...})` boilerplate. All 13 agents use identical `inputProcessors` (UnicodeNormalizer) and identical `model` selection logic (production/testing via requestContext). The factory captures this once.
+
+**When to use:** When 10+ agents share identical structural boilerplate with only `id`, `name`, `instructions`, and `tools` varying.
+
+**Example — current boilerplate (repeated 10 times across agents with UnicodeNormalizer):**
+
+```typescript
+// Current: 02-dispatcher-agent.ts (34 lines)
+import { Agent } from '@mastra/core/agent';
+import { UnicodeNormalizer } from '@mastra/core/processors';
+import { DISPATCHER_INSTRUCTIONS } from './02-dispatcher-instructions';
+import { TESTING_MODEL } from '../openrouter';
+import { getOpenRouterProvider } from './request-context-helpers';
+
+export const dispatcherAgent = new Agent({
+  id: 'perspective-dispatcher',
+  name: '[Step 2] Perspective Dispatcher Agent',
+  instructions: { role: 'system', content: DISPATCHER_INSTRUCTIONS },
+  model: ({ requestContext }) =>
+    getOpenRouterProvider(requestContext)(
+      requestContext?.get('model-mode') === 'production'
+        ? 'google/gemini-3-flash-preview'
+        : TESTING_MODEL,
+    ),
+  tools: {},
+  inputProcessors: [new UnicodeNormalizer({ ... })],
+});
 ```
-Agent(
-  agent_type="lo-extractor",
-  prompt="Read the problem from claude-code/workspace/problem.md.
-  Parse it into structured form.
-  Write the result to claude-code/workspace/extracted.json.
-  The JSON must have fields: context (string), dataset (array of
-  {source, target} pairs), questions (array of {id, type, input})."
-)
 
-# After agent returns, orchestrator reads extracted.json
-# and uses it to compose the next agent's prompt
+**After factory:**
+
+```typescript
+// agent-factory.ts — new file
+import { Agent } from '@mastra/core/agent';
+import { UnicodeNormalizer } from '@mastra/core/processors';
+import { TESTING_MODEL, getOpenRouterProvider } from '../openrouter';
+import type { Tool } from '@mastra/core/tools';
+
+interface WorkflowAgentConfig {
+  id: string;
+  name: string;
+  instructions: string | { role: string; content: string };
+  productionModel: string;
+  tools?: Record<string, Tool>;
+  skipUnicodeNormalizer?: boolean;   // for tester agents that use requestContextSchema
+  requestContextSchema?: z.ZodObject<any>;
+}
+
+export function createWorkflowAgent(config: WorkflowAgentConfig): Agent {
+  return new Agent({
+    id: config.id,
+    name: config.name,
+    instructions: typeof config.instructions === 'string'
+      ? config.instructions
+      : config.instructions,
+    model: ({ requestContext }) =>
+      getOpenRouterProvider(requestContext)(
+        requestContext?.get('model-mode') === 'production'
+          ? config.productionModel
+          : TESTING_MODEL,
+      ),
+    tools: config.tools ?? {},
+    ...(config.requestContextSchema && { requestContextSchema: config.requestContextSchema }),
+    ...(!config.skipUnicodeNormalizer && {
+      inputProcessors: [new UnicodeNormalizer({
+        stripControlChars: false,
+        preserveEmojis: true,
+        collapseWhitespace: true,
+        trim: true,
+      })],
+    }),
+  });
+}
 ```
 
-### Pattern 2: Orchestrator-Dispatched Pipeline (replaces Mastra Workflow Steps)
+```typescript
+// 02-dispatcher-agent.ts — after factory (13 lines vs 34 lines)
+import { createWorkflowAgent } from './agent-factory';
+import { DISPATCHER_INSTRUCTIONS } from './02-dispatcher-instructions';
 
-**What:** A single orchestrator agent (invoked via the `/solve` skill) runs the pipeline sequentially, dispatching specialized subagents via the Agent tool at each step. The orchestrator handles the verify/improve loop logic itself rather than delegating loop control.
+export const dispatcherAgent = createWorkflowAgent({
+  id: 'perspective-dispatcher',
+  name: '[Step 2] Perspective Dispatcher Agent',
+  instructions: { role: 'system', content: DISPATCHER_INSTRUCTIONS },
+  productionModel: 'google/gemini-3-flash-preview',
+});
+```
 
-**When to use:** For any multi-step workflow where steps have dependencies.
+**Agent variants handled by factory:**
+
+| Variant | Agents | Factory Config |
+|---------|--------|----------------|
+| Reasoning agents (Gemini, with UnicodeNormalizer) | dispatcher, improver-dispatcher, synthesizer, hypothesizer, verifier-orchestrator, rules-improver, answerer | Default: no extra config |
+| Extraction agents (GPT-5-mini, with UnicodeNormalizer) | structured-problem-extractor, hypothesis-extractor, feedback-extractor, improvement-extractor | `productionModel: 'openai/gpt-5-mini'` |
+| Tester agents (GPT-5-mini, no UnicodeNormalizer, has requestContextSchema) | rule-tester, sentence-tester | `skipUnicodeNormalizer: true, requestContextSchema: z.object({...})` |
 
 **Trade-offs:**
-- Pro: Orchestrator sees the full pipeline state and can make intelligent decisions about when to stop iterating
-- Pro: No framework overhead -- pure Claude Code native
-- Con: Orchestrator context grows with each step's summary (mitigate by keeping subagent returns concise)
-- Con: Subagents cannot spawn other subagents (Claude Code limitation), so deep nesting is impossible
+- Pro: UnicodeNormalizer config and model-selection logic defined once
+- Pro: New agents are 10-15 lines instead of 30-50
+- Con: Factory adds one layer of indirection; agent files no longer show complete Agent config
+- Con: Agents with `requestContextSchema` need special handling in factory signature
 
-**Critical constraint -- subagents cannot spawn subagents.** In Mastra, the verifier orchestrator agent calls testRule and testSentence tools which internally invoke sub-agents. In Claude Code, the verifier must do all testing inline within its own context. This is a fundamental architectural difference. The verifier's system prompt must include all testing logic directly.
+---
 
-**Example -- orchestrator pipeline pseudocode:**
+### Pattern 3: Schema Reorganization Decision
 
-```
-1. Read problem input from $ARGUMENTS or ask user to paste
-2. Write problem text to workspace/problem.md
-3. Dispatch lo-extractor -> writes extracted.json
-4. Read extracted.json, determine perspectives (inline reasoning)
-5. Dispatch lo-hypothesizer x N in parallel -> each writes hypothesis-{id}.json
-6. For each round (max 3):
-   a. Read hypothesis files, select best, write rules.json + vocabulary.json
-   b. Dispatch lo-verifier -> writes verification.json
-   c. If all rules pass: break
-   d. Dispatch lo-improver -> writes updated rules.json + vocabulary.json
-7. Dispatch lo-answerer -> writes answers.md
-8. Display answers.md to user
-```
+**What:** `workflow-schemas.ts` (407 lines) groups all Zod schemas. The refactoring option is to split into domain files. The question is whether splitting aids maintainability or creates import fragmentation.
 
-### Pattern 3: Parallel Perspective Generation via Multiple Agent Calls
-
-**What:** The orchestrator spawns multiple hypothesizer agents in parallel, each exploring a different linguistic perspective. Claude Code's Agent tool supports parallelism when multiple calls are independent.
-
-**When to use:** Step 2 (hypothesis generation) where perspectives are independent.
-
-**Trade-offs:**
-- Pro: Matches the existing Mastra architecture's parallel perspective pattern
-- Pro: Claude Code naturally handles parallel Agent calls
-- Con: Each parallel agent returns results to the orchestrator, consuming context
-- Con: Results must be written to separate files (hypothesis-morphological.json, hypothesis-syntactic.json, etc.) to avoid conflicts
-
-**Critical design note:** In Mastra, each perspective hypothesizer gets its own DraftStore (isolated vocabulary + rules Maps). In Claude Code, isolation is achieved by having each hypothesizer write to its own output file. The orchestrator then reads all hypothesis files, scores them via verification, and promotes the best one to the main `rules.json` and `vocabulary.json`.
-
-### Pattern 4: Prompt Fragment Inclusion via File References
-
-**What:** Shared prompt content (linguistics patterns, rule format specs, vocabulary format specs) lives in `prompts/` files. Agent system prompts instruct the agent to read these at startup. This replaces Mastra's compile-time template literal interpolation (`{{RULES_TOOLS_INSTRUCTIONS}}`).
-
-**When to use:** When multiple agents need the same domain knowledge.
-
-**Trade-offs:**
-- Pro: Single source of truth for shared content
-- Pro: Agents can Read the file at runtime, keeping their base system prompt lean
-- Con: Agent must spend a tool call to read the file (trivial cost)
-- Con: Unlike Mastra's compile-time injection, this is runtime
-
-### Pattern 5: Two-Agent Chain Elimination
-
-**What:** Mastra uses "reasoning agent -> JSON extractor agent" chains because earlier LLMs struggled with simultaneous reasoning and structured output. Opus 4.6 does not have this limitation. Each step can reason AND produce structured output in a single agent call.
-
-**When to use:** All steps. The hypothesizer, verifier, and improver each produce structured output directly.
-
-**Trade-offs:**
-- Pro: Halves the number of agents (10 Mastra agents -> 6 Claude Code agents)
-- Pro: Eliminates potential data loss in extraction step
-- Pro: Faster pipeline (fewer LLM calls)
-- Con: Must be explicit in system prompts about output format expectations
-
-**Mastra agents eliminated:** Initial Hypothesis Extractor, Verifier Feedback Extractor, Rules Improvement Extractor, Perspective Dispatcher (absorbed into orchestrator). Their work is absorbed into the agents they previously followed.
-
-## Data Flow
-
-### Request Flow
+**Analysis of current grouping:**
 
 ```
-User types /solve [problem-text or @problem-file]
-    |
-    v
-Skill (SKILL.md) activates with context: fork, agent: solve-orchestrator
-    |
-    v
-Orchestrator agent starts (solve-orchestrator) in isolated context
-    |
-    v
-Write problem text to workspace/problem.md
-    |
-    v
-Agent(lo-extractor) --> reads problem.md --> writes extracted.json
-    |
-    v
-Orchestrator reads extracted.json
-Orchestrator determines N perspectives via inline reasoning
-    |
-    v
-Agent(lo-hypothesizer) x N in parallel
-    --> each reads extracted.json + receives perspective in prompt
-    --> each writes hypothesis-{perspectiveId}.json (rules + vocabulary)
-    |
-    v
-Orchestrator reads all hypothesis files, selects/synthesizes best
-Writes rules.json + vocabulary.json from winning hypothesis
-    |
-    v
-VERIFY/IMPROVE LOOP (max 3 rounds):
-    |
-    Agent(lo-verifier) --> reads rules.json + vocabulary.json + extracted.json
-                       --> tests every rule and sentence inline
-                       --> writes verification.json
-    |
-    v
-    Orchestrator reads verification.json
-    If all rules pass OR max rounds reached: exit loop
-    |
-    Agent(lo-improver) --> reads verification.json + rules.json + vocabulary.json
-                       --> writes updated rules.json + vocabulary.json
-    |
-    v (loop back to verifier)
-
-Agent(lo-answerer) --> reads rules.json + vocabulary.json + extracted.json
-                   --> writes answers.md
-    |
-    v
-Orchestrator reads answers.md, presents to user
+workflow-schemas.ts contains:
+  - ruleSchema, rulesArraySchema                         (core, referenced everywhere)
+  - workflowStateSchema, initializeWorkflowState         (state management)
+  - rawProblemInputSchema                                (API boundary)
+  - structuredProblemDataSchema, structuredProblemSchema (step 1 output)
+  - rulesSchema                                          (hypothesis extraction)
+  - verifierFeedbackSchema, issueSchema, missingRuleSchema (step 3 verification)
+  - questionsAnsweredSchema, questionAnswerSchema         (step 3 output)
+  - hypothesisTestLoopSchema, initialHypothesisInputSchema (legacy, unused by current step 2)
+  - roundResultSchema, verificationMetadataSchema        (metadata tracking)
+  - questionAnsweringInputSchema                         (step 2 → step 3 interface)
+  - perspectiveSchema, dispatcherOutputSchema            (dispatch sub-phase)
+  - perspectiveResultSchema, synthesisInputSchema        (synthesis sub-phase)
+  - improverDispatcherOutputSchema                       (dispatch sub-phase, round 2+)
 ```
 
-### Data Format Mapping (Mastra -> Claude Code)
+**Recommendation: Keep as single file for this milestone.** The schemas are 407 lines across 17 schema groups. Splitting into 4-5 files creates 6-8 cross-file imports per consumer (each step file currently imports 5-8 schemas from one place). The split adds maintenance overhead without proportional readability gain at this scale.
 
-| Mastra Concept | Claude Code Equivalent |
-|----------------|----------------------|
-| `RequestContext['vocabulary-state']` (Map) | `workspace/vocabulary.json` (JSON array) |
-| `RequestContext['rules-state']` (Map) | `workspace/rules.json` (JSON array) |
-| `RequestContext['structured-problem']` (object) | `workspace/extracted.json` |
-| `RequestContext['current-rules']` (array) | `workspace/rules.json` (same file) |
-| `DraftStore` per perspective | `workspace/hypothesis-{id}.json` per perspective |
-| Workflow State (`workflowStateSchema`) | Orchestrator's conversation context + workspace files |
-| `emitTraceEvent()` streaming | Terminal output during solve (no streaming UI) |
-| `streamWithRetry()` | Claude Code's built-in Agent tool reliability |
-| Vocabulary/Rules CRUD tools | Direct JSON file read/write by agents |
-| Two-agent chain (reasoner -> extractor) | Single Opus 4.6 agent with format instructions |
-| Dispatcher agent | Orchestrator inline reasoning |
+**If splitting is attempted anyway, the natural domain groupings are:**
 
-### Key Data Flows
+| File | Contents | Imports from |
+|------|----------|--------------|
+| `schemas/core.ts` | ruleSchema, rulesArraySchema, vocabularyEntrySchema | vocabulary-tools.ts |
+| `schemas/workflow-state.ts` | workflowStateSchema, initializeWorkflowState, rawProblemInputSchema | core.ts, logging-utils.ts |
+| `schemas/problem.ts` | structuredProblemDataSchema, structuredProblemSchema | core.ts |
+| `schemas/hypothesis.ts` | dispatcherOutputSchema, perspectiveSchema, perspectiveResultSchema, synthesisInputSchema, improverDispatcherOutputSchema, hypothesisTestLoopSchema | core.ts, problem.ts |
+| `schemas/verification.ts` | verifierFeedbackSchema, roundResultSchema, verificationMetadataSchema, questionAnsweringInputSchema | core.ts, hypothesis.ts |
+| `schemas/answers.ts` | questionsAnsweredSchema, questionAnswerSchema | core.ts |
 
-1. **Problem -> Extraction:** Raw text in `problem.md` -> extractor reads it -> writes `extracted.json` with structured problem data `{ context, dataset[], questions[] }`.
+**Critical import chain issue:** `vocabularyEntrySchema` lives in `vocabulary-tools.ts`. Any schema file referencing it must import from there. Currently `workflow-schemas.ts` imports from `vocabulary-tools.ts`; splitting does not change this dependency, it only distributes it.
 
-2. **Extraction -> Hypotheses:** Orchestrator reads `extracted.json`, determines N perspectives, includes perspective description in each hypothesizer's prompt. Each hypothesizer writes `hypothesis-{perspectiveId}.json` containing `{ rules: [...], vocabulary: [...], reasoning: "..." }`.
+---
 
-3. **Hypotheses -> Verification:** Orchestrator selects the best hypothesis (or synthesizes), writes `rules.json` and `vocabulary.json`. Verifier reads these plus `extracted.json`, tests every rule against every sentence, writes `verification.json` with pass/fail results and feedback per rule/sentence.
+### Pattern 4: request-context-helpers.ts Decomposition Decision
 
-4. **Verification -> Improvement:** Improver reads `verification.json` (structured feedback), `rules.json`, `vocabulary.json`, and `extracted.json`. Writes updated `rules.json` and `vocabulary.json`.
+**What:** `request-context-helpers.ts` (440 lines) contains 6 distinct concern groups. The split option separates these into domain files.
 
-5. **Rules -> Answers:** Answerer reads final `rules.json`, `vocabulary.json`, and `extracted.json`. Writes `answers.md` with translations and reasoning.
+**Analysis of current concern groups:**
 
-## Scaling Considerations
+```
+request-context-helpers.ts contains:
+  Group 1: Type definitions (ToolExecuteContext, RequestContextGetter)  — 10 lines
+  Group 2: OpenRouter provider accessor (getOpenRouterProvider)          — 10 lines
+  Group 3: Vocabulary accessors (getVocabularyState, getVocabularyArray) — 20 lines
+  Group 4: Problem/rules accessors (getStructuredProblem, getCurrentRules, etc.) — 40 lines
+  Group 5: Trace event emitters (emitTraceEvent, emitToolTraceEvent)    — 65 lines
+  Group 6: Cost tracking (extractCostFromResult, updateCumulativeCost)  — 55 lines
+  Group 7: Rules state helpers (getRulesState, getRulesArray)           — 20 lines
+  Group 8: Draft store helpers (createDraftStore, getDraftStore, etc.)  — 150 lines
+  Group 9: Utility (normalizeTranslation)                               — 10 lines
+```
 
-Not applicable in the traditional sense (single-user CLI tool), but relevant for context window management:
+**Import surface analysis:**
 
-| Scale | Architecture Adjustments |
-|-------|--------------------------|
-| Simple problems (5-10 sentences) | Single perspective, 1-2 verify rounds. Full pipeline fits easily in one orchestrator context. |
-| Medium problems (10-20 sentences) | 2-3 perspectives in parallel, 2-3 verify rounds. Workspace files keep orchestrator context lean. |
-| Complex problems (20+ sentences) | Risk of verifier context overflow testing every sentence. May need `maxTurns` setting on verifier or batched testing. |
+| Importer | Functions imported |
+|----------|--------------------|
+| `02-hypothesize.ts` | emitTraceEvent, createDraftStore, clearAllDraftStores, extractCostFromResult, updateCumulativeCost |
+| `01-extract.ts` | emitTraceEvent, extractCostFromResult, updateCumulativeCost |
+| `03-answer.ts` | emitTraceEvent, extractCostFromResult, updateCumulativeCost |
+| `vocabulary-tools.ts` | getVocabularyState, getLogFile, emitToolTraceEvent, getWorkflowStartTime, ToolExecuteContext |
+| `rules-tools.ts` | getRulesState, getLogFile, emitToolTraceEvent, getWorkflowStartTime, ToolExecuteContext |
+| `03a-rule-tester-tool.ts` | getCurrentRules, getStructuredProblem, getVocabularyState, emitToolTraceEvent, normalizeTranslation, ToolExecuteContext |
+| `03a-sentence-tester-tool.ts` | getCurrentRules, getStructuredProblem, getVocabularyState, emitToolTraceEvent, normalizeTranslation, ToolExecuteContext |
+| Agent files (13) | getOpenRouterProvider (only) |
 
-### Context Management Priorities
+**Recommendation: Keep as single file for this milestone.** The 440-line file is dense but all functions are related to one concept: accessing workflow context. The split into domain files would create 6 files where each tool file imports from 3-4 of them. The current single import `from './request-context-helpers'` is simpler than `from './context/trace'`, `from './context/vocabulary'`, `from './context/rules'`. The only genuine win would be splitting the 150-line draft store section into its own file if it grows.
 
-1. **First bottleneck -- orchestrator context accumulation.** Each subagent returns a summary to the orchestrator. Over 3 rounds with 3 perspectives, that is 15+ agent returns. **Mitigation:** Keep subagent prompts explicit: "Return ONLY the file path you wrote, not the full content." The orchestrator reads files directly rather than receiving data inline.
+**If draft stores are extracted (the clearest split candidate):**
 
-2. **Second bottleneck -- verifier context with many sentences.** A problem with 20 sentences tested in both directions = 40+ inline test operations, each producing reasoning. **Mitigation:** The verifier writes results to `verification.json` as it goes and keeps its own reasoning concise. Consider `maxTurns` limit on the agent.
+```typescript
+// context/draft-stores.ts — new file (150 lines)
+// Exports: createDraftStore, getDraftStore, getAllDraftStores,
+//          mergeDraftToMain, clearAllDraftStores,
+//          getDraftVocabularyState, getDraftRulesState
 
-## Anti-Patterns
+// request-context-helpers.ts — reduced to ~290 lines
+// Re-exports draft-stores.ts functions for backward compatibility
+export {
+  createDraftStore, getDraftStore, getAllDraftStores,
+  mergeDraftToMain, clearAllDraftStores,
+  getDraftVocabularyState, getDraftRulesState,
+} from './context/draft-stores';
+```
 
-### Anti-Pattern 1: Passing Full Data in Agent Prompts
+---
 
-**What people do:** Embed the entire problem text, all rules, all vocabulary, and all test results directly in the Agent tool's `prompt` parameter.
-**Why it's wrong:** Consumes orchestrator context rapidly. The orchestrator sees the full prompt AND the full return, doubling the cost of every data transfer.
-**Do this instead:** Write data to workspace files, pass file paths in prompts. "Read `claude-code/workspace/rules.json` for the current rules" is 10 tokens vs 500+ tokens of inline rules.
+### Pattern 5: Type Safety Improvements
 
-### Anti-Pattern 2: Trying to Nest Subagents
+**What:** Tools use `context as unknown as ToolExecuteContext` pattern throughout. The `updateCumulativeCost` function accepts `{ get: (key: any) => any; set: (key: any, value: any) => void }`. These `any` types can be narrowed.
 
-**What people do:** Design the verifier agent to spawn testRule and testSentence sub-sub-agents, mimicking Mastra's tool-based delegation pattern.
-**Why it's wrong:** Claude Code subagents cannot spawn other subagents. The Agent tool is unavailable inside subagent contexts. This is documented behavior, not a bug.
-**Do this instead:** The verifier does all testing inline within its own context. Its system prompt includes complete testing methodology. Opus 4.6 is capable of reasoning about rule correctness without sub-delegation.
+**Current pattern in all tool execute functions (17 occurrences):**
 
-### Anti-Pattern 3: Running Pipeline in Main Conversation
+```typescript
+execute: async (_inputData, context) => {
+  const ctx = context as unknown as ToolExecuteContext;
+  // ...
+}
+```
 
-**What people do:** Put all orchestration logic in the SKILL.md content without `context: fork`, running the pipeline in the user's main conversation.
-**Why it's wrong:** The main conversation accumulates all intermediate state, agent returns, and problem data. Context fills up fast. The user also sees every intermediate step flooding their terminal.
-**Do this instead:** Use `context: fork` with `agent: solve-orchestrator` to run the pipeline in an isolated context. The orchestrator gets its own 200k context window. Only a concise summary returns to the main conversation.
+**Why this exists:** Mastra's `createTool` execute signature types `context` as `BaseExecuteContext` which does not include `requestContext`. The `as unknown as ToolExecuteContext` is a necessary type assertion because Mastra does not expose typed tool context generics in the public API.
 
-### Anti-Pattern 4: One Monolithic Agent
+**Improvement approach:** Narrow the `ToolExecuteContext` type and `RequestContextGetter` to avoid `any` in `updateCumulativeCost`:
 
-**What people do:** Put the entire solver pipeline (extract + hypothesize + verify + improve + answer) into a single agent's system prompt.
-**Why it's wrong:** A single agent cannot parallelize perspectives. Its context fills with all reasoning from all steps. No isolation between steps means errors compound. No iterative improvement loop possible within a single pass.
-**Do this instead:** The orchestrator dispatches specialized agents with focused prompts. Each agent does one thing well.
+```typescript
+// Before (in request-context-helpers.ts)
+export async function updateCumulativeCost(
+  requestContext: { get: (key: any) => any; set: (key: any, value: any) => void },
+  ...
 
-### Anti-Pattern 5: Duplicating Prompt Content Across Agents
+// After: use the actual WorkflowRequestContext keys
+export async function updateCumulativeCost(
+  requestContext: {
+    get: (key: keyof WorkflowRequestContext) => WorkflowRequestContext[keyof WorkflowRequestContext];
+    set: <K extends keyof WorkflowRequestContext>(key: K, value: WorkflowRequestContext[K]) => void;
+  },
+  ...
+```
 
-**What people do:** Copy the full linguistics patterns catalog, rule format specification, and vocabulary format into every agent's system prompt.
-**Why it's wrong:** Maintenance nightmare -- changes must be made in 6 places. Wastes context in agents that only need a subset.
-**Do this instead:** Store shared content in `prompts/` files. Agent system prompts say "Read `claude-code/prompts/linguistics-patterns.md` for the pattern reference catalog." Only the agents that need it load it.
+**The `context as unknown as ToolExecuteContext` assertions in tools cannot be eliminated without Mastra exposing typed context generics.** The improvement is to ensure `ToolExecuteContext` is as precise as possible, not to remove the assertion.
+
+---
+
+### Pattern 6: Prompt Engineering Integration
+
+**What:** All 19 agent prompts (13 Mastra `*-instructions.ts` files + 6 Claude Code markdown agents) are rewritten using vendor-specific best practices. This is purely additive — no structural changes to agent files, tools, schemas, or workflow.
+
+**Integration points:**
+
+- **Mastra agents:** Each `*-instructions.ts` file is rewritten in isolation. The agent file (`*-agent.ts`) is unchanged except for the imported constant.
+- **Template literal injection:** Three agents inject `{{RULES_TOOLS_INSTRUCTIONS}}` and/or `{{VOCABULARY_TOOLS_INSTRUCTIONS}}` via `.replace()` in their agent file. This mechanism stays identical; only the base instruction constant changes.
+- **Claude Code agents:** Six markdown files in `claude-code/.claude/agents/` rewritten. No TypeScript code touched.
+
+**Agents using template injection (must preserve `.replace()` calls):**
+
+| Agent file | Template variables |
+|------------|-------------------|
+| `02-initial-hypothesizer-agent.ts` | `{{RULES_TOOLS_INSTRUCTIONS}}`, `{{VOCABULARY_TOOLS_INSTRUCTIONS}}` |
+| `02-synthesizer-agent.ts` | `{{RULES_TOOLS_INSTRUCTIONS}}`, `{{VOCABULARY_TOOLS_INSTRUCTIONS}}` |
+| `03b-rules-improver-agent.ts` | `{{VOCABULARY_TOOLS_INSTRUCTIONS}}` |
+
+---
+
+## Data Flow — How Refactoring Changes Data Movement
+
+### Current flow in 02-hypothesize.ts (all in one closure):
+
+```
+createStep.execute closure
+  └─ mainRequestContext (RequestContext) — shared mutable object
+  └─ mainRules (Map<string, Rule>)       — direct reference
+  └─ mainVocabulary (Map<string, VocabularyEntry>) — direct reference
+  └─ draftStores (Map<string, DraftStore>)
+       Round loop:
+         a. dispatch phase — writes nothing to maps, gets perspectives[]
+         b. hypothesize — each perspective creates draft store, writes to draft maps
+         c. verify — reads draft maps (read-only), produces PerspectiveResult[]
+         d. synthesize — clears mainRules, clears mainVocab, synthesizer writes to main
+         e. convergence — reads main maps, produces converged bool
+```
+
+### After split (sub-phases with passed references):
+
+```
+02-hypothesize.ts (coordinator)
+  Owns: mainRequestContext, mainRules, mainVocabulary, draftStores
+  Passes by reference to sub-phases — Maps are mutated in place by sub-phases
+
+  02a-dispatch.ts — reads main maps (for prompt construction), returns perspectives[]
+  02b-hypothesize.ts — creates draft stores (writes to draftStores map), returns HypothesisResult[]
+  02c-verify.ts — reads draft stores (read-only), returns PerspectiveResult[]
+  02d-synthesize.ts — mutates mainRules and mainVocabulary, returns convergence result
+```
+
+**No serialization occurs.** Sub-phases receive live Map references. This is identical semantics to the current single-closure approach — just reorganized into functions.
+
+---
 
 ## Integration Points
 
-### Relationship to Existing Codebase
-
-| Boundary | Direction | Notes |
-|----------|-----------|-------|
-| Main repo `CLAUDE.md` | Separate | `claude-code/` has its own `CLAUDE.md`. The main repo's instructions are for the Mastra/Next.js app and should not interfere. |
-| Example problems (`examples/`) | Read-only by solver | The `/solve` skill can reference example problems from the main repo for testing. |
-| Eval problems (`src/evals/problems.ts`) | Read-only for comparison | Ground truth problems for comparing Claude Code solver vs Mastra pipeline. |
-| `.claude/agents/` (main repo) | Separate namespace | The main repo's `.claude/agents/` contains GSD agents. The solver's agents live in `claude-code/.claude/agents/`. Claude Code will discover both when the CWD is `claude-code/`. |
-
-### Internal Boundaries
-
-| Boundary | Communication | Notes |
-|----------|---------------|-------|
-| Skill -> Orchestrator | `context: fork` + `agent:` field | Skill content becomes the orchestrator's task. `$ARGUMENTS` from `/solve` are substituted into the skill content. |
-| Orchestrator -> Subagents | Agent tool with `agent_type` parameter | Orchestrator writes workspace files, then dispatches subagent with file paths in prompt. Subagent reads files, does work, writes output files, returns brief confirmation. |
-| Subagent -> Orchestrator | Agent tool return value | Subagent returns a brief confirmation (file paths written). Orchestrator reads the actual data from files. |
-| Between subagents | No direct communication | All inter-agent data flows through workspace files, mediated by the orchestrator. This is enforced by Claude Code's "subagents cannot spawn subagents" constraint. |
-
-### Mastra Concept Mapping
-
-| Mastra Mechanism | Claude Code Equivalent | Key Difference |
-|-----------------|----------------------|----------------|
-| `createWorkflow().then().then()` | Orchestrator's sequential Agent calls | Workflow is in the orchestrator's reasoning, not a framework DSL |
-| `createStep()` with Zod schemas | Agent with file-based I/O and format instructions | No Zod runtime validation; prompt instructions enforce output format |
-| `Agent.generate()` with `requestContext` | Agent tool dispatch with file paths | No shared memory; files serve as the shared context |
-| `streamWithRetry()` | Claude Code's built-in reliability | No manual retry logic needed |
-| Vocabulary/Rules CRUD tools | Direct JSON file read/write | Agents manipulate JSON files directly instead of calling tools that manage Maps |
-| `emitTraceEvent()` streaming | Terminal output + workspace files | No real-time UI streaming; results visible in terminal and final markdown |
-| `DraftStore` per perspective | Separate `hypothesis-{id}.json` files | File-based isolation replaces Map-based isolation |
-| Two-agent chain (reasoner -> extractor) | Single Opus 4.6 agent | Model capability eliminates the need for a separate extraction step |
-| Dispatcher agent (separate LLM call) | Orchestrator inline reasoning | Opus 4.6 can determine perspectives without a dedicated agent |
-
-## New vs Modified Components
-
 ### New Components
 
-| Component | Type | Purpose |
-|-----------|------|---------|
-| `claude-code/` directory | Directory | Entire new project root for the Claude Code solver |
-| `claude-code/.claude/agents/solve-orchestrator.md` | Agent | Pipeline orchestrator dispatching subagents |
-| `claude-code/.claude/agents/lo-extractor.md` | Agent | Problem parsing |
-| `claude-code/.claude/agents/lo-hypothesizer.md` | Agent | Rule generation per perspective |
-| `claude-code/.claude/agents/lo-verifier.md` | Agent | Rule and sentence testing |
-| `claude-code/.claude/agents/lo-improver.md` | Agent | Rule revision from feedback |
-| `claude-code/.claude/agents/lo-answerer.md` | Agent | Question translation |
-| `claude-code/.claude/skills/solve/SKILL.md` | Skill | User-facing `/solve` command |
-| `claude-code/prompts/linguistics-patterns.md` | Prompt fragment | Shared linguistics pattern catalog |
-| `claude-code/prompts/rule-format.md` | Prompt fragment | Rule JSON format specification |
-| `claude-code/prompts/vocabulary-format.md` | Prompt fragment | Vocabulary JSON format specification |
-| `claude-code/workspace/` | Directory | Ephemeral per-run data files |
-| `claude-code/CLAUDE.md` | Config | Project-level instructions |
-| `claude-code/.claude/settings.json` | Config | Agent permissions and tool access |
+| Component | Type | Integrates With |
+|-----------|------|-----------------|
+| `02a-dispatch.ts` | New sub-phase module | Imported by `02-hypothesize.ts`; calls dispatcher/improver-dispatcher via `mastra.getAgentById()` |
+| `02b-hypothesize.ts` | New sub-phase module | Imported by `02-hypothesize.ts`; calls initial-hypothesizer via `mastra.getAgentById()` |
+| `02c-verify.ts` | New sub-phase module | Imported by `02-hypothesize.ts`; calls verifier-orchestrator + verifier-feedback-extractor |
+| `02d-synthesize.ts` | New sub-phase module | Imported by `02-hypothesize.ts`; calls hypothesis-synthesizer + convergence verifier |
+| `agent-factory.ts` | New utility | Imported by all 13 `*-agent.ts` files (replaces direct `new Agent()`) |
 
 ### Modified Components
 
-None. The Claude Code solver is built entirely in a new `claude-code/` directory. No existing Mastra code, frontend components, or configuration files are modified.
+| Component | Nature of Change | Risk |
+|-----------|-----------------|------|
+| `steps/02-hypothesize.ts` | Refactored from 1,240 lines to ~150-line coordinator | HIGH — primary change; all sub-phase logic moved out |
+| All 13 `*-agent.ts` files | `new Agent({...})` replaced with `createWorkflowAgent({...})` | LOW — purely structural; exports unchanged |
+| All 13 `*-instructions.ts` files | Prompt content rewritten | MEDIUM — behavior change; eval before and after |
+| 6 Claude Code `*.md` agent files | Prompt content rewritten | MEDIUM — behavior change; manual test before and after |
+
+### Unchanged Components
+
+| Component | Why Unchanged |
+|-----------|---------------|
+| `steps/01-extract.ts` | Clean, focused, no splitting needed |
+| `steps/03-answer.ts` | Clean, focused, no splitting needed |
+| `workflow.ts` | Pipeline assembly — imports steps by name, steps' public exports unchanged |
+| `workflow-schemas.ts` | Kept flat (see Pattern 3) |
+| `request-context-helpers.ts` | Kept flat unless draft stores extracted (see Pattern 4) |
+| `request-context-types.ts` | No changes |
+| `agent-utils.ts` | No changes |
+| `logging-utils.ts` | No changes |
+| `vocabulary-tools.ts` | No changes |
+| `rules-tools.ts` | No changes |
+| `03a-rule-tester-tool.ts` | No changes |
+| `03a-sentence-tester-tool.ts` | No changes |
+| `index.ts` | Updated only if factory changes agent export shape (it won't) |
+| All frontend components | No changes for refactoring phase |
+| Eval system | No changes |
+
+---
 
 ## Build Order
 
-Based on dependencies, build in this order:
+Build order is determined by dependency direction: factories before agents, sub-phases before coordinator, schema changes before anything that imports them.
 
-### Phase 1: Foundation (no dependencies)
-1. **Directory structure** -- Create `claude-code/` with all subdirectories
-2. **CLAUDE.md** -- Project instructions for the solver
-3. **Prompt fragments** -- Shared prompt content (`linguistics-patterns.md`, `rule-format.md`, `vocabulary-format.md`) adapted from existing Mastra agent instructions
-4. **Example problems** -- Copy or symlink from `examples/` for testing
-5. **`.claude/settings.json`** -- Configure permissions for the solver agents
+### Phase 1: Dead Code Removal (no dependencies — do first)
 
-### Phase 2: Individual Agents (depends on prompt fragments)
-6. **lo-extractor agent** -- Simplest agent, validates the file-based I/O pattern
-7. **lo-hypothesizer agent** -- Core reasoning agent, references prompt fragments, most complex system prompt
-8. **lo-verifier agent** -- Most architecturally different from Mastra (inline testing instead of tool delegation), needs careful prompt design
-9. **lo-improver agent** -- Depends on verifier output format being settled
-10. **lo-answerer agent** -- Depends on rules/vocabulary format being settled
+1. **Audit `shared-memory.ts`** — determine if it is used; remove if not
+2. **Remove or mark DEPRECATED** the `02a-initial-hypothesis-extractor-agent.ts` and its instructions file — `index.ts` marks it deprecated but it is still exported
+3. **Remove `hypothesisTestLoopSchema` and `initialHypothesisInputSchema`** from `workflow-schemas.ts` if unused by any live code path
 
-### Phase 3: Orchestration (depends on all agents existing)
-11. **solve-orchestrator agent** -- Coordinates the full pipeline, dispatches all agents
-12. **solve skill (SKILL.md)** -- Entry point, invokes orchestrator via `context: fork`
+**Why first:** Removing dead code reduces the surface area for all subsequent changes. Less to move when splitting files.
 
-### Phase 4: Tuning and Evaluation (depends on working pipeline)
-13. **End-to-end testing** -- Run against eval problems, verify output quality
-14. **Prompt tuning** -- Iterate on agent prompts based on results
-15. **Comparison** -- Compare results with Mastra pipeline on same problems
+### Phase 2: Agent Factory (low risk, no runtime behaviour change)
 
-**Phase ordering rationale:**
-- Prompt fragments first because agents reference them at runtime
-- Individual agents before orchestrator because they can be tested in isolation (manually dispatch a single agent)
-- Orchestrator last because it depends on all agents working correctly and having settled I/O formats
-- The skill is a thin wrapper and comes at the very end
-- Tuning is iterative and ongoing after the pipeline works
+4. **Create `agent-factory.ts`** — implement `createWorkflowAgent()`
+5. **Migrate all agent files** to use factory — one agent at a time, verify `npx tsc --noEmit` after each
+
+**Why second:** Factory must exist before any agent can be migrated. Migrating agents is low-risk (no behaviour change) and reduces file sizes before prompt rewrites, making instructions files easier to review.
+
+### Phase 3: 02-hypothesize.ts Split (highest risk — do before prompt changes)
+
+6. **Create `02a-dispatch.ts`** — extract dispatch phase function
+7. **Create `02b-hypothesize.ts`** — extract parallel hypothesize phase function
+8. **Create `02c-verify.ts`** — extract per-perspective verify phase function
+9. **Create `02d-synthesize.ts`** — extract synthesize + convergence phase function
+10. **Refactor `02-hypothesize.ts`** to thin coordinator importing sub-phases
+11. **Verify `npx tsc --noEmit`** after each sub-phase extraction, not just at the end
+
+**Why third:** Structural splits must happen before prompt engineering. If you rewrite prompts first and then split, you have to move rewritten content around. Split first on unchanged prompts — easier to verify correctness since behaviour is unchanged.
+
+**Extraction order within step 3:** Extract sub-phases in pipeline order (dispatch first, synthesize last) so that each extracted function can be verified in isolation against the still-monolithic remainder.
+
+### Phase 4: Mastra Prompt Engineering
+
+12. **Rewrite `01-structured-problem-extractor-instructions.ts`** — baseline extractor
+13. **Rewrite dispatcher and hypothesizer instructions** (`02-dispatcher`, `02-initial-hypothesizer`) — core of the pipeline
+14. **Rewrite synthesizer and improver-dispatcher instructions**
+15. **Rewrite verifier and feedback extractor instructions** (`03a-*`)
+16. **Rewrite rules improver and improvement extractor instructions** (`03b-*`)
+17. **Rewrite question answerer instructions** (`04-*`)
+18. **Run eval after each agent group** — measure regression or improvement
+
+**Why this order within prompt engineering:** Extract-first agents are lower risk (GPT-5-mini, structured output, less creative latitude). Reasoning agents (Gemini) have more complex prompts and benefit from seeing extractor changes first to align on data formats.
+
+### Phase 5: Claude Code Prompt Engineering
+
+19. **Rewrite all 6 Claude Code agent markdown files** — orchestrator last (depends on subagent formats)
+
+**Why fifth:** Claude Code solver is independent of Mastra. Doing it after Mastra avoids context switching. The subagent formats (extractor, hypothesizer, etc.) should be rewritten before the orchestrator since orchestrator prompts reference subagent output formats.
+
+### Phase 6: Type Safety Improvements (lowest priority)
+
+20. **Tighten `updateCumulativeCost` signature** — replace `any` with typed accessors
+21. **Audit and narrow `ToolExecuteContext` interface** — ensure it matches actual Mastra execute context shape
+22. **Frontend component cleanup** if identified (DevTracePanel, event handlers)
+
+**Why last:** Type safety changes are correctness improvements, not functional changes. They are safe to defer and do not unblock other phases.
+
+---
+
+## Anti-Patterns
+
+### Anti-Pattern 1: Extracting Sub-Phases with Copied Data Instead of Map References
+
+**What people do:** Copy `Array.from(mainRules.values())` into the sub-phase function signature instead of passing the live `Map<string, Rule>` reference.
+
+**Why it's wrong:** The current architecture relies on Maps being mutated in place. The synthesizer writes rules via CRUD tools that access the Map directly through `requestContext`. Passing copies breaks this — the synthesizer's tool writes go to the copy, not the Map the coordinator reads after synthesis.
+
+**Do this instead:** Pass the live Map references. Sub-phase function signatures should accept `mainRules: Map<string, Rule>` and `mainVocabulary: Map<string, VocabularyEntry>` by reference.
+
+---
+
+### Anti-Pattern 2: Adding a Sub-Phase Index File
+
+**What people do:** Create `steps/02-phases/index.ts` that re-exports all four sub-phase functions.
+
+**Why it's wrong:** The sub-phases are internal to `02-hypothesize.ts`. They are not part of any public API. Adding an index file creates a false impression that they are importable by other consumers, and adds a re-export layer with no benefit.
+
+**Do this instead:** The coordinator (`02-hypothesize.ts`) imports directly from the individual sub-phase files. No index.
+
+---
+
+### Anti-Pattern 3: Rewriting Prompts Before Splitting 02-hypothesize.ts
+
+**What people do:** Rewrite the 13 Mastra agent instructions first (exciting work), then attempt to split the monolithic step file.
+
+**Why it's wrong:** Splitting the file requires careful reading and understanding of the current logic. Simultaneous prompt changes make it harder to verify that the split did not accidentally change behavior. Bugs introduced during the split are harder to isolate from prompt-change regressions.
+
+**Do this instead:** Split the file on unchanged prompts, run evals to confirm identical behavior, then rewrite prompts.
+
+---
+
+### Anti-Pattern 4: Splitting workflow-schemas.ts Without Checking Import Graph
+
+**What people do:** Split schemas into domain files, then discover that `workflowStateSchema` needs `ruleSchema` (core), `vocabularyEntrySchema` (from vocabulary-tools.ts), and `logging-utils.ts` (for `initializeWorkflowState`). The resulting import graph has multiple cross-file dependencies, creating circular import risk.
+
+**Why it's wrong:** The schema file is flat by design. The apparent "domains" are load-bearing cross-references. A naive split creates circular imports or requires a shared `core.ts` that contains most of the schemas anyway.
+
+**Do this instead:** Keep `workflow-schemas.ts` as a single file for this milestone. If schema file size becomes a maintenance issue post-v1.5, audit the dependency graph before splitting.
+
+---
+
+### Anti-Pattern 5: Changing the `agent-factory.ts` Signature Mid-Migration
+
+**What people do:** Begin migrating agents to the factory, then realize the `requestContextSchema` handling needs a different API, and refactor the factory mid-migration.
+
+**Why it's wrong:** Agents migrated before the signature change need to be re-migrated. The factory becomes a source of merge conflicts.
+
+**Do this instead:** Finalize the factory signature by migrating 2-3 representative agents first (one reasoning agent, one extraction agent, one tester agent). Lock the API, then migrate the remaining 10.
+
+---
 
 ## Sources
 
-- [Claude Code Subagents Documentation](https://code.claude.com/docs/en/sub-agents) -- Official docs covering custom subagents, YAML frontmatter fields, tool access restrictions, `context: fork`, parallel execution, and the constraint that subagents cannot spawn subagents (HIGH confidence)
-- [Claude Code Skills Documentation](https://code.claude.com/docs/en/skills) -- Official docs covering SKILL.md format, `context: fork` + `agent:` field, `$ARGUMENTS` substitution, invocation control, and skill-agent interaction patterns (HIGH confidence)
-- GSD workflow system at `.claude/get-shit-done/` (local reference) -- Demonstrates orchestrator-dispatched multi-agent workflows using the Agent/Task tool, file-path-based subagent prompts, and parallel research spawning pattern (HIGH confidence, verified in this repo)
-- GSD `execute-phase.md` workflow (local reference) -- Pattern for orchestrator spawning executor subagents with file paths, collecting results via workspace files, and spot-checking agent output (HIGH confidence)
-- GSD `new-project.md` workflow (local reference) -- Pattern for spawning 4 parallel researcher subagents, each writing to separate output files, followed by a synthesizer agent (HIGH confidence)
-- Existing Mastra workflow in `src/mastra/workflow/` (local reference) -- Source architecture being mapped: 10 agents, RequestContext for state, DraftStore for perspective isolation, two-agent chains, and vocabulary/rules CRUD tools (HIGH confidence)
-- [Claude Code known issue #20931](https://github.com/anthropics/claude-code/issues/20931) -- Bug report about custom agents in `~/.claude/agents/` not being loaded as Task subagent types; may affect project-scoped agents (MEDIUM confidence, may be resolved)
+- `src/mastra/workflow/steps/02-hypothesize.ts` — direct inspection, 1,240 lines (HIGH confidence)
+- `src/mastra/workflow/workflow-schemas.ts` — direct inspection, 407 lines (HIGH confidence)
+- `src/mastra/workflow/request-context-helpers.ts` — direct inspection, 440 lines (HIGH confidence)
+- `src/mastra/workflow/request-context-types.ts` — direct inspection, 79 lines (HIGH confidence)
+- All 13 `*-agent.ts` files — direct inspection, confirmed boilerplate pattern (HIGH confidence)
+- `src/mastra/workflow/index.ts` — direct inspection, confirmed export surface (HIGH confidence)
+- `.planning/PROJECT.md` — milestone scope confirmation (HIGH confidence)
 
 ---
-*Architecture research for: Claude Code native solver workflow*
-*Researched: 2026-03-07*
+
+*Architecture research for: v1.5 refactor and prompt engineering integration*
+*Researched: 2026-03-08*

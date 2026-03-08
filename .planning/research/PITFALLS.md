@@ -1,307 +1,348 @@
 # Pitfalls Research
 
-**Domain:** Claude Code native multi-agent solver workflow (converting Mastra orchestration to Claude Code subagents)
-**Researched:** 2026-03-07
-**Confidence:** HIGH (verified against official Claude Code docs, GitHub issues, and GSD workflow patterns)
+**Domain:** Codebase refactoring and prompt engineering on an existing AI agent orchestration system (LO-Solver v1.5)
+**Researched:** 2026-03-08
+**Confidence:** HIGH (codebase analysis, Mastra v1 migration docs) / MEDIUM (prompt engineering, verified against vendor docs and peer-reviewed research)
+
+---
 
 ## Critical Pitfalls
 
-### Pitfall 1: Parallel Task Tool Calls Silently Emit Only 1 of N
+### Pitfall 1: Circular Imports from File-Splitting Without Dependency Analysis
 
 **What goes wrong:**
-When the orchestrator tries to spawn multiple subagents in parallel (e.g., 3 parallel hypothesizers), Claude Code may emit only 1 of the intended N Task tool calls. The model writes text suggesting it is launching 3 agents, but only 1 actually executes. The "results" for the other 2 are hallucinated -- plausible-looking but fabricated output that was never computed. This is a confirmed open bug (issues #22508, #29181) affecting Opus 4.6 on Claude Code. The problem worsens on subsequent attempts within the same conversation.
+When `02-hypothesize.ts` (1,240 lines) is split into sub-phase files, the new files may re-import from each other or from shared utilities they previously lived alongside. For example, splitting into `02a-dispatch.ts`, `02b-hypothesize-per-perspective.ts`, and `02c-synthesize.ts` means each needs `emitTraceEvent`, `streamWithRetry`, and types from `workflow-schemas.ts`. If any two of these new files also cross-reference each other, TypeScript produces silent circular dependency errors at runtime — the imported value arrives as `undefined` — not a build error.
+
+The existing codebase already has a cross-reference to watch: `request-context-types.ts` imports `Rule` from `workflow-schemas.ts` and immediately re-exports it. Any new file in the same split that also imports `Rule` from `request-context-types.ts` while `request-context-types.ts` imports from the new file creates a cycle.
 
 **Why it happens:**
-The root cause is unclear (model-side vs client-side), but the symptom is that the model's stop_reason is `null` on messages that should contain multiple parallel tool calls. The tool call emission pipeline appears to truncate after the first Task call. This is not a prompt engineering problem -- it is a platform bug in how parallel Task tool use is dispatched.
+Large monolithic files implicitly avoid circular imports because everything lives in one module. The moment you extract sub-modules, latent dependency cycles surface. Developers split files linearly (phase A, phase B, phase C) without drawing the full import graph first.
 
 **How to avoid:**
-1. Do NOT rely on the model spontaneously emitting multiple parallel Task calls in a single message. Instead, have the orchestrator explicitly spawn subagents one at a time in a sequential loop, collecting each result before spawning the next.
-2. Alternatively, use explicit sequential dispatch with file-based output: spawn agent 1, wait for its file output, spawn agent 2, etc. The GSD workflow's `execute-phase.md` uses exactly this pattern -- it spawns one Task per plan and waits for completion before checking results.
-3. If parallelism is essential, use Claude Code Agent Teams (experimental) which coordinate across separate sessions, bypassing the single-message parallel Task limitation.
-4. For the LO-Solver specifically: the multi-perspective hypothesis step currently runs 3 parallel hypothesizers. Convert to sequential dispatch (hypothesizer 1 -> collect -> hypothesizer 2 -> collect -> hypothesizer 3 -> collect -> compare results). Accept the latency cost in exchange for correctness.
+1. Draw the dependency graph before writing any code. `workflow-schemas.ts` and `request-context-types.ts` must remain pure leaf consumers — no new files should be added to their import lists during the split. All sub-phase files should import only from leaves and from `../agent-utils`, `../logging-utils`, `../request-context-helpers`, and the specific agent files they invoke.
+2. Keep sub-phase files as import-only consumers: they import utilities but export nothing that other sub-phase files import.
+3. Run `npx tsc --noEmit` after each file extraction, not just at the end.
+4. Use `import type` for all type-only imports — this prevents runtime circular dependency problems even when the type graph has cycles.
 
 **Warning signs:**
-- The orchestrator says "spawning 3 agents" but only one subagent viewer appears in Ctrl+O
-- Results from "parallel" agents arrive instantly (they were hallucinated, not computed)
-- Results for different perspectives are suspiciously similar or share the same vocabulary entries
-- The orchestrator's response mentions results from agents that never wrote any output files
+- A split file imports from another split file that was created in the same refactoring session.
+- A new barrel/index file re-exports from multiple sub-phase files that each import from the same helper.
+- `npx tsc --noEmit` produces a new `TS2303: Circular definition of import alias` error.
+- An import resolves to `undefined` at runtime where a function was expected.
 
-**Phase to address:**
-Phase 1 (Orchestrator skeleton) -- the dispatch model (sequential vs parallel) is an architectural decision that must be locked in before writing subagent definitions.
+**Phase to address:** File-splitting phase (02-hypothesize.ts). Verify with `npx tsc --noEmit` and `npm run eval -- --problem <id>` smoke test after each split.
 
 ---
 
-### Pitfall 2: Subagents Cannot Spawn Subagents (No Nesting)
+### Pitfall 2: Prompt Regression Without a Captured Baseline Score
 
 **What goes wrong:**
-The current Mastra workflow has a deep call chain: Orchestrator -> Step 2 (multi-perspective) -> Dispatcher Agent -> N Hypothesizer Agents -> (each uses) Rule Tester Tool -> (which calls) Rule Tester Agent. If this hierarchy is naively translated to Claude Code subagents, the hypothesizer subagent would need to spawn a rule-tester subagent. This fails silently -- subagents do not have access to the Task tool and cannot spawn other subagents. The hypothesizer would either skip testing entirely or hallucinate test results.
+All 19 agent prompts are rewritten. Each individual change looks improved in isolation — clearer structure, model-specific formatting, explicit output constraints. But the eval harness runs end-to-end: a change to the dispatcher prompt that increases the number of generated perspectives cascades into a verifier timeout, dropping the final translation accuracy score. There is no per-step score that fires automatically on prompt change, so a 10-point drop in `translation-accuracy` from a synthesizer rewrite goes undetected until the full eval run at the end of the milestone.
+
+Research confirms this failure mode directly: replacing task-specific prompt structure with generic "improved" prompt rules reduced extraction pass rate from 100% to 90% and RAG compliance from 93% to 80% on Llama-class models, while instruction-following metrics *improved* — the prompt appeared better but performed worse on the actual task.
 
 **Why it happens:**
-Claude Code enforces a single level of delegation by design. The Task tool is only available to the main conversation (or the main agent in `--agent` mode). Subagents receive a filtered tool set that excludes Task. This is documented in the official Claude Code subagent docs: "Subagents cannot spawn other subagents."
+Prompt engineering feedback cycles are slow (minutes per eval run) and costly. Developers batch multiple prompt changes before running evals, making it impossible to isolate which rewrite caused a regression.
 
 **How to avoid:**
-1. Flatten the agent hierarchy to one level. The orchestrator (main conversation) must be the only entity that spawns subagents. The verify/improve loop must be orchestrated by the main agent, not delegated to a verifier subagent that in turn spawns testers.
-2. Structure as: Orchestrator -> [Extractor Subagent] -> Orchestrator -> [Hypothesizer Subagent 1] -> Orchestrator -> [Hypothesizer Subagent 2] -> ... -> Orchestrator -> [Verifier Subagent] -> Orchestrator (evaluates results, decides if another improve round is needed) -> [Improver Subagent] -> repeat.
-3. Any operation that currently uses "tool calls within agent calls" (like the verifier orchestrator calling rule-tester tools) must be folded into a single subagent's system prompt with explicit instructions to perform the testing internally, or the testing logic must be moved to the orchestrator level.
+1. Establish a numeric baseline before touching any prompt: run `npm run eval -- --comparison` on all 4 ground-truth problems and record `translation-accuracy` and `rule-quality` scores. Save the results JSON as `evals/results/pre-v1.5-baseline.json`.
+2. Rewrite one agent prompt at a time. After each rewrite, run `npm run eval -- --problem <id>` on the fastest problem in testing mode. If the score drops, revert and investigate before moving to the next agent.
+3. Do not rewrite the dispatcher, synthesizer, and hypothesizer prompts in the same commit. These three agents interact — their prompts are coupled.
+4. The eval baseline must be captured before any prompt is touched.
 
 **Warning signs:**
-- A subagent's system prompt instructs it to "spawn" or "delegate to" another agent
-- A subagent references the Task tool in its instructions
-- Test results appear in a subagent's output without corresponding file I/O evidence that testing actually occurred
+- More than one agent prompt changed between eval runs.
+- A prompt is described as "cleaner" or "follows best practices" but no eval was run to confirm the score held.
+- The dispatcher prompt now instructs the LLM to generate a different number of perspectives than the workflow's `effectivePerspectiveCount` cap expects.
+- The synthesizer prompt no longer mentions the tool-call constraint, causing the agent to return prose instead of calling tools.
 
-**Phase to address:**
-Phase 1 (Orchestrator skeleton) -- the flat hierarchy constraint shapes the entire architecture.
+**Phase to address:** Pre-prompt-engineering setup. The eval baseline must be captured before any prompt is touched. Each prompt rewrite should have its own `npm run eval` verification.
 
 ---
 
-### Pitfall 3: Subagent Return Values Are Unstructured Text, Not Typed Data
+### Pitfall 3: Agent Factory Pattern Breaking Mastra's Dynamic Model Resolution
 
 **What goes wrong:**
-In the Mastra workflow, agents return structured Zod-validated objects (e.g., `structuredProblemDataSchema`, `dispatcherOutputSchema`). Data flows through typed schemas between steps. In Claude Code, a subagent returns free-form text to the orchestrator. If the orchestrator expects JSON and the subagent returns markdown, or if the subagent wraps JSON in a code fence, or if the subagent adds commentary before/after the JSON, parsing fails. The orchestrator cannot use Zod validation on subagent returns because there is no structured output enforcement in the Task tool.
+The current agent pattern uses a dynamic model function:
+```typescript
+model: ({ requestContext }) =>
+  getOpenRouterProvider(requestContext)(
+    requestContext?.get('model-mode') === 'production'
+      ? 'google/gemini-3-flash-preview'
+      : TESTING_MODEL,
+  ),
+```
+A factory function that abstracts agent construction risks inlining the model as a static value or losing the `requestContext` parameter:
+```typescript
+// BAD: factory captures model at construction time, ignoring runtime mode
+function makeAgent(model: string) {
+  return new Agent({ model: openrouter(model), ... });
+}
+```
+This breaks the testing/production mode toggle and the per-request API key injection, which both depend on `requestContext` being evaluated at call time, not at construction time.
 
 **Why it happens:**
-Claude Code subagents communicate via natural language text. There is no schema enforcement, no structured output mode, and no JSON-mode for the Task tool return. The Claude API supports structured outputs (tool_use with JSON schema), but the Task tool in Claude Code does not expose this capability to subagent returns.
+The factory pattern naturally encourages passing configuration at construction time. The dynamic-model pattern (a function that receives `requestContext`) is non-obvious — it looks like extra boilerplate until you understand why it exists. A developer writing the factory may simplify it by resolving the model eagerly.
 
 **How to avoid:**
-1. Use file-based data passing instead of relying on return text. Each subagent writes its output to a designated JSON file (e.g., `claude-code/workspace/extraction-result.json`). The orchestrator reads the file after the subagent completes. This is the GSD pattern: subagents write SUMMARY.md files, and the orchestrator reads them after completion.
-2. Include explicit formatting instructions in each subagent's system prompt: "Write your complete output to `{output_file}` as valid JSON matching this schema: {...}. Do not include any text before or after the JSON. Do not wrap in code fences."
-3. Add defensive parsing in the orchestrator: try JSON.parse on the file contents, and if it fails, try extracting JSON from code fences, then try extracting from the first `{` to the last `}`.
-4. For the LO-Solver: define a workspace directory (`claude-code/workspace/`) with a naming convention for intermediate files: `01-extraction.json`, `02-perspective-1.json`, `02-perspective-2.json`, etc.
+The factory must preserve the `({ requestContext }) => ...` signature. The correct factory shape:
+```typescript
+function makeWorkflowAgent(
+  id: string,
+  instructions: string,
+  productionModel: string,
+  tools?: Record<string, Tool>,
+) {
+  return new Agent({
+    id,
+    model: ({ requestContext }) =>
+      getOpenRouterProvider(requestContext)(
+        requestContext?.get('model-mode') === 'production'
+          ? productionModel
+          : TESTING_MODEL,
+      ),
+    instructions: { role: 'system', content: instructions },
+    tools: tools ?? {},
+    inputProcessors: [new UnicodeNormalizer({ stripControlChars: false, preserveEmojis: true, collapseWhitespace: true, trim: true })],
+  });
+}
+```
+Write this factory first, then migrate one agent, verify testing/production mode still switches models by checking the logged model name in a `npm run eval -- --problem <id>` run before migrating further.
 
 **Warning signs:**
-- The orchestrator says "parsing the extraction result" and then produces garbled or missing data
-- A subagent's output file contains markdown commentary mixed with JSON
-- The orchestrator skips a step because it couldn't parse the previous step's output
-- Rule or vocabulary data is partially lost between steps
+- The factory receives a `string` or `LanguageModelV1` as the model parameter instead of passing a function.
+- Running `npm run eval -- --mode production` and `--mode testing` logs the same model ID.
+- The per-request API key (user-provided key from `state.apiKey`) is no longer propagated — the factory doesn't call `getOpenRouterProvider(requestContext)`.
 
-**Phase to address:**
-Phase 1 (Orchestrator skeleton) -- the data-passing contract (file paths, naming, format) must be defined before writing any subagent.
+**Phase to address:** Factory pattern phase. Verify model switching and key propagation before migrating more than two agents.
 
 ---
 
-### Pitfall 4: Context Window Exhaustion in the Orchestrator
+### Pitfall 4: Dead Code Removal Deleting the Only Re-Export of a Type
 
 **What goes wrong:**
-The orchestrator (main conversation) accumulates context from every subagent's return text. With 4 solver steps, each returning substantial output (extracted problem data, multiple hypothesis sets with rules and vocabulary, verification results, final answers), the orchestrator's 200K token context window fills up. Performance degrades around 147K-152K tokens due to the lost-in-the-middle problem. By the time the verify/improve loop runs its 3rd or 4th iteration, the orchestrator has lost critical context from earlier steps, leading to degraded decision-making about whether to continue iterating.
+The deprecated `02a-initial-hypothesis-extractor-agent.ts` is not called from any step and is safe to delete in isolation. However, `index.ts` still registers it in `workflowAgents`. Deleting the file without updating `index.ts` produces a broken import. More subtly: `src/evals/zero-shot-solver.ts` imports `questionsAnsweredSchema` from `@/mastra/workflow/workflow-schemas` and lives outside the `workflow/` directory. If schema reorganization moves or renames that export, this eval file breaks — it is not found by a `grep` scoped to `src/mastra/`.
+
+This is a concrete risk: there are 39 import edges across the codebase pointing to `workflow-schemas.ts`, `request-context-types.ts`, and `request-context-helpers.ts`. Any reorganization that changes module paths without adding re-exports will break some subset of these.
 
 **Why it happens:**
-Each subagent's return text is injected into the orchestrator's conversation. The orchestrator also has ~30-40K tokens of system prompt, tool definitions, and environment context loaded before any work begins. With 4 main steps plus up to 4 verify/improve iterations, the conversation grows rapidly. Unlike Mastra (which uses RequestContext -- a separate mutable state store), Claude Code has no out-of-band state mechanism.
+Dead code tools flag the deprecated agent as unused in steps but miss its registration in `index.ts`. Schema reorganization tends to move canonical declarations without auditing all downstream consumers. Searches scoped to the `workflow/` directory miss the eval files one level up in `src/evals/`.
 
 **How to avoid:**
-1. Keep subagent returns minimal. Subagents write full results to files, but return only a brief summary to the orchestrator (e.g., "Extraction complete. 12 dataset pairs, 4 questions. Results in claude-code/workspace/01-extraction.json").
-2. Use the file system as the shared state store. Each subagent reads its inputs from files and writes its outputs to files. The orchestrator only needs to know file paths and pass/fail status.
-3. Run `/compact` between major phases if the orchestrator detects high context usage.
-4. Design the verify/improve loop to be self-contained: the verifier subagent reads rules from a file, tests them, writes results to a file. The orchestrator only reads the pass/fail summary, not the full verification trace.
+1. Before deleting any file: run `grep -rn "from.*<filename>"` across the entire `src/` tree (not just `workflow/`). If any hit exists outside the file itself, update the importer first.
+2. For schema reorganization: maintain re-exports at the old path for at least one commit. Move the declaration, add a re-export at the old path, verify `npx tsc --noEmit` passes, then remove the re-export in a separate commit.
+3. The `02a-initial-hypothesis-extractor-agent.ts` deletion specifically requires removing both its `import` and its entry in `workflowAgents` in `index.ts`, and removing the reference in `README.md`.
 
 **Warning signs:**
-- The orchestrator starts "forgetting" the problem statement or earlier extraction results
-- Verify/improve iterations produce worse results than earlier iterations
-- The orchestrator's responses become shorter or less coherent in later steps
-- Auto-compaction triggers during the workflow, losing critical context
+- `npx tsc --noEmit` produces `Cannot find module` errors after a deletion.
+- A file is deleted but `src/mastra/workflow/index.ts` still imports it.
+- `src/evals/zero-shot-solver.ts` fails to import after `workflow-schemas.ts` is restructured — this file lives outside the workflow directory and is easy to miss in a local search.
 
-**Phase to address:**
-Phase 1 (Orchestrator skeleton) -- context management strategy must be baked into the architecture from the start.
+**Phase to address:** Dead-code-removal phase (first in the refactor sequence). Run `npx tsc --noEmit` and `npm run eval -- --problem <id>` after each deletion.
 
 ---
 
-### Pitfall 5: The classifyHandoffIfNeeded Bug Causes False Failures
+### Pitfall 5: Schema Reorganization Producing Duplicate Symbol Errors via Re-Exports
 
 **What goes wrong:**
-Every Task tool subagent reports "failed" even when all work completes successfully. The error message is `classifyHandoffIfNeeded is not defined`. This fires 100% of the time across all sessions, all platforms, and all agent types. It has been an open bug since at least Claude Code v2.1.27 (issues #22087, #22312, #22544, #22567, #22573, #23307, #24181). The error occurs in the completion handler AFTER all tool calls finish, so the actual work is always done. But if the orchestrator naively treats "failed" as an actual failure, it will abort the workflow or retry work that already completed.
+`workflow-schemas.ts` and `request-context-types.ts` already have a dual-export pattern for `Rule`: it is defined in `workflow-schemas.ts` and re-exported from `request-context-types.ts`. If schema reorganization splits `workflow-schemas.ts` into domain files and introduces a barrel `schemas/index.ts` that re-exports everything, consumers that import the same type from both the barrel and a direct path will produce TypeScript duplicate-import errors. With Zod 4, this is further complicated because inferred types and schema objects share similar names (`Rule` type vs `ruleSchema` object), and a barrel re-export of both can create `TS2300: Duplicate identifier` errors if two source files in the barrel export the same name.
 
 **Why it happens:**
-A function `classifyHandoffIfNeeded` is referenced in Claude Code's agent completion/handoff code path but was never defined or imported in the bundled `cli.js`. This is a Claude Code runtime bug, not a user error. Built-in agents (Explore, Plan) are also affected.
+Barrel files feel like the natural solution to "one import for everything," but they cause TypeScript to see the same symbol through two different module paths. The Zod pattern of `const ruleSchema = z.object(...)` + `type Rule = z.infer<typeof ruleSchema>` is particularly prone to this when reorganized across multiple files.
 
 **How to avoid:**
-1. The orchestrator MUST implement spot-check logic for every subagent completion. When a Task reports "failed" with error containing "classifyHandoffIfNeeded", do NOT treat it as a failure. Instead:
-   - Check that the expected output file exists on disk
-   - Check that the file contains valid content (not empty, parseable)
-   - If spot-checks pass, treat as successful and proceed
-2. The GSD workflow (`execute-phase.md`) already implements this exact pattern. Copy it: check for SUMMARY.md existence, check for git commits, check for Self-Check marker.
-3. For the LO-Solver: after each subagent completes, verify its output file exists and contains valid JSON before proceeding.
+1. Do not create a barrel `index.ts` that re-exports from multiple schema files. Keep the existing `workflow-schemas.ts` as the canonical single point of import for all schemas. If it needs to be split, move declarations into sub-files and import them into `workflow-schemas.ts` — consumers continue to import from `workflow-schemas.ts`.
+2. Use `import type` for all type-only imports to prevent runtime value conflicts.
+3. Never re-export the same symbol from two different module paths.
+4. The safest approach for v1.5: do not split `workflow-schemas.ts` at all. At 407 lines it is well-organized. Scope schema reorganization only to `request-context-helpers.ts` domain functions.
 
 **Warning signs:**
-- Every single subagent reports "failed" even though output files appear on disk
-- The orchestrator enters an infinite retry loop because it keeps getting "failed" status
-- The workflow aborts after the first step even though extraction completed successfully
+- `npx tsc --noEmit` reports `TS2300: Duplicate identifier` after a barrel file is introduced.
+- A schema is imported from both `./workflow-schemas` and `./schemas/index` in the same file.
+- A Zod schema name and its inferred type name collide in a re-export barrel.
 
-**Phase to address:**
-Phase 1 (Orchestrator skeleton) -- the spot-check pattern must be built into the orchestrator's subagent dispatch logic from day one.
+**Phase to address:** Schema reorganization phase. Verify with `npx tsc --noEmit` before and after each schema move.
 
 ---
 
-### Pitfall 6: Verify/Improve Loop Lacks Stopping Criteria, Runs Indefinitely
+### Pitfall 6: Model-Specific Prompt Assumptions Breaking Cross-Agent Behavior
 
 **What goes wrong:**
-The Mastra workflow has a hard-coded 4-iteration cap on the verify/improve loop. In a Claude Code native implementation, the orchestrator runs the loop by spawning verifier and improver subagents in sequence. Without explicit stopping criteria, the evaluator keeps finding minor issues and the improver keeps tweaking, but quality plateaus well before the loop stops. Each iteration consumes ~20-30K tokens of orchestrator context and ~5-10 minutes of wall time. Without a cap, the workflow burns through context and money.
+GPT-5-mini (extraction agents), Gemini 3 Flash (reasoning agents), and GPT-OSS-120B (testing mode fallback) each follow different instruction patterns. Gemini 3 models default to efficient/terse output and require explicit requests for detailed reasoning. GPT-5-mini responds well to markdown delimiters (`###`, `---`) but does not need chain-of-thought encouragement. Writing a uniform "improved" prompt template and applying it to all 13 Mastra agents ignores these differences.
+
+The extraction agents (steps 1 and 2a-extractor) use GPT-5-mini and produce structured JSON. If the new prompt for these agents adopts Gemini-style XML tags (`<output>`, `<reasoning>`), GPT-5-mini may wrap its JSON in XML-like prose, and the downstream Zod parse fails silently — the extractor returns an empty result rather than throwing.
+
+Critically: all eval runs use `TESTING_MODEL = 'openai/gpt-oss-120b'`. Model-specific issues introduced for Gemini 3 Flash or GPT-5-mini prompts only surface when running `--mode production`. A prompt rewrite can appear to "pass" testing-mode evals while being broken in production.
 
 **Why it happens:**
-In a framework-based workflow, iteration limits are enforced by code (`for (let i = 0; i < MAX_ITERATIONS; i++)`). In a prompt-based orchestrator, the iteration count is a natural language instruction that the model may or may not respect, especially as context grows and earlier instructions are pushed out of the attention window.
+Prompt engineering guides present best practices as universal. Developers apply the "correct" pattern from one model's guide to all agents without realizing the testing model runs all eval tests.
 
 **How to avoid:**
-1. Track iteration count in a file (e.g., `claude-code/workspace/verify-improve-state.json` with `{ "iteration": 2, "maxIterations": 4 }`). The orchestrator reads this file before each iteration and increments it after.
-2. Define explicit pass/fail thresholds: "If 80% or more rules pass verification, accept the result. If fewer than 50% pass after 4 iterations, output partial results with a warning."
-3. Include the iteration count in every verifier and improver prompt: "This is iteration 3 of 4. Focus on the most impactful remaining failures."
-4. Use the state file as the source of truth, not the orchestrator's memory of how many iterations have run.
+1. Treat extraction agents (GPT-5-mini) and reasoning agents (Gemini 3 Flash) as separate prompt engineering workstreams. Do not port reasoning agent prompt structures to extraction agents.
+2. For extraction agents: prioritize exact output format instructions. Include JSON schema in the prompt, concrete examples of the expected output object, explicit "output ONLY valid JSON" constraint.
+3. For Gemini 3 Flash reasoning agents: use structural headings, keep temperature at default 1.0 (per Google's explicit recommendation), use directness rather than persuasive framing.
+4. Run at least one `npm run eval -- --problem <id> --mode production` after rewriting each extraction agent prompt to catch production-mode regressions.
 
 **Warning signs:**
-- The workflow runs for 30+ minutes on a problem that should take 10-15
-- The orchestrator says "running one more iteration" for the 6th time
-- Rules that were passing in iteration 2 start failing in iteration 4 (regression from over-optimization)
-- Context auto-compaction triggers during the verify/improve loop
+- An extraction agent's prompt adds `<reasoning>` or `<thinking>` XML tags not present before.
+- `scoreExtraction` in `intermediate-scorers.ts` returns `questionsFound: 0` after a prompt change.
+- Zod parsing of structured output starts producing more `success: false` results in eval intermediate scores.
+- An eval passes in `--mode testing` but fails in `--mode production`.
 
-**Phase to address:**
-Phase 3 (Verify/Improve loop) -- must be designed with explicit state tracking from the start.
+**Phase to address:** Prompt engineering phase, specifically when touching `01-structured-problem-extractor-instructions.ts` and `02a-initial-hypothesis-extractor-instructions.ts`.
 
 ---
 
-### Pitfall 7: Subagent System Prompts Are Thin -- No Claude Code System Prompt Inheritance
+### Pitfall 7: emitToolTraceEvent Silent No-Op After Helper Extraction
 
 **What goes wrong:**
-Subagents receive ONLY their custom system prompt plus basic environment details (working directory). They do NOT receive the full Claude Code system prompt, CLAUDE.md contents, or any parent conversation context. A subagent definition that says "follow the patterns in CLAUDE.md" or "use the conventions described in the project" will fail because the subagent has no access to that information. If the extraction subagent's prompt says "parse the problem into structured form" without specifying the exact output format, the subagent has no reference for what "structured form" means.
+The codebase has a documented caution: `ctx.writer?.custom()` inside tools is a silent no-op when agents run inside workflow steps. Events must be emitted via the `step-writer` from `RequestContext` using `emitToolTraceEvent`. During the DevTracePanel cleanup — extracting event handlers into helper functions — developers copy the tool execute signature but drop the `requestContext` threading needed to access `step-writer`. The result is tools that run correctly but produce no trace events in the frontend.
 
 **Why it happens:**
-This is by design for context efficiency -- each subagent gets a fresh 200K context window with only its own system prompt. But developers coming from framework-based workflows (where shared schemas and type definitions are imported) forget that subagents have no implicit shared context.
+The normal mental model for emitting events from an async function is `writer.write(event)`. The `step-writer` workaround is project-specific knowledge. When logic is extracted into helper functions, the `requestContext` parameter is often omitted to keep the helper signature clean.
 
 **How to avoid:**
-1. Each subagent's system prompt (the markdown body of the agent definition file) must be FULLY self-contained. Include the complete output schema inline, not by reference. Include all formatting rules, not "follow project conventions."
-2. Use the `skills` field in subagent frontmatter to inject relevant skill content. But note: this adds to context consumption.
-3. For the LO-Solver: each subagent's `.md` file should include a complete specification of its input format, output format, and expected behavior. Do not rely on the subagent "knowing" what a Rule or VocabularyEntry looks like.
-4. Include example input/output in the system prompt if the format is complex.
+1. Any function that calls `emitToolTraceEvent` must receive `requestContext` as an explicit parameter — do not thread it through a closure or module-level variable.
+2. When extracting helper functions from tool execute bodies, verify each helper that previously emitted events continues to emit events after extraction.
+3. Add a comment above each `emitToolTraceEvent` call in extracted helpers: `// requires step-writer via requestContext; ctx.writer is a no-op inside workflow steps`.
 
 **Warning signs:**
-- A subagent produces output in a different format than the orchestrator expects
-- A subagent ignores project conventions (e.g., naming patterns, file structure)
-- A subagent asks "what format should I use?" in its return text
-- Different subagents produce inconsistent schemas for the same data type
+- A tool's event (e.g., `data-tool-call`) no longer appears in the DevTracePanel after a refactoring commit.
+- A helper function was extracted from a tool execute body but its signature does not include `requestContext`.
+- The frontend trace shows agent-level events but gaps where tool-level events used to appear.
 
-**Phase to address:**
-Phase 2 (Subagent definitions) -- each subagent's prompt must be comprehensive and self-contained.
+**Phase to address:** DevTracePanel / frontend component cleanup phase. Verify by running a full solve in dev mode and checking that all expected trace events appear for at least one tool call.
 
 ---
 
-### Pitfall 8: File I/O Race Conditions When Multiple Subagents Write to the Same Directory
+### Pitfall 8: Mastra v1 API Breaking Changes in Agent Property Access
 
 **What goes wrong:**
-If two subagents run concurrently (despite Pitfall 1, Claude Code may still dispatch some work in parallel via background mode), they can write to overlapping files or read files that another subagent is mid-write. The workspace directory becomes corrupted -- partial JSON files, interleaved writes, or one subagent overwriting another's output.
+Mastra v1 deprecated direct property access to `agent.llm`, `agent.tools`, and `agent.instructions` in favor of getter methods (`agent.getLLM()`, `agent.getTools()`, `agent.getInstructions()`). The refactoring milestone touches agent definitions across 13 files. If any refactoring introduces code that reads these properties directly (e.g., in a factory's test helper, in a README example, or in a diagnostic utility), the code will fail at runtime without a TypeScript error — the properties exist but return deprecated values.
+
+Similarly, `mastra.getAgents()` was renamed to `mastra.listAgents()`. If any diagnostic or eval code calls `getAgents()`, it fails at runtime.
 
 **Why it happens:**
-Claude Code subagents share the same filesystem and working directory. There is no file locking, no transaction mechanism, and no isolation between concurrent subagents. Even sequential subagents can collide if the orchestrator spawns the next one before the previous one's file writes have flushed.
+The old property names worked in previous Mastra versions and the change is not enforced at the TypeScript type level in all code paths. Developers copy patterns from older code or documentation without noticing the deprecation.
 
 **How to avoid:**
-1. Use distinct file paths for every subagent's output. Never have two subagents write to the same file. Convention: `{step}-{perspective}-{type}.json` (e.g., `02-morphological-rules.json`, `02-syntactic-rules.json`).
-2. If using the `isolation: worktree` option, each subagent gets its own git worktree copy. But this is heavy and the worktree is cleaned up if no changes are made -- not suitable for read-then-write patterns.
-3. Wait for each subagent to fully complete (Task tool blocks by default in foreground mode) before spawning the next one.
-4. After each subagent completes, verify its output file exists and is valid before proceeding.
+1. When writing any factory helper or diagnostic code that introspects agents, always use getter methods.
+2. Search for `agent.llm`, `agent.tools`, `agent.instructions`, and `mastra.getAgents()` before marking a refactoring phase complete.
+3. Check `node_modules/@mastra/core` type definitions for the current installed version (1.8.0) to confirm which methods are available.
 
 **Warning signs:**
-- JSON parse errors on files that should be well-formed
-- Output files contain content from a different step's subagent
-- Files are empty or truncated
-- The orchestrator reads stale data from a previous run
+- A newly written factory test helper accesses `agent.tools` instead of `agent.getTools()`.
+- `mastra.getAgents()` appears in any new utility or diagnostic file.
+- Runtime errors in dev mode mentioning deprecated property access.
 
-**Phase to address:**
-Phase 1 (Orchestrator skeleton) -- file naming conventions and write isolation must be established before any subagent writes files.
+**Phase to address:** Factory pattern phase and any phase that introduces agent introspection utilities.
 
 ---
 
 ## Technical Debt Patterns
 
+Shortcuts that seem reasonable but create long-term problems.
+
 | Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
 |----------|-------------------|----------------|-----------------|
-| Embedding full schemas in every subagent prompt | Self-contained subagents | Schema changes require updating N subagent files | Always -- until a shared skill is created with schema definitions that subagents can load via `skills:` field |
-| Hardcoding file paths in subagent prompts | Simple, no path resolution needed | Path changes require updating all subagent definitions | Acceptable for v1.4 where the solver is a standalone feature |
-| Sequential subagent dispatch instead of parallel | Avoids parallel Task tool bug | 3x slower for multi-perspective hypothesis | Always for v1.4 -- correctness over speed. Parallel can be added when the platform bug is fixed. |
-| Using untyped JSON files instead of schema-validated files | No build step, no type generation | Silent data corruption if schema drifts | Acceptable for v1.4 as a proof-of-concept. Add validation in a later milestone. |
-| Orchestrator reads entire output files instead of summaries | Simpler implementation | Context window fills faster | Only for small problems. Must switch to summary-only returns for production use. |
+| Rewriting all 19 prompts in one batch | Faster milestone delivery | Cannot isolate which prompt caused a regression; eval scores become meaningless for diagnosis | Never — always do one agent at a time with an eval checkpoint |
+| Using a barrel `index.ts` for schemas | Single import path for consumers | Circular import risk, duplicate symbol errors, tree-shaking problems in Next.js | Only if the barrel imports from true leaf files with no cross-dependencies |
+| Deleting deprecated agents without grepping all consumers | Cleaner codebase faster | Breaks `src/evals/zero-shot-solver.ts` or other out-of-tree importers silently | Never — always grep `src/` first |
+| Applying one factory to all 13 agents at once | Less incremental work | Mistakes propagate to all agents; harder to bisect a regression | Start with 2-3 agents, verify, then scale |
+| Skipping `npx tsc --noEmit` between refactoring steps | Faster iteration | Circular imports and broken re-exports accumulate undetected | Never during schema reorganization |
+| Running only `--mode testing` evals for prompt rewrites | Fast iteration cycle | Production-mode model-specific regressions invisible until production use | Never for extraction agents; acceptable for a first pass on reasoning agents |
+
+---
 
 ## Integration Gotchas
 
+Common mistakes when connecting to external services or internal boundaries.
+
 | Integration | Common Mistake | Correct Approach |
 |-------------|----------------|------------------|
-| Claude Code Task tool + expected "success" status | Treating Task result "failed" as an actual failure | Check for classifyHandoffIfNeeded error, then spot-check output files. Treat as success if files are valid. |
-| Subagent system prompt + CLAUDE.md | Assuming subagent inherits CLAUDE.md content | Subagents get only their own system prompt. Include all relevant instructions inline or via `skills:` field. |
-| Subagent + structured data output | Expecting subagent to return valid JSON in its text response | Have subagents write JSON to files. Read files from orchestrator. Never parse return text as structured data. |
-| Orchestrator + verify/improve loop state | Tracking iteration count in the orchestrator's memory | Use a state file (`verify-improve-state.json`) as source of truth. Orchestrator reads/writes the file each iteration. |
-| Multiple subagents + shared workspace | Having subagents write to overlapping file paths | Use unique file names per subagent per step. Never share output files between concurrent subagents. |
-| Subagent + `maxTurns` | Not setting `maxTurns`, allowing a subagent to loop indefinitely on a hard problem | Set `maxTurns` appropriate to the task (e.g., 30 for extraction, 50 for hypothesis generation). Subagent stops and returns partial results at the limit. |
-| GSD executor pattern + LO-Solver orchestrator | Trying to use GSD's `gsd-executor` agent type for solver subagents | Create dedicated solver subagent definitions in `.claude/agents/`. GSD agents are for project management, not domain-specific orchestration. |
+| Mastra v1 Agent API | Accessing `agent.llm`, `agent.tools`, `agent.instructions` as properties | Use `agent.getLLM()`, `agent.getTools()`, `agent.getInstructions()` — direct property access deprecated in Mastra v1 |
+| Mastra RequestContext in factory | Passing model string to factory, constructing `openrouter(modelId)` at factory call time | Pass `productionModel: string` to factory; factory must construct `({ requestContext }) => getOpenRouterProvider(requestContext)(...)` |
+| OpenRouter per-request key | Creating provider once at module load and capturing it in closure | Create provider per-request via `createOpenRouterProvider(state.apiKey)` inside the step; do not cache across requests |
+| Eval harness as regression gate | Running eval only at end of milestone | Run `npm run eval -- --problem <id>` in testing mode after every prompt change; run full `--comparison` eval before and after milestone |
+| `emitToolTraceEvent` in extracted helpers | Omitting `requestContext` from helper function signature | Always pass `requestContext` explicitly; never rely on module-scope capture |
+| Zod 4 `._def` access | Accessing `schema._def` for schema introspection (Zod 3 pattern) | Zod 4 moved internal definition to `schema._zod.def`; avoid `._def` access in any reorganized schema code |
+| `src/evals/` during schema reorganization | Scoping schema import audit to `src/mastra/workflow/` only | `src/evals/zero-shot-solver.ts` imports from `@/mastra/workflow/workflow-schemas`; always audit the full `src/` tree |
+
+---
 
 ## Performance Traps
 
+Patterns that work but silently degrade eval score or runtime performance.
+
 | Trap | Symptoms | Prevention | When It Breaks |
 |------|----------|------------|----------------|
-| Orchestrator context bloat from subagent returns | Later steps produce lower-quality output, orchestrator "forgets" problem details | Subagents return 1-2 sentence summaries to orchestrator, write full data to files | After 3-4 subagent round-trips (~100K tokens consumed) |
-| Unnecessary re-reading of large problem text | Each subagent re-reads the full problem from scratch, wasting tokens | Extract once, store as structured JSON, subsequent subagents read the extracted version | Not a performance cliff, but wastes ~2-5K tokens per subagent |
-| Auto-compaction during verify/improve loop | Critical rules or vocabulary dropped from orchestrator memory mid-loop | Keep loop state in files, minimize orchestrator context, run `/compact` between major phases (not mid-loop) | When orchestrator context exceeds ~150K tokens |
-| Spawning heavyweight subagents for lightweight tasks | A simple "check if iteration count < 4" takes 30 seconds because a full subagent spins up | Keep control flow decisions in the orchestrator. Only spawn subagents for substantive LLM work (extraction, hypothesis, verification). | Immediately -- every subagent has ~20K tokens of startup overhead |
+| Prompt length exceeding 3,000 tokens | LLM reasoning degrades; rule quality score drops; more verifier iterations needed | Audit token count after each prompt rewrite; keep system prompts under 2,000 tokens; put dynamic content in user message, not system message | Above ~3,000 tokens in system prompt per research findings |
+| Duplicate instructions across tool-injection and system prompt | LLM receives conflicting format requirements; produces malformed tool calls | The hypothesizer agent injects `{{RULES_TOOLS_INSTRUCTIONS}}` and `{{VOCABULARY_TOOLS_INSTRUCTIONS}}` via template substitution; do not duplicate these sections in the base prompt | Any prompt rewrite that copies tool documentation inline rather than using the template placeholder |
+| Over-specifying output format for reasoning agents | Gemini 3 Flash produces shorter, less nuanced reasoning; rule coverage decreases | Keep Gemini reasoning agents directive but not overly constrained; use structural headings, not rigid JSON-extraction constraints on reasoning steps | When a rewritten prompt adds `RETURN ONLY` or a JSON schema to a reasoning (not extraction) agent |
+| Testing mode masking production prompt issues | All eval runs use `TESTING_MODEL` (`gpt-oss-120b`); production-model-specific regressions invisible | Run at least one `--mode production` eval for prompts intended for Gemini 3 Flash or GPT-5-mini | Any prompt that uses model-specific formatting not supported by `gpt-oss-120b` |
 
-## Security Mistakes
-
-| Mistake | Risk | Prevention |
-|---------|------|------------|
-| Subagent with `bypassPermissions` and Bash access | Subagent could execute arbitrary commands without approval | Use `permissionMode: default` or `acceptEdits`. Only grant Bash if needed and with PreToolUse validation hooks. |
-| Writing problem data with sensitive content to unprotected workspace files | Problem data could contain real linguistic examples that are copyrighted | Store workspace files in a gitignored directory (`claude-code/workspace/` added to `.gitignore`) |
-| Subagent writing to project source files | A misconfigured subagent could modify `src/` or `.planning/` files | Use `disallowedTools: Write, Edit` for subagents that should only produce output files, or restrict to specific paths via hooks |
-
-## UX Pitfalls
-
-| Pitfall | User Impact | Better Approach |
-|---------|-------------|-----------------|
-| No progress visibility during subagent execution | User sees nothing for minutes while a subagent works silently | Have the orchestrator print status messages between subagent dispatches: "Step 1/4: Extracting problem structure..." |
-| Outputting raw JSON to terminal | Unreadable wall of text when results are displayed | Format final results as markdown with clear sections: Questions, Answers, Rules Used, Confidence |
-| Not saving intermediate results | If the workflow fails at step 3, all step 1-2 work is lost | Write intermediate results to files at each step. User can inspect partial results or restart from a checkpoint. |
-| Hiding the verify/improve loop from the user | User does not know if rules are improving or stagnating | Print a summary after each iteration: "Iteration 2/4: 15/20 rules passing (up from 12/20)" |
+---
 
 ## "Looks Done But Isn't" Checklist
 
-- [ ] **Orchestrator dispatch:** Verify that ALL subagent results come from actual subagent execution (check output files exist) -- not hallucinated by the orchestrator
-- [ ] **Schema consistency:** After each subagent writes its output file, verify the JSON parses successfully and contains the expected top-level keys
-- [ ] **Iteration cap:** Run the verify/improve loop on a hard problem and verify it stops at exactly 4 iterations, not 3 or 5
-- [ ] **Context health:** After a full workflow run, check that the orchestrator can still accurately describe the original problem (context not lost to compaction)
-- [ ] **File cleanup:** After a workflow run, verify that workspace files from a PREVIOUS run do not contaminate the current run -- stale files must be cleared at startup
-- [ ] **Subagent independence:** Each subagent should produce the same output regardless of what order other subagents ran -- test by running steps out of order
-- [ ] **Error recovery:** Simulate a subagent failure (e.g., truncated output file) and verify the orchestrator reports the error clearly rather than hallucinating results
+Things that appear complete but are missing critical pieces.
+
+- [ ] **02-hypothesize.ts split:** Run `npm run eval` after split to confirm the multi-round hypothesis loop still terminates correctly. The sub-phase files must preserve all `await setState(...)` calls in the correct sequence; a missing setState between phases corrupts round state.
+- [ ] **Dead code removal:** Verify `src/evals/zero-shot-solver.ts` still compiles after any schema change — it lives outside `workflow/` and imports `questionsAnsweredSchema`.
+- [ ] **Factory pattern migration:** Verify `--mode testing` and `--mode production` model toggle still works by checking logged model IDs in at least one eval run after migration.
+- [ ] **Prompt rewrite for extraction agents:** Verify with `npm run eval -- --problem <id> --mode production` that `scoreExtraction` still returns `success: true` and `questionsFound` matches `expectedQuestions`.
+- [ ] **DevTracePanel cleanup:** After any handler extraction, trigger a full solve in dev mode and confirm all trace event types still appear in the panel (`data-tool-call`, `data-vocabulary-update`, `data-rules-update`).
+- [ ] **Type safety improvements:** Replacing `as any` in `03a-rule-tester-tool.ts` and `03a-sentence-tester-tool.ts` for `abort-signal` access requires confirming the new typed pattern works identically at runtime to `(ctx.requestContext as any)?.get?.('abort-signal')`.
+- [ ] **Claude Code agent prompts (6 agents):** The agents in `claude-code/.claude/agents/` use markdown-file workspace state, not Mastra RequestContext. Applying Mastra-style tool instruction patterns to these agents is a category error; they must retain PIPELINE.md references.
+
+---
 
 ## Recovery Strategies
 
+When pitfalls occur despite prevention, how to recover.
+
 | Pitfall | Recovery Cost | Recovery Steps |
 |---------|---------------|----------------|
-| Parallel Task tool only emits 1 of N | LOW | Switch to sequential dispatch. No architectural change needed, just run subagents one at a time. |
-| Nested subagent fails silently | MEDIUM | Flatten the hierarchy. Requires restructuring the orchestrator to handle verify/improve loop directly instead of delegating to a verifier sub-orchestrator. |
-| Unstructured return text breaks parsing | LOW | Switch to file-based data passing. Each subagent writes a JSON file, orchestrator reads the file. |
-| Context window exhaustion | MEDIUM | Reduce return text to summaries. Add `/compact` calls between major phases. Restructure prompts to be more concise. May require rewriting subagent definitions. |
-| classifyHandoffIfNeeded false failures | LOW | Add spot-check logic (file existence + valid JSON check) after every Task tool call. Copy the pattern from GSD's execute-phase.md. |
-| Verify/improve loop runs too long | LOW | Add state file with iteration counter and max. Orchestrator reads before each iteration. |
-| Subagent produces wrong output format | LOW | Update subagent system prompt with explicit schema and examples. No architectural change. |
-| File I/O race condition | LOW | Ensure sequential dispatch. Use unique file names per subagent. Add file existence verification after each subagent. |
+| Circular import discovered at runtime | LOW | `git diff --stat` to find new import edges; use `import type` to break the cycle; re-run `npx tsc --noEmit` |
+| Prompt regression found in eval | MEDIUM | `git log --oneline` to find the prompt change commit; revert that one file; re-run eval to confirm score restores; then re-attempt the rewrite with a more conservative change |
+| Factory pattern broke model switching | LOW | Compare factory implementation against the original dynamic-model pattern in `03a-verifier-orchestrator-agent.ts`; ensure the function is `({ requestContext }) => ...` not a static value |
+| Schema reorganization broke evals import | LOW | Add a re-export at the old path (`export { questionsAnsweredSchema } from './schemas/new-location'`); run `npx tsc --noEmit`; do not delete old re-export until all consumers are migrated |
+| Dead code deletion broke observability registry | LOW | Restore the import and export in `index.ts`; mark the agent with `// DEPRECATED` rather than deleting its registration |
+| emitToolTraceEvent stopped emitting from extracted helper | LOW | Add `requestContext` parameter to the helper; thread it from the tool execute context |
+
+---
 
 ## Pitfall-to-Phase Mapping
 
+How roadmap phases should address these pitfalls.
+
 | Pitfall | Prevention Phase | Verification |
 |---------|------------------|--------------|
-| Parallel Task tool bug (#1) | Phase 1: Orchestrator skeleton | Sequential dispatch produces correct results for all perspectives |
-| No nested subagents (#2) | Phase 1: Orchestrator skeleton | Architecture diagram shows single level of delegation only |
-| Unstructured return values (#3) | Phase 1: Orchestrator skeleton | Output file naming convention documented, all files parseable as valid JSON |
-| Context window exhaustion (#4) | Phase 1: Orchestrator skeleton | Full workflow run completes without auto-compaction triggering |
-| classifyHandoffIfNeeded bug (#5) | Phase 1: Orchestrator skeleton | Orchestrator correctly proceeds after every "failed" Task result |
-| Verify/improve loop no cap (#6) | Phase 3: Verify/Improve loop | Loop stops at exactly MAX_ITERATIONS, state file shows correct count |
-| Thin subagent prompts (#7) | Phase 2: Subagent definitions | Each subagent produces output matching the expected schema without referencing external files for format guidance |
-| File I/O race conditions (#8) | Phase 1: Orchestrator skeleton | No file naming collisions across all subagent outputs in a full run |
+| Circular imports from file-splitting | File-splitting phase (02-hypothesize.ts) | `npx tsc --noEmit` passes; `npm run eval -- --problem <id>` passes after each split |
+| Prompt regression without baseline | Pre-prompt-engineering setup | Baseline eval scores captured and saved before any prompt is touched |
+| Factory pattern breaking dynamic model | Factory pattern phase | `--mode testing` and `--mode production` log different model IDs after factory migration |
+| Dead code removal breaking importers | Dead code removal phase (first) | `grep -rn "from.*<deleted-file>"` across full `src/` returns zero hits before deletion |
+| Schema re-export duplicate symbols | Schema reorganization phase | `npx tsc --noEmit` produces zero new errors; `src/evals/` compiles cleanly |
+| Model-specific prompt breaking extraction | Prompt engineering phase (extraction agents) | `scoreExtraction` returns `success: true` in `--mode production` eval |
+| emitToolTraceEvent silent no-op | DevTracePanel cleanup phase | Full solve in dev mode shows all expected trace event types in the panel |
+| Mastra v1 API deprecated properties | Factory pattern phase | No direct `agent.llm`/`agent.tools`/`agent.instructions` property access in any new code |
+
+---
 
 ## Sources
 
-- [Claude Code official subagent documentation](https://code.claude.com/docs/en/sub-agents) -- HIGH confidence, official docs
-- [GitHub issue #29181: Model emits only 1 Task tool call per message](https://github.com/anthropics/claude-code/issues/29181) -- HIGH confidence, confirmed bug
-- [GitHub issue #22508: Parallel Task calls, Claude states intent for 16 but only emits 1](https://github.com/anthropics/claude-code/issues/22508) -- HIGH confidence, confirmed bug
-- [GitHub issue #24181: Task tool agents always report "failed" -- classifyHandoffIfNeeded](https://github.com/anthropics/claude-code/issues/24181) -- HIGH confidence, confirmed bug, 100% reproduction rate
-- [GitHub issue #22087: classifyHandoffIfNeeded SubagentStop hook failure](https://github.com/anthropics/claude-code/issues/22087) -- HIGH confidence, confirmed bug
-- [Claude Code context window management guide](https://www.morphllm.com/claude-code-context-window) -- MEDIUM confidence, third-party but well-sourced
-- [Claude Code sub-agents: parallel vs sequential patterns](https://claudefa.st/blog/guide/agents/sub-agent-best-practices) -- MEDIUM confidence, third-party best practices
-- [GSD execute-phase.md workflow](/.claude/get-shit-done/workflows/execute-phase.md) -- HIGH confidence, proven in-repo pattern for subagent orchestration with spot-check logic
-- [GSD execute-plan.md workflow](/.claude/get-shit-done/workflows/execute-plan.md) -- HIGH confidence, proven pattern for file-based state passing and subagent dispatch
-- Codebase analysis of existing Mastra workflow (`src/mastra/workflow/`) -- HIGH confidence, direct source reading
+- Codebase analysis: `/home/cervo/Code/LO-Solver/src/mastra/workflow/` — direct examination of 39 import edges across schema files, agent definitions, and step files
+- Mastra v1 migration guide: [Agent Class | v1 Migration Guide | Mastra Docs](https://mastra.ai/guides/migrations/upgrade-to-v1/agent) — breaking changes for `requestContext`, property accessor deprecations
+- Prompt regression research: [When "Better" Prompts Hurt](https://arxiv.org/html/2601.22025v1) — 10% extraction pass rate drop and 13% RAG compliance drop from generic prompt improvements on Llama 3
+- Automated prompt regression testing: [Traceloop — Automated Prompt Regression Testing](https://www.traceloop.com/blog/automated-prompt-regression-testing-with-llm-as-a-judge-and-ci-cd) — "prompt drift is silent but costly"
+- Gemini prompting strategies: [Gemini API Prompt Design Strategies](https://ai.google.dev/gemini-api/docs/prompting-strategies) — temperature 1.0 recommendation, directness over persuasive framing, few-shot example guidance
+- TypeScript circular dependencies: [How to Fix Circular Dependency Issues in TypeScript](https://medium.com/visual-development/how-to-fix-nasty-circular-dependency-issues-once-and-for-all-in-javascript-typescript-a04c987cf0de) — `import type` as a safe workaround
+- Barrel file pitfalls: [Tree shaking doesn't work with TypeScript barrel files](https://github.com/vercel/next.js/issues/12557) — confirmed still an issue in Next.js projects
+- Zod 4 migration: [Lessons from Upgrading to Zod 4](https://www.viget.com/articles/lessons-learned-upgrading-a-large-typescript-application-from-zod-3-to-4) — `._def` moved to `._zod.def`, stricter `.pipe()` typing
+- LLM prompt engineering testing: [LLM Testing in 2026 — Top Methods](https://www.confident-ai.com/blog/llm-testing-in-2024-top-methods-and-strategies)
+- Dead code removal: [How to Delete Dead Code in TypeScript Projects](https://camchenry.com/blog/deleting-dead-code-in-typescript)
 
 ---
-*Pitfalls research for: LO-Solver v1.4 Claude Code Native Solver*
-*Researched: 2026-03-07*
+
+*Pitfalls research for: LO-Solver v1.5 Refactor and Prompt Engineering milestone*
+*Researched: 2026-03-08*
