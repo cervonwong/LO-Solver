@@ -11,7 +11,6 @@ export interface ProgressStep {
 
 interface StepProgressProps {
   steps: ProgressStep[];
-  statusMessage?: string | undefined;
   onStepClick?: (stepId: UIStepId) => void;
 }
 
@@ -67,7 +66,7 @@ function Connector({ fromStatus, toStatus }: { fromStatus: StepStatus; toStatus:
   );
 }
 
-export function StepProgress({ steps, statusMessage, onStepClick }: StepProgressProps) {
+export function StepProgress({ steps, onStepClick }: StepProgressProps) {
   return (
     <div className="flex flex-col">
       {steps.map((step, i) => (
@@ -102,9 +101,6 @@ export function StepProgress({ steps, statusMessage, onStepClick }: StepProgress
           </div>
         </div>
       ))}
-      {statusMessage && (
-        <p className="mt-3 pl-[28px] text-sm text-muted-foreground">{statusMessage}</p>
-      )}
     </div>
   );
 }
