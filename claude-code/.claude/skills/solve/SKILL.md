@@ -313,4 +313,79 @@ After the answerer completes:
 - If it does not exist on first attempt: retry once
 - If retry also fails: print `"Answer generation failed."` and append to `{WORKSPACE}/errors.md`
 
-Print: `"Pipeline complete. Workspace: {WORKSPACE}/"`
+## Step 6: Output Results
+
+### Step 6a: Display Results in Terminal
+
+Read {CURRENT_SOLUTION} to extract the rules (from `## Rules` section) and vocabulary (from `## Vocabulary` section).
+Read `{WORKSPACE}/answers.md` to extract translated answers (from each `## Q{N}` section).
+Read {CURRENT_VERIFICATION} to get the overall pass rate (from `## Summary`) and per-rule results (from `## Rule Results`).
+
+If CURRENT_VERIFICATION is not set (100% convergence at Step 4f with no verify-improve loop), use `{WORKSPACE}/verification.md`.
+
+Print: `""`
+Print: `"--- Results ---"`
+Print: `""`
+
+Print: `"Rules:"`
+
+For each rule (`### {title}` under `## Rules` in CURRENT_SOLUTION):
+  - Extract the rule title and the first sentence of its description as a one-liner
+  - Look up this rule's status in CURRENT_VERIFICATION's `## Rule Results` section
+  - Print: `"{N}. {title} -- {one-line description}"`
+  - If the rule's status is FAIL or NEEDS_UPDATE:
+    - Extract the verifier's reasoning from the Rule Results Notes field
+    - Print: `"   [FAIL] {reasoning}"`
+
+Print: `""`
+Print: `"Answers:"`
+
+If `{WORKSPACE}/answers.md` exists (check with `test -f`):
+  For each question section (`## Q{N}` in answers.md):
+    - Extract the input sentence (from `**Input:**` line) and translation (from `**Translation:**` or `**Revised translation:**` line, preferring revised if present)
+    - Print: `"{Q_ID}: {input} -> {translation}"`
+If `{WORKSPACE}/answers.md` does not exist:
+  Print: `"No answers generated -- see errors.md for details."`
+
+Print: `""`
+
+Extract the pass rate from CURRENT_VERIFICATION's `## Summary` section.
+Print: `"Pass rate: {rate}%"`
+
+If `{WORKSPACE}/errors.md` exists (check with `test -f`):
+  Read it and check for errors that affected the outcome -- look for entries where Recovered is "No" or entries that mention fallback/degraded behavior.
+  If any such errors exist:
+    Print: `""`
+    Print: `"Warnings:"`
+    For each relevant error:
+      Print: `"- {agent}: {message}"`
+
+### Step 6b: Write Solution File
+
+Read {CURRENT_SOLUTION} for the full rules and vocabulary sections.
+Read {CURRENT_VERIFICATION} for per-rule verification status and reasoning.
+Read `{WORKSPACE}/answers.md` for translated answers (if it exists).
+If `{WORKSPACE}/errors.md` exists (check with `test -f`), read it for pipeline notes.
+
+If CURRENT_VERIFICATION is not set (100% convergence at Step 4f with no verify-improve loop), use `{WORKSPACE}/verification.md`.
+
+Collect verification history:
+  Read `{WORKSPACE}/verification.md` and extract the pass rate from `## Summary` (this is iteration 0).
+  For I = 1 to 4:
+    Check if `{WORKSPACE}/verification-{I}.md` exists (using `test -f` via Bash).
+    If it exists, read it and extract the pass rate from `## Summary`.
+
+Write `{WORKSPACE}/solution-complete.md` using the Write tool with the structure defined in `references/workspace-format.md` (## solution-complete.md template).
+
+Key formatting rules for the solution file:
+- Problem reference: `> Problem: See problem.md` (do not include problem content inline)
+- Rules section: include full description, evidence, confidence, verification status (PASS/FAIL), and for failed rules include the verifier's failure reasoning
+- Vocabulary section: table with Form, Meaning, Type, Notes columns (Source column from CURRENT_SOLUTION can be omitted)
+- Verification Summary: one line per iteration that actually occurred (check file existence before including), format: `- Iteration {N}: {rate}%` with iteration 0 labeled `- Iteration 0 (initial): {rate}%`
+- Answers section: one subsection per question with Input, Translation, and Confidence. If answers.md does not exist, note the failure in this section instead.
+- Pipeline Notes section: include ONLY if errors.md exists and contains entries. List each error with agent name, message, and recovery status. Omit this section entirely on clean runs.
+
+Do NOT include:
+- Hypothesis round details (per-perspective results, individual round data)
+- Full verification tables (the summary lines per iteration cover the history)
+- The problem dataset or context (referenced via "See problem.md")
