@@ -150,7 +150,9 @@ Plans:
   2. Step 4c assembles verification-{P}.md with ## Summary and Pass rate from individual test results
   3. Step 4d can extract per-perspective pass rates from the corrected output format
   4. Step 4f convergence check produces consistent output format
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 25-01-PLAN.md -- Rewrite Steps 4c and 4f to use per-call verifier orchestration
 
 ### Phase 26: Documentation Consistency Cleanup
 **Goal**: All documentation files accurately reflect the implemented design decisions
