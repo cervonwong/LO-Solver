@@ -206,13 +206,9 @@ export async function emitToolTraceEvent(
 /** Shape of the cost-related metadata nested in agent results. */
 interface AgentResultCostInfo {
   steps?: Array<{
-    providerMetadata?: {
-      openrouter?: { usage?: { cost?: number } };
-    };
+    providerMetadata?: { openrouter?: { usage?: { cost?: number } } } | undefined;
   }>;
-  providerMetadata?: {
-    openrouter?: { usage?: { cost?: number } };
-  };
+  providerMetadata?: { openrouter?: { usage?: { cost?: number } } } | undefined;
 }
 
 /**
@@ -238,7 +234,10 @@ export function extractCostFromResult(result: AgentResultCostInfo): number {
 /** Typed read/write interface for RequestContext in cost-tracking helpers. */
 type RequestContextReadWrite = {
   get: (key: keyof WorkflowRequestContext) => unknown;
-  set: <K extends keyof WorkflowRequestContext>(key: K, value: WorkflowRequestContext[K]) => void;
+  set: <K extends keyof WorkflowRequestContext>(
+    key: K,
+    value: K extends keyof WorkflowRequestContext ? WorkflowRequestContext[K] : never,
+  ) => void;
 };
 
 /**

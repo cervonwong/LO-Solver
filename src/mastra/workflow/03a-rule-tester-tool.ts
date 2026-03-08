@@ -231,7 +231,7 @@ export const testRuleTool = createTool({
       },
     });
 
-    const abortSignal = (ctx.requestContext as any)?.get?.('abort-signal') as
+    const abortSignal = ctx.requestContext?.get('abort-signal') as
       | AbortSignal
       | undefined;
 
@@ -311,7 +311,7 @@ export const testRuleWithRulesetTool = createTool({
       ...(r.confidence !== undefined && { confidence: r.confidence }),
     }));
 
-    const abortSignal = (ctx.requestContext as any)?.get?.('abort-signal') as
+    const abortSignal = ctx.requestContext?.get('abort-signal') as
       | AbortSignal
       | undefined;
 

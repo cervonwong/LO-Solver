@@ -240,7 +240,7 @@ export const testSentenceTool = createTool({
       },
     });
 
-    const abortSignal = (ctx.requestContext as any)?.get?.('abort-signal') as
+    const abortSignal = ctx.requestContext?.get('abort-signal') as
       | AbortSignal
       | undefined;
 
@@ -335,7 +335,7 @@ export const testSentenceWithRulesetTool = createTool({
       ...(r.confidence !== undefined && { confidence: r.confidence }),
     }));
 
-    const abortSignal = (ctx.requestContext as any)?.get?.('abort-signal') as
+    const abortSignal = ctx.requestContext?.get('abort-signal') as
       | AbortSignal
       | undefined;
 
