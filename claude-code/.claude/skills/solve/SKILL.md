@@ -150,7 +150,167 @@ After the verifier completes, read `{WORKSPACE}/verification.md` and check the `
 
 ## Step 5: Verify-Improve Loop and Answer
 
-[Phase 23 -- verify-improve iteration loop on the synthesized solution, then answer step]
+### Step 5a: Check Iteration 0 (Convergence from Step 4f)
 
-Print: `"Pipeline complete through synthesis. Verify-improve loop and answer step will be added in Phase 23."`
-Print: `"Workspace: {WORKSPACE}/"`
+Read `{WORKSPACE}/verification.md` (produced by Step 4f).
+Extract the pass rate from the `## Summary` section.
+
+If pass rate is **100%**:
+- Print: `"Step 4f already converged at 100%. Skipping to answer step."`
+- Set CURRENT_SOLUTION to `{WORKSPACE}/solution.md`
+- Jump to Step 5d (Answer)
+
+Otherwise:
+- Print: `"Starting verify-improve loop (iteration 0 pass rate: {rate}%)..."`
+- Set CURRENT_SOLUTION to `{WORKSPACE}/solution.md`
+- Set CURRENT_VERIFICATION to `{WORKSPACE}/verification.md`
+- Continue to Step 5b
+
+### Steps 5b-5c: Verify-Improve Loop (iterations 1 to 4)
+
+For iteration I (1 to 4):
+
+#### Step 5b: Improve (iteration I)
+
+Print: `"Iteration {I}: Improving rules..."`
+
+Use the **improver** agent:
+- Read current solution from: {CURRENT_SOLUTION}
+- Read verification from: {CURRENT_VERIFICATION}
+- Read problem from: {WORKSPACE}/problem.md
+- Write improved rules to: {WORKSPACE}/improved-{I}.md
+
+After the improver completes:
+- Check that `{WORKSPACE}/improved-{I}.md` exists using `test -f`
+- If it does not exist on first attempt: retry once with the same instructions
+- If retry also fails: print `"Improvement failed at iteration {I}. Using last known good solution."` and append to `{WORKSPACE}/errors.md`, then break out of the loop
+
+Set CURRENT_SOLUTION to `{WORKSPACE}/improved-{I}.md`
+
+#### Step 5c: Verify (iteration I)
+
+Print: `"Iteration {I}: Verifying rules..."`
+
+This is the multi-call verification orchestration. The /solve skill itself orchestrates individual verifier calls and aggregates results.
+
+**Step 5c.1: Extract rules and sentences from current solution and problem**
+
+Read {CURRENT_SOLUTION} to get the list of rule titles (each `### {title}` under `## Rules`).
+Read `{WORKSPACE}/problem.md` to get dataset sentences and questions.
+
+**Step 5c.2: Test rules (one per call)**
+
+For each rule title in the solution:
+1. Use the **verifier** agent in rule test mode:
+   - Test type: "rule"
+   - Rule title: {rule_title}
+   - Solution file: {CURRENT_SOLUTION}
+   - Problem file: {WORKSPACE}/problem.md
+   - Output file: a temporary result (the /solve skill reads it back immediately)
+2. Read the verifier's output to get the Status (PASS/FAIL/NEEDS_UPDATE)
+3. Record the result: rule title, status, reasoning
+
+**Step 5c.3: Test sentences (one per call, blind translation)**
+
+For each dataset sentence (from the `## Dataset` table in problem.md):
+1. Use the **verifier** agent in sentence test mode:
+   - Test type: "sentence"
+   - Sentence: the foreign text to translate
+   - Direction: the translation direction (based on which column is source vs target)
+   - Solution file: {CURRENT_SOLUTION}
+   - Problem file: {WORKSPACE}/problem.md
+   - Output file: a temporary result
+2. Read the verifier's output to get the blind Translation
+3. Normalize both the verifier's translation and the expected translation:
+   - Trim whitespace
+   - Convert to lowercase
+   - Remove leading/trailing punctuation
+4. Compare: PASS if normalized strings match, FAIL otherwise
+5. Record: sentence number, expected, got, PASS/FAIL
+
+For each question in problem.md (from `## Questions`):
+1. Use the **verifier** agent in sentence test mode (same as above but no expected answer)
+2. Read the verifier's blind translation
+3. Record: question ID, translation (for coverage logging only -- questions do not count toward pass rate)
+
+**Step 5c.4: Aggregate and write verification file**
+
+Compute:
+- rules_passed = count of rules with PASS status
+- rules_failed = count of rules with FAIL or NEEDS_UPDATE status
+- sentences_passed = count of dataset sentences with PASS status
+- sentences_failed = count of dataset sentences with FAIL status
+- pass_rate = round(100 * (rules_passed + sentences_passed) / (rules_total + sentences_total))
+
+Note: questions are NOT included in the pass rate denominator (they have no expected answer).
+
+Write `{WORKSPACE}/verification-{I}.md` with this structure:
+
+```
+# Verification: Iteration {I}
+
+## Summary
+
+- Rules tested: {rules_total}
+- Rules passed: {rules_passed}
+- Rules failed: {rules_failed}
+- Sentences tested: {sentences_total}
+- Sentences passed: {sentences_passed}
+- Sentences failed: {sentences_failed}
+- Pass rate: {pass_rate}%
+
+## Rule Results
+
+### {Rule title}
+**Status:** {PASS|FAIL|NEEDS_UPDATE}
+**Notes:** {reasoning from verifier}
+
+(repeat for each rule)
+
+## Sentence Results
+
+| # | {Foreign} | Expected {Target} | Generated {Target} | Status | Notes |
+|---|-----------|-------------------|---------------------|--------|-------|
+(one row per dataset sentence)
+
+## Question Coverage
+
+| # | Direction | Translation | Notes |
+|---|-----------|-------------|-------|
+(one row per question -- for logging, not pass rate)
+```
+
+Set CURRENT_VERIFICATION to `{WORKSPACE}/verification-{I}.md`
+
+#### Convergence check and iteration summary
+
+Print: `"Iteration {I}: {pass_rate}% ({rules_passed}/{rules_total} rules, {sentences_passed}/{sentences_total} sentences)"`
+
+If pass_rate is 100%:
+- Print: `"Converged at iteration {I}! All rules and sentences pass."`
+- Break out of the loop
+
+If I = 4 (max iterations reached):
+- Print: `"Maximum iterations reached. Final pass rate: {pass_rate}%."`
+- If any rules failed, print: `"Failing rules: {comma-separated failing rule titles}"`
+- If any sentences failed, print: `"Failing sentences: {comma-separated failing sentence numbers}"`
+- Break out of the loop
+
+Otherwise:
+- Continue to iteration I+1
+
+### Step 5d: Answer
+
+Print: `"Generating answers from validated rules..."`
+
+Use the **answerer** agent:
+- Read solution from: {CURRENT_SOLUTION}
+- Read problem from: {WORKSPACE}/problem.md
+- Write answers to: {WORKSPACE}/answers.md
+
+After the answerer completes:
+- Check that `{WORKSPACE}/answers.md` exists using `test -f`
+- If it does not exist on first attempt: retry once
+- If retry also fails: print `"Answer generation failed."` and append to `{WORKSPACE}/errors.md`
+
+Print: `"Pipeline complete. Workspace: {WORKSPACE}/"`
