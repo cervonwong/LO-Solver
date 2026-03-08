@@ -90,10 +90,11 @@
   3. `shared-memory.ts` is either removed (if unused) or its purpose is documented with an inline comment explaining its consumers
   4. `npx tsc --noEmit` reports zero `any` annotations in workflow code (only the pre-existing CSS module error remains)
   5. `npm run eval -- --problem linguini-1` passes with identical scores to pre-cleanup baseline
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 27-01: TBD
+- [ ] 27-01-PLAN.md — Delete deprecated files, install Knip, clean unused exports
+- [ ] 27-02-PLAN.md — Replace all any type annotations with explicit types
 
 ### Phase 28: Agent Factory
 **Goal**: A single factory function produces all 13 workflow agents, eliminating boilerplate while preserving dynamic model resolution
@@ -199,7 +200,7 @@ Phases execute in numeric order: 27 -> 28 -> 29 -> 30 -> 31 -> 32
 | 24. Output and Integration | v1.4 | 1/1 | Complete | 2026-03-08 |
 | 25. Fix Step 4c Verifier Orchestration | v1.4 | 1/1 | Complete | 2026-03-08 |
 | 26. Documentation Consistency Cleanup | v1.4 | 1/1 | Complete | 2026-03-08 |
-| 27. Dead Code & Type Safety | v1.5 | 0/? | Not started | - |
+| 27. Dead Code & Type Safety | v1.5 | 0/2 | Not started | - |
 | 28. Agent Factory | v1.5 | 0/? | Not started | - |
 | 29. Hypothesize Step Split | v1.5 | 0/? | Not started | - |
 | 30. Mastra Prompt Engineering | v1.5 | 0/? | Not started | - |
