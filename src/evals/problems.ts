@@ -1,6 +1,9 @@
 import {
   loadLinguiniQuestions,
   buildLinguiniProblemText,
+  EXAMPLE_PROBLEMS,
+  loadExampleGroundTruth,
+  readExampleInput,
 } from '@examples/index';
 import type { LinguiniQuestion } from '@examples/index';
 
@@ -66,18 +69,31 @@ function buildGroundTruth(question: LinguiniQuestion): GroundTruthAnswer[] {
   return results;
 }
 
-/** Load the evaluation problem set from the Linguini dataset. */
+/** Load the evaluation problem set from the Linguini dataset and hand-curated examples. */
 export function loadEvalProblems(): EvalProblem[] {
   const allQuestions = loadLinguiniQuestions();
   const selectedIds = new Set(SELECTED_QUESTION_IDS);
 
   const selected = allQuestions.filter((q) => selectedIds.has(q.id));
 
-  return selected.map((question) => ({
+  const linguiniProblems = selected.map((question) => ({
     id: question.id,
     title: question.title,
     source: 'linguini' as const,
     rawProblemText: buildLinguiniProblemText(question),
     groundTruth: buildGroundTruth(question),
   }));
+
+  const handCurated = EXAMPLE_PROBLEMS.filter((e) => e.groundTruthFile).map((e) => ({
+    id: e.id,
+    title: e.language,
+    source: 'hand-curated' as const,
+    rawProblemText: readExampleInput(e),
+    groundTruth: loadExampleGroundTruth(e).map((answer, i) => ({
+      questionIndex: i,
+      acceptedAnswers: [answer],
+    })),
+  }));
+
+  return [...linguiniProblems, ...handCurated];
 }

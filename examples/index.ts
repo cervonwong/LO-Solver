@@ -10,6 +10,7 @@ export interface ExampleProblemMeta {
   questionNumber: number;
   inputFile: string;
   solutionFile: string;
+  groundTruthFile?: string;
   sourceUrl: string;
   problemUrl: string;
   solutionUrl: string;
@@ -25,6 +26,7 @@ export const EXAMPLE_PROBLEMS: ExampleProblemMeta[] = [
     questionNumber: 3,
     inputFile: 'uklo_2025R1P3_MoSy_Rosetta_Austr_Saisiyat_Input.md',
     solutionFile: 'uklo_2025R1P3_MoSy_Rosetta_Austr_Saisiyat_Solution.md',
+    groundTruthFile: 'ground-truth/saisiyat.json',
     sourceUrl: 'https://uklo.org/',
     problemUrl: 'https://www.uklo.org/wp-content/uploads/2025/04/2025R1-3-Saisiyat.pdf',
     solutionUrl: 'https://www.uklo.org/wp-content/uploads/2025/04/2025R1-3-Saisiyat.pdf',
@@ -39,6 +41,7 @@ export const EXAMPLE_PROBLEMS: ExampleProblemMeta[] = [
     questionNumber: 1,
     inputFile: 'onling_2024P1_MoSyPh_Rosetta_Uralic_Forest-Enets_Input.md',
     solutionFile: 'onling_2024P1_MoSyPh_Rosetta_Uralic_Forest-Enets_Solution.md',
+    groundTruthFile: 'ground-truth/forest-enets.json',
     sourceUrl: 'https://onling.org/',
     problemUrl: 'https://onling.org/contests/student-2024/online/eng/',
     solutionUrl: 'https://onling.org/contests/student-2024/files/solutions.pdf',
@@ -51,11 +54,29 @@ export const EXAMPLE_PROBLEMS: ExampleProblemMeta[] = [
     questionNumber: 3,
     inputFile: 'onling_2024P3_MoSyPh_Rosetta_Japonic_Okinawan_Input.md',
     solutionFile: 'onling_2024P3_MoSyPh_Rosetta_Japonic_Okinawan_Solution.md',
+    groundTruthFile: 'ground-truth/okinawan.json',
     sourceUrl: 'https://onling.org/',
     problemUrl: 'https://onling.org/contests/student-2024/online/eng/',
     solutionUrl: 'https://onling.org/contests/student-2024/files/solutions.pdf',
   },
 ];
+
+/** Load ground truth answers for a hand-curated example problem. */
+export function loadExampleGroundTruth(meta: ExampleProblemMeta): string[] {
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = dirname(__filename);
+  const filePath = resolve(__dirname, meta.groundTruthFile!);
+  const data = JSON.parse(readFileSync(filePath, 'utf-8'));
+  return data.answers;
+}
+
+/** Read the input file content for a hand-curated example problem. */
+export function readExampleInput(meta: ExampleProblemMeta): string {
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = dirname(__filename);
+  const filePath = resolve(__dirname, meta.inputFile);
+  return readFileSync(filePath, 'utf-8');
+}
 
 /** A single JSONL entry from the Linguini dataset. */
 export interface LinguiniEntry {
