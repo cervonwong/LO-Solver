@@ -74,7 +74,7 @@
 - [x] **Phase 27: Dead Code & Type Safety** - Remove deprecated files, dead exports, and replace all `any` types (completed 2026-03-08)
 - [x] **Phase 28: Agent Factory** - Create `createWorkflowAgent()` factory and migrate all 12 agents (completed 2026-03-08)
 - [x] **Phase 29: Hypothesize Step Split** - Split 1,240-line `02-hypothesize.ts` into 4 sub-phase files (completed 2026-03-09)
-- [ ] **Phase 30: Mastra Prompt Engineering** - Rewrite GPT-5-mini and Gemini 3 Flash prompts with eval verification
+- [x] **Phase 30: Mastra Prompt Engineering** - Rewrite GPT-5-mini and Gemini 3 Flash prompts with eval verification (completed 2026-03-09)
 - [ ] **Phase 31: Claude Code Prompt Engineering** - Rewrite all 6 Claude Code agent prompts per Anthropic best practices
 - [ ] **Phase 32: Frontend Cleanup** - Extract DevTracePanel inline handlers and clean up trace component types
 
@@ -136,7 +136,7 @@ Plans:
   3. All 6 Gemini 3 Flash agent prompts use XML-delimited sections with no chain-of-thought scaffolding and no temperature overrides
   4. Confidence/conclusion vocabulary is consistent across all 13 Mastra agent prompts (no mixed terminology like "confident"/"certain"/"sure")
   5. At least one `--mode production` eval run per model family confirms no production-model-specific regressions
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 
 Plans:
 - [ ] 30-01-PLAN.md — Rewrite 5 GPT-5-mini agent prompts with role-adapted vendor guide strategies
@@ -207,7 +207,7 @@ Phases execute in numeric order: 27 -> 28 -> 29 -> 30 -> 31 -> 32
 | 27. Dead Code & Type Safety | 2/2 | Complete   | 2026-03-08 | - |
 | 28. Agent Factory | 2/2 | Complete    | 2026-03-08 | - |
 | 29. Hypothesize Step Split | 2/2 | Complete    | 2026-03-09 | - |
-| 30. Mastra Prompt Engineering | 2/3 | In Progress|  | - |
+| 30. Mastra Prompt Engineering | 3/3 | Complete    | 2026-03-09 | - |
 | 31. Claude Code Prompt Engineering | v1.5 | 0/? | Not started | - |
 | 32. Frontend Cleanup | v1.5 | 0/? | Not started | - |
 
