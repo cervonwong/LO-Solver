@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: Refactor & Prompt Engineering
-status: completed
-stopped_at: Phase 30 context gathered
-last_updated: "2026-03-09T07:31:37.071Z"
-last_activity: 2026-03-09 — Completed Plan 02 (coordinator rewrite) of Phase 29
+status: in-progress
+stopped_at: Completed 30-01-PLAN.md
+last_updated: "2026-03-09T07:58:32.365Z"
+last_activity: 2026-03-09 — Completed Plan 01 (GPT-5-mini prompt rewrites) of Phase 30
 progress:
   total_phases: 6
   completed_phases: 3
-  total_plans: 6
-  completed_plans: 6
-  percent: 100
+  total_plans: 9
+  completed_plans: 7
+  percent: 78
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-08)
 
 **Core value:** The agentic workflow must produce measurably better results than zero-shotting the same LLMs without orchestration.
-**Current focus:** Phase 29 — Hypothesize Step Split
+**Current focus:** Phase 30 — Mastra Prompt Engineering
 
 ## Current Position
 
-Phase: 29 of 32 (Hypothesize Step Split)
-Plan: 2 of 2
-Status: Phase 29 complete (all plans done)
-Last activity: 2026-03-09 — Completed Plan 02 (coordinator rewrite) of Phase 29
+Phase: 30 of 32 (Mastra Prompt Engineering)
+Plan: 1 of 3
+Status: Plan 01 complete, Plan 02 pending
+Last activity: 2026-03-09 — Completed Plan 01 (GPT-5-mini prompt rewrites) of Phase 30
 
-Progress: [██████████] 100%
+Progress: [████████░░] 78%
 
 ## Performance Metrics
 
@@ -71,6 +71,8 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - [29-01]: Used project's StepWriter type from request-context-types.ts for writer field in StepParams
 - [29-01]: Kept convergence-complete event in synthesize sub-phase; round-level accumulation stays in coordinator
 - [Phase 29-02]: Used any types for bail/setState in StepParams for Mastra framework compatibility
+- [30-01]: Kept suggestion likelihood as 3-level in sentence tester (measures fix likelihood, not evidence confidence)
+- [30-01]: Markdown headers inside example blocks preserved (sample input for extractors to parse)
 
 ### Pending Todos
 
@@ -84,6 +86,6 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 ## Session Continuity
 
-Last session: 2026-03-09T07:31:37.066Z
-Stopped at: Phase 30 context gathered
-Resume file: .planning/phases/30-mastra-prompt-engineering/30-CONTEXT.md
+Last session: 2026-03-09T07:58:21.696Z
+Stopped at: Completed 30-01-PLAN.md
+Resume file: None
