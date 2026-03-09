@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: Refactor & Prompt Engineering
 status: in-progress
-stopped_at: Completed 30-01-PLAN.md
-last_updated: "2026-03-09T07:58:32.365Z"
-last_activity: 2026-03-09 — Completed Plan 01 (GPT-5-mini prompt rewrites) of Phase 30
+stopped_at: Completed 30-02-PLAN.md
+last_updated: "2026-03-09T07:58:09Z"
+last_activity: 2026-03-09 — Completed Plan 02 (Gemini prompt rewrites) of Phase 30
 progress:
   total_phases: 6
   completed_phases: 3
   total_plans: 9
-  completed_plans: 7
-  percent: 78
+  completed_plans: 8
+  percent: 89
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-03-08)
 ## Current Position
 
 Phase: 30 of 32 (Mastra Prompt Engineering)
-Plan: 1 of 3
-Status: Plan 01 complete, Plan 02 pending
-Last activity: 2026-03-09 — Completed Plan 01 (GPT-5-mini prompt rewrites) of Phase 30
+Plan: 2 of 3
+Status: Plan 02 complete, Plan 03 pending
+Last activity: 2026-03-09 — Completed Plan 02 (Gemini prompt rewrites) of Phase 30
 
-Progress: [████████░░] 78%
+Progress: [█████████░] 89%
 
 ## Performance Metrics
 
@@ -73,6 +73,9 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - [Phase 29-02]: Used any types for bail/setState in StepParams for Mastra framework compatibility
 - [30-01]: Kept suggestion likelihood as 3-level in sentence tester (measures fix likelihood, not evidence confidence)
 - [30-01]: Markdown headers inside example blocks preserved (sample input for extractors to parse)
+- [30-02]: Kept markdown formatting inside rules-tools-prompt.ts (embedded content within XML tools sections, not structural headers)
+- [30-02]: Included full 6-level confidence scale directly in rules-improver (no rules-tools template slot available)
+- [30-02]: Used <approach> section for structured decomposition instead of chain-of-thought scaffolding
 
 ### Pending Todos
 
@@ -86,6 +89,6 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 ## Session Continuity
 
-Last session: 2026-03-09T07:58:21.696Z
-Stopped at: Completed 30-01-PLAN.md
+Last session: 2026-03-09T07:58:09Z
+Stopped at: Completed 30-02-PLAN.md
 Resume file: None
