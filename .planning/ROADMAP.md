@@ -152,10 +152,10 @@ Plans:
   2. Each agent prompt opens with a role definition as the first sentence before any other content
   3. Prompts place long data/context before the task description (data-first ordering per Anthropic guidance)
   4. Tool use instructions specify conditions and expected behavior rather than blanket "ALWAYS" directives
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 31-01: TBD
+- [ ] 31-01-PLAN.md — Rewrite all 6 Claude Code agent prompts with XML structure, confidence scale, and hedged assertions
 
 ### Phase 32: Frontend Cleanup
 **Goal**: Trace panel components use named, typed event handlers instead of inline callbacks
@@ -208,7 +208,7 @@ Phases execute in numeric order: 27 -> 28 -> 29 -> 30 -> 31 -> 32
 | 28. Agent Factory | 2/2 | Complete    | 2026-03-08 | - |
 | 29. Hypothesize Step Split | 2/2 | Complete    | 2026-03-09 | - |
 | 30. Mastra Prompt Engineering | 3/3 | Complete    | 2026-03-09 | - |
-| 31. Claude Code Prompt Engineering | v1.5 | 0/? | Not started | - |
+| 31. Claude Code Prompt Engineering | v1.5 | 0/1 | Not started | - |
 | 32. Frontend Cleanup | v1.5 | 0/? | Not started | - |
 
 _v1.0: 7 phases, 16 plans. All complete._
