@@ -123,7 +123,7 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 29-01-PLAN.md — Type infrastructure and extract all 4 sub-phase functions
+- [x] 29-01-PLAN.md — Type infrastructure and extract all 4 sub-phase functions (completed 2026-03-09)
 - [ ] 29-02-PLAN.md — Rewrite coordinator to call sub-phases and verify non-regression
 
 ### Phase 30: Mastra Prompt Engineering
@@ -204,7 +204,7 @@ Phases execute in numeric order: 27 -> 28 -> 29 -> 30 -> 31 -> 32
 | 26. Documentation Consistency Cleanup | v1.4 | 1/1 | Complete | 2026-03-08 |
 | 27. Dead Code & Type Safety | 2/2 | Complete   | 2026-03-08 | - |
 | 28. Agent Factory | 2/2 | Complete    | 2026-03-08 | - |
-| 29. Hypothesize Step Split | v1.5 | 0/2 | Not started | - |
+| 29. Hypothesize Step Split | v1.5 | 1/2 | In progress | - |
 | 30. Mastra Prompt Engineering | v1.5 | 0/? | Not started | - |
 | 31. Claude Code Prompt Engineering | v1.5 | 0/? | Not started | - |
 | 32. Frontend Cleanup | v1.5 | 0/? | Not started | - |

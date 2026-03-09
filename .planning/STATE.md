@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: Refactor & Prompt Engineering
-status: completed
-stopped_at: Phase 29 context gathered
-last_updated: "2026-03-09T03:13:35.293Z"
-last_activity: 2026-03-08 — Completed Plan 02 (agent migration) of Phase 28
+status: in-progress
+stopped_at: Completed 29-01-PLAN.md
+last_updated: "2026-03-09T04:01:36Z"
+last_activity: 2026-03-09 — Completed Plan 01 (type infrastructure and sub-phase extraction) of Phase 29
 progress:
   total_phases: 6
   completed_phases: 2
-  total_plans: 4
-  completed_plans: 4
+  total_plans: 5
+  completed_plans: 5
   percent: 100
 ---
 
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-08)
 
 **Core value:** The agentic workflow must produce measurably better results than zero-shotting the same LLMs without orchestration.
-**Current focus:** Phase 28 — Agent Factory
+**Current focus:** Phase 29 — Hypothesize Step Split
 
 ## Current Position
 
-Phase: 28 of 32 (Agent Factory)
-Plan: 2 of 2
-Status: Phase 28 complete (all plans done)
-Last activity: 2026-03-08 — Completed Plan 02 (agent migration) of Phase 28
+Phase: 29 of 32 (Hypothesize Step Split)
+Plan: 1 of 2
+Status: Plan 01 complete, Plan 02 pending
+Last activity: 2026-03-09 — Completed Plan 01 (type infrastructure and sub-phase extraction) of Phase 29
 
-Progress: [██████████] 100%
+Progress: [█████████░] 90%
 
 ## Performance Metrics
 
@@ -67,18 +67,22 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - [Phase 28]: Used import('zod').ZodType<any> inline type to avoid runtime Zod dependency in factory
 - [Phase 28]: Local ToolsInput type alias (Record<string, any>) since @mastra/core does not publicly export ToolsInput
 - [Phase 28]: Typed instructions role as literal 'system' to match Mastra SystemModelMessage type constraint
+- [29-01]: Conditional spread for AbortSignal to satisfy exactOptionalPropertyTypes in tsconfig
+- [29-01]: Used project's StepWriter type from request-context-types.ts for writer field in StepParams
+- [29-01]: Kept convergence-complete event in synthesize sub-phase; round-level accumulation stays in coordinator
 
 ### Pending Todos
 
-None.
+2 pending todos:
+- Optimise prompts with ChatGPT 5.4 and Claude prompting guide
+- Investigate production model failures and improve prompts
 
 ### Blockers/Concerns
 
-- Phase 29 (Hypothesize Split): Research flags this as needing a detailed pre-split reading of the full 1,240-line file to map variable write/read sites before writing sub-phase function signatures.
 - Phase 30 (Prompt Engineering): Production eval runs incur OpenRouter cost. Budget for 4-6 production eval runs.
 
 ## Session Continuity
 
-Last session: 2026-03-09T03:13:35.290Z
-Stopped at: Phase 29 context gathered
-Resume file: .planning/phases/29-hypothesize-step-split/29-CONTEXT.md
+Last session: 2026-03-09T04:01:36Z
+Stopped at: Completed 29-01-PLAN.md
+Resume file: .planning/phases/29-hypothesize-step-split/29-01-SUMMARY.md
