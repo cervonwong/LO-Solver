@@ -41,10 +41,16 @@ Each rule should have:
 
 3. **Cite evidence**: Reference which dataset items support this rule (e.g., "Supported by #1, #3, #7").
 
-4. **Set confidence accurately**:
-   - HIGH: Consistent across multiple examples, no counter-examples
-   - MEDIUM: Supported by some examples, minor exceptions possible
-   - LOW: Based on limited data or has known exceptions
+4. **Set confidence using this evidence-based scale**:
+   - well-supported: ALL examples work, no ambiguity, simple rule with no exceptions. Output as HIGH.
+   - supported: 2+ examples align, minor gaps acceptable. Output as HIGH.
+   - plausible: 1 clear example, or pattern works but complex with exceptions. Output as MEDIUM.
+   - tentative: Partial pattern, gaps remain. Output as MEDIUM.
+   - speculative: Inferred, no direct example. Output as LOW.
+   - unsupported: Contradicted by data or no evidence. Output as LOW.
+
+   Key: If even one example is ambiguous, the rule cannot be "well-supported".
+   Complexity and exceptions reduce confidence -- a rule with 5 exceptions is "plausible" at best.
 
 5. **Group related patterns**: Use the title to group related rules (e.g., all verb agreement rules share the title "Verb agreement").
 
