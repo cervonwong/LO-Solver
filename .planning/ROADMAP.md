@@ -73,7 +73,7 @@
 
 - [x] **Phase 27: Dead Code & Type Safety** - Remove deprecated files, dead exports, and replace all `any` types (completed 2026-03-08)
 - [x] **Phase 28: Agent Factory** - Create `createWorkflowAgent()` factory and migrate all 12 agents (completed 2026-03-08)
-- [ ] **Phase 29: Hypothesize Step Split** - Split 1,240-line `02-hypothesize.ts` into 4 sub-phase files
+- [x] **Phase 29: Hypothesize Step Split** - Split 1,240-line `02-hypothesize.ts` into 4 sub-phase files (completed 2026-03-09)
 - [ ] **Phase 30: Mastra Prompt Engineering** - Rewrite GPT-5-mini and Gemini 3 Flash prompts with eval verification
 - [ ] **Phase 31: Claude Code Prompt Engineering** - Rewrite all 6 Claude Code agent prompts per Anthropic best practices
 - [ ] **Phase 32: Frontend Cleanup** - Extract DevTracePanel inline handlers and clean up trace component types
@@ -120,7 +120,7 @@ Plans:
   2. `02-hypothesize.ts` is reduced to a thin coordinator (under 200 lines) that imports and calls sub-phase functions
   3. No sub-phase file imports from another sub-phase file (import-only leaves verified by grep)
   4. `npm run eval -- --comparison` produces identical scores to the pre-split baseline, confirming zero behavioral regression
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 
 Plans:
 - [x] 29-01-PLAN.md — Type infrastructure and extract all 4 sub-phase functions (completed 2026-03-09)
@@ -204,7 +204,7 @@ Phases execute in numeric order: 27 -> 28 -> 29 -> 30 -> 31 -> 32
 | 26. Documentation Consistency Cleanup | v1.4 | 1/1 | Complete | 2026-03-08 |
 | 27. Dead Code & Type Safety | 2/2 | Complete   | 2026-03-08 | - |
 | 28. Agent Factory | 2/2 | Complete    | 2026-03-08 | - |
-| 29. Hypothesize Step Split | v1.5 | 1/2 | In progress | - |
+| 29. Hypothesize Step Split | 2/2 | Complete   | 2026-03-09 | - |
 | 30. Mastra Prompt Engineering | v1.5 | 0/? | Not started | - |
 | 31. Claude Code Prompt Engineering | v1.5 | 0/? | Not started | - |
 | 32. Frontend Cleanup | v1.5 | 0/? | Not started | - |

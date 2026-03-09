@@ -16,7 +16,7 @@ Requirements for the refactoring and prompt engineering milestone. Each maps to 
 
 ### Structure
 
-- [ ] **STR-01**: `02-hypothesize.ts` (1,240 lines) split into 4 sub-phase files (dispatch, hypothesize, verify, synthesize) with a thin coordinator
+- [x] **STR-01**: `02-hypothesize.ts` (1,240 lines) split into 4 sub-phase files (dispatch, hypothesize, verify, synthesize) with a thin coordinator
 - [x] **STR-02**: Sub-phase files are import-only leaves (no circular dependencies between them)
 - [x] **STR-03**: `mainRules` and `mainVocabulary` Maps passed by reference (not copied) to sub-phases
 - [x] **STR-04**: Agent factory `createWorkflowAgent()` created handling 3 agent variants (reasoning, extraction, tester)
@@ -70,7 +70,7 @@ Requirements for the refactoring and prompt engineering milestone. Each maps to 
 | STR-05 | Phase 28 | Complete |
 | STR-06 | Phase 28 | Complete |
 | STR-07 | Phase 28 | Complete |
-| STR-01 | Phase 29 | Pending |
+| STR-01 | Phase 29 | Complete |
 | STR-02 | Phase 29 | Complete |
 | STR-03 | Phase 29 | Complete |
 | PE-01 | Phase 30 | Pending |
