@@ -120,10 +120,11 @@ Plans:
   2. `02-hypothesize.ts` is reduced to a thin coordinator (under 200 lines) that imports and calls sub-phase functions
   3. No sub-phase file imports from another sub-phase file (import-only leaves verified by grep)
   4. `npm run eval -- --comparison` produces identical scores to the pre-split baseline, confirming zero behavioral regression
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 29-01: TBD
+- [ ] 29-01-PLAN.md — Type infrastructure and extract all 4 sub-phase functions
+- [ ] 29-02-PLAN.md — Rewrite coordinator to call sub-phases and verify non-regression
 
 ### Phase 30: Mastra Prompt Engineering
 **Goal**: All 13 Mastra agent prompts are rewritten using model-specific best practices with eval-verified non-regression
@@ -203,7 +204,7 @@ Phases execute in numeric order: 27 -> 28 -> 29 -> 30 -> 31 -> 32
 | 26. Documentation Consistency Cleanup | v1.4 | 1/1 | Complete | 2026-03-08 |
 | 27. Dead Code & Type Safety | 2/2 | Complete   | 2026-03-08 | - |
 | 28. Agent Factory | 2/2 | Complete    | 2026-03-08 | - |
-| 29. Hypothesize Step Split | v1.5 | 0/? | Not started | - |
+| 29. Hypothesize Step Split | v1.5 | 0/2 | Not started | - |
 | 30. Mastra Prompt Engineering | v1.5 | 0/? | Not started | - |
 | 31. Claude Code Prompt Engineering | v1.5 | 0/? | Not started | - |
 | 32. Frontend Cleanup | v1.5 | 0/? | Not started | - |
