@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { createStep } from '@mastra/core/workflows';
 import { RequestContext } from '@mastra/core/request-context';
 import { type VocabularyEntry } from '../vocabulary-tools';
-import type { WorkflowRequestContext, DraftStore } from '../request-context-types';
+import type { WorkflowRequestContext, DraftStore, StepWriter } from '../request-context-types';
 import type { Rule } from '../request-context-types';
 import type { ModelMode } from '../../openrouter';
 import { activeModelId, createOpenRouterProvider } from '../../openrouter';
@@ -34,6 +34,68 @@ import {
   type RoundResult,
   type VerificationMetadata,
 } from '../workflow-schemas';
+import type { Mastra } from '@mastra/core/mastra';
+
+export type { StepTiming } from '../logging-utils';
+
+// Shared context carrying references to main stores and immutable problem data.
+// Maps are passed by reference (STR-03) so sub-phases read/write the same instances.
+export interface HypothesizeContext {
+  structuredProblem: z.infer<typeof structuredProblemDataSchema>;
+  mainVocabulary: Map<string, VocabularyEntry>;
+  mainRules: Map<string, Rule>;
+  draftStores: Map<string, DraftStore>;
+  mainRequestContext: RequestContext<WorkflowRequestContext>;
+  logFile: string;
+  modelMode: ModelMode;
+  stepId: StepId;
+  effectivePerspectiveCount: number;
+  workflowStartTime: number;
+}
+
+// Mastra framework params, separate from application state.
+export interface StepParams {
+  mastra: Mastra;
+  writer: StepWriter;
+  bail: (value: unknown) => never;
+  setState: (state: Record<string, unknown>) => Promise<void>;
+  abortSignal?: AbortSignal;
+}
+
+// Result returned by the dispatch sub-phase.
+export interface DispatchResult {
+  perspectives: Perspective[] | null;
+  error?: string;
+  timings: StepTiming[];
+}
+
+// Result returned by the hypothesize sub-phase.
+export interface HypothesizeResult {
+  results: Array<{
+    perspective: Perspective;
+    draftStore: DraftStore;
+    timing: StepTiming;
+  }>;
+  timings: StepTiming[];
+}
+
+// Result returned by the verify sub-phase.
+export interface VerifyResult {
+  perspectiveResults: PerspectiveResult[];
+  timings: StepTiming[];
+}
+
+// Result returned by the synthesize + convergence sub-phase.
+export interface SynthesizeResult {
+  convergencePassRate: number;
+  convergenceConclusion: 'ALL_RULES_PASS' | 'NEEDS_IMPROVEMENT' | 'MAJOR_ISSUES';
+  converged: boolean;
+  convergenceFeedback: z.infer<typeof verifierFeedbackSchema> | null;
+  timings: StepTiming[];
+}
+
+// Local import of StepTiming for use within this file
+import type { StepTiming } from '../logging-utils';
 
 // Step 2: Multi-perspective hypothesis generation
 // Implements dispatch -> hypothesize (parallel) -> verify -> synthesize loop
