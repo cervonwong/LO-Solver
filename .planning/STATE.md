@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: Refactor & Prompt Engineering
 status: completed
-stopped_at: Completed 30-02-PLAN.md
-last_updated: "2026-03-09T08:18:12.149Z"
+stopped_at: Phase 31 context gathered
+last_updated: "2026-03-09T09:08:25.308Z"
 last_activity: 2026-03-09 — Completed Plan 02 (Gemini prompt rewrites) of Phase 30
 progress:
   total_phases: 6
@@ -89,6 +89,6 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 ## Session Continuity
 
-Last session: 2026-03-09T07:58:09Z
-Stopped at: Completed 30-02-PLAN.md
-Resume file: None
+Last session: 2026-03-09T09:08:25.304Z
+Stopped at: Phase 31 context gathered
+Resume file: .planning/phases/31-claude-code-prompt-engineering/31-CONTEXT.md
