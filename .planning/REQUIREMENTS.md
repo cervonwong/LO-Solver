@@ -34,7 +34,7 @@ Requirements for the refactoring and prompt engineering milestone. Each maps to 
 - [ ] **PE-01**: Eval baseline captured with `npm run eval -- --comparison` before any prompt changes
 - [x] **PE-02**: GPT-5-mini agent prompts (5 agents) rewritten per OpenAI GPT-5 prompting guide — static-first structure, explicit JSON schema descriptions, literal instruction-following
 - [x] **PE-03**: Gemini 3 Flash agent prompts (6 agents) rewritten per Google Gemini 3 prompting guide — XML delimiters, removed chain-of-thought scaffolding, data-first ordering
-- [ ] **PE-04**: Claude Opus 4.6 agent prompts (6 agents) rewritten per Anthropic Claude 4.6 best practices — XML-tagged sections, role-first structure, tool use guidance
+- [x] **PE-04**: Claude Opus 4.6 agent prompts (6 agents) rewritten per Anthropic Claude 4.6 best practices — XML-tagged sections, role-first structure, tool use guidance
 - [x] **PE-05**: Confidence/conclusion vocabulary standardized across all 19 agent prompts
 - [ ] **PE-06**: Each prompt rewrite verified with eval run (no regression from baseline)
 - [ ] **PE-07**: At least one `--mode production` eval run per model family to catch production-model-specific regressions
@@ -78,7 +78,7 @@ Requirements for the refactoring and prompt engineering milestone. Each maps to 
 | PE-06 | Phase 30 | Pending |
 | PE-07 | Phase 30 | Pending |
 | PE-03 | Phase 30 | Complete |
-| PE-04 | Phase 31 | Pending |
+| PE-04 | Phase 31 | Complete |
 | PE-05 | Phase 30 | Complete |
 | FE-01 | Phase 32 | Pending |
 | FE-02 | Phase 32 | Pending |
