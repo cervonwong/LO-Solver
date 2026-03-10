@@ -1,5 +1,5 @@
 import { readFileSync } from 'fs';
-import { resolve } from 'path';
+import { resolve, sep } from 'path';
 import { loadLinguiniQuestions, buildLinguiniProblemText, type LinguiniQuestion } from '@examples/index';
 import { EXAMPLE_PROBLEMS, getExampleLabel, getLinguiniLabel } from './examples';
 
@@ -12,7 +12,12 @@ export function readExampleProblem(id: string): string {
   if (!example) {
     throw new Error(`Example problem not found: ${id}`);
   }
-  const filePath = resolve(process.cwd(), 'examples', example.inputFile);
+  const examplesDir = resolve(process.cwd(), 'examples');
+  const filePath = resolve(examplesDir, example.inputFile);
+  // Ensure the resolved path stays within the examples directory
+  if (!filePath.startsWith(examplesDir + sep)) {
+    throw new Error(`Invalid inputFile path: ${example.inputFile}`);
+  }
   return readFileSync(filePath, 'utf-8');
 }
 

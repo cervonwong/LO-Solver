@@ -1,5 +1,5 @@
 import { mkdir, readdir, readFile, writeFile } from 'fs/promises';
-import { join, resolve } from 'path';
+import { join, resolve, sep } from 'path';
 
 import type { ExtractionScore, RuleQualityScore } from './intermediate-scorers';
 
@@ -107,8 +107,15 @@ export async function loadEvalRuns(): Promise<EvalRunResult[]> {
   const results: EvalRunResult[] = [];
 
   for (const file of jsonFiles) {
-    const content = await readFile(join(RESULTS_DIR, file), 'utf-8');
-    results.push(JSON.parse(content) as EvalRunResult);
+    try {
+      const content = await readFile(join(RESULTS_DIR, file), 'utf-8');
+      results.push(JSON.parse(content) as EvalRunResult);
+    } catch (error) {
+      console.warn(
+        `Skipping corrupt eval result file ${file}:`,
+        error instanceof Error ? error.message : String(error),
+      );
+    }
   }
 
   results.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
@@ -120,6 +127,11 @@ export async function loadEvalRuns(): Promise<EvalRunResult[]> {
  * Returns null if no matching file is found.
  */
 export async function loadEvalRun(id: string): Promise<EvalRunResult | null> {
+  // Validate ID format to prevent path traversal (expect UUID format)
+  if (!/^[a-f0-9-]+$/i.test(id)) {
+    return null;
+  }
+
   let entries: string[];
   try {
     entries = await readdir(RESULTS_DIR);
@@ -132,6 +144,20 @@ export async function loadEvalRun(id: string): Promise<EvalRunResult | null> {
     return null;
   }
 
-  const content = await readFile(join(RESULTS_DIR, match), 'utf-8');
-  return JSON.parse(content) as EvalRunResult;
+  // Ensure the resolved path stays within RESULTS_DIR
+  const resolvedPath = resolve(RESULTS_DIR, match);
+  if (!resolvedPath.startsWith(resolve(RESULTS_DIR) + sep)) {
+    return null;
+  }
+
+  try {
+    const content = await readFile(resolvedPath, 'utf-8');
+    return JSON.parse(content) as EvalRunResult;
+  } catch (error) {
+    console.warn(
+      `Failed to parse eval run ${id}:`,
+      error instanceof Error ? error.message : String(error),
+    );
+    return null;
+  }
 }

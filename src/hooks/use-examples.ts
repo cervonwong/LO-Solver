@@ -6,10 +6,14 @@ export function useExamples() {
   const [examples, setExamples] = useState<Array<{ id: string; label: string; type: string }>>([]);
 
   useEffect(() => {
-    fetch('/api/examples')
+    const controller = new AbortController();
+    fetch('/api/examples', { signal: controller.signal })
       .then((res) => res.json())
-      .then((data) => setExamples(data.examples))
+      .then((data) => {
+        if (!controller.signal.aborted) setExamples(data.examples);
+      })
       .catch(() => {});
+    return () => controller.abort();
   }, []);
 
   return { examples };

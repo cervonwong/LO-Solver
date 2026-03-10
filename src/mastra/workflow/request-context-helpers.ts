@@ -287,13 +287,11 @@ function getDraftStoresMap(requestContext: RequestContextGetter): Map<string, Dr
   if (!requestContext) {
     throw new Error('requestContext is required for draft store operations');
   }
-  let stores = requestContext.get('draft-stores') as Map<string, DraftStore> | undefined;
+  const stores = requestContext.get('draft-stores') as Map<string, DraftStore> | undefined;
   if (!stores) {
-    // First access — the Map does not exist yet; create it.
-    // Note: WorkflowRequestContext.get returns undefined for unset keys,
-    // but the map reference must be stored externally by the caller that
-    // initializes requestContext. We create a new Map here for safety.
-    stores = new Map<string, DraftStore>();
+    throw new Error(
+      "'draft-stores' not found in requestContext — ensure the hypothesize step initializes it",
+    );
   }
   return stores;
 }

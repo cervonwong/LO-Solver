@@ -17,13 +17,19 @@ export function CreditsBadge({ onClick, onServerKeyStatus }: CreditsBadgeProps) 
   const [hasServerKey, setHasServerKey] = useState<boolean | null>(null);
 
   useEffect(() => {
+    const controller = new AbortController();
+
     async function fetchCredits() {
       try {
-        const url = apiKey
-          ? `/api/credits?key=${encodeURIComponent(apiKey)}`
-          : '/api/credits';
-        const res = await fetch(url);
+        const res = await fetch('/api/credits', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(apiKey ? { key: apiKey } : {}),
+          signal: controller.signal,
+        });
+        if (controller.signal.aborted) return;
         const data = await res.json();
+        if (controller.signal.aborted) return;
         if (data.remaining !== null && data.remaining !== undefined) {
           setRemaining(data.remaining);
           setError(false);
@@ -36,14 +42,21 @@ export function CreditsBadge({ onClick, onServerKeyStatus }: CreditsBadgeProps) 
           onServerKeyStatus?.(serverKey);
         }
       } catch {
-        setError(true);
+        if (!controller.signal.aborted) {
+          setError(true);
+        }
       }
-      setLoading(false);
+      if (!controller.signal.aborted) {
+        setLoading(false);
+      }
     }
 
     fetchCredits();
     const interval = setInterval(fetchCredits, 20_000);
-    return () => clearInterval(interval);
+    return () => {
+      controller.abort();
+      clearInterval(interval);
+    };
   }, [apiKey, onServerKeyStatus]);
 
   const hasAnyKey = !!apiKey || hasServerKey === true;

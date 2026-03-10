@@ -153,10 +153,7 @@ ${JSON.stringify(structuredProblem.questions, null, 2)}
     }
 
     // Emit rule test result for the frontend rules panel
-    const rcGetter = requestContext
-      ? { get: (key: string) => requestContext.get(key as keyof import('./request-context-types').WorkflowRequestContext) }
-      : undefined;
-    await emitToolTraceEvent(rcGetter as Parameters<typeof emitToolTraceEvent>[0], {
+    await emitToolTraceEvent(requestContext, {
       type: 'data-rule-test-result',
       data: {
         ruleTitle: rule.title,
@@ -173,10 +170,7 @@ ${JSON.stringify(structuredProblem.questions, null, 2)}
     );
 
     // Emit failing rule test result for the frontend rules panel
-    const rcGetter = requestContext
-      ? { get: (key: string) => requestContext.get(key as keyof import('./request-context-types').WorkflowRequestContext) }
-      : undefined;
-    await emitToolTraceEvent(rcGetter as Parameters<typeof emitToolTraceEvent>[0], {
+    await emitToolTraceEvent(requestContext, {
       type: 'data-rule-test-result',
       data: {
         ruleTitle: rule.title,

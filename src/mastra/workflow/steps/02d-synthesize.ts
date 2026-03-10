@@ -44,7 +44,7 @@ export async function runSynthesize(
     const draft = ctx.draftStores.get(result.perspectiveId);
     if (draft) {
       for (const [key, entry] of draft.vocabulary) {
-        ctx.mainVocabulary.set(key, entry);
+        ctx.mainVocabulary.set(key, { ...entry });
       }
     }
   }
