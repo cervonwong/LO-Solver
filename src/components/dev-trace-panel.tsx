@@ -207,13 +207,12 @@ function StepSection({ group, isRunning }: StepSectionProps) {
   );
 }
 
-function EventList({
-  events,
-  isStepActive,
-}: {
+interface EventListProps {
   events: WorkflowTraceEvent[];
   isStepActive: boolean;
-}) {
+}
+
+function EventList({ events, isStepActive }: EventListProps) {
   // Filter out ephemeral text chunk events (real-time streaming, not trace entries)
   const displayEvents = events.filter((e) => e.type !== 'data-agent-text-chunk');
 

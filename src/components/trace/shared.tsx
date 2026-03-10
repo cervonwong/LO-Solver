@@ -10,7 +10,12 @@ import { jsonMarkdown } from './trace-utils';
 /** Font size class for all Streamdown instances in the trace panel. */
 export const TRACE_SD_CLASS = 'text-[11px] leading-4 streamdown-compact';
 
-export function ChevronIcon({ open, className }: { open: boolean; className?: string }) {
+interface ChevronIconProps {
+  open: boolean;
+  className?: string;
+}
+
+export function ChevronIcon({ open, className }: ChevronIconProps) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -25,13 +30,12 @@ export function ChevronIcon({ open, className }: { open: boolean; className?: st
   );
 }
 
-export function RawJsonToggle({
-  data,
-  children,
-}: {
+interface RawJsonToggleProps {
   data: { input: Record<string, unknown>; result: Record<string, unknown> };
   children: React.ReactNode;
-}) {
+}
+
+export function RawJsonToggle({ data, children }: RawJsonToggleProps) {
   const [showRaw, setShowRaw] = useState(false);
 
   const handleToggleRaw = (e: React.MouseEvent) => {
@@ -66,7 +70,11 @@ export function RawJsonToggle({
   );
 }
 
-export function StructuredOutputSection({ data }: { data: Record<string, unknown> }) {
+interface StructuredOutputSectionProps {
+  data: Record<string, unknown>;
+}
+
+export function StructuredOutputSection({ data }: StructuredOutputSectionProps) {
   const [open, setOpen] = useState(false);
 
   return (

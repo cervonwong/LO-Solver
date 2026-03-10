@@ -51,13 +51,12 @@ export function ToolCallGroupCard({ group }: ToolCallGroupCardProps) {
   );
 }
 
-function ToolCallDetail({
-  index,
-  call,
-}: {
+interface ToolCallDetailProps {
   index: number;
   call: { input: Record<string, unknown>; result: Record<string, unknown> };
-}) {
+}
+
+function ToolCallDetail({ index, call }: ToolCallDetailProps) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -82,7 +81,12 @@ function ToolCallDetail({
 // Render items: ordered list from children array with bulk grouping
 // ---------------------------------------------------------------------------
 
-function RenderItem({ item, depth }: { item: RenderItemType; depth: number }) {
+interface RenderItemProps {
+  item: RenderItemType;
+  depth: number;
+}
+
+function RenderItem({ item, depth }: RenderItemProps) {
   switch (item.kind) {
     case 'agent':
       return <AgentCard group={item.group} depth={depth + 1} />;
@@ -115,7 +119,12 @@ function getIndentClass(depth: number): string {
 // AgentCard — hierarchical rendering of agent-start + children + agent-end
 // ---------------------------------------------------------------------------
 
-export function AgentCard({ group, depth = 0 }: { group: AgentGroup; depth?: number }) {
+interface AgentCardProps {
+  group: AgentGroup;
+  depth?: number;
+}
+
+export function AgentCard({ group, depth = 0 }: AgentCardProps) {
   const [open, setOpen] = useState(group.isActive);
   const { agentStart, agentEnd, children, toolCalls, isActive } = group;
   const durationMs = agentEnd?.data.durationMs;

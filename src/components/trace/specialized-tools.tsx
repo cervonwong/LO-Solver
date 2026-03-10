@@ -16,9 +16,7 @@ import {
 // INERT: Tool-call events currently emit `input: { count }`, not the actual entries array.
 // This card activates when events carry `input.entries` — see hasVocabularyEntries().
 // To enable: change vocabulary-tools.ts tool-call events to include the entries data.
-function VocabularyToolCard({
-  toolCall,
-}: {
+interface VocabularyToolCardProps {
   toolCall: {
     data: {
       toolName: string;
@@ -26,7 +24,9 @@ function VocabularyToolCard({
       result: Record<string, unknown>;
     };
   };
-}) {
+}
+
+function VocabularyToolCard({ toolCall }: VocabularyToolCardProps) {
   const action = toolCall.data.toolName.replace('Vocabulary', '').toUpperCase();
   const entries = (toolCall.data.input.entries ?? toolCall.data.input.foreignForms ?? []) as Array<
     Record<string, unknown>
@@ -123,9 +123,7 @@ function VocabularyToolCard({
   );
 }
 
-function SentenceTestToolCard({
-  toolCall,
-}: {
+interface SentenceTestToolCardProps {
   toolCall: {
     data: {
       toolName: string;
@@ -133,7 +131,9 @@ function SentenceTestToolCard({
       result: Record<string, unknown>;
     };
   };
-}) {
+}
+
+function SentenceTestToolCard({ toolCall }: SentenceTestToolCardProps) {
   const [open, setOpen] = useState(false);
   const sentenceId = (toolCall.data.input.sentenceId ?? toolCall.data.input.id ?? '?') as string;
   const result = toolCall.data.result;
@@ -177,15 +177,13 @@ function SentenceTestToolCard({
   );
 }
 
-export function BulkToolCallGroup({
-  toolName,
-  toolCalls,
-  depth,
-}: {
+interface BulkToolCallGroupProps {
   toolName: string;
   toolCalls: ToolCallEvent[];
   depth: number;
-}) {
+}
+
+export function BulkToolCallGroup({ toolName, toolCalls, depth }: BulkToolCallGroupProps) {
   const [open, setOpen] = useState(false);
 
   // Calculate pass/fail for test tools
@@ -228,13 +226,13 @@ export function BulkToolCallGroup({
   );
 }
 
-function RuleTestCard({
-  toolCall,
-}: {
+interface RuleTestCardProps {
   toolCall: {
     data: { input: Record<string, unknown>; result: Record<string, unknown> };
   };
-}) {
+}
+
+function RuleTestCard({ toolCall }: RuleTestCardProps) {
   const [open, setOpen] = useState(false);
   const title = (toolCall.data.input.title as string) || 'Unknown rule';
   const result = toolCall.data.result;
@@ -276,7 +274,12 @@ function RuleTestCard({
 // dependencies: BulkToolCallGroup calls ToolCallRenderer, and ToolCallRenderer
 // calls the specialized card components above.
 
-export function ToolCallRenderer({ toolCall, depth }: { toolCall: ToolCallEvent; depth: number }) {
+interface ToolCallRendererProps {
+  toolCall: ToolCallEvent;
+  depth: number;
+}
+
+export function ToolCallRenderer({ toolCall, depth }: ToolCallRendererProps) {
   // Skip intermediate "started" status events
   if (isStartedStatus(toolCall.data.result)) return null;
 
@@ -300,9 +303,7 @@ export function ToolCallRenderer({ toolCall, depth }: { toolCall: ToolCallEvent;
 // AgentToolCallCard — generic fallback for tool calls without specialized UI
 // ---------------------------------------------------------------------------
 
-function AgentToolCallCard({
-  toolCall,
-}: {
+interface AgentToolCallCardProps {
   toolCall: {
     data: {
       toolName: string;
@@ -310,7 +311,9 @@ function AgentToolCallCard({
       result: Record<string, unknown>;
     };
   };
-}) {
+}
+
+function AgentToolCallCard({ toolCall }: AgentToolCallCardProps) {
   const [open, setOpen] = useState(false);
 
   return (
