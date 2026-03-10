@@ -79,9 +79,10 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 ### Pending Todos
 
-2 pending todos:
+3 pending todos:
 - Optimise prompts with ChatGPT 5.4 and Claude prompting guide
 - Investigate production model failures and improve prompts
+- Explore Claude Agent SDK as alternate model provider
 
 ### Blockers/Concerns
 
