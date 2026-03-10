@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.5
-milestone_name: Refactor & Prompt Engineering
-status: shipped
-stopped_at: Milestone v1.5 complete
-last_updated: "2026-03-10T12:00:00.000Z"
-last_activity: 2026-03-10 — Milestone v1.5 shipped
+milestone: v1.6
+milestone_name: Claude Code Provider
+status: defining-requirements
+stopped_at: null
+last_updated: "2026-03-10T13:10:00.000Z"
+last_activity: 2026-03-10 — Milestone v1.6 started
 progress:
-  total_phases: 6
-  completed_phases: 6
-  total_plans: 11
-  completed_plans: 11
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -21,12 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-10)
 
 **Core value:** The agentic workflow must produce measurably better results than zero-shotting the same LLMs without orchestration.
-**Current focus:** Planning next milestone
+**Current focus:** v1.6 Claude Code Provider — adding Claude Code as alternative model provider
 
 ## Current Position
 
-Milestone v1.5 shipped. 6 phases, 11 plans complete.
-Last activity: 2026-03-10 — Milestone v1.5 archived
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-10 — Milestone v1.6 started
 
 ## Performance Metrics
 
@@ -64,4 +66,4 @@ Last activity: 2026-03-10 — Milestone v1.5 archived
 
 ### Blockers/Concerns
 
-(None — between milestones)
+(None)

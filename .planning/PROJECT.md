@@ -77,7 +77,13 @@ The ONE thing that must work: **the agentic workflow must produce measurably bet
 
 ### Active
 
-(None — planning next milestone)
+**Current Milestone: v1.6 Claude Code Provider**
+
+- [ ] Claude Code AI SDK provider integrated as alternative model provider
+- [ ] Provider toggle replacing model mode (OpenRouter Testing / OpenRouter Production / Claude Code)
+- [ ] Agent factory updated to support provider switching
+- [ ] Frontend toggle and state management for provider selection
+- [ ] Tool compatibility validated (custom Mastra tools with Claude Code provider)
 
 ### Out of Scope
 
@@ -91,6 +97,16 @@ The ONE thing that must work: **the agentic workflow must produce measurably bet
 - Server-side key storage — localStorage sufficient, no accounts needed
 - Schema barrel split — 39 import edges, circular dependency risk
 - Full context helpers decomposition — low ROI, already helper-only code
+
+## Current Milestone: v1.6 Claude Code Provider
+
+**Goal:** Add Claude Code as an alternative model provider via `ai-sdk-provider-claude-code`, enabling users to run the solver workflow using their Claude subscription instead of OpenRouter API credits.
+
+**Target features:**
+- Claude Code AI SDK provider integration (`ai-sdk-provider-claude-code`)
+- Three-way provider/mode toggle replacing the current testing/production toggle
+- Backend provider abstraction supporting both OpenRouter and Claude Code
+- Tool compatibility research and bridging (custom Mastra tools via MCP if needed)
 
 ## Problem Statement
 
@@ -110,6 +126,7 @@ Code structure: Agent factory pattern (`createWorkflowAgent()`), hypothesize ste
 Claude Code solver: 6 agent definitions in `claude-code/.claude/agents/`, /solve skill, workspace-based state, PIPELINE.md reference doc.
 Deployment: App can run without server-side OPENROUTER_API_KEY; users provide their own key via browser dialog.
 All 19 agent prompts (13 Mastra + 6 Claude Code) use model-specific best practices with standardized 6-level confidence vocabulary.
+v1.6 integration target: `ai-sdk-provider-claude-code` community provider (wraps Claude Agent SDK `query()` as Vercel AI SDK provider, uses `claude login` auth). Reference integration: https://github.com/t3ta/claude-code-mastra.
 
 ## Key Decisions
 
@@ -174,4 +191,4 @@ When working on any phase that touches Mastra code (agents, workflows, tools, ev
 
 ---
 
-*Last updated: 2026-03-10 after v1.5 milestone*
+*Last updated: 2026-03-10 after v1.6 milestone start*
