@@ -208,7 +208,7 @@ Phases execute in numeric order: 27 -> 28 -> 29 -> 30 -> 31 -> 32
 | 28. Agent Factory | 2/2 | Complete    | 2026-03-08 | - |
 | 29. Hypothesize Step Split | 2/2 | Complete    | 2026-03-09 | - |
 | 30. Mastra Prompt Engineering | 3/3 | Complete    | 2026-03-09 | - |
-| 31. Claude Code Prompt Engineering | 1/1 | Complete   | 2026-03-10 | - |
+| 31. Claude Code Prompt Engineering | 1/1 | Complete    | 2026-03-10 | - |
 | 32. Frontend Cleanup | v1.5 | 0/? | Not started | - |
 
 _v1.0: 7 phases, 16 plans. All complete._
