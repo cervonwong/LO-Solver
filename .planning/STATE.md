@@ -58,8 +58,7 @@ Last activity: 2026-03-10 — Milestone v1.5 archived
 
 ### Pending Todos
 
-3 pending todos:
-- Optimise prompts with ChatGPT 5.4 and Claude prompting guide
+2 pending todos:
 - Investigate production model failures and improve prompts
 - Explore Claude Agent SDK as alternate model provider
 
