@@ -165,10 +165,10 @@ Plans:
   1. DevTracePanel has zero inline arrow functions in JSX event handler props (all extracted to named functions)
   2. All trace component props use explicitly named interface types (no inline `{ foo: string; bar: number }` prop definitions)
   3. The trace panel renders identically in the browser with all event types visible (data-tool-call, data-vocabulary-update, data-rules-update confirmed in dev mode)
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 32-01: TBD
+- [ ] 32-01-PLAN.md — Extract inline handler, remove duplicate ChevronIcon, add named prop interfaces to all trace components
 
 ## Progress
 
@@ -209,7 +209,7 @@ Phases execute in numeric order: 27 -> 28 -> 29 -> 30 -> 31 -> 32
 | 29. Hypothesize Step Split | 2/2 | Complete    | 2026-03-09 | - |
 | 30. Mastra Prompt Engineering | 3/3 | Complete    | 2026-03-09 | - |
 | 31. Claude Code Prompt Engineering | 1/1 | Complete    | 2026-03-10 | - |
-| 32. Frontend Cleanup | v1.5 | 0/? | Not started | - |
+| 32. Frontend Cleanup | v1.5 | 0/1 | Not started | - |
 
 _v1.0: 7 phases, 16 plans. All complete._
 _v1.1: 6 phases, 9 plans. All complete._
