@@ -76,7 +76,7 @@
 - [x] **Phase 29: Hypothesize Step Split** - Split 1,240-line `02-hypothesize.ts` into 4 sub-phase files (completed 2026-03-09)
 - [x] **Phase 30: Mastra Prompt Engineering** - Rewrite GPT-5-mini and Gemini 3 Flash prompts with eval verification (completed 2026-03-09)
 - [x] **Phase 31: Claude Code Prompt Engineering** - Rewrite all 6 Claude Code agent prompts per Anthropic best practices (completed 2026-03-10)
-- [ ] **Phase 32: Frontend Cleanup** - Extract DevTracePanel inline handlers and clean up trace component types
+- [x] **Phase 32: Frontend Cleanup** - Extract DevTracePanel inline handlers and clean up trace component types (completed 2026-03-10)
 
 ## Phase Details
 
@@ -209,7 +209,7 @@ Phases execute in numeric order: 27 -> 28 -> 29 -> 30 -> 31 -> 32
 | 29. Hypothesize Step Split | 2/2 | Complete    | 2026-03-09 | - |
 | 30. Mastra Prompt Engineering | 3/3 | Complete    | 2026-03-09 | - |
 | 31. Claude Code Prompt Engineering | 1/1 | Complete    | 2026-03-10 | - |
-| 32. Frontend Cleanup | v1.5 | 0/1 | Not started | - |
+| 32. Frontend Cleanup | 1/1 | Complete   | 2026-03-10 | - |
 
 _v1.0: 7 phases, 16 plans. All complete._
 _v1.1: 6 phases, 9 plans. All complete._

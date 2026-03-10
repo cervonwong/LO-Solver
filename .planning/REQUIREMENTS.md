@@ -26,8 +26,8 @@ Requirements for the refactoring and prompt engineering milestone. Each maps to 
 
 ### Frontend
 
-- [ ] **FE-01**: DevTracePanel inline event handlers extracted to named functions
-- [ ] **FE-02**: Component naming and prop types cleaned up in trace components
+- [x] **FE-01**: DevTracePanel inline event handlers extracted to named functions
+- [x] **FE-02**: Component naming and prop types cleaned up in trace components
 
 ### Prompt Engineering
 
@@ -80,8 +80,8 @@ Requirements for the refactoring and prompt engineering milestone. Each maps to 
 | PE-03 | Phase 30 | Complete |
 | PE-04 | Phase 31 | Complete |
 | PE-05 | Phase 30 | Complete |
-| FE-01 | Phase 32 | Pending |
-| FE-02 | Phase 32 | Pending |
+| FE-01 | Phase 32 | Complete |
+| FE-02 | Phase 32 | Complete |
 
 **Coverage:**
 - v1.5 requirements: 20 total
