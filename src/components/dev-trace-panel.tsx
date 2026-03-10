@@ -18,6 +18,7 @@ import type { StepGroup } from '@/lib/trace-utils';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Skeleton } from '@/components/skeleton';
 import type { WorkflowTraceEvent } from '@/lib/workflow-events';
+import { ChevronIcon } from '@/components/trace/shared';
 
 interface DevTracePanelProps {
   events: WorkflowTraceEvent[];
@@ -97,21 +98,6 @@ export function DevTracePanel({ events, isRunning }: DevTracePanelProps) {
 interface StepSectionProps {
   group: StepGroup;
   isRunning: boolean;
-}
-
-function ChevronIcon({ open }: { open: boolean }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      height="16"
-      viewBox="0 -960 960 960"
-      width="16"
-      fill="currentColor"
-      className={`shrink-0 text-muted-foreground transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
-    >
-      <path d="M480-371.69 267.69-584 296-612.31l184 184 184-184L692.31-584 480-371.69Z" />
-    </svg>
-  );
 }
 
 function StepSection({ group, isRunning }: StepSectionProps) {
@@ -207,7 +193,7 @@ function StepSection({ group, isRunning }: StepSectionProps) {
                 {stepSummary}
               </span>
             )}
-            <ChevronIcon open={open} />
+            <ChevronIcon open={open} className="text-muted-foreground" />
           </span>
         </CollapsibleTrigger>
 
