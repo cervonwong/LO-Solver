@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.5
 milestone_name: Refactor & Prompt Engineering
-status: completed
-stopped_at: Completed 32-01-PLAN.md
-last_updated: "2026-03-10T10:53:34.810Z"
-last_activity: 2026-03-10 — Completed Plan 01 (Trace component props cleanup) of Phase 32
+status: shipped
+stopped_at: Milestone v1.5 complete
+last_updated: "2026-03-10T12:00:00.000Z"
+last_activity: 2026-03-10 — Milestone v1.5 shipped
 progress:
   total_phases: 6
   completed_phases: 6
@@ -18,19 +18,15 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-08)
+See: .planning/PROJECT.md (updated 2026-03-10)
 
 **Core value:** The agentic workflow must produce measurably better results than zero-shotting the same LLMs without orchestration.
-**Current focus:** Phase 32 — Frontend Cleanup
+**Current focus:** Planning next milestone
 
 ## Current Position
 
-Phase: 32 of 32 (Frontend Cleanup)
-Plan: 1 of 1 (complete)
-Status: Phase 32 complete
-Last activity: 2026-03-10 — Completed Plan 01 (Trace component props cleanup) of Phase 32
-
-Progress: [██████████] 100%
+Milestone v1.5 shipped. 6 phases, 11 plans complete.
+Last activity: 2026-03-10 — Milestone v1.5 archived
 
 ## Performance Metrics
 
@@ -54,31 +50,11 @@ Progress: [██████████] 100%
 - Total plans completed: 9
 - Total execution time: ~21min
 
+**v1.5:**
+- Total plans completed: 11
+- Total execution time: ~3 days
+
 ## Accumulated Context
-
-### Decisions
-
-- [27-01] shadcn/ui component exports kept as documented false positives (generated library convention)
-- [27-01] Mastra tool registration exports kept as false positives (runtime spread consumption)
-- [27-02] Used local interfaces (AgentResultCostInfo, ReasoningChunk) over importing Mastra types to avoid coupling
-- [27-02] Matched Mastra conditional type pattern in RequestContextReadWrite for set() compatibility
-
-Decisions are logged in PROJECT.md Key Decisions table.
-- [Phase 28]: Used import('zod').ZodType<any> inline type to avoid runtime Zod dependency in factory
-- [Phase 28]: Local ToolsInput type alias (Record<string, any>) since @mastra/core does not publicly export ToolsInput
-- [Phase 28]: Typed instructions role as literal 'system' to match Mastra SystemModelMessage type constraint
-- [29-01]: Conditional spread for AbortSignal to satisfy exactOptionalPropertyTypes in tsconfig
-- [29-01]: Used project's StepWriter type from request-context-types.ts for writer field in StepParams
-- [29-01]: Kept convergence-complete event in synthesize sub-phase; round-level accumulation stays in coordinator
-- [Phase 29-02]: Used any types for bail/setState in StepParams for Mastra framework compatibility
-- [30-01]: Kept suggestion likelihood as 3-level in sentence tester (measures fix likelihood, not evidence confidence)
-- [30-01]: Markdown headers inside example blocks preserved (sample input for extractors to parse)
-- [30-02]: Kept markdown formatting inside rules-tools-prompt.ts (embedded content within XML tools sections, not structural headers)
-- [30-02]: Included full 6-level confidence scale directly in rules-improver (no rules-tools template slot available)
-- [30-02]: Used <approach> section for structured decomposition instead of chain-of-thought scaffolding
-- [Phase 31]: Customized answerer confidence scale descriptions for translation context while keeping identical 6 level labels
-- [32-01]: Used interface (not type) for all prop definitions, consistent with existing DevTracePanelProps pattern
-- [32-01]: No useCallback for handleToggleRaw since it targets a native button element, not a memoized child
 
 ### Pending Todos
 
@@ -89,10 +65,4 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 ### Blockers/Concerns
 
-- Phase 30 (Prompt Engineering): Production eval runs incur OpenRouter cost. Budget for 4-6 production eval runs.
-
-## Session Continuity
-
-Last session: 2026-03-10T10:48:41Z
-Stopped at: Completed 32-01-PLAN.md
-Resume file: .planning/phases/32-frontend-cleanup/32-01-SUMMARY.md
+(None — between milestones)

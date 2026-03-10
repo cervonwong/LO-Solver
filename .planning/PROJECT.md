@@ -2,7 +2,7 @@
 
 ## What This Is
 
-LO-Solver is an AI-powered system for solving Linguistics Olympiad Rosetta Stone problems. It has two solver implementations: a **Mastra workflow** (Next.js frontend, OpenRouter LLMs, real-time UI) and a **Claude Code native solver** (subagent-based, terminal-only, file-based state). Both use the same multi-step pipeline: extract structure, generate multi-perspective linguistic hypotheses, verify/improve rules with failure diagnostics, and answer translation questions. An automated evaluation harness proves the agentic workflow outperforms zero-shot LLMs, with a polished observability UI featuring hierarchical agent traces with duck mascots, animated 3-column layout, structured data formatting, workflow abort/reset controls, and live-updating vocabulary and rules panels.
+LO-Solver is an AI-powered system for solving Linguistics Olympiad Rosetta Stone problems. It has two solver implementations: a **Mastra workflow** (Next.js frontend, OpenRouter LLMs, real-time UI) and a **Claude Code native solver** (subagent-based, terminal-only, file-based state). Both use the same multi-step pipeline: extract structure, generate multi-perspective linguistic hypotheses, verify/improve rules with failure diagnostics, and answer translation questions. An automated evaluation harness proves the agentic workflow outperforms zero-shot LLMs, with a polished observability UI featuring hierarchical agent traces with duck mascots, animated 3-column layout, structured data formatting, workflow abort/reset controls, and live-updating vocabulary and rules panels. The codebase uses an agent factory pattern, decomposed workflow steps, and model-specific prompt engineering across all 19 agent prompts.
 
 ## Core Value
 
@@ -64,20 +64,20 @@ The ONE thing that must work: **the agentic workflow must produce measurably bet
 - ✓ Terminal output display and markdown solution file generation — v1.4
 - ✓ File-based workspace state (markdown files, not JSON) — v1.4
 
+- ✓ Dead code removal via Knip audit with 26 dead exports removed — v1.5
+- ✓ All `any` type annotations replaced with explicit types — v1.5
+- ✓ `createWorkflowAgent()` factory for all 12 Mastra agents — v1.5
+- ✓ Dynamic model resolution preserved through factory — v1.5
+- ✓ Hypothesize step decomposed into 4 sub-phase files + coordinator — v1.5
+- ✓ GPT-5-mini prompts rewritten per OpenAI best practices — v1.5
+- ✓ Gemini 3 Flash prompts rewritten per Google best practices — v1.5
+- ✓ Claude Opus 4.6 prompts rewritten per Anthropic best practices — v1.5
+- ✓ Confidence vocabulary standardized across all 19 agent prompts — v1.5
+- ✓ Frontend trace component props cleaned up with named interfaces — v1.5
+
 ### Active
 
-## Current Milestone: v1.5 Refactor & Prompt Engineering
-
-**Goal:** Clean up the codebase without changing functionality, then rewrite all agent prompts using the latest model-specific best practices from OpenAI, Google, and Anthropic.
-
-**Target features:**
-- Dead code removal and unused export cleanup
-- Split `02-hypothesize.ts` (1,240 lines) into sub-phase files
-- Agent factory pattern reducing boilerplate across 13 agent definitions
-- Schema and request-context-helpers reorganization into domain files
-- Frontend component cleanup (DevTracePanel, event handlers)
-- Type safety improvements (replace `any` with explicit interfaces)
-- Prompt engineering: rewrite all 19 agent prompts (13 Mastra + 6 Claude Code) using latest vendor guides
+(None — planning next milestone)
 
 ### Out of Scope
 
@@ -89,14 +89,16 @@ The ONE thing that must work: **the agentic workflow must produce measurably bet
 - API key validation via test call — errors surface naturally during solve
 - Auto-prompt dialog on first visit — button-only by design
 - Server-side key storage — localStorage sufficient, no accounts needed
+- Schema barrel split — 39 import edges, circular dependency risk
+- Full context helpers decomposition — low ROI, already helper-only code
 
 ## Problem Statement
 
-(Resolved in v1.0) The workflow uses multi-perspective hypothesis generation and verified rules. The evaluation harness demonstrates workflow accuracy improvements over zero-shot baselines. (Resolved in v1.1) The observability UI is polished with correct trace hierarchy, structured data display, workflow controls, and animated layout. (Resolved in v1.2) Abort propagation stops in-flight LLM calls, large files are split into focused modules, and toast notifications provide workflow lifecycle feedback. (Resolved in v1.3) Users can provide their own OpenRouter API key, enabling deployment without a server-side key. (Resolved in v1.4) Claude Code native solver implemented with 6 subagents, /solve skill, and file-based workspace — running alongside the Mastra implementation in `claude-code/`.
+(Resolved in v1.0) The workflow uses multi-perspective hypothesis generation and verified rules. The evaluation harness demonstrates workflow accuracy improvements over zero-shot baselines. (Resolved in v1.1) The observability UI is polished with correct trace hierarchy, structured data display, workflow controls, and animated layout. (Resolved in v1.2) Abort propagation stops in-flight LLM calls, large files are split into focused modules, and toast notifications provide workflow lifecycle feedback. (Resolved in v1.3) Users can provide their own OpenRouter API key, enabling deployment without a server-side key. (Resolved in v1.4) Claude Code native solver implemented with 6 subagents, /solve skill, and file-based workspace — running alongside the Mastra implementation in `claude-code/`. (Resolved in v1.5) Codebase refactored with agent factory, decomposed hypothesize step, and all 19 agent prompts rewritten using model-specific vendor best practices.
 
 ## Context
 
-Shipped v1.4 with 15,656 LOC TypeScript + 3,494 LOC markdown (Claude Code solver).
+Shipped v1.5 with 14,751 LOC TypeScript + 3,494 LOC markdown (Claude Code solver).
 Tech stack: TypeScript 5.9.3, Next.js 16.1.6, Mastra 1.8.0, Zod 4.3.6.
 Models (Mastra): GPT-5-mini (extraction), Gemini 3 Flash (reasoning), GPT-OSS-120B (testing).
 Models (Claude Code): Opus 4.6 (all agents except verifier), Sonnet (verifier, cost efficiency).
@@ -104,9 +106,10 @@ Storage: LibSQL for Mastra state, markdown logs for execution traces, JSON for e
 Frontend: React 19, shadcn/ui, resizable panels (3-column animated layout), AI SDK streaming.
 Evaluation: 4 Linguini ground-truth problems, CLI runner with --comparison and --problem flags.
 UI: Blueprint/cyanotype design system, duck mascots per agent role, workflow abort/reset controls, Sonner toast notifications, user API key dialog.
-Code structure: Workflow steps split into individual files, trace components in focused modules, page hooks extracted to dedicated files.
+Code structure: Agent factory pattern (`createWorkflowAgent()`), hypothesize step decomposed into 4 sub-phase files, workflow steps in individual files, trace components with named prop interfaces, page hooks in dedicated files. Knip configured for dead code detection.
 Claude Code solver: 6 agent definitions in `claude-code/.claude/agents/`, /solve skill, workspace-based state, PIPELINE.md reference doc.
 Deployment: App can run without server-side OPENROUTER_API_KEY; users provide their own key via browser dialog.
+All 19 agent prompts (13 Mastra + 6 Claude Code) use model-specific best practices with standardized 6-level confidence vocabulary.
 
 ## Key Decisions
 
@@ -145,6 +148,14 @@ Deployment: App can run without server-side OPENROUTER_API_KEY; users provide th
 | Per-call verifier pattern | One rule or one sentence per verifier call; orchestrator aggregates | ✓ Good — consistent across Steps 4c, 4f, 5c |
 | Verifier uses Sonnet (not Opus) | High call volume per solve; cost control | ✓ Good — adequate accuracy at lower cost |
 | File existence as validation | Spot-check output file exists rather than parsing return status | ✓ Good — simple, reliable completion check |
+| Knip for dead code detection | Static analysis catches unused exports reliably | ✓ Good — found 26 dead exports across 18 files |
+| Agent factory over inheritance | Flat config object + function > class hierarchy for 3 agent variants | ✓ Good — eliminated boilerplate, preserved flexibility |
+| Local type aliases for Mastra internals | `ToolsInput`, `ZodType<any>` not publicly exported | ✓ Good — avoids coupling to internal Mastra types |
+| Sub-phase files as import-only leaves | No circular dependencies between extracted files | ✓ Good — clean dependency graph |
+| `any` for bail/setState in StepParams | Mastra framework types not publicly stable | ✓ Good — practical compatibility |
+| XML sections for all prompt styles | GPT-5-mini, Gemini, Claude all use XML delimiters | ✓ Good — consistent structure across models |
+| 6-level confidence scale across all agents | Standardized vocabulary (well-supported → unsupported) | ✓ Good — consistent terminology |
+| Interface (not type) for prop definitions | Matches existing DevTracePanelProps convention | ✓ Good — consistent codebase style |
 
 ## Constraints
 
@@ -163,4 +174,4 @@ When working on any phase that touches Mastra code (agents, workflows, tools, ev
 
 ---
 
-*Last updated: 2026-03-08 after v1.5 milestone started*
+*Last updated: 2026-03-10 after v1.5 milestone*

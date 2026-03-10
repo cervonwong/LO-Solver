@@ -235,6 +235,57 @@
 
 ---
 
+## Milestone: v1.5 — Refactor & Prompt Engineering
+
+**Shipped:** 2026-03-10
+**Phases:** 6 | **Plans:** 11
+
+### What Was Built
+- Dead code removal via Knip audit: 26 dead exports removed across 18 files, deprecated agent files deleted
+- Agent factory (`createWorkflowAgent()`) handling reasoning, extraction, and tester variants for all 12 Mastra agents
+- Hypothesize step decomposed from 1,240 lines into 4 sub-phase files + thin coordinator
+- GPT-5-mini prompts rewritten with static-first structure, XML sections, schema-first ordering
+- Gemini 3 Flash prompts rewritten with XML delimiters, data-first ordering, structured decomposition approach
+- Claude Code prompts rewritten with XML-tagged sections, role-first structure, 6-level confidence scale
+- Standardized confidence vocabulary across all 19 agent prompts
+- Frontend trace components cleaned up with named prop interfaces
+
+### What Worked
+- Factory pattern was a clean fit — flat config object + function eliminated repetitive Agent construction across 12 files
+- Sub-phase extraction was surgical — each file became independently readable without any behavioral change
+- Model-specific prompt research (vendor guides) gave concrete, actionable patterns per model family
+- XML section tags worked universally across GPT-5-mini, Gemini, and Claude — converged on a single structural convention
+- Phase 32 (frontend) was correctly identified as independent and could execute without blocking prompt work
+
+### What Was Inefficient
+- Eval baseline (PE-01) was skipped before prompt changes — no quantitative before/after comparison exists
+- Per-rewrite eval verification (PE-06) deferred — prompt changes shipped without automated regression checking
+- Production mode eval (PE-07) never executed — cost concern deferred it indefinitely
+- Coordinator at 305 lines exceeded 200-line target (Prettier formatting expansion) — plan target was too aggressive
+- Nyquist validation missing for all 6 phases — skipped per config setting
+
+### Patterns Established
+- Agent factory pattern: `createWorkflowAgent(config)` with model resolver, UnicodeNormalizer, requestContextSchema pre-built
+- Sub-phase file pattern: thin coordinator imports focused async functions, each sub-phase is an import-only leaf
+- XML section tags for all prompt styles: `<instructions>`, `<context>`, `<input>`, `<task>`, `<output>` boundaries
+- 6-level confidence scale: well-supported, supported, partially-supported, weakly-supported, speculative, unsupported
+- Named prop interfaces: every React component gets a dedicated `FooProps` interface (not inline types)
+
+### Key Lessons
+1. Refactoring milestones are safe and fast — zero behavioral changes means zero regressions to debug
+2. Factory patterns work best with flat config objects, not class hierarchies or variant enums
+3. Model-specific prompt guides provide concrete patterns — worth the research investment per model family
+4. XML delimiters are the universal structural pattern across all major LLM providers
+5. Eval verification should not be optional for prompt engineering — shipped without quantitative confidence
+6. Plan targets (e.g., "200 lines") should account for Prettier expansion
+
+### Cost Observations
+- Model mix: opus for phase execution, haiku for summaries
+- Sessions: ~4 across 3 days
+- Notable: 11 plans across 6 phases — larger than v1.4 but still fast execution
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -246,6 +297,7 @@
 | v1.2 | ~30 | 3 | Focused cleanup; sequential dependency chain; fastest milestone |
 | v1.3 | 26 | 2 | User-facing feature; pattern copying; verification-driven bug fixes |
 | v1.4 | 62 | 8 | Markdown-only deliverables; 2.3min/plan average; audit-driven gap closure |
+| v1.5 | 68 | 6 | Pure refactoring; factory + decomposition + prompt engineering; no behavioral changes |
 
 ### Cumulative Quality
 
@@ -256,6 +308,7 @@
 | v1.2 | 4 Linguini | 15/15 satisfied | 15,069 TS |
 | v1.3 | 4 Linguini | 9/9 satisfied | 15,656 TS |
 | v1.4 | 4 Linguini | 27/27 satisfied | 15,656 TS + 3,494 MD |
+| v1.5 | 4 Linguini | 17/20 satisfied (3 user-skipped) | 14,751 TS + 3,494 MD |
 
 ### Top Lessons (Verified Across Milestones)
 
@@ -268,3 +321,6 @@
 7. Verification checkpoints catch real bugs before shipping (verified v1.2, v1.3)
 8. Invest in reference documentation before implementation — it pays for itself across all subsequent phases (verified v1.4)
 9. Audit-driven gap closure catches integration issues that static verification misses (verified v1.4)
+10. Refactoring milestones are safe and fast — zero behavioral changes means zero regressions (verified v1.5)
+11. XML delimiters are the universal structural pattern across all major LLM providers (verified v1.5)
+12. Eval verification should not be optional for prompt engineering work (lesson learned v1.5)

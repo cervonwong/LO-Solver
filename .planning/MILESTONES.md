@@ -1,5 +1,30 @@
 # Milestones
 
+## v1.5 Refactor & Prompt Engineering (Shipped: 2026-03-10)
+
+**Phases:** 6 | **Plans:** 11 | **LOC:** 14,751 TypeScript
+**Timeline:** 3 days (2026-03-08 → 2026-03-10)
+**Git range:** v1.4..e91bbf4 (117 files changed, +11,066 / -3,394)
+
+**Delivered:** Full codebase refactoring — dead code removal, agent factory pattern, hypothesize step decomposition — followed by model-specific prompt engineering across all 19 agent prompts (GPT-5-mini, Gemini 3 Flash, Claude Opus 4.6) and frontend trace component cleanup.
+
+**Key accomplishments:**
+1. Dead code removal via Knip audit: 26 dead exports removed, deprecated files deleted, all `any` types replaced
+2. `createWorkflowAgent()` factory eliminating boilerplate across all 12 Mastra agents with dynamic model resolution
+3. 1,240-line hypothesize step decomposed into 4 focused sub-phase files + thin coordinator
+4. GPT-5-mini prompts rewritten with static-first structure, XML sections, and schema-first ordering
+5. Gemini 3 Flash prompts rewritten with XML delimiters, data-first ordering, and structured decomposition
+6. All 6 Claude Code agent prompts rewritten with XML-tagged sections, role-first structure, and 6-level confidence scale
+
+### Known Gaps
+
+3 requirements skipped per user decision (all eval-related):
+- **PE-01**: Eval baseline not captured before prompt changes (user decided to skip)
+- **PE-06**: Per-rewrite eval verification deferred to user
+- **PE-07**: Production mode eval run not executed (user decided to skip)
+
+---
+
 ## v1.4 Claude Code Native Solver (Shipped: 2026-03-08)
 
 **Phases:** 8 | **Plans:** 9 | **LOC:** 3,494 markdown (claude-code/)
