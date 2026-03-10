@@ -68,31 +68,31 @@ Requirements for Claude Code provider integration. Each maps to roadmap phases.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PROV-01 | — | Pending |
-| PROV-02 | — | Pending |
-| PROV-03 | — | Pending |
-| PROV-04 | — | Pending |
-| PROV-05 | — | Pending |
-| PROV-06 | — | Pending |
-| TOOL-01 | — | Pending |
-| TOOL-02 | — | Pending |
-| TOOL-03 | — | Pending |
-| TOOL-04 | — | Pending |
-| TOOL-05 | — | Pending |
-| AUTH-01 | — | Pending |
-| AUTH-02 | — | Pending |
-| AUTH-03 | — | Pending |
-| UI-01 | — | Pending |
-| UI-02 | — | Pending |
-| UI-03 | — | Pending |
-| EVAL-01 | — | Pending |
-| EVAL-02 | — | Pending |
+| PROV-01 | Phase 33 | Pending |
+| PROV-02 | Phase 33 | Pending |
+| PROV-03 | Phase 33 | Pending |
+| PROV-04 | Phase 33 | Pending |
+| PROV-05 | Phase 33 | Pending |
+| PROV-06 | Phase 35 | Pending |
+| TOOL-01 | Phase 34 | Pending |
+| TOOL-02 | Phase 34 | Pending |
+| TOOL-03 | Phase 34 | Pending |
+| TOOL-04 | Phase 34 | Pending |
+| TOOL-05 | Phase 34 | Pending |
+| AUTH-01 | Phase 33 | Pending |
+| AUTH-02 | Phase 33 | Pending |
+| AUTH-03 | Phase 33 | Pending |
+| UI-01 | Phase 35 | Pending |
+| UI-02 | Phase 35 | Pending |
+| UI-03 | Phase 35 | Pending |
+| EVAL-01 | Phase 36 | Pending |
+| EVAL-02 | Phase 36 | Pending |
 
 **Coverage:**
 - v1.6 requirements: 19 total
-- Mapped to phases: 0
-- Unmapped: 19
+- Mapped to phases: 19
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-10*
-*Last updated: 2026-03-10 after initial definition*
+*Last updated: 2026-03-10 after roadmap creation*

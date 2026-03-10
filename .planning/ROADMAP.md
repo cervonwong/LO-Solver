@@ -8,6 +8,7 @@
 - ✅ **v1.3 User API Key** — Phases 17-18 (shipped 2026-03-06)
 - ✅ **v1.4 Claude Code Native Solver** — Phases 19-26 (shipped 2026-03-08)
 - ✅ **v1.5 Refactor & Prompt Engineering** — Phases 27-32 (shipped 2026-03-10)
+- 🚧 **v1.6 Claude Code Provider** — Phases 33-36 (in progress)
 
 ## Phases
 
@@ -79,7 +80,78 @@
 
 </details>
 
+### 🚧 v1.6 Claude Code Provider (In Progress)
+
+**Milestone Goal:** Add Claude Code as an alternative model provider, enabling users to run the solver workflow using their Claude subscription instead of OpenRouter API credits.
+
+- [ ] **Phase 33: Provider Foundation** - Provider module, auth, agent factory, schema changes, tool-free agents validated
+- [ ] **Phase 34: MCP Tool Bridge** - MCP server wrapping Mastra tools, tool-using agents validated
+- [ ] **Phase 35: Frontend Integration** - Three-way provider toggle, auth status, cost display
+- [ ] **Phase 36: Evaluation Support** - Eval harness provider flag and cross-provider comparison
+
+## Phase Details
+
+### Phase 33: Provider Foundation
+**Goal**: Users can run the 8 tool-free agents through Claude Code provider with correct auth and error handling
+**Depends on**: Phase 32 (v1.5 complete)
+**Requirements**: PROV-01, PROV-02, PROV-03, PROV-04, PROV-05, AUTH-01, AUTH-02, AUTH-03
+**Success Criteria** (what must be TRUE):
+  1. Workflow schema accepts `providerMode` with three values (openrouter-testing, openrouter-production, claude-code) and existing OpenRouter modes continue to work unchanged
+  2. All 8 tool-free agents (extractors, dispatchers, answerer) produce correct structured output when run through Claude Code provider
+  3. Solve attempt with unauthenticated Claude Code CLI is blocked with a clear error message before any LLM call is made
+  4. Claude Code agent cannot access filesystem tools (Bash, Read, Write, Edit) during server-side execution
+  5. A transient Claude Code error during solve triggers retry logic and surfaces a meaningful error message (not an unhandled crash)
+**Plans**: TBD
+
+Plans:
+- [ ] 33-01: TBD
+- [ ] 33-02: TBD
+
+### Phase 34: MCP Tool Bridge
+**Goal**: The 4 tool-using agents (hypothesizer, synthesizer, verifier orchestrator, rules improver) execute their tool calls correctly through Claude Code via MCP bridge
+**Depends on**: Phase 33
+**Requirements**: TOOL-01, TOOL-02, TOOL-03, TOOL-04, TOOL-05
+**Success Criteria** (what must be TRUE):
+  1. Vocabulary tools (get, add, update, delete, list) are callable by Claude Code agents and correctly read/write RequestContext state
+  2. Rules tools (get, add, update) are callable by Claude Code agents and correctly read/write RequestContext state
+  3. Tester tools (testRule, testSentence) are callable by Claude Code agents and return structured pass/fail results
+  4. A full end-to-end solve completes through Claude Code provider with all 12 agents (tool-free and tool-using) producing correct output
+**Plans**: TBD
+
+Plans:
+- [ ] 34-01: TBD
+- [ ] 34-02: TBD
+
+### Phase 35: Frontend Integration
+**Goal**: Users can select Claude Code as their provider from the UI and see appropriate feedback throughout the solve
+**Depends on**: Phase 33 (schema changes), Phase 34 (full pipeline working)
+**Requirements**: UI-01, UI-02, UI-03, PROV-06
+**Success Criteria** (what must be TRUE):
+  1. User can switch between OpenRouter Testing, OpenRouter Production, and Claude Code via a three-way selector in the UI
+  2. API key dialog is hidden and not prompted when Claude Code mode is selected
+  3. Auth status indicator shows whether Claude Code CLI is authenticated (visible when Claude Code mode is active)
+  4. Cost display shows "Subscription" label instead of dollar amounts during Claude Code solves
+**Plans**: TBD
+
+Plans:
+- [ ] 35-01: TBD
+
+### Phase 36: Evaluation Support
+**Goal**: Eval harness can benchmark Claude Code provider runs alongside OpenRouter runs for cross-provider comparison
+**Depends on**: Phase 34 (full pipeline working through Claude Code)
+**Requirements**: EVAL-01, EVAL-02
+**Success Criteria** (what must be TRUE):
+  1. Running `npm run eval -- --provider claude-code` executes the eval suite through the Claude Code provider
+  2. Eval result JSON files record which provider was used, and the eval results viewer can filter/compare results by provider
+**Plans**: TBD
+
+Plans:
+- [ ] 36-01: TBD
+
 ## Progress
+
+**Execution Order:**
+Phases execute in numeric order: 33 -> 34 -> 35 -> 36
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 | --- | --- | --- | --- | --- |
@@ -115,6 +187,10 @@
 | 30. Mastra Prompt Engineering | v1.5 | 3/3 | Complete | 2026-03-09 |
 | 31. Claude Code Prompt Engineering | v1.5 | 1/1 | Complete | 2026-03-10 |
 | 32. Frontend Cleanup | v1.5 | 1/1 | Complete | 2026-03-10 |
+| 33. Provider Foundation | v1.6 | 0/? | Not started | - |
+| 34. MCP Tool Bridge | v1.6 | 0/? | Not started | - |
+| 35. Frontend Integration | v1.6 | 0/? | Not started | - |
+| 36. Evaluation Support | v1.6 | 0/? | Not started | - |
 
 _v1.0: 7 phases, 16 plans. All complete._
 _v1.1: 6 phases, 9 plans. All complete._
@@ -122,3 +198,4 @@ _v1.2: 3 phases, 7 plans. All complete._
 _v1.3: 2 phases, 4 plans. All complete._
 _v1.4: 8 phases, 9 plans. All complete._
 _v1.5: 6 phases, 11 plans. All complete._
+_v1.6: 4 phases, ? plans. In progress._
