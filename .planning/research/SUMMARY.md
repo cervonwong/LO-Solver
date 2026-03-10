@@ -1,196 +1,190 @@
 # Project Research Summary
 
-**Project:** LO-Solver v1.5 Refactor and Prompt Engineering
-**Domain:** AI agent orchestration system — internal quality milestone (structural refactoring + model-specific prompt engineering)
-**Researched:** 2026-03-08
-**Confidence:** HIGH
+**Project:** LO-Solver v1.6 — Claude Code Provider Integration
+**Domain:** AI SDK provider toggle for existing Mastra agentic workflow
+**Researched:** 2026-03-10
+**Confidence:** MEDIUM (provider integration path is HIGH confidence; MCP tool bridging is the unverified high-risk element)
 
 ## Executive Summary
 
-LO-Solver v1.5 is a pure internal quality milestone on a working TypeScript/Next.js/Mastra AI pipeline. No new user-facing features are introduced; the work is split into two sequential workstreams: structural refactoring of the existing 15,656-LOC codebase, and rewriting all 19 agent prompts using model-family-specific best practices from official vendor guides. The existing stack is fixed — Mastra 1.8.0, Zod 4.3.6, Next.js 16.1.6, OpenRouter — and no runtime dependency changes are planned. The only net-new dependency is Knip 5.86.0, a one-time dead code audit tool.
+Adding Claude Code as an alternative provider to LO-Solver is a well-bounded infrastructure change: one new npm package (`ai-sdk-provider-claude-code`), one new provider configuration file, and a three-way mode selector replacing the existing binary toggle. The `claudeCode()` provider returns a `LanguageModelV3` instance that Mastra 1.8.0 accepts natively, and the 8 tool-free agents (extractors, dispatchers, answerer) can use it as a direct drop-in with no agent-level changes. This half of the integration has HIGH confidence and no significant technical risk.
 
-The recommended approach is a strict phase ordering: dead code removal first, then the agent factory pattern, then the 1,240-line `02-hypothesize.ts` split, then prompt engineering model-by-model (GPT-5-mini extraction agents, Gemini 3 Flash reasoning agents, Claude Opus 4.6 agents), with type safety and frontend cleanup last. This ordering is not arbitrary: structural changes must precede prompt engineering to prevent prompt rewrites from having to be moved during file splits. Each phase must be verified against the existing eval harness (`npm run eval`) before the next begins. A numeric baseline eval score must be captured before any prompt is touched.
+The hard problem is the remaining 4 agents — hypothesizer, synthesizer, verifier orchestrator, and rules improver — which use 12 Mastra custom tools that the Claude Code provider explicitly does not support. Two viable approaches emerge from research: (1) bridge the tools as an in-process MCP server via `createSdkMcpServer()`, which preserves the existing tool-call architecture but requires wrapping all 12 tools and using async-generator prompts; or (2) a prompt-only approach where tool-using agents emit structured JSON that step code parses and applies, following the same pattern as the earlier v1.4 Claude Code native solver. The architecture research recommends Approach 2 (prompt-only) as simpler and proven for this domain; the features research leans toward Approach 1 (MCP bridge) for full fidelity. This decision is the critical architectural fork and must be made explicitly in Phase 1 before any significant implementation begins.
 
-The dominant risk is behavioral regression from prompt changes, compounded by the fact that all eval runs use `TESTING_MODEL` (gpt-oss-120b) — meaning production-model-specific regressions for Gemini 3 Flash and GPT-5-mini are invisible unless explicitly run with `--mode production`. Secondary risks are circular imports during the file split (silent runtime errors if a sub-phase file is imported by another sub-phase file) and breaking the dynamic model resolution pattern when introducing the agent factory. Both are preventable with `npx tsc --noEmit` checkpoints and a factory implementation that preserves the `({ requestContext }) => ...` function signature.
+Beyond the tool problem, three production-readiness concerns need active mitigation: OAuth token refresh race conditions during concurrent calls (solved by switching to `claude setup-token` for headless auth), structured output silent fallback on complex Zod schemas (solved by auditing and simplifying the 5 schemas used with `generateObject`), and the streaming event mismatch that will render the existing real-time trace UI incorrect for Claude Code runs. The security surface is also materially different from OpenRouter — Claude Code's `bypassPermissions` mode grants filesystem access, requiring explicit `disallowedTools` to block built-in Bash/Write/Edit/Read from server-side execution.
 
 ## Key Findings
 
 ### Recommended Stack
 
-The base stack is unchanged. The only new tooling addition is Knip 5.86.0 for dead code detection, which supersedes the maintenance-mode ts-prune and auto-activates its Next.js plugin when `next` is in package.json. All prompt engineering work uses the existing plain TypeScript string-export pattern for instructions files — no prompt templating libraries, no DSPy, no LangChain. The three production model families are GPT-5-mini (extraction agents), Gemini 3 Flash (reasoning agents), and Claude Opus 4.6 (Claude Code solver agents); no model changes are in scope.
-
-Prompt engineering methodology is strictly model-specific and sourced from official vendor guides fetched directly at research time. GPT-5-mini responds to literal, explicit, caching-friendly prompts with JSON schema described verbatim. Gemini 3 Flash requires direct XML-structured prompts, temperature held at default 1.0, and no chain-of-thought scaffolding (it reasons natively). Claude Opus 4.6 benefits from XML-tagged sections, role-first structure, data placed before task, and explicit rationale behind constraints. Applying any model's pattern to another model's agents is a concrete failure mode identified in research.
+A single new package (`ai-sdk-provider-claude-code@^3.4.4`) is the only addition required. It pulls `@anthropic-ai/claude-agent-sdk` as a transitive dependency and is fully compatible with the existing stack: AI SDK v6, Zod 4.3.6, and Mastra 1.8.0. The Claude Code CLI (v2.1.62) is already installed and authenticated on this system with a Max subscription. No version conflicts arise.
 
 **Core technologies:**
-- Knip 5.86.0: dead code audit — the only tool that finds unused exports, files, and npm deps in a single TypeScript/Next.js pass; run once before cleanup, once to confirm
-- TypeScript 5.9.3 (existing): post-split validation — already at maximum strictness; `npx tsc --noEmit` is the sole needed gate after each file extraction
-- Mastra 1.8.0 (existing): agent orchestration — factory must preserve dynamic `({ requestContext }) => ...` model resolution or testing/production switching breaks silently
-- Eval harness (existing): regression gate — run before any prompt is touched to capture baseline, then after each individual prompt rewrite
+- `ai-sdk-provider-claude-code`: AI SDK v6 community provider wrapping Claude Agent SDK — only viable path to use Claude subscription without a separate API key
+- `@anthropic-ai/claude-agent-sdk` (transitive): Underlying SDK powering the provider — do NOT install separately; the provider pins a compatible range
+- Claude Code CLI: Authentication and execution backend — already present and authenticated on this machine
+
+**What NOT to use:**
+- `@t3ta/claude-code-mastra`: Targets Mastra 0.10.x (pre-1.0), likely abandoned
+- `@anthropic-ai/claude-code` (deprecated npm package): Replaced by `claude-agent-sdk` since Oct 2025
+- `@ai-sdk/anthropic`: Requires a separate Anthropic API key; does not use the subscription
 
 ### Expected Features
 
-In the context of an internal refactoring milestone, "features" are the deliverables that make the codebase maintainable and improve pipeline quality. Research identified two distinct tiers.
+**Must have (table stakes — required for usable v1.6.0):**
+- Three-way provider toggle (Testing / Production / Claude Code) — replaces binary switch
+- Agent factory provider abstraction — resolves to Claude Code or OpenRouter based on `provider-mode` request context key
+- Per-agent model mapping — lookup table from OpenRouter model IDs to Claude Code shortcuts (Gemini Flash → sonnet, GPT-5-mini → sonnet or haiku)
+- Claude Code authentication gate — block solve with clear instructions if `claude login` not completed
+- Tool-free agents working — 8 agents work immediately with direct provider drop-in
+- Tool strategy for 4 remaining agents — either MCP bridge or prompt-only (must be decided before implementation)
+- Cost tracking adaptation — show "Subscription" label instead of $0.00 when Claude Code is active
 
-**Must have (table stakes for a complete refactoring milestone):**
-- Zero behavioral regression — refactors that change behavior are bugs; the eval harness is the verification gate
-- Dead code removal — the deprecated `02a-initial-hypothesis-extractor-*` files are explicitly marked DEPRECATED but still registered and exported in `index.ts`
-- `02-hypothesize.ts` split — at 1,240 lines this is the largest merge-conflict source; split into 4 sub-phase files plus a thin coordinator (~150 lines)
-- Agent factory pattern — 13 agents share 90% identical boilerplate; factory reduces each from ~50 to ~10 lines of config
-- GPT-5-mini prompt rewrites (5 agents) — current prompts have static content mid-prompt and format directives last; caching-hostile and verbose
-- Gemini 3 Flash prompt rewrites (6 agents) — current prompts use numbered step lists that constrain Gemini 3's native reasoning; major rewrites required
-- Claude Opus 4.6 prompt rewrites (6 Claude Code agents) — current `.md` files use markdown headings instead of XML; lack explicit tool use guidance
-
-**Should have (quality improvements, not milestone blockers):**
-- Schema domain grouping (`workflow-schemas.ts`, 407 lines) — research recommends keeping as flat file for this milestone to avoid circular import risk and the 39-edge import graph
-- `request-context-helpers.ts` grouping (440 lines) — extract draft stores (150 lines) as the clearest split candidate; remainder can stay flat
-- Type safety: replace 4 `any` occurrences in `logging-utils.ts` and `request-context-helpers.ts`
-- Frontend `DevTracePanel` event handler extraction — extract inline callbacks to named functions with explicit `requestContext` threading
-- Confidence/conclusion vocabulary standardization across all prompts
-- Prompt template injection cleanup — replace fragile `.replace('{{PLACEHOLDER}}', value)` with typed composition
+**Should have (polish — add after initial validation):**
+- Auth status indicator in nav bar (green/red dot when Claude Code is selected)
+- Trace event streaming verification — ensure real-time trace UI works correctly for Claude Code runs
+- Graceful throttle/rate-limit messaging — Pro tier may hit 5-hour rolling window quotas during repeated solves
 
 **Defer (v2+):**
-- Automated prompt regression CI — eval runs on every PR; valuable but requires infrastructure investment
-- Deeper `request-context-helpers.ts` domain split — lower priority; already helper-only code
-- Schema barrel split — research strongly recommends against for this milestone due to circular import risk
+- Eval harness with `--provider claude-code` flag for cross-provider benchmarking
+- Per-Claude-Code-agent prompt engineering (prompts optimized for GPT-5-mini/Gemini Flash may need adjustment for Opus/Sonnet)
+- Claude Code model selection within provider (Opus vs. Sonnet vs. Haiku per-agent)
 
 ### Architecture Approach
 
-The architecture for v1.5 is decomposition without API surface change. The primary structural transformation is splitting `02-hypothesize.ts` into a thin coordinator plus four sub-phase modules (02a-dispatch, 02b-hypothesize, 02c-verify, 02d-synthesize), each exporting a single async function that receives data by reference and returns a typed result. The critical constraint is that `mainRules` and `mainVocabulary` Maps must be passed by reference (not copied) because synthesizer tool calls mutate them in place through RequestContext. Sub-phase files are import-only leaves — they import utilities but are never imported by each other — preventing circular dependency cycles.
+The integration requires a new `claude-code-provider.ts` module alongside the existing `openrouter.ts`, a single new `provider-mode` key in `WorkflowRequestContext`, and a branch in the agent factory's `model` callback. The workflow schema replaces the binary `modelMode` field with a three-value `providerMode` enum (`'openrouter-testing' | 'openrouter-production' | 'claude-code'`), which propagates unchanged through the existing `inputData` → workflow state → `requestContext` → agent factory chain. The `apiKey` field becomes optional and OpenRouter-only; the API route skips the key check for Claude Code mode.
 
-The agent factory centralizes the repeated `new Agent({...})` constructor across 13 agents, handling three variants: reasoning agents (Gemini, with UnicodeNormalizer), extraction agents (GPT-5-mini, with UnicodeNormalizer), and tester agents (GPT-5-mini, without UnicodeNormalizer, with requestContextSchema). The factory must preserve the `({ requestContext }) => getOpenRouterProvider(requestContext)(...)` dynamic model resolution pattern — a static model value in the factory silently breaks testing/production mode switching. Research explicitly recommends keeping both `workflow-schemas.ts` and `request-context-helpers.ts` flat for this milestone based on direct import graph analysis (39 import edges across these files).
-
-**Major components after refactoring:**
-1. `agent-factory.ts` (new) — `createWorkflowAgent()` centralizing UnicodeNormalizer config and model resolution across all 13 agents
-2. `02a-dispatch.ts`, `02b-hypothesize.ts`, `02c-verify.ts`, `02d-synthesize.ts` (new) — sub-phase functions extracted from `02-hypothesize.ts`; each exports one async function, receives Map references, returns typed result
-3. `02-hypothesize.ts` (refactored) — reduced from 1,240 lines to ~150-line coordinator importing sub-phases
-4. All 13 `*-instructions.ts` files and 6 Claude Code `*.md` agents (rewritten) — prompt content only; agent files, tool files, schemas, and workflow structure unchanged
+**Major components and changes:**
+1. `claude-code-provider.ts` (new) — `ProviderMode` type, `getClaudeCodeModel()` factory, permission config with `disallowedTools` blocking Bash/Write/Edit/Read
+2. `agent-factory.ts` (modified) — add Claude Code branch in `model` callback; suppress or adapt `tools` parameter for tool-using agents in Claude Code mode
+3. `workflow-schemas.ts` + `request-context-types.ts` (modified) — `providerMode` replaces `modelMode` throughout
+4. `use-provider-mode.ts` + `provider-mode-selector.tsx` (new) — three-state hook and UI component replacing binary switch
+5. All step files (modified) — propagate `provider-mode` in place of `model-mode`
 
 ### Critical Pitfalls
 
-1. **Circular imports from file splitting** — sub-phase files that import from each other cause silent runtime `undefined` values, not TypeScript build errors. Draw the full dependency graph before writing any code; sub-phases must be import-only leaves; run `npx tsc --noEmit` after every single file extraction, not at the end.
+1. **AI SDK custom tools are silently unsupported** — The provider marks "Tool Usage: No" across all models. Agents with Mastra tools will silently produce text-only responses instead of executing tool calls. Prevention: decide on MCP bridge vs. prompt-only approach before any tool-using agent test; implement the chosen strategy before testing the verify/improve loop.
 
-2. **Prompt regression without a baseline score** — rewriting multiple prompts between eval runs makes regressions undiagnosable. Capture `translation-accuracy` and `rule-quality` baseline scores with `npm run eval -- --comparison` before touching any prompt file. Rewrite one agent at a time; run `npm run eval -- --problem <id>` after each. Research confirms that "cleaner" prompts can reduce extraction pass rate by 10% and RAG compliance by 13% while appearing better by instruction-following metrics.
+2. **OAuth token refresh race condition** — Concurrent CLI processes race on a single-use refresh token, causing mid-workflow 404 auth failures requiring manual re-login. This is a confirmed, unfixed GitHub bug (#27933). Prevention: use `claude setup-token` (1-year headless token) for server-side use instead of `claude login` OAuth.
 
-3. **Agent factory breaking dynamic model resolution** — a factory that accepts a static model string instead of preserving the `({ requestContext }) => ...` pattern breaks testing/production model switching with no TypeScript error. Verify both modes log different model IDs after migrating the first 2-3 agents before continuing.
+3. **Structured output silent fallback** — `.catchall()` in `structuredProblemDataSchema` and `format` constraints cause the provider to silently return prose instead of structured JSON with no error. Prevention: audit all 5 schemas used with `generateObject`; check `response.object !== null` explicitly; simplify or restructure the `.catchall()` usage.
 
-4. **Dead code removal breaking out-of-tree importers** — `src/evals/zero-shot-solver.ts` imports `questionsAnsweredSchema` from `@/mastra/workflow/workflow-schemas` and lives outside `workflow/`. It is missed by searches scoped to `workflow/`. Always `grep -rn` the full `src/` tree before any file deletion.
+4. **Permission mode filesystem access** — `bypassPermissions` (required for headless server use) grants full filesystem access including reading CLAUDE.md. Prevention: use `disallowedTools` to block `Bash`, `Write`, `Edit`, `Read`; set `loadFileSystemSettings: false` to prevent the agent treating itself as a coding assistant.
 
-5. **Testing-mode evals masking production-model regressions** — all eval runs use `TESTING_MODEL` (gpt-oss-120b). Regressions specific to Gemini 3 Flash or GPT-5-mini prompts are invisible until `--mode production` is explicitly run. Run at least one production eval after rewriting each model family's prompts.
+5. **MCP tools require async-generator prompts** — If the MCP bridge approach is chosen, string prompts are incompatible with MCP tool discovery; an async generator wrapper is required. Warning sign: MCP tools registered but agent never calls them despite correct server setup.
 
 ## Implications for Roadmap
 
-Research across all four files converges on a 6-phase sequence. The ordering is determined by four constraints: (1) structural changes must precede prompt changes to avoid moving rewritten content; (2) dead code removal reduces surface area for subsequent work; (3) the factory must exist before agent migration begins; (4) an eval baseline must be captured before any prompt is touched. These constraints are derived from the dependency graph in FEATURES.md and the build order analysis in ARCHITECTURE.md.
+Based on the dependency graph across all four research files, three phases are recommended.
 
-### Phase 1: Dead Code Removal and Quick Wins
+### Phase 1: Provider Foundation and Architecture Decision
 
-**Rationale:** Removing dead code first reduces the file set all subsequent phases work with. The three quick-win items (dead code, type safety, commented code) are fully independent of each other and touch different files; they can be done in any order and verified together with a single `npx tsc --noEmit` and `npm run eval -- --problem <id>`.
-**Delivers:** Deleted deprecated `02a-initial-hypothesis-extractor-*` files and their `index.ts` registration; 4 `any` annotations replaced with typed alternatives (`unknown` + narrowing or `keyof WorkflowRequestContext` generics); commented-out model line removed from `03b-rules-improver-agent.ts`; Knip audit results captured as a candidate list for unused exports
-**Addresses:** Dead code removal, type safety fixes, commented-out code removal (all P1 table-stakes features)
-**Avoids:** Dead code removal breaking out-of-tree importers — `grep -rn` full `src/` before each deletion; verify `src/evals/zero-shot-solver.ts` compiles after any schema-adjacent change
+**Rationale:** The tool compatibility question (MCP bridge vs. prompt-only) is a blocking architectural fork. All subsequent implementation depends on which path is chosen. Provider types, auth configuration, and the agent factory branch must be in place before any agent can be tested through Claude Code. This is also where permission mode and auth strategy must be locked — getting either wrong causes hangs or security issues in every subsequent phase.
 
-### Phase 2: Agent Factory Pattern
+**Delivers:** Working Claude Code provider for tool-free agents; settled tool strategy for the 4 tool-using agents; confirmed auth approach (`setup-token` recommended); permission mode configured correctly.
 
-**Rationale:** The factory must exist before any agent can be migrated, and smaller agent files make the `02-hypothesize.ts` split diff cleaner. Validate the factory on 2-3 representative agents (one reasoning, one extraction, one tester) before full migration to lock the API before it has 13 dependents.
-**Delivers:** `agent-factory.ts` with `createWorkflowAgent()` handling all three agent variants; all 13 `*-agent.ts` files migrated from ~50-line boilerplate to ~10-line config declarations; testing/production model switching confirmed working via eval run
-**Avoids:** Factory breaking dynamic model resolution — factory must construct `({ requestContext }) => getOpenRouterProvider(requestContext)(...)` internally, not accept a static model value; Mastra v1 deprecated property access (`agent.llm`, `agent.tools`) must not appear in any factory utility code
+**Addresses:** Agent factory provider abstraction, per-agent model mapping, three-way provider toggle (backend schema changes), auth gate.
 
-### Phase 3: 02-hypothesize.ts Split
+**Avoids:** Tool incompatibility (Pitfall 1), permission mode misconfiguration (Pitfall 4), OAuth token race condition (Pitfall 2).
 
-**Rationale:** This is the highest-complexity structural change and must happen before prompt engineering. Splitting while prompts are unchanged means that an eval run before and after the split on identical prompts definitively establishes zero behavioral regression. Extract sub-phases in pipeline order (dispatch first, synthesize last) so each extracted function can be verified against the still-monolithic remainder.
-**Delivers:** `02a-dispatch.ts`, `02b-hypothesize.ts`, `02c-verify.ts`, `02d-synthesize.ts` each at ~200-300 lines; `02-hypothesize.ts` coordinator reduced to ~150 lines; `npx tsc --noEmit` clean and eval passing after each extraction step
-**Addresses:** `02-hypothesize.ts` split (P1 table-stakes feature)
-**Avoids:** Circular imports — sub-phases import utilities only, never each other; Map reference pitfall — `mainRules` and `mainVocabulary` passed by reference, not copied; missing `setState` calls between phases that would corrupt round state
+**Key decisions in this phase:**
+- MCP bridge or prompt-only for the 4 tool-using agents (must be explicit, not deferred)
+- `claude setup-token` vs. OAuth for server auth (recommendation: `setup-token`)
+- `disallowedTools` list to block Bash/Write/Edit/Read built-in tools
 
-### Phase 4: Mastra Prompt Engineering (GPT-5-mini, then Gemini 3 Flash)
+**Research flag:** This phase has HIGH confidence for the tool-free path. If MCP bridge is chosen for tool-using agents, a spike/proof-of-concept with one tool (e.g., `getVocabulary`) should be the first task to validate async-generator prompt requirements before committing to wrapping all 12 tools.
 
-**Rationale:** Prompt engineering begins only after structural refactoring is complete and a numeric eval baseline is established. Rewriting by model family (not by pipeline step) maintains model-specific mental context. GPT-5-mini extraction agents first because they are lower-risk (JSON-in/JSON-out, less creative latitude) and their output format changes affect what Gemini reasoning agents receive. Each model family batch ends with an eval verification.
-**Delivers:** All 13 Mastra `*-instructions.ts` files rewritten: GPT-5-mini agents get static-first structure, explicit Zod-schema-derived JSON descriptions, and `Return ONLY a valid JSON object. No explanation.` directives; Gemini 3 Flash agents get XML-delimited sections (`<task>`, `<context>`, `<constraints>`, `<output_format>`), removed numbered chain-of-thought scaffolding, and no temperature overrides; all prompts use aligned confidence/conclusion vocabulary
-**Uses:** Official OpenAI GPT-5 Prompting Guide, Google Gemini 3 Developer Guide (both fetched at research time, HIGH confidence)
-**Avoids:** Prompt regression without baseline (baseline saved before this phase begins); model-specific pattern cross-contamination (separate workstreams per model family); testing-mode masking production regressions (run `--mode production` eval after each model family)
+### Phase 2: Schema Validation and Tool Integration
 
-### Phase 5: Claude Code Prompt Engineering
+**Rationale:** After the provider loads and tool-free agents are confirmed working, the next risk is structured output schema compatibility and (if MCP bridge was chosen) tool execution correctness. These must be resolved before the full pipeline can execute end-to-end. Error handling in `generateWithRetry` must also be extended — Claude Code errors may not match the existing OpenRouter-specific error patterns.
 
-**Rationale:** Claude Code solver agents are structurally independent of Mastra — they use markdown workspace files and file-read/write tool calls, not Mastra RequestContext. Doing this after Mastra prompt engineering avoids context switching and allows the orchestrator agent prompt to be written last, after subagent output formats are settled.
-**Delivers:** All 6 Claude Code `.md` agent files rewritten: XML-tagged sections (`<instructions>`, `<context>`, `<input>`, `<task>`, `<example>`) replacing markdown headings; role definition as first sentence; long data before task at end; explicit tool use instructions with conditions rather than "ALWAYS" directives; constraint rationale embedded per Anthropic guidance; verifier agent (Sonnet 4.6) free of deep-reasoning-increasing language
-**Avoids:** Applying Mastra RequestContext tool patterns to Claude Code agents (category error; Claude Code agents reference PIPELINE.md for workspace state); "ALWAYS"/"MUST" overuse that triggers Opus 4.6 overtriggering
+**Delivers:** All 12 agents running through Claude Code with correct outputs; structured output schemas validated; cost tracking adapted for subscription mode; retry logic covers Claude Code error types.
 
-### Phase 6: Type Safety, Schema Cleanup, and Frontend
+**Addresses:** Structured output compatibility (Pitfall 3), cost tracking adaptation, tool bridge implementation (if MCP path), error classification in retry logic.
 
-**Rationale:** These are correctness and readability improvements that do not block any other phase. Schema and helpers reorganization is scoped conservatively (per ARCHITECTURE.md recommendations) to avoid circular import risk. Frontend cleanup is included here because it is the only phase touching components outside the workflow directory.
-**Delivers:** `updateCumulativeCost` signature tightened to use `keyof WorkflowRequestContext` typed accessors; `DevTracePanel` inline event handlers extracted to named functions with `requestContext` threaded explicitly; prompt template injection replaced with typed builder or direct concatenation; draft stores optionally extracted from `request-context-helpers.ts` if time permits
-**Avoids:** `emitToolTraceEvent` silent no-op after handler extraction — always pass `requestContext` explicitly; verify all trace event types (`data-tool-call`, `data-vocabulary-update`, `data-rules-update`) appear in dev mode after frontend cleanup
+**Avoids:** Silent structured output fallback on `.catchall()` schemas, MCP async-generator prompt format requirement (Pitfall 8), cost display showing permanent $0.00.
+
+**Key tasks:**
+- Test each of the 5 structured-output schemas individually through the Claude Code provider; check `response.object` is populated (not just `response.text` containing JSON-like text)
+- Pay special attention to `structuredProblemDataSchema` which uses `.catchall()` — highest risk for silent fallback
+- Adapt `extractCostFromResult()` to be provider-aware; add "Subscription" cost display mode
+- Add Claude Code error shapes to the `isRetryable` check in `generateWithRetry`
+
+**Research flag:** Standard patterns for this phase. Validation is mechanical testing of each schema. No additional research needed beyond what PITFALLS.md documents.
+
+### Phase 3: Frontend Integration and UX Polish
+
+**Rationale:** Frontend changes (provider selector, cost display, trace UI adaptation) are decoupled from backend correctness and can only be meaningfully designed after Phase 2 produces a working pipeline with observable streaming behavior. The trace display adaptation in particular requires empirical observation of what the Claude Code provider's `textStream` actually emits before the correct UI treatment can be specified.
+
+**Delivers:** Three-way provider selector in the UI; adapted trace display for Claude Code; subscription quota awareness; auth status indicator; API key dialog hidden for Claude Code mode.
+
+**Addresses:** Three-way provider toggle (UI), auth status indicator, trace event streaming adaptation, rate-limit messaging.
+
+**Avoids:** Streaming mismatch causing garbled trace output (Pitfall 6), quota exhaustion with no user feedback (Pitfall 7), $0.00 cost display confusion.
+
+**Key tasks:**
+- Replace `ModelModeToggle` binary switch with segmented control or dropdown
+- Update `useModelMode` → `useProviderMode` hook and localStorage key
+- Discovery task: run a full solve through Claude Code and observe the actual `textStream` content before designing the trace UI adaptation
+- Adapt trace display based on empirical findings (simplified step-progress mode is the likely outcome)
+- Show "Subscription" cost label; hide API key dialog when Claude Code is selected
+
+**Research flag:** Standard frontend patterns for selector and hook work. The trace display adaptation has a discovery dependency on Phase 2 execution — plan for a task to observe and decide before implementing.
 
 ### Phase Ordering Rationale
 
-- Dead code before everything: reduces the file surface for all subsequent phases; the 3 quick-win items have no dependencies
-- Factory before split: smaller agent files make the split diff cleaner; structural reduction before structural reorganization
-- Structural refactoring (Phases 1-3) before prompt engineering (Phases 4-5): splitting files after rewriting prompts means moving rewritten content and makes regression detection impossible
-- Eval baseline captured between Phase 3 and Phase 4: the one point where behavior is confirmed identical to v1.4 and a clean score is measurable
-- GPT-5-mini before Gemini 3 Flash within Phase 4: extraction agent output format changes affect what reasoning agents receive; settle extraction format first
-- Mastra prompts before Claude Code prompts: subagent output format expectations should be established before the orchestrator prompt references them
-- Type safety and frontend last: independent of all other work; never blocks a prior phase
+- Phase 1 must come first because the tool strategy decision (MCP vs. prompt-only) dictates the implementation shape for Phase 2. Starting Phase 2 work before this decision risks building the wrong thing.
+- Auth strategy (`setup-token` setup) belongs in Phase 1 even though it feels like infrastructure — without correct auth, nothing in Phase 2 can be tested reliably.
+- Phase 2 (schema and tool validation) must precede Phase 3 (frontend) because the trace UI adaptation depends on knowing what the Claude Code provider actually emits — you cannot design the right UI treatment until you have observed real streaming behavior from a working pipeline.
+- Frontend selector and hook rename (Phase 3) could partially parallel Phase 2 for purely cosmetic changes, but the trace display work requires a working pipeline to observe first.
 
 ### Research Flags
 
-Phases likely needing deeper research during planning:
+Phases needing deeper research during planning:
+- **Phase 1 (MCP bridge decision):** If MCP bridge approach is chosen, a spike task should validate `createSdkMcpServer` + async-generator prompt interaction before planning the full implementation. The architecture is sound per official docs but no existing example bridges Mastra tools specifically to the Claude Code provider. The spike should use one simple tool (`getVocabulary`) before committing to wrapping all 12.
 
-- **Phase 3 (02-hypothesize.ts split):** The 1,240-line file has complex shared mutable state (Maps by reference, draft stores keyed by perspective, round convergence loop with `await setState()` calls at specific points). A detailed pre-split reading of the full file to map every variable's write and read sites is essential before writing sub-phase function signatures. The ARCHITECTURE.md signatures are a starting point, not a final contract.
-- **Phase 4 (Gemini 3 Flash prompts):** The 6 reasoning agent prompts are major rewrites (HIGH complexity per FEATURES.md). The existing numbered step lists also encode logic constraints that are not pure scaffolding — each numbered step must be evaluated for whether it is a reasoning scaffold (remove) or a behavioral constraint (translate to XML section). Read each prompt line-by-line before rewriting.
-
-Phases with standard patterns (skip additional research-phase):
-
-- **Phase 1 (Dead code removal):** Knip + grep + tsc workflow is fully documented; the 3 quick-win items (deprecated agent, 4 `any` occurrences, commented code) are unambiguous locations
-- **Phase 2 (Agent factory):** The factory pattern, correct dynamic-model signature, and all three agent variants are fully specified in ARCHITECTURE.md Pattern 2 with working code examples
-- **Phase 5 (Claude Code prompts):** Anthropic's best practices are fetched and documented in STACK.md at HIGH confidence; the 6 agent files share the same structural issues (markdown vs XML, wrong data ordering) and the same fix pattern
-- **Phase 6 (Type safety):** Specific `any` locations and the correct typed replacements are identified in ARCHITECTURE.md Pattern 5; the `ToolExecuteContext` assertion cannot be fully eliminated without Mastra exposing typed context generics
+Phases with standard patterns (skip research-phase):
+- **Phase 2 (schema validation):** Well-documented constraint; validation is mechanical testing of each schema; warning signs and recovery steps are fully specified in PITFALLS.md.
+- **Phase 3 (frontend):** Standard React state management and component replacement patterns; the one unknown (trace display) is resolved by a discovery task, not additional research.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | Official vendor docs fetched directly for all 3 model families; Knip confirmed via official docs and effectivetypescript.com; no new runtime dependencies |
-| Features | HIGH | Based on direct codebase inspection (line counts, grep for `any`, dead code markers); not inferred; dependency graph drawn from actual import statements |
-| Architecture | HIGH | Based on direct inspection of all 60+ source files; function signatures researched against actual code; keep-flat recommendations for schemas and helpers derived from 39-edge import graph analysis |
-| Pitfalls | HIGH (codebase / Mastra API) / MEDIUM (prompt engineering) | Circular import and factory pitfalls from direct code analysis and Mastra v1 migration docs; prompt regression pitfall supported by ArXiv paper with empirical data |
+| Stack | HIGH | All version compatibility verified via npm, type definitions, and dry-run install. Single new dependency. CLI already installed and authenticated. |
+| Features | MEDIUM | Tool-free agent integration is HIGH confidence. MCP bridge viability is MEDIUM — architecture is sound but Mastra-specific implementation is unverified in practice. Prompt-only alternative is MEDIUM-HIGH (proven in v1.4 but requires structural change to 4 agents). |
+| Architecture | MEDIUM | Provider integration pattern is HIGH confidence. Tool compatibility strategy is the unresolved fork — both approaches are architecturally viable, neither is fully proven. Streaming behavior divergence acknowledged; actual content of `textStream` requires empirical observation. |
+| Pitfalls | HIGH | All 8 pitfalls sourced from official docs, confirmed GitHub issues, and codebase analysis. Warning signs and recovery steps are concrete. OAuth race condition is a documented, confirmed, unfixed upstream bug. |
 
-**Overall confidence:** HIGH
+**Overall confidence:** MEDIUM-HIGH. The integration path is clear and low-risk for the tool-free half. The tool-using agent strategy is the one area requiring an upfront architectural decision before work can proceed safely.
 
 ### Gaps to Address
 
-- **GPT-5-mini-specific guidance is sparse:** The GPT-5 Prompting Guide has limited guidance specific to the mini variant vs full GPT-5. Extraction agent prompt rewrites should be validated against the eval harness promptly after each rewrite rather than deferred to end-of-batch.
-- **`shared-memory.ts` purpose unclear:** ARCHITECTURE.md flags this file as "(unclear purpose, needs audit)." Its usage must be determined before Phase 1 dead code removal to avoid deleting something referenced.
-- **Production eval cost:** Running `--mode production` evals after each model family's prompts incurs OpenRouter cost. Budget for at least 4-6 production eval runs (one per model family batch, plus start/end baselines).
-- **Draft store extraction is optional:** ARCHITECTURE.md recommends extracting the 150-line draft stores section from `request-context-helpers.ts` as the clearest split candidate, but labels it optional. Treat as P2 in Phase 6 — skip if time is constrained.
+- **Tool strategy decision:** Must be resolved before Phase 1 implementation begins. Research surfaces two viable approaches (MCP bridge and prompt-only) with a recommendation for prompt-only. The roadmapper should treat this as an explicit planning decision and call it out as the first task in Phase 1 rather than leaving it implicit.
+- **Streaming behavior empirical baseline:** PITFALLS.md documents the streaming mismatch risk but cannot predict exactly what the Claude Code provider's `textStream` will contain without running it. Phase 3 planning should include a discovery task before the trace UI adaptation is specified.
+- **Subscription tier requirement:** A single solve is estimated to consume 20-60% of a Pro tier 5-hour quota. The roadmap should include a task to document the minimum recommended subscription tier and surface it in the UI before users commit to Claude Code mode.
+- **`generateWithRetry` error compatibility:** The current retry logic checks for OpenRouter-specific error names. Claude Code errors may have different shapes. This needs a task in Phase 2 to test with intentional failures and add Claude Code error patterns to the `isRetryable` check.
 
 ## Sources
 
 ### Primary (HIGH confidence)
-
-- https://developers.openai.com/cookbook/examples/gpt-5/gpt-5_prompting_guide — GPT-5 prompting guide: literal instruction following, system prompt structure, JSON output, extraction agent patterns
-- https://developers.openai.com/cookbook/examples/gpt4-1_prompting_guide — GPT-4.1 prompting guide: structured output, extraction precision, prompt caching, verbosity control
-- https://ai.google.dev/gemini-api/docs/gemini-3 — Gemini 3 Flash developer guide: temperature 1.0 requirement, thinking level, context window, knowledge cutoff
-- https://ai.google.dev/gemini-api/docs/prompting-strategies — Google prompting strategies: few-shot examples, context placement, positive constraints only
-- https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices — Anthropic prompting best practices: XML tags, data placement, role assignment, prefill deprecation, parallel tool use
-- https://knip.dev/ — Knip documentation: Next.js plugin auto-activation, unused export detection, false positive handling
-- `src/mastra/workflow/steps/02-hypothesize.ts` — direct codebase inspection, 1,240 lines, full shared-state map
-- `src/mastra/workflow/workflow-schemas.ts` — direct codebase inspection, 407 lines, 39 import edges mapped
-- `src/mastra/workflow/request-context-helpers.ts` — direct codebase inspection, 440 lines, 9 concern groups identified
-- All 13 `*-agent.ts` files — direct codebase inspection, confirmed boilerplate pattern and three agent variants
+- [ai-sdk-provider-claude-code GitHub](https://github.com/ben-vargas/ai-sdk-provider-claude-code) — provider capabilities, tool limitations, permission modes, structured output behavior, Zod 4 requirement
+- [AI SDK Community Providers: Claude Code](https://ai-sdk.dev/providers/community-providers/claude-code) — official tool support matrix (Tool Usage: No, Tool Streaming: No across all models)
+- [Claude Agent SDK Custom Tools docs](https://platform.claude.com/docs/en/agent-sdk/custom-tools) — MCP bridge pattern via `createSdkMcpServer` + `tool()`; streaming input requirement for MCP tools
+- [Claude Agent SDK TypeScript Reference](https://platform.claude.com/docs/en/agent-sdk/typescript) — `query()`, model selection, permission options
+- [Claude Agent SDK Structured Outputs docs](https://platform.claude.com/docs/en/agent-sdk/structured-outputs) — supported JSON Schema features for constrained decoding
+- [Claude Agent SDK Cost Tracking docs](https://platform.claude.com/docs/en/agent-sdk/cost-tracking) — `total_cost_usd` result field, per-query cost reporting
+- npm registry + dry-run install — confirmed version compatibility, no blocking conflicts
+- Local `claude auth status` — confirmed CLI installed, authenticated, Max subscription
+- `@mastra/core@1.8.0` type definitions — confirmed `MastraModelConfig` accepts `LanguageModelV3`
 
 ### Secondary (MEDIUM confidence)
-
-- https://arxiv.org/html/2601.22025v1 — prompt regression research: 10% extraction pass rate drop and 13% RAG compliance drop from generic "improved" prompts on Llama 3
-- https://www.philschmid.de/gemini-3-prompt-practices — Gemini 3 practical differences from earlier models (community source, consistent with official guide)
-- https://www.traceloop.com/blog/automated-prompt-regression-testing-with-llm-as-a-judge-and-ci-cd — "prompt drift is silent but costly"
-- https://effectivetypescript.com/2023/07/29/knip/ — ts-prune vs Knip comparison; ts-prune maintenance status confirmed by tool maintainer
-- https://mastra.ai/guides/migrations/upgrade-to-v1/agent — Mastra v1 breaking changes: `requestContext` API, property accessor deprecations (`agent.llm`, `agent.tools`, `agent.instructions`)
-
-### Tertiary (LOW confidence)
-
-- https://medium.com/visual-development/how-to-fix-nasty-circular-dependency-issues-once-and-for-all-in-javascript-typescript-a04c987cf0de — TypeScript circular dependencies: `import type` as safe workaround
-- https://github.com/vercel/next.js/issues/12557 — barrel file tree-shaking problems in Next.js (corroborates recommendation to avoid schema barrel files)
-- https://www.viget.com/articles/lessons-learned-upgrading-a-large-typescript-application-from-zod-3-to-4 — Zod 4 `._def` moved to `._zod.def`; stricter `.pipe()` typing
+- [GitHub Issue #27933](https://github.com/anthropics/claude-code/issues/27933) and [#24317](https://github.com/anthropics/claude-code/issues/24317) — OAuth token race condition, confirmed but not fixed upstream
+- [GitHub Issue #29048](https://github.com/anthropics/claude-code/issues/29048), [#14279](https://github.com/anthropics/claude-code/issues/14279), [#20264](https://github.com/anthropics/claude-code/issues/20264) — permission mode behavior edge cases
+- [t3ta/claude-code-mastra](https://github.com/t3ta/claude-code-mastra) — reference Mastra integration (pre-1.0, not directly reusable, but confirms pattern direction and surfaces security warnings)
+- [Claude Code rate limits (Portkey)](https://portkey.ai/blog/claude-code-limits/) and [Northflank](https://northflank.com/blog/claude-rate-limits-claude-code-pricing-cost) — subscription tier quota estimates
+- Codebase analysis: `request-context-helpers.ts`, `agent-factory.ts`, `vocabulary-tools.ts`, `workflow-schemas.ts` — integration surface area for provider switching
 
 ---
-*Research completed: 2026-03-08*
+*Research completed: 2026-03-10*
 *Ready for roadmap: yes*

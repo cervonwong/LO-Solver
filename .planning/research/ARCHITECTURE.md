@@ -1,668 +1,435 @@
 # Architecture Research
 
-**Domain:** Mastra workflow refactoring and prompt engineering — LO-Solver v1.5
-**Researched:** 2026-03-08
-**Confidence:** HIGH
+**Domain:** Claude Code provider integration into Mastra workflow agent factory
+**Researched:** 2026-03-10
+**Confidence:** MEDIUM (tool compatibility is the key risk; provider integration path is HIGH confidence)
 
-## Overview
+## System Overview: Current vs Target
 
-This document maps the integration points for v1.5 refactoring changes: file splitting in `02-hypothesize.ts`, agent factory pattern, schema reorganization, and `request-context-helpers.ts` decomposition. All analysis is grounded in direct inspection of the existing codebase.
-
----
-
-## Current System Layout
+### Current Architecture (v1.5)
 
 ```
-src/mastra/workflow/
-├── [agent files]              # 13 agent definitions (24-93 lines each)
-│   ├── 01-structured-problem-extractor-agent.ts
-│   ├── 02-dispatcher-agent.ts
-│   ├── 02-improver-dispatcher-agent.ts
-│   ├── 02-initial-hypothesizer-agent.ts
-│   ├── 02-synthesizer-agent.ts
-│   ├── 02a-initial-hypothesis-extractor-agent.ts  (DEPRECATED)
-│   ├── 03a-rule-tester-agent.ts
-│   ├── 03a-sentence-tester-agent.ts
-│   ├── 03a-verifier-orchestrator-agent.ts
-│   ├── 03a2-verifier-feedback-extractor-agent.ts
-│   ├── 03b-rules-improver-agent.ts
-│   ├── 03b2-rules-improvement-extractor-agent.ts
-│   └── 04-question-answerer-agent.ts
-├── [instructions files]       # One per agent (50-161 lines each)
-├── [tool files]               # vocabulary-tools.ts, rules-tools.ts, tester tools
-├── agent-utils.ts             # generateWithRetry + streamWithRetry (331 lines)
-├── logging-utils.ts           # Markdown log writers (302 lines)
-├── request-context-helpers.ts # All context accessors + cost tracking + draft stores (440 lines)
-├── request-context-types.ts   # WorkflowRequestContext interface (79 lines)
-├── workflow-schemas.ts        # All Zod schemas + initializeWorkflowState (407 lines)
-├── index.ts                   # Re-exports agents and tools
-├── shared-memory.ts           # (unclear purpose, needs audit)
-├── workflow.ts                # Workflow composition (pipeline assembly)
-└── steps/
-    ├── 01-extract.ts          # Step 1: extraction (166 lines)
-    ├── 02-hypothesize.ts      # Step 2: full hypothesis loop (1,240 lines) <-- PRIMARY TARGET
-    └── 03-answer.ts           # Step 3: question answering (179 lines)
+Frontend (React)                      Backend (Mastra Workflow)
+ +---------------------------+         +-------------------------------------------+
+ | useModelMode hook         |         | Workflow State                             |
+ |  localStorage: testing/   |         |  modelMode: testing | production           |
+ |    production             |         |  apiKey?: string                           |
+ |                           |         +-------------------------------------------+
+ | useSolverWorkflow hook    |              |
+ |  transport: /api/solve    |              v
+ |  body.inputData: {        |         +-------------------------------------------+
+ |    modelMode, apiKey      |         | Per-Step RequestContext                    |
+ |  }                        |         |  'model-mode': ModelMode                  |
+ +---------------------------+         |  'openrouter-provider'?: OpenRouterProvider|
+              |                        +-------------------------------------------+
+              v                             |
+ POST /api/solve                            v
+              |                        +-------------------------------------------+
+              v                        | Agent Factory (createWorkflowAgent)        |
+ Mastra workflow.createRun()           |  model: ({ requestContext }) => {           |
+   inputData flows through             |    mode = ctx.get('model-mode')            |
+   workflow state to each step         |    modelId = mode==='prod' ? prod : test   |
+                                       |    return getOpenRouterProvider(ctx)(modelId)|
+                                       |  }                                         |
+                                       +-------------------------------------------+
 ```
 
----
-
-## System Overview — After Refactoring
+### Target Architecture (v1.6)
 
 ```
-src/mastra/workflow/
-├── agents/                    # (optional: move agent files here)
-│   └── ...                    # or leave flat with factory pattern applied
-│
-├── steps/
-│   ├── 01-extract.ts          # (unchanged)
-│   ├── 02-hypothesize.ts      # Thin coordinator — orchestrates sub-phases
-│   ├── 02a-dispatch.ts        # Sub-phase: dispatch (rounds 1 and 2+)
-│   ├── 02b-hypothesize.ts     # Sub-phase: parallel hypothesizer execution
-│   ├── 02c-verify.ts          # Sub-phase: per-perspective verification scoring
-│   ├── 02d-synthesize.ts      # Sub-phase: synthesis + convergence check
-│   └── 03-answer.ts           # (unchanged)
-│
-├── schemas/                   # (optional: schema split by domain)
-│   ├── workflow-state.ts      # workflowStateSchema, initializeWorkflowState
-│   ├── problem.ts             # structuredProblemDataSchema, structuredProblemSchema
-│   ├── hypothesis.ts          # dispatcher, perspective, hypothesis-loop schemas
-│   ├── verification.ts        # verifierFeedbackSchema, roundResult, verificationMetadata
-│   └── answers.ts             # questionsAnsweredSchema, questionAnsweringInputSchema
-│   (or keep as single workflow-schemas.ts — see Architecture note below)
-│
-├── context/                   # (optional: context helper split by domain)
-│   ├── vocabulary.ts          # getVocabularyState, getVocabularyArray
-│   ├── rules.ts               # getRulesState, getRulesArray, getCurrentRules
-│   ├── draft-stores.ts        # createDraftStore, getDraftStore, mergeDraftToMain, clearAllDraftStores
-│   ├── trace.ts               # emitTraceEvent, emitToolTraceEvent
-│   ├── cost.ts                # extractCostFromResult, updateCumulativeCost
-│   └── accessors.ts           # getLogFile, getWorkflowStartTime, getParentAgentId, etc.
-│   (or keep as single request-context-helpers.ts — see Architecture note below)
-│
-├── agent-factory.ts           # createWorkflowAgent() factory
-├── agent-utils.ts             # (unchanged)
-├── logging-utils.ts           # (unchanged)
-├── openrouter.ts              # (unchanged — lives in src/mastra/)
-├── request-context-helpers.ts # (kept or decomposed)
-├── request-context-types.ts   # (unchanged)
-├── vocabulary-tools.ts        # (unchanged)
-├── rules-tools.ts             # (unchanged)
-├── workflow-schemas.ts        # (kept or decomposed)
-└── index.ts                   # (re-export agents — updated if factory applied)
+Frontend (React)                      Backend (Mastra Workflow)
+ +---------------------------+         +-------------------------------------------+
+ | useProviderMode hook      |         | Workflow State                             |
+ |  localStorage: provider   |         |  providerMode: 'openrouter-testing'       |
+ |    + mode combined into   |         |    | 'openrouter-production'               |
+ |    single selection       |         |    | 'claude-code'                         |
+ |                           |         |  apiKey?: string (OpenRouter only)         |
+ +---------------------------+         +-------------------------------------------+
+              |                             |
+              v                             v
+ POST /api/solve                       +-------------------------------------------+
+   body.inputData: {                   | Per-Step RequestContext                    |
+     providerMode,                     |  'provider-mode': ProviderMode             |
+     apiKey                            |  'openrouter-provider'?: OpenRouterProvider|
+   }                                   +-------------------------------------------+
+                                            |
+                                            v
+                                       +-------------------------------------------+
+                                       | Agent Factory (createWorkflowAgent)        |
+                                       |  model: ({ requestContext }) => {           |
+                                       |    mode = ctx.get('provider-mode')          |
+                                       |    if (mode === 'claude-code')              |
+                                       |      return claudeCode('sonnet', opts)      |
+                                       |    else                                     |
+                                       |      return openrouter(modelId)             |
+                                       |  }                                         |
+                                       +-------------------------------------------+
 ```
-
----
 
 ## Component Responsibilities
 
-### What Each Piece Does Today (and After Refactoring)
-
-| Component | Today | After Refactoring |
-|-----------|-------|-------------------|
-| `02-hypothesize.ts` | 1,240-line monolith: dispatch + hypothesize + verify + synthesize + convergence loop | Thin coordinator: imports sub-phase functions, calls them in sequence, manages round loop |
-| `02a-dispatch.ts` | Does not exist | Sub-phase: resolve perspectives from dispatcher or improver-dispatcher agent |
-| `02b-hypothesize.ts` | Does not exist | Sub-phase: parallel hypothesizer execution per perspective |
-| `02c-verify.ts` | Does not exist | Sub-phase: per-perspective verification + feedback extraction |
-| `02d-synthesize.ts` | Does not exist | Sub-phase: vocabulary merge, synthesizer call, convergence check |
-| `workflow-schemas.ts` | Single file, 407 lines, all schemas | Either stays flat or splits into domain files |
-| `request-context-helpers.ts` | Single file, 440 lines, all helpers | Either stays flat or splits into domain files |
-| Agent files (13 files) | ~24-93 lines each; duplicated constructor boilerplate | Same behaviour with factory reducing 15-20 lines per agent |
-| `agent-factory.ts` | Does not exist | `createWorkflowAgent()` — centralized Agent constructor |
-
----
+| Component | Current Responsibility | v1.6 Change |
+|-----------|----------------------|-------------|
+| `agent-factory.ts` | Creates agents with OpenRouter model resolution | Add Claude Code provider branch in model callback |
+| `openrouter.ts` | OpenRouter provider singleton + factory | No change (provider code stays isolated) |
+| NEW: `claude-code-provider.ts` | N/A | Claude Code provider configuration, model mapping |
+| `request-context-types.ts` | Defines `WorkflowRequestContext` with `model-mode` and `openrouter-provider` | Add `provider-mode` key, deprecate or alias `model-mode` |
+| `request-context-helpers.ts` | `getOpenRouterProvider()` helper | Add `getProviderModel()` that returns the right model instance |
+| `workflow-schemas.ts` | `modelMode` in state, `rawProblemInputSchema` | Replace `modelMode` with `providerMode` enum |
+| `use-model-mode.ts` | Two-state toggle (testing/production) | Replace with three-state `useProviderMode` |
+| `model-mode-toggle.tsx` | Binary Switch component | Replace with segmented selector or dropdown |
+| Step files (01-extract, 02-hypothesize, 03-answer) | Create RequestContext with `model-mode` + `openrouter-provider` | Switch to `provider-mode`, conditionally skip OpenRouter provider setup |
+| `use-solver-workflow.ts` | Sends `modelMode` in body | Send `providerMode` instead |
+| `route.ts` (API) | Validates API key presence | Skip API key check when Claude Code mode |
 
 ## Architectural Patterns
 
-### Pattern 1: Sub-Phase Function Extraction (02-hypothesize.ts split)
+### Pattern 1: Provider-Agnostic Model Resolution in Agent Factory
 
-**What:** The 1,240-line step is reorganized into a thin coordinator plus four sub-phase modules. Each sub-phase exports a single async function that receives exactly the data it needs and returns exactly what the coordinator needs.
+**What:** The `createWorkflowAgent` factory's `model` callback resolves to either an OpenRouter model instance or a Claude Code model instance based on `provider-mode` in RequestContext. The agent itself is unaware of which provider is active.
 
-**When to use:** When a step contains multiple logically independent phases each large enough to warrant their own file (target: ~200-300 lines per sub-phase).
+**When to use:** Every agent creation (all 12 workflow agents use the factory).
 
-**Interface contract — sub-phases must accept and return plain data, not the step's full closure scope:**
+**Trade-offs:** Single point of change for provider logic (+). Claude Code provider may behave differently with tools and structured output, which the factory cannot abstract away (-).
 
-```typescript
-// 02a-dispatch.ts — new file
-export async function runDispatchPhase(params: {
-  structuredProblem: StructuredProblemData;
-  round: number;
-  effectivePerspectiveCount: number;
-  mainRules: Map<string, Rule>;
-  mainVocabulary: Map<string, VocabularyEntry>;
-  lastTestResults: unknown;
-  previousPerspectiveIds: string[];
-  modelMode: ModelMode;
-  requestContext: RequestContext<WorkflowRequestContext>;
-  writer: StepWriter | undefined;
-  abortSignal: AbortSignal | undefined;
-  logFile: string;
-  workflowStartTime: number;
-  mastra: Mastra;  // or typed agent getter
-}): Promise<{ perspectives: Perspective[]; timing: StepTiming } | null>
-
-// 02b-hypothesize.ts — new file
-export async function runHypothesizePhase(params: {
-  perspectives: Perspective[];
-  round: number;
-  isImproverRound: boolean;
-  structuredProblem: StructuredProblemData;
-  mainRequestContext: RequestContext<WorkflowRequestContext>;
-  draftStores: Map<string, DraftStore>;
-  mainRules: Map<string, Rule>;
-  mainVocabulary: Map<string, VocabularyEntry>;
-  modelMode: ModelMode;
-  writer: StepWriter | undefined;
-  abortSignal: AbortSignal | undefined;
-  logFile: string;
-  workflowStartTime: number;
-  mastra: Mastra;
-}): Promise<HypothesisResult[]>
-
-// 02c-verify.ts — new file
-export async function runVerifyPhase(params: {
-  hypothesisResults: HypothesisResult[];
-  round: number;
-  structuredProblem: StructuredProblemData;
-  mainRequestContext: RequestContext<WorkflowRequestContext>;
-  modelMode: ModelMode;
-  writer: StepWriter | undefined;
-  abortSignal: AbortSignal | undefined;
-  logFile: string;
-  workflowStartTime: number;
-  mastra: Mastra;
-}): Promise<PerspectiveResult[]>
-
-// 02d-synthesize.ts — new file
-export async function runSynthesizePhase(params: {
-  perspectiveResults: PerspectiveResult[];
-  sortedResults: PerspectiveResult[];
-  draftStores: Map<string, DraftStore>;
-  mainRules: Map<string, Rule>;
-  mainVocabulary: Map<string, VocabularyEntry>;
-  structuredProblem: StructuredProblemData;
-  round: number;
-  mainRequestContext: RequestContext<WorkflowRequestContext>;
-  modelMode: ModelMode;
-  writer: StepWriter | undefined;
-  abortSignal: AbortSignal | undefined;
-  logFile: string;
-  workflowStartTime: number;
-  mastra: Mastra;
-}): Promise<{
-  converged: boolean;
-  convergencePassRate: number;
-  convergenceConclusion: 'ALL_RULES_PASS' | 'NEEDS_IMPROVEMENT' | 'MAJOR_ISSUES';
-  lastTestResults: VerifierFeedback | null;
-  finalFeedback: VerifierFeedback | null;
-}>
-```
-
-**Critical constraint: shared mutable state.** The `mainRules` and `mainVocabulary` Maps are mutated across sub-phases (hypothesizers write to drafts, synthesize writes to main). Sub-phases must receive the live Map references, not copies. The coordinator holds the Maps and passes references into each sub-phase call.
-
-**Trade-offs:**
-- Pro: Each sub-phase is independently readable, reviewable, and testable
-- Pro: Reduces cognitive load for prompt engineering changes in sub-phases
-- Con: Function signatures are verbose (many parameters); consider a `RoundContext` object
-- Con: Requires careful naming to avoid ambiguity between the step file and sub-phase files
-
----
-
-### Pattern 2: Agent Factory
-
-**What:** A `createWorkflowAgent()` factory centralizes the repeated `new Agent({...})` boilerplate. All 13 agents use identical `inputProcessors` (UnicodeNormalizer) and identical `model` selection logic (production/testing via requestContext). The factory captures this once.
-
-**When to use:** When 10+ agents share identical structural boilerplate with only `id`, `name`, `instructions`, and `tools` varying.
-
-**Example — current boilerplate (repeated 10 times across agents with UnicodeNormalizer):**
+**Example:**
 
 ```typescript
-// Current: 02-dispatcher-agent.ts (34 lines)
-import { Agent } from '@mastra/core/agent';
-import { UnicodeNormalizer } from '@mastra/core/processors';
-import { DISPATCHER_INSTRUCTIONS } from './02-dispatcher-instructions';
-import { TESTING_MODEL } from '../openrouter';
-import { getOpenRouterProvider } from './request-context-helpers';
+// claude-code-provider.ts (NEW)
+import { claudeCode } from 'ai-sdk-provider-claude-code';
 
-export const dispatcherAgent = new Agent({
-  id: 'perspective-dispatcher',
-  name: '[Step 2] Perspective Dispatcher Agent',
-  instructions: { role: 'system', content: DISPATCHER_INSTRUCTIONS },
-  model: ({ requestContext }) =>
-    getOpenRouterProvider(requestContext)(
-      requestContext?.get('model-mode') === 'production'
-        ? 'google/gemini-3-flash-preview'
-        : TESTING_MODEL,
-    ),
-  tools: {},
-  inputProcessors: [new UnicodeNormalizer({ ... })],
-});
-```
+export type ProviderMode = 'openrouter-testing' | 'openrouter-production' | 'claude-code';
 
-**After factory:**
-
-```typescript
-// agent-factory.ts — new file
-import { Agent } from '@mastra/core/agent';
-import { UnicodeNormalizer } from '@mastra/core/processors';
-import { TESTING_MODEL, getOpenRouterProvider } from '../openrouter';
-import type { Tool } from '@mastra/core/tools';
-
-interface WorkflowAgentConfig {
-  id: string;
-  name: string;
-  instructions: string | { role: string; content: string };
-  productionModel: string;
-  tools?: Record<string, Tool>;
-  skipUnicodeNormalizer?: boolean;   // for tester agents that use requestContextSchema
-  requestContextSchema?: z.ZodObject<any>;
+/** Claude Code model mapped from OpenRouter model role. */
+export function getClaudeCodeModel(productionModel: string) {
+  // Map agent roles to Claude Code model aliases.
+  // Reasoning agents (Gemini Flash) -> sonnet (balanced)
+  // Extraction agents (GPT-5-mini) -> sonnet (structured output capable)
+  // All agents use sonnet since Claude Code has no model granularity benefit
+  // and subscription cost is flat-rate.
+  return claudeCode('sonnet', {
+    permissionMode: 'bypassPermissions',
+    // No filesystem settings -- agents should not read CLAUDE.md
+    settingSources: [],
+    // Explicit system prompt is handled by Mastra agent instructions
+  });
 }
+
+// Updated agent-factory.ts
+import { getClaudeCodeModel, type ProviderMode } from './claude-code-provider';
 
 export function createWorkflowAgent(config: WorkflowAgentConfig): Agent {
   return new Agent({
-    id: config.id,
-    name: config.name,
-    instructions: typeof config.instructions === 'string'
-      ? config.instructions
-      : config.instructions,
-    model: ({ requestContext }) =>
-      getOpenRouterProvider(requestContext)(
-        requestContext?.get('model-mode') === 'production'
-          ? config.productionModel
-          : TESTING_MODEL,
-      ),
-    tools: config.tools ?? {},
-    ...(config.requestContextSchema && { requestContextSchema: config.requestContextSchema }),
-    ...(!config.skipUnicodeNormalizer && {
-      inputProcessors: [new UnicodeNormalizer({
-        stripControlChars: false,
-        preserveEmojis: true,
-        collapseWhitespace: true,
-        trim: true,
-      })],
-    }),
+    // ...
+    model: ({ requestContext }) => {
+      const providerMode = requestContext?.get('provider-mode') as ProviderMode | undefined;
+
+      if (providerMode === 'claude-code') {
+        return getClaudeCodeModel(config.productionModel);
+      }
+
+      // OpenRouter path (existing behavior)
+      const isProduction = providerMode === 'openrouter-production';
+      const modelId = isProduction ? config.productionModel : config.testingModel;
+      return getOpenRouterProvider(requestContext)(modelId);
+    },
+    // ...
   });
 }
 ```
 
-```typescript
-// 02-dispatcher-agent.ts — after factory (13 lines vs 34 lines)
-import { createWorkflowAgent } from './agent-factory';
-import { DISPATCHER_INSTRUCTIONS } from './02-dispatcher-instructions';
+### Pattern 2: Provider Mode in Workflow State (replaces Model Mode)
 
-export const dispatcherAgent = createWorkflowAgent({
-  id: 'perspective-dispatcher',
-  name: '[Step 2] Perspective Dispatcher Agent',
-  instructions: { role: 'system', content: DISPATCHER_INSTRUCTIONS },
-  productionModel: 'google/gemini-3-flash-preview',
+**What:** The three-way `providerMode` replaces the binary `modelMode` in workflow state and input schemas. This is a semantic expansion -- the old `testing`/`production` distinction maps directly to `openrouter-testing`/`openrouter-production`, with `claude-code` as the new option.
+
+**When to use:** All workflow state initialization and propagation.
+
+**Trade-offs:** Breaking change to workflow schema (+cleaner semantics). Requires migration of all step files that read `modelMode` from state (-).
+
+**Example:**
+
+```typescript
+// workflow-schemas.ts
+export const rawProblemInputSchema = z.object({
+  rawProblemText: z.string(),
+  providerMode: z.enum([
+    'openrouter-testing',
+    'openrouter-production',
+    'claude-code',
+  ]).default('openrouter-testing'),
+  maxRounds: z.number().min(1).max(5).default(3),
+  perspectiveCount: z.number().min(2).max(7).default(3),
+  apiKey: z.string().optional(), // Only used for OpenRouter
 });
 ```
 
-**Agent variants handled by factory:**
+### Pattern 3: Conditional Tool/StructuredOutput Handling
 
-| Variant | Agents | Factory Config |
-|---------|--------|----------------|
-| Reasoning agents (Gemini, with UnicodeNormalizer) | dispatcher, improver-dispatcher, synthesizer, hypothesizer, verifier-orchestrator, rules-improver, answerer | Default: no extra config |
-| Extraction agents (GPT-5-mini, with UnicodeNormalizer) | structured-problem-extractor, hypothesis-extractor, feedback-extractor, improvement-extractor | `productionModel: 'openai/gpt-5-mini'` |
-| Tester agents (GPT-5-mini, no UnicodeNormalizer, has requestContextSchema) | rule-tester, sentence-tester | `skipUnicodeNormalizer: true, requestContextSchema: z.object({...})` |
+**What:** Claude Code provider does NOT support AI SDK custom tools (Zod schemas in `tools` parameter). It DOES support `generateObject`/`streamObject` structured output. For agents that use custom Mastra tools (verifier orchestrator with testRule/testSentence), Claude Code mode either (a) must use a different execution strategy, or (b) those tools must be exposed via MCP.
 
-**Trade-offs:**
-- Pro: UnicodeNormalizer config and model-selection logic defined once
-- Pro: New agents are 10-15 lines instead of 30-50
-- Con: Factory adds one layer of indirection; agent files no longer show complete Agent config
-- Con: Agents with `requestContextSchema` need special handling in factory signature
+**When to use:** Only affects agents with custom tools: verifier orchestrator (testRule, testSentence tools).
 
----
+**Trade-offs:** This is the **critical architectural decision** for v1.6. Options detailed below.
 
-### Pattern 3: Schema Reorganization Decision
+**Impact assessment across all 12 agents:**
 
-**What:** `workflow-schemas.ts` (407 lines) groups all Zod schemas. The refactoring option is to split into domain files. The question is whether splitting aids maintainability or creates import fragmentation.
+| Agent | Uses Tools | Uses StructuredOutput | Claude Code Compatible |
+|-------|-----------|----------------------|----------------------|
+| structured-problem-extractor | No | Yes (structuredProblemSchema) | YES -- structured output works |
+| dispatcher | No | Yes (dispatcherOutputSchema) | YES |
+| initial-hypothesizer | Yes (vocab + rules tools) | No | PARTIAL -- tools won't work |
+| synthesizer | Yes (vocab + rules tools) | No | PARTIAL -- tools won't work |
+| improver-dispatcher | No | Yes (improverDispatcherOutputSchema) | YES |
+| rules-improver | Yes (vocab + rules tools) | No | PARTIAL -- tools won't work |
+| rules-improvement-extractor | No | Yes (rulesSchema) | YES |
+| verifier-orchestrator | Yes (testRule, testSentence) | No | PARTIAL -- tools won't work |
+| verifier-feedback-extractor | No | Yes (verifierFeedbackSchema) | YES |
+| rule-tester | No | No (text output) | YES |
+| sentence-tester | No | No (text output) | YES |
+| question-answerer | No | Yes (questionsAnsweredSchema) | YES |
 
-**Analysis of current grouping:**
+**5 of 12 agents use custom tools** that Claude Code provider cannot execute.
 
-```
-workflow-schemas.ts contains:
-  - ruleSchema, rulesArraySchema                         (core, referenced everywhere)
-  - workflowStateSchema, initializeWorkflowState         (state management)
-  - rawProblemInputSchema                                (API boundary)
-  - structuredProblemDataSchema, structuredProblemSchema (step 1 output)
-  - rulesSchema                                          (hypothesis extraction)
-  - verifierFeedbackSchema, issueSchema, missingRuleSchema (step 3 verification)
-  - questionsAnsweredSchema, questionAnswerSchema         (step 3 output)
-  - hypothesisTestLoopSchema, initialHypothesisInputSchema (legacy, unused by current step 2)
-  - roundResultSchema, verificationMetadataSchema        (metadata tracking)
-  - questionAnsweringInputSchema                         (step 2 → step 3 interface)
-  - perspectiveSchema, dispatcherOutputSchema            (dispatch sub-phase)
-  - perspectiveResultSchema, synthesisInputSchema        (synthesis sub-phase)
-  - improverDispatcherOutputSchema                       (dispatch sub-phase, round 2+)
-```
+## Data Flow
 
-**Recommendation: Keep as single file for this milestone.** The schemas are 407 lines across 17 schema groups. Splitting into 4-5 files creates 6-8 cross-file imports per consumer (each step file currently imports 5-8 schemas from one place). The split adds maintenance overhead without proportional readability gain at this scale.
-
-**If splitting is attempted anyway, the natural domain groupings are:**
-
-| File | Contents | Imports from |
-|------|----------|--------------|
-| `schemas/core.ts` | ruleSchema, rulesArraySchema, vocabularyEntrySchema | vocabulary-tools.ts |
-| `schemas/workflow-state.ts` | workflowStateSchema, initializeWorkflowState, rawProblemInputSchema | core.ts, logging-utils.ts |
-| `schemas/problem.ts` | structuredProblemDataSchema, structuredProblemSchema | core.ts |
-| `schemas/hypothesis.ts` | dispatcherOutputSchema, perspectiveSchema, perspectiveResultSchema, synthesisInputSchema, improverDispatcherOutputSchema, hypothesisTestLoopSchema | core.ts, problem.ts |
-| `schemas/verification.ts` | verifierFeedbackSchema, roundResultSchema, verificationMetadataSchema, questionAnsweringInputSchema | core.ts, hypothesis.ts |
-| `schemas/answers.ts` | questionsAnsweredSchema, questionAnswerSchema | core.ts |
-
-**Critical import chain issue:** `vocabularyEntrySchema` lives in `vocabulary-tools.ts`. Any schema file referencing it must import from there. Currently `workflow-schemas.ts` imports from `vocabulary-tools.ts`; splitting does not change this dependency, it only distributes it.
-
----
-
-### Pattern 4: request-context-helpers.ts Decomposition Decision
-
-**What:** `request-context-helpers.ts` (440 lines) contains 6 distinct concern groups. The split option separates these into domain files.
-
-**Analysis of current concern groups:**
+### Request Flow (Current -- OpenRouter)
 
 ```
-request-context-helpers.ts contains:
-  Group 1: Type definitions (ToolExecuteContext, RequestContextGetter)  — 10 lines
-  Group 2: OpenRouter provider accessor (getOpenRouterProvider)          — 10 lines
-  Group 3: Vocabulary accessors (getVocabularyState, getVocabularyArray) — 20 lines
-  Group 4: Problem/rules accessors (getStructuredProblem, getCurrentRules, etc.) — 40 lines
-  Group 5: Trace event emitters (emitTraceEvent, emitToolTraceEvent)    — 65 lines
-  Group 6: Cost tracking (extractCostFromResult, updateCumulativeCost)  — 55 lines
-  Group 7: Rules state helpers (getRulesState, getRulesArray)           — 20 lines
-  Group 8: Draft store helpers (createDraftStore, getDraftStore, etc.)  — 150 lines
-  Group 9: Utility (normalizeTranslation)                               — 10 lines
+User clicks "Solve"
+    |
+    v
+useSolverWorkflow: body = { rawProblemText, modelMode, apiKey }
+    |
+    v
+POST /api/solve -> workflow.createRun({ inputData })
+    |
+    v
+Step 1 (extract): reads inputData.modelMode -> sets state.modelMode
+    creates RequestContext: 'model-mode', 'openrouter-provider'
+    calls agent.generate() -> agent.model({ requestContext }) -> OpenRouter(modelId)
+    |
+    v
+Step 2 (hypothesize): reads state.modelMode -> creates new RequestContext per sub-phase
+    propagates 'openrouter-provider' from main RequestContext to sub-contexts
+    |
+    v
+Step 3 (answer): reads state.modelMode -> creates new RequestContext
 ```
 
-**Import surface analysis:**
-
-| Importer | Functions imported |
-|----------|--------------------|
-| `02-hypothesize.ts` | emitTraceEvent, createDraftStore, clearAllDraftStores, extractCostFromResult, updateCumulativeCost |
-| `01-extract.ts` | emitTraceEvent, extractCostFromResult, updateCumulativeCost |
-| `03-answer.ts` | emitTraceEvent, extractCostFromResult, updateCumulativeCost |
-| `vocabulary-tools.ts` | getVocabularyState, getLogFile, emitToolTraceEvent, getWorkflowStartTime, ToolExecuteContext |
-| `rules-tools.ts` | getRulesState, getLogFile, emitToolTraceEvent, getWorkflowStartTime, ToolExecuteContext |
-| `03a-rule-tester-tool.ts` | getCurrentRules, getStructuredProblem, getVocabularyState, emitToolTraceEvent, normalizeTranslation, ToolExecuteContext |
-| `03a-sentence-tester-tool.ts` | getCurrentRules, getStructuredProblem, getVocabularyState, emitToolTraceEvent, normalizeTranslation, ToolExecuteContext |
-| Agent files (13) | getOpenRouterProvider (only) |
-
-**Recommendation: Keep as single file for this milestone.** The 440-line file is dense but all functions are related to one concept: accessing workflow context. The split into domain files would create 6 files where each tool file imports from 3-4 of them. The current single import `from './request-context-helpers'` is simpler than `from './context/trace'`, `from './context/vocabulary'`, `from './context/rules'`. The only genuine win would be splitting the 150-line draft store section into its own file if it grows.
-
-**If draft stores are extracted (the clearest split candidate):**
-
-```typescript
-// context/draft-stores.ts — new file (150 lines)
-// Exports: createDraftStore, getDraftStore, getAllDraftStores,
-//          mergeDraftToMain, clearAllDraftStores,
-//          getDraftVocabularyState, getDraftRulesState
-
-// request-context-helpers.ts — reduced to ~290 lines
-// Re-exports draft-stores.ts functions for backward compatibility
-export {
-  createDraftStore, getDraftStore, getAllDraftStores,
-  mergeDraftToMain, clearAllDraftStores,
-  getDraftVocabularyState, getDraftRulesState,
-} from './context/draft-stores';
-```
-
----
-
-### Pattern 5: Type Safety Improvements
-
-**What:** Tools use `context as unknown as ToolExecuteContext` pattern throughout. The `updateCumulativeCost` function accepts `{ get: (key: any) => any; set: (key: any, value: any) => void }`. These `any` types can be narrowed.
-
-**Current pattern in all tool execute functions (17 occurrences):**
-
-```typescript
-execute: async (_inputData, context) => {
-  const ctx = context as unknown as ToolExecuteContext;
-  // ...
-}
-```
-
-**Why this exists:** Mastra's `createTool` execute signature types `context` as `BaseExecuteContext` which does not include `requestContext`. The `as unknown as ToolExecuteContext` is a necessary type assertion because Mastra does not expose typed tool context generics in the public API.
-
-**Improvement approach:** Narrow the `ToolExecuteContext` type and `RequestContextGetter` to avoid `any` in `updateCumulativeCost`:
-
-```typescript
-// Before (in request-context-helpers.ts)
-export async function updateCumulativeCost(
-  requestContext: { get: (key: any) => any; set: (key: any, value: any) => void },
-  ...
-
-// After: use the actual WorkflowRequestContext keys
-export async function updateCumulativeCost(
-  requestContext: {
-    get: (key: keyof WorkflowRequestContext) => WorkflowRequestContext[keyof WorkflowRequestContext];
-    set: <K extends keyof WorkflowRequestContext>(key: K, value: WorkflowRequestContext[K]) => void;
-  },
-  ...
-```
-
-**The `context as unknown as ToolExecuteContext` assertions in tools cannot be eliminated without Mastra exposing typed context generics.** The improvement is to ensure `ToolExecuteContext` is as precise as possible, not to remove the assertion.
-
----
-
-### Pattern 6: Prompt Engineering Integration
-
-**What:** All 19 agent prompts (13 Mastra `*-instructions.ts` files + 6 Claude Code markdown agents) are rewritten using vendor-specific best practices. This is purely additive — no structural changes to agent files, tools, schemas, or workflow.
-
-**Integration points:**
-
-- **Mastra agents:** Each `*-instructions.ts` file is rewritten in isolation. The agent file (`*-agent.ts`) is unchanged except for the imported constant.
-- **Template literal injection:** Three agents inject `{{RULES_TOOLS_INSTRUCTIONS}}` and/or `{{VOCABULARY_TOOLS_INSTRUCTIONS}}` via `.replace()` in their agent file. This mechanism stays identical; only the base instruction constant changes.
-- **Claude Code agents:** Six markdown files in `claude-code/.claude/agents/` rewritten. No TypeScript code touched.
-
-**Agents using template injection (must preserve `.replace()` calls):**
-
-| Agent file | Template variables |
-|------------|-------------------|
-| `02-initial-hypothesizer-agent.ts` | `{{RULES_TOOLS_INSTRUCTIONS}}`, `{{VOCABULARY_TOOLS_INSTRUCTIONS}}` |
-| `02-synthesizer-agent.ts` | `{{RULES_TOOLS_INSTRUCTIONS}}`, `{{VOCABULARY_TOOLS_INSTRUCTIONS}}` |
-| `03b-rules-improver-agent.ts` | `{{VOCABULARY_TOOLS_INSTRUCTIONS}}` |
-
----
-
-## Data Flow — How Refactoring Changes Data Movement
-
-### Current flow in 02-hypothesize.ts (all in one closure):
+### Request Flow (Target -- Provider-Agnostic)
 
 ```
-createStep.execute closure
-  └─ mainRequestContext (RequestContext) — shared mutable object
-  └─ mainRules (Map<string, Rule>)       — direct reference
-  └─ mainVocabulary (Map<string, VocabularyEntry>) — direct reference
-  └─ draftStores (Map<string, DraftStore>)
-       Round loop:
-         a. dispatch phase — writes nothing to maps, gets perspectives[]
-         b. hypothesize — each perspective creates draft store, writes to draft maps
-         c. verify — reads draft maps (read-only), produces PerspectiveResult[]
-         d. synthesize — clears mainRules, clears mainVocab, synthesizer writes to main
-         e. convergence — reads main maps, produces converged bool
+User clicks "Solve"
+    |
+    v
+useSolverWorkflow: body = { rawProblemText, providerMode, apiKey? }
+    |
+    v
+POST /api/solve
+    if providerMode !== 'claude-code' && !apiKey && !env.OPENROUTER_API_KEY:
+      return 401
+    |
+    v
+Step 1 (extract): reads inputData.providerMode -> sets state.providerMode
+    creates RequestContext: 'provider-mode'
+    if OpenRouter: also sets 'openrouter-provider'
+    calls agent.generate() -> agent.model({ requestContext }) ->
+      if 'claude-code': claudeCode('sonnet', opts)
+      else: OpenRouter(modelId)
+    |
+    v
+Step 2 (hypothesize): reads state.providerMode -> propagates to sub-contexts
+    |
+    v
+Step 3 (answer): reads state.providerMode
 ```
 
-### After split (sub-phases with passed references):
+### Key Data Flow Change
 
-```
-02-hypothesize.ts (coordinator)
-  Owns: mainRequestContext, mainRules, mainVocabulary, draftStores
-  Passes by reference to sub-phases — Maps are mutated in place by sub-phases
-
-  02a-dispatch.ts — reads main maps (for prompt construction), returns perspectives[]
-  02b-hypothesize.ts — creates draft stores (writes to draftStores map), returns HypothesisResult[]
-  02c-verify.ts — reads draft stores (read-only), returns PerspectiveResult[]
-  02d-synthesize.ts — mutates mainRules and mainVocabulary, returns convergence result
-```
-
-**No serialization occurs.** Sub-phases receive live Map references. This is identical semantics to the current single-closure approach — just reorganized into functions.
-
----
+The `apiKey` field becomes **optional** and **OpenRouter-only**. Claude Code authentication happens via `claude login` on the server -- there is no API key to pass. The API route must skip the key check for Claude Code mode.
 
 ## Integration Points
 
-### New Components
+### Critical Integration: Claude Code Provider with Mastra Agent.generate()
 
-| Component | Type | Integrates With |
-|-----------|------|-----------------|
-| `02a-dispatch.ts` | New sub-phase module | Imported by `02-hypothesize.ts`; calls dispatcher/improver-dispatcher via `mastra.getAgentById()` |
-| `02b-hypothesize.ts` | New sub-phase module | Imported by `02-hypothesize.ts`; calls initial-hypothesizer via `mastra.getAgentById()` |
-| `02c-verify.ts` | New sub-phase module | Imported by `02-hypothesize.ts`; calls verifier-orchestrator + verifier-feedback-extractor |
-| `02d-synthesize.ts` | New sub-phase module | Imported by `02-hypothesize.ts`; calls hypothesis-synthesizer + convergence verifier |
-| `agent-factory.ts` | New utility | Imported by all 13 `*-agent.ts` files (replaces direct `new Agent()`) |
+**Mechanism:** `claudeCode('sonnet')` returns a `LanguageModelV3` instance (AI SDK v6). Mastra 1.8.0's `Agent` class accepts `MastraModelConfig` which is `LanguageModelV1 | LanguageModelV2 | LanguageModelV3 | ...`. The dynamic `model` callback returns this type, so **the provider instance slots directly into Mastra's model resolution**.
 
-### Modified Components
+**Confidence:** HIGH. The types align: `claudeCode()` -> `LanguageModelV3` -> `MastraModelConfig`. Mastra 1.8.0 explicitly supports V3 models.
 
-| Component | Nature of Change | Risk |
-|-----------|-----------------|------|
-| `steps/02-hypothesize.ts` | Refactored from 1,240 lines to ~150-line coordinator | HIGH — primary change; all sub-phase logic moved out |
-| All 13 `*-agent.ts` files | `new Agent({...})` replaced with `createWorkflowAgent({...})` | LOW — purely structural; exports unchanged |
-| All 13 `*-instructions.ts` files | Prompt content rewritten | MEDIUM — behavior change; eval before and after |
-| 6 Claude Code `*.md` agent files | Prompt content rewritten | MEDIUM — behavior change; manual test before and after |
+### Critical Integration: Tool Compatibility
 
-### Unchanged Components
+**Problem:** `ai-sdk-provider-claude-code` does NOT support AI SDK custom tools passed via the `tools` parameter in `generateText`/`streamText`. Mastra agents that have `tools: { testRule, testSentence }` or vocabulary/rules tools will fail when the model callback returns a Claude Code model, because Mastra calls `agent.generate()` which internally uses AI SDK's `generateText`/`streamText` with the tools.
 
-| Component | Why Unchanged |
-|-----------|---------------|
-| `steps/01-extract.ts` | Clean, focused, no splitting needed |
-| `steps/03-answer.ts` | Clean, focused, no splitting needed |
-| `workflow.ts` | Pipeline assembly — imports steps by name, steps' public exports unchanged |
-| `workflow-schemas.ts` | Kept flat (see Pattern 3) |
-| `request-context-helpers.ts` | Kept flat unless draft stores extracted (see Pattern 4) |
-| `request-context-types.ts` | No changes |
-| `agent-utils.ts` | No changes |
-| `logging-utils.ts` | No changes |
-| `vocabulary-tools.ts` | No changes |
-| `rules-tools.ts` | No changes |
-| `03a-rule-tester-tool.ts` | No changes |
-| `03a-sentence-tester-tool.ts` | No changes |
-| `index.ts` | Updated only if factory changes agent export shape (it won't) |
-| All frontend components | No changes for refactoring phase |
-| Eval system | No changes |
+**Confidence:** HIGH that this is a real blocker. The ai-sdk.dev documentation explicitly states "Tool usage: No" for this provider.
 
----
+**Three approaches to handle this:**
 
-## Build Order
+1. **Prompt-only approach (RECOMMENDED):** For Claude Code mode, agents that currently use tools receive the tool functionality as prompt context instead. Vocabulary and rules CRUD operations become instructions to output structured JSON that the step code parses and applies. This is how the Claude Code native solver (v1.4) already works -- agents output markdown that the orchestrator parses.
 
-Build order is determined by dependency direction: factories before agents, sub-phases before coordinator, schema changes before anything that imports them.
+2. **MCP bridge approach:** Wrap existing Mastra tools as MCP servers using `createSdkMcpServer()` from `@anthropic-ai/claude-agent-sdk`. Pass these as `mcpServers` in the Claude Code provider config. Tools would execute autonomously within the Claude Code session. **Risk:** This changes execution semantics -- the agent controls tool execution, not Mastra's step code.
 
-### Phase 1: Dead Code Removal (no dependencies — do first)
+3. **Hybrid approach:** Use Claude Code provider only for tool-free agents, keep OpenRouter for tool-using agents even in "Claude Code mode." **Risk:** Mixed execution undermines the point of a single provider toggle.
 
-1. **Audit `shared-memory.ts`** — determine if it is used; remove if not
-2. **Remove or mark DEPRECATED** the `02a-initial-hypothesis-extractor-agent.ts` and its instructions file — `index.ts` marks it deprecated but it is still exported
-3. **Remove `hypothesisTestLoopSchema` and `initialHypothesisInputSchema`** from `workflow-schemas.ts` if unused by any live code path
+**Recommendation:** Approach 1 (prompt-only). Reasons:
+- The Claude Code native solver already proves this pattern works for this domain
+- 7 of 12 agents already work without tools (structured output or text-only)
+- The 5 tool-using agents use vocabulary/rules CRUD, which is fundamentally "write structured data" -- easily expressed as structured output
+- MCP bridge adds significant complexity for marginal benefit
+- Keeps the architecture simple: one provider mode, one code path per agent
 
-**Why first:** Removing dead code reduces the surface area for all subsequent changes. Less to move when splitting files.
+### Critical Integration: Structured Output Compatibility
 
-### Phase 2: Agent Factory (low risk, no runtime behaviour change)
+**Status:** Claude Code provider supports `generateObject()`/`streamObject()` with Zod schemas. However, the provider documentation warns: "Some JSON Schema features can cause the Claude Code CLI to silently fall back to prose." Complex regex patterns and format constraints may not work.
 
-4. **Create `agent-factory.ts`** — implement `createWorkflowAgent()`
-5. **Migrate all agent files** to use factory — one agent at a time, verify `npx tsc --noEmit` after each
+**Impact:** The current schemas (structuredProblemSchema, verifierFeedbackSchema, etc.) use standard Zod types (string, number, enum, array, object) without format constraints. They should work.
 
-**Why second:** Factory must exist before any agent can be migrated. Migrating agents is low-risk (no behaviour change) and reduces file sizes before prompt rewrites, making instructions files easier to review.
+**Confidence:** MEDIUM. Standard schemas should work, but edge cases with deeply nested schemas or enum arrays need testing.
 
-### Phase 3: 02-hypothesize.ts Split (highest risk — do before prompt changes)
+### Integration: Cost Tracking
 
-6. **Create `02a-dispatch.ts`** — extract dispatch phase function
-7. **Create `02b-hypothesize.ts`** — extract parallel hypothesize phase function
-8. **Create `02c-verify.ts`** — extract per-perspective verify phase function
-9. **Create `02d-synthesize.ts`** — extract synthesize + convergence phase function
-10. **Refactor `02-hypothesize.ts`** to thin coordinator importing sub-phases
-11. **Verify `npx tsc --noEmit`** after each sub-phase extraction, not just at the end
+**Current:** `extractCostFromResult()` reads `providerMetadata.openrouter.usage.cost`.
 
-**Why third:** Structural splits must happen before prompt engineering. If you rewrite prompts first and then split, you have to move rewritten content around. Split first on unchanged prompts — easier to verify correctness since behaviour is unchanged.
+**Claude Code:** Usage data comes in a different format: `usage.raw` contains raw provider usage (v3.0.0+). Cost is subscription-based, not per-token, so per-call cost tracking is meaningless. The cost display should show "subscription" or be hidden for Claude Code mode.
 
-**Extraction order within step 3:** Extract sub-phases in pipeline order (dispatch first, synthesize last) so that each extracted function can be verified in isolation against the still-monolithic remainder.
+**Confidence:** HIGH.
 
-### Phase 4: Mastra Prompt Engineering
+### Integration: AbortSignal
 
-12. **Rewrite `01-structured-problem-extractor-instructions.ts`** — baseline extractor
-13. **Rewrite dispatcher and hypothesizer instructions** (`02-dispatcher`, `02-initial-hypothesizer`) — core of the pipeline
-14. **Rewrite synthesizer and improver-dispatcher instructions**
-15. **Rewrite verifier and feedback extractor instructions** (`03a-*`)
-16. **Rewrite rules improver and improvement extractor instructions** (`03b-*`)
-17. **Rewrite question answerer instructions** (`04-*`)
-18. **Run eval after each agent group** — measure regression or improvement
+**Current:** `abortSignal` propagates through `mergedSignal` in `generateWithRetry`/`streamWithRetry` to the AI SDK call.
 
-**Why this order within prompt engineering:** Extract-first agents are lower risk (GPT-5-mini, structured output, less creative latitude). Reasoning agents (Gemini) have more complex prompts and benefit from seeing extractor changes first to align on data formats.
+**Claude Code:** The provider supports `AbortSignal` (documented in ai-sdk-provider-claude-code README). This should work transparently.
 
-### Phase 5: Claude Code Prompt Engineering
+**Confidence:** HIGH.
 
-19. **Rewrite all 6 Claude Code agent markdown files** — orchestrator last (depends on subagent formats)
+### Integration: Streaming (streamWithRetry)
 
-**Why fifth:** Claude Code solver is independent of Mastra. Doing it after Mastra avoids context switching. The subagent formats (extractor, hypothesizer, etc.) should be rewritten before the orchestrator since orchestrator prompts reference subagent output formats.
+**Current:** `streamWithRetry` uses `agent.stream()` which internally calls `streamText()`.
 
-### Phase 6: Type Safety Improvements (lowest priority)
+**Claude Code:** The provider supports `streamText()`. However, streaming behavior may differ -- Claude Code runs an agent session that may have multi-turn internal execution before producing output. Latency characteristics will differ from direct API calls.
 
-20. **Tighten `updateCumulativeCost` signature** — replace `any` with typed accessors
-21. **Audit and narrow `ToolExecuteContext` interface** — ensure it matches actual Mastra execute context shape
-22. **Frontend component cleanup** if identified (DevTracePanel, event handlers)
+**Confidence:** MEDIUM. Streaming works, but timing/chunking behavior may be different.
 
-**Why last:** Type safety changes are correctness improvements, not functional changes. They are safe to defer and do not unblock other phases.
+## Recommended Project Structure
 
----
+### New Files
+
+```
+src/mastra/
+  claude-code-provider.ts     # ProviderMode type, getClaudeCodeModel(), Claude Code config
+```
+
+### Modified Files
+
+```
+src/mastra/
+  workflow/
+    agent-factory.ts           # Add Claude Code branch in model callback
+    request-context-types.ts   # Add 'provider-mode' to WorkflowRequestContext
+    request-context-helpers.ts # Add getProviderModel() helper, update cost helpers
+    workflow-schemas.ts        # providerMode replaces modelMode in schemas
+    steps/01-extract.ts        # providerMode instead of modelMode
+    steps/02-hypothesize.ts    # providerMode propagation
+    steps/02a-dispatch.ts      # providerMode in sub-context
+    steps/02b-hypothesize.ts   # providerMode in sub-context
+    steps/02c-verify.ts        # providerMode in sub-context
+    steps/02d-synthesize.ts    # providerMode in sub-context
+    steps/03-answer.ts         # providerMode instead of modelMode
+src/hooks/
+  use-model-mode.ts -> use-provider-mode.ts  # Three-state selection
+src/components/
+  model-mode-toggle.tsx -> provider-mode-selector.tsx  # UI update
+src/hooks/
+  use-solver-workflow.ts       # Send providerMode in body
+src/app/api/solve/
+  route.ts                     # Skip API key check for Claude Code
+```
+
+### Structure Rationale
+
+- **`claude-code-provider.ts` alongside `openrouter.ts`:** Parallel structure -- each provider gets its own module at the `src/mastra/` level. Not inside `workflow/` because the provider is a model concern, not a workflow concern.
+- **RequestContext changes are minimal:** One new key (`provider-mode`) replaces one existing key (`model-mode`). The pattern of per-step context creation stays identical.
+- **Frontend changes are minimal:** One hook replacement, one component replacement. The data flow through transport/body stays the same shape.
 
 ## Anti-Patterns
 
-### Anti-Pattern 1: Extracting Sub-Phases with Copied Data Instead of Map References
+### Anti-Pattern 1: Creating Claude Code Sessions Per Agent Call
 
-**What people do:** Copy `Array.from(mainRules.values())` into the sub-phase function signature instead of passing the live `Map<string, Rule>` reference.
+**What people do:** Instantiate a new `claudeCode()` provider for every `agent.generate()` call, potentially with different configs.
 
-**Why it's wrong:** The current architecture relies on Maps being mutated in place. The synthesizer writes rules via CRUD tools that access the Map directly through `requestContext`. Passing copies breaks this — the synthesizer's tool writes go to the copy, not the Map the coordinator reads after synthesis.
+**Why it's wrong:** Claude Code sessions have startup overhead (spawning CLI process, authentication handshake). Creating per-call instances adds unnecessary latency. The provider handles session lifecycle internally.
 
-**Do this instead:** Pass the live Map references. Sub-phase function signatures should accept `mainRules: Map<string, Rule>` and `mainVocabulary: Map<string, VocabularyEntry>` by reference.
+**Do this instead:** Create the model instance once per provider mode resolution and let the provider manage sessions. The `claudeCode('sonnet', opts)` call creates a model reference, not a session -- sessions are created when AI SDK actually calls the model.
 
----
+### Anti-Pattern 2: Trying to Make Custom Tools Work via Prompt Hacking
 
-### Anti-Pattern 2: Adding a Sub-Phase Index File
+**What people do:** Pass tools to the agent and hope Claude Code ignores the unsupported tool parameter, or try to serialize tool definitions into the prompt.
 
-**What people do:** Create `steps/02-phases/index.ts` that re-exports all four sub-phase functions.
+**Why it's wrong:** The AI SDK will error when trying to pass tools to a provider that doesn't support them. Mastra's Agent class will pass the `tools` option through to the underlying `generateText` call.
 
-**Why it's wrong:** The sub-phases are internal to `02-hypothesize.ts`. They are not part of any public API. Adding an index file creates a false impression that they are importable by other consumers, and adds a re-export layer with no benefit.
+**Do this instead:** For Claude Code mode, agents that need tool-like behavior should use structured output to return operation instructions, and the step code should execute those operations. Or use the `activeTools` mechanism to disable tools per-call.
 
-**Do this instead:** The coordinator (`02-hypothesize.ts`) imports directly from the individual sub-phase files. No index.
+### Anti-Pattern 3: Sharing Authentication State Between OpenRouter and Claude Code
 
----
+**What people do:** Try to unify API key management across both providers.
 
-### Anti-Pattern 3: Rewriting Prompts Before Splitting 02-hypothesize.ts
+**Why it's wrong:** OpenRouter uses per-request API keys (user-provided or env). Claude Code uses `claude login` CLI auth (OAuth, stored locally). They are fundamentally different auth models.
 
-**What people do:** Rewrite the 13 Mastra agent instructions first (exciting work), then attempt to split the monolithic step file.
+**Do this instead:** Keep them completely separate. OpenRouter: `apiKey` in workflow state. Claude Code: pre-authenticated via CLI on the server. The frontend only shows the API key dialog when in OpenRouter mode.
 
-**Why it's wrong:** Splitting the file requires careful reading and understanding of the current logic. Simultaneous prompt changes make it harder to verify that the split did not accidentally change behavior. Bugs introduced during the split are harder to isolate from prompt-change regressions.
+## Scaling Considerations
 
-**Do this instead:** Split the file on unchanged prompts, run evals to confirm identical behavior, then rewrite prompts.
+| Concern | Impact |
+|---------|--------|
+| Claude Code process lifecycle | Each `claudeCode()` call spawns a CLI process. Multiple concurrent solves may overwhelm the server. Consider limiting concurrency for Claude Code mode. |
+| Subscription rate limits | Claude Pro/Max has usage limits. High-frequency agent calls (12+ per solve, multiple solves) may hit these. The provider's `maxTurns` and `maxBudgetUsd` options can help. |
+| Server requirement | Claude Code CLI must be installed and authenticated on the server. This limits deployment to environments where you control the server (dev machine, self-hosted). Not suitable for shared/serverless deployment. |
 
----
+## Build Order
 
-### Anti-Pattern 4: Splitting workflow-schemas.ts Without Checking Import Graph
+Based on dependency analysis, the recommended implementation order:
 
-**What people do:** Split schemas into domain files, then discover that `workflowStateSchema` needs `ruleSchema` (core), `vocabularyEntrySchema` (from vocabulary-tools.ts), and `logging-utils.ts` (for `initializeWorkflowState`). The resulting import graph has multiple cross-file dependencies, creating circular import risk.
+1. **Provider types and configuration** (no existing code depends on new types)
+   - `claude-code-provider.ts` (new file)
+   - Update `request-context-types.ts` (add `provider-mode`)
+   - Update `workflow-schemas.ts` (add `providerMode` to schemas)
 
-**Why it's wrong:** The schema file is flat by design. The apparent "domains" are load-bearing cross-references. A naive split creates circular imports or requires a shared `core.ts` that contains most of the schemas anyway.
+2. **Agent factory update** (depends on step 1)
+   - Update `createWorkflowAgent` in `agent-factory.ts`
+   - Update `request-context-helpers.ts`
 
-**Do this instead:** Keep `workflow-schemas.ts` as a single file for this milestone. If schema file size becomes a maintenance issue post-v1.5, audit the dependency graph before splitting.
+3. **Step file migration** (depends on step 2)
+   - Update all step files to use `providerMode` instead of `modelMode`
+   - Update provider propagation logic
 
----
+4. **API route update** (depends on step 3)
+   - Update `route.ts` to handle Claude Code mode (skip API key check)
 
-### Anti-Pattern 5: Changing the `agent-factory.ts` Signature Mid-Migration
+5. **Frontend update** (can partially parallel with step 3)
+   - New `use-provider-mode.ts` hook
+   - New `provider-mode-selector.tsx` component
+   - Update `use-solver-workflow.ts`
 
-**What people do:** Begin migrating agents to the factory, then realize the `requestContextSchema` handling needs a different API, and refactor the factory mid-migration.
+6. **Tool compatibility** (depends on step 2, highest risk)
+   - Validate which agents work with Claude Code
+   - Implement prompt-only alternatives for tool-using agents in Claude Code mode
+   - Likely needs per-agent `tools` override in the factory based on provider mode
 
-**Why it's wrong:** Agents migrated before the signature change need to be re-migrated. The factory becomes a source of merge conflicts.
-
-**Do this instead:** Finalize the factory signature by migrating 2-3 representative agents first (one reasoning agent, one extraction agent, one tester agent). Lock the API, then migrate the remaining 10.
-
----
+7. **Testing and validation** (depends on all above)
+   - Manual testing of each agent with Claude Code
+   - Verify structured output works with all schemas
+   - Verify abort signal propagation
 
 ## Sources
 
-- `src/mastra/workflow/steps/02-hypothesize.ts` — direct inspection, 1,240 lines (HIGH confidence)
-- `src/mastra/workflow/workflow-schemas.ts` — direct inspection, 407 lines (HIGH confidence)
-- `src/mastra/workflow/request-context-helpers.ts` — direct inspection, 440 lines (HIGH confidence)
-- `src/mastra/workflow/request-context-types.ts` — direct inspection, 79 lines (HIGH confidence)
-- All 13 `*-agent.ts` files — direct inspection, confirmed boilerplate pattern (HIGH confidence)
-- `src/mastra/workflow/index.ts` — direct inspection, confirmed export surface (HIGH confidence)
-- `.planning/PROJECT.md` — milestone scope confirmation (HIGH confidence)
+- [ai-sdk-provider-claude-code GitHub](https://github.com/ben-vargas/ai-sdk-provider-claude-code) -- Provider source, README, capabilities
+- [AI SDK Community Providers: Claude Code](https://ai-sdk.dev/providers/community-providers/claude-code) -- Official AI SDK listing, capabilities matrix
+- [Claude Agent SDK Custom Tools](https://platform.claude.com/docs/en/agent-sdk/custom-tools) -- MCP-based custom tool pattern
+- [t3ta/claude-code-mastra](https://github.com/t3ta/claude-code-mastra) -- Reference Mastra integration
+- [Mastra Agent Class Reference](https://mastra.ai/reference/agents/agent) -- DynamicArgument model pattern
+- [Mastra Agent.generate() Reference](https://mastra.ai/reference/agents/generate) -- RequestContext flow
+- [Mastra Models Documentation](https://mastra.ai/models) -- AI SDK provider support, MastraModelConfig types
+- Installed `@mastra/core@1.8.0` type definitions -- MastraLanguageModel, MastraModelConfig, DynamicArgument type verification
 
 ---
-
-*Architecture research for: v1.5 refactor and prompt engineering integration*
-*Researched: 2026-03-08*
+*Architecture research for: Claude Code provider integration into LO-Solver v1.6*
+*Researched: 2026-03-10*

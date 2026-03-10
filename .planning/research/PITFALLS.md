@@ -1,348 +1,356 @@
 # Pitfalls Research
 
-**Domain:** Codebase refactoring and prompt engineering on an existing AI agent orchestration system (LO-Solver v1.5)
-**Researched:** 2026-03-08
-**Confidence:** HIGH (codebase analysis, Mastra v1 migration docs) / MEDIUM (prompt engineering, verified against vendor docs and peer-reviewed research)
-
----
+**Domain:** Adding Claude Code as alternative model provider to existing Mastra/AI SDK workflow app
+**Researched:** 2026-03-10
+**Confidence:** HIGH (primary findings from official docs, verified GitHub issues, and codebase analysis)
 
 ## Critical Pitfalls
 
-### Pitfall 1: Circular Imports from File-Splitting Without Dependency Analysis
+### Pitfall 1: AI SDK Custom Tools Are Not Supported by Claude Code Provider
 
 **What goes wrong:**
-When `02-hypothesize.ts` (1,240 lines) is split into sub-phase files, the new files may re-import from each other or from shared utilities they previously lived alongside. For example, splitting into `02a-dispatch.ts`, `02b-hypothesize-per-perspective.ts`, and `02c-synthesize.ts` means each needs `emitTraceEvent`, `streamWithRetry`, and types from `workflow-schemas.ts`. If any two of these new files also cross-reference each other, TypeScript produces silent circular dependency errors at runtime — the imported value arrives as `undefined` — not a build error.
-
-The existing codebase already has a cross-reference to watch: `request-context-types.ts` imports `Rule` from `workflow-schemas.ts` and immediately re-exports it. Any new file in the same split that also imports `Rule` from `request-context-types.ts` while `request-context-types.ts` imports from the new file creates a cycle.
+The `ai-sdk-provider-claude-code` does not support AI SDK custom tools -- Zod-schema tools passed to `generateText`/`streamText` via the `tools` option are silently ignored. The AI SDK docs page for this provider explicitly marks "Tool Usage" and "Tool Streaming" as unsupported across all models (Opus, Sonnet, Haiku). This means the 10 Mastra tools currently used in the workflow (5 vocabulary CRUD tools, 3 rules CRUD tools, rule tester tool, sentence tester tool) will not work when switching the model provider from OpenRouter to Claude Code. The agents that depend on tool calls (verifier orchestrator, hypothesizers, improvers) will produce text-only responses instead of executing tool calls, breaking the entire verify/improve loop.
 
 **Why it happens:**
-Large monolithic files implicitly avoid circular imports because everything lives in one module. The moment you extract sub-modules, latent dependency cycles surface. Developers split files linearly (phase A, phase B, phase C) without drawing the full import graph first.
+The Claude Code provider wraps the Claude Agent SDK `query()` function, which operates Claude as an autonomous agent with its own built-in tools (Bash, Read, Write, Edit, etc.) and MCP-server tools. The AI SDK's tool abstraction (`tool()` with Zod schemas, `maxSteps` for multi-step execution) operates at a different level -- the provider translates prompts into `query()` calls but has no mechanism to inject AI SDK tool definitions into the Claude Agent SDK's tool execution layer.
 
 **How to avoid:**
-1. Draw the dependency graph before writing any code. `workflow-schemas.ts` and `request-context-types.ts` must remain pure leaf consumers — no new files should be added to their import lists during the split. All sub-phase files should import only from leaves and from `../agent-utils`, `../logging-utils`, `../request-context-helpers`, and the specific agent files they invoke.
-2. Keep sub-phase files as import-only consumers: they import utilities but export nothing that other sub-phase files import.
-3. Run `npx tsc --noEmit` after each file extraction, not just at the end.
-4. Use `import type` for all type-only imports — this prevents runtime circular dependency problems even when the type graph has cycles.
+Bridge custom tools via MCP. The Claude Agent SDK supports custom tools through in-process MCP servers (`createSdkMcpServer` + `tool()` from `@anthropic-ai/claude-agent-sdk`). The Mastra vocabulary/rules/tester tools must be re-exposed as MCP tools that the Claude Code provider can discover and call. This requires:
+1. Creating an in-process MCP server wrapping each Mastra tool
+2. Passing the MCP server via the provider's `mcpServers` option
+3. Adding tools to `allowedTools` using the `mcp__<server-name>__<tool-name>` naming pattern
+4. Using streaming input mode (async generator for prompts) -- custom MCP tools require this
+
+Alternatively, for agents that do NOT use tools (extractors, dispatchers, answerers), the Claude Code provider can work directly -- only tool-using agents need MCP bridging.
 
 **Warning signs:**
-- A split file imports from another split file that was created in the same refactoring session.
-- A new barrel/index file re-exports from multiple sub-phase files that each import from the same helper.
-- `npx tsc --noEmit` produces a new `TS2303: Circular definition of import alias` error.
-- An import resolves to `undefined` at runtime where a function was expected.
+- Agent responses contain prose descriptions of what they "would do" instead of actual tool calls
+- `response.steps` array has length 1 (no multi-step tool execution)
+- `response.toolCalls` is empty or undefined
+- Tests pass for extraction/answering agents but fail for verifier/hypothesizer agents
 
-**Phase to address:** File-splitting phase (02-hypothesize.ts). Verify with `npx tsc --noEmit` and `npm run eval -- --problem <id>` smoke test after each split.
+**Phase to address:**
+Phase 1 (provider integration) -- this is the blocking architectural decision that determines the entire integration approach. Must be resolved before any agent runs through the Claude Code provider.
 
 ---
 
-### Pitfall 2: Prompt Regression Without a Captured Baseline Score
+### Pitfall 2: OAuth Token Refresh Race Condition With Concurrent Agent Calls
 
 **What goes wrong:**
-All 19 agent prompts are rewritten. Each individual change looks improved in isolation — clearer structure, model-specific formatting, explicit output constraints. But the eval harness runs end-to-end: a change to the dispatcher prompt that increases the number of generated perspectives cascades into a verifier timeout, dropping the final translation accuracy score. There is no per-step score that fires automatically on prompt change, so a 10-point drop in `translation-accuracy` from a synthesizer rewrite goes undetected until the full eval run at the end of the milestone.
-
-Research confirms this failure mode directly: replacing task-specific prompt structure with generic "improved" prompt rules reduced extraction pass rate from 100% to 90% and RAG compliance from 93% to 80% on Llama-class models, while instruction-following metrics *improved* — the prompt appeared better but performed worse on the actual task.
+When multiple Claude Code agent calls run concurrently (or near-concurrently), they race on refreshing the single-use OAuth refresh token stored in `~/.claude/.credentials.json`. OAuth refresh tokens are single-use: the first process consumes the token server-side, and the second process receives a 404 `not_found_error` and loses authentication with no automatic recovery. The user must manually run `claude logout && claude login` to re-authenticate. This is a confirmed, documented bug (GitHub issues #27933 and #24317).
 
 **Why it happens:**
-Prompt engineering feedback cycles are slow (minutes per eval run) and costly. Developers batch multiple prompt changes before running evals, making it impossible to isolate which rewrite caused a regression.
+The Claude CLI token manager performs a read-HTTP refresh-write cycle on `.credentials.json` with no file locking or inter-process coordination. When two processes read the same `refresh_token=T1`, the first redemption gets a new token T2 and writes it, but the second process tries the now-consumed T1 and gets a 404. OAuth tokens expire after 8-12 hours, so this race can occur during any workflow execution if tokens need refreshing.
 
 **How to avoid:**
-1. Establish a numeric baseline before touching any prompt: run `npm run eval -- --comparison` on all 4 ground-truth problems and record `translation-accuracy` and `rule-quality` scores. Save the results JSON as `evals/results/pre-v1.5-baseline.json`.
-2. Rewrite one agent prompt at a time. After each rewrite, run `npm run eval -- --problem <id>` on the fastest problem in testing mode. If the score drops, revert and investigate before moving to the next agent.
-3. Do not rewrite the dispatcher, synthesizer, and hypothesizer prompts in the same commit. These three agents interact — their prompts are coupled.
-4. The eval baseline must be captured before any prompt is touched.
+1. **Serialize all Claude Code provider calls** -- never run concurrent `query()` calls within the same workflow execution. The existing workflow already uses sequential agent dispatch (key decision in PROJECT.md: "Sequential agent dispatch, not parallel"), so this aligns. But ensure no parallelism leaks in (e.g., the multi-perspective hypothesizer loop currently dispatches perspectives sequentially, which is safe).
+2. **Use `setup-token` for long-lived auth** -- `claude setup-token` creates a 1-year token designed for automated/headless workflows, avoiding the OAuth refresh cycle entirely. This is the recommended path for a server-side application.
+3. **Single session reuse** -- use the provider's `sessionId` option to maintain a single session across calls, reducing token refresh frequency.
 
 **Warning signs:**
-- More than one agent prompt changed between eval runs.
-- A prompt is described as "cleaner" or "follows best practices" but no eval was run to confirm the score held.
-- The dispatcher prompt now instructs the LLM to generate a different number of perspectives than the workflow's `effectivePerspectiveCount` cap expects.
-- The synthesizer prompt no longer mentions the tool-call constraint, causing the agent to return prose instead of calling tools.
+- Intermittent 401/404 errors during workflow execution
+- "Refresh token is invalid or expired" in logs from `token-manager` service
+- Authentication failures that only occur when the workflow has multiple agent calls in sequence
+- OAuth token expiry (8-12 hours) causing mid-workflow failures on long-running solves
 
-**Phase to address:** Pre-prompt-engineering setup. The eval baseline must be captured before any prompt is touched. Each prompt rewrite should have its own `npm run eval` verification.
+**Phase to address:**
+Phase 1 (provider integration) -- authentication strategy must be decided before the first end-to-end test. The `setup-token` approach should be the default for server-side usage.
 
 ---
 
-### Pitfall 3: Agent Factory Pattern Breaking Mastra's Dynamic Model Resolution
+### Pitfall 3: Structured Output Schema Silent Fallback to Prose
 
 **What goes wrong:**
-The current agent pattern uses a dynamic model function:
-```typescript
-model: ({ requestContext }) =>
-  getOpenRouterProvider(requestContext)(
-    requestContext?.get('model-mode') === 'production'
-      ? 'google/gemini-3-flash-preview'
-      : TESTING_MODEL,
-  ),
-```
-A factory function that abstracts agent construction risks inlining the model as a static value or losing the `requestContext` parameter:
-```typescript
-// BAD: factory captures model at construction time, ignoring runtime mode
-function makeAgent(model: string) {
-  return new Agent({ model: openrouter(model), ... });
-}
-```
-This breaks the testing/production mode toggle and the per-request API key injection, which both depend on `requestContext` being evaluated at call time, not at construction time.
+Some JSON Schema features cause the Claude Code CLI to silently fall back to prose generation (no `structured_output` in the response). The workflow uses `structuredOutput: { schema: ... }` extensively in extraction (Step 1), hypothesis extraction (Step 2), verification feedback extraction (Step 3a2), rules improvement extraction (Step 3b2), and question answering (Step 4). If the Zod schema generates JSON Schema features the provider does not support, agents return unstructured text instead of JSON, causing `schema.safeParse(response.object)` to fail with `response.object` being null/undefined.
+
+The specific unsupported JSON Schema features that trigger this silent fallback are:
+- `format` constraints (e.g., `email`, `uri`, `date-time`)
+- Complex regex patterns with lookaheads/backreferences
+- Potentially: `.catchall()` schemas -- used in `structuredProblemDataSchema` for variable dataset fields, which generates `additionalProperties` in JSON Schema
 
 **Why it happens:**
-The factory pattern naturally encourages passing configuration at construction time. The dynamic-model pattern (a function that receives `requestContext`) is non-obvious — it looks like extra boilerplate until you understand why it exists. A developer writing the factory may simplify it by resolving the model eagerly.
+The Claude Agent SDK's constrained decoding only supports a subset of JSON Schema. When it encounters unsupported features, it does not error -- it silently drops the `structured_output` constraint and returns free-form text. The provider emits an `unsupported-setting` warning, but this is easy to miss in logs.
 
 **How to avoid:**
-The factory must preserve the `({ requestContext }) => ...` signature. The correct factory shape:
-```typescript
-function makeWorkflowAgent(
-  id: string,
-  instructions: string,
-  productionModel: string,
-  tools?: Record<string, Tool>,
-) {
-  return new Agent({
-    id,
-    model: ({ requestContext }) =>
-      getOpenRouterProvider(requestContext)(
-        requestContext?.get('model-mode') === 'production'
-          ? productionModel
-          : TESTING_MODEL,
-      ),
-    instructions: { role: 'system', content: instructions },
-    tools: tools ?? {},
-    inputProcessors: [new UnicodeNormalizer({ stripControlChars: false, preserveEmojis: true, collapseWhitespace: true, trim: true })],
-  });
-}
-```
-Write this factory first, then migrate one agent, verify testing/production mode still switches models by checking the logged model name in a `npm run eval -- --problem <id>` run before migrating further.
+1. **Audit all Zod schemas** used with `structuredOutput` against the supported JSON Schema subset. The current schemas in `workflow-schemas.ts` use `.catchall()` (on `structuredProblemDataSchema`), `.nullable()`, `.optional()`, `.enum()`, and nested objects/arrays -- `.catchall()` is the highest-risk feature.
+2. **Simplify generation schemas, validate strictly client-side** -- the official workaround from the provider docs. Generate with a simplified schema, then validate with the full schema in application code.
+3. **Test each schema individually** before integrating -- run each `structuredOutput` schema through the Claude Code provider in isolation and verify `response.object` is not null.
+4. **Listen for the `unsupported-setting` warning** emitted by the provider and surface it as an error rather than silently continuing.
 
 **Warning signs:**
-- The factory receives a `string` or `LanguageModelV1` as the model parameter instead of passing a function.
-- Running `npm run eval -- --mode production` and `--mode testing` logs the same model ID.
-- The per-request API key (user-provided key from `state.apiKey`) is no longer propagated — the factory doesn't call `getOpenRouterProvider(requestContext)`.
+- `response.object` is null/undefined when using Claude Code provider but works with OpenRouter
+- `response.text` contains JSON-like content but is not parsed as structured output
+- Extraction steps bail with "Validation failed" errors only on Claude Code mode
+- Provider logs contain `unsupported-setting` warnings
 
-**Phase to address:** Factory pattern phase. Verify model switching and key propagation before migrating more than two agents.
+**Phase to address:**
+Phase 2 (schema validation) -- after basic provider connectivity is established, but before full workflow integration. Every schema used with `structuredOutput` must be tested against the Claude Code provider.
 
 ---
 
-### Pitfall 4: Dead Code Removal Deleting the Only Re-Export of a Type
+### Pitfall 4: Cost Tracking Uses OpenRouter-Specific Provider Metadata Path
 
 **What goes wrong:**
-The deprecated `02a-initial-hypothesis-extractor-agent.ts` is not called from any step and is safe to delete in isolation. However, `index.ts` still registers it in `workflowAgents`. Deleting the file without updating `index.ts` produces a broken import. More subtly: `src/evals/zero-shot-solver.ts` imports `questionsAnsweredSchema` from `@/mastra/workflow/workflow-schemas` and lives outside the `workflow/` directory. If schema reorganization moves or renames that export, this eval file breaks — it is not found by a `grep` scoped to `src/mastra/`.
+The current cost tracking code in `extractCostFromResult()` (at `request-context-helpers.ts:202`) reads cost data from `providerMetadata.openrouter.usage.cost` -- a path that is specific to the OpenRouter provider. The Claude Code provider (via the Claude Agent SDK) reports cost through a completely different mechanism: `total_cost_usd` on the result message and `modelUsage` per-model breakdowns on the result. When using the Claude Code provider, `extractCostFromResult()` will always return 0, and the $1-boundary cost update events will never fire, making the frontend cost display permanently show $0.00.
 
-This is a concrete risk: there are 39 import edges across the codebase pointing to `workflow-schemas.ts`, `request-context-types.ts`, and `request-context-helpers.ts`. Any reorganization that changes module paths without adding re-exports will break some subset of these.
+This function is called in every workflow step (01-extract, 02a-dispatch, 02b-hypothesize, 02c-verify, 02d-synthesize, 03-answer), so the bug affects the entire pipeline -- not just one agent call.
 
 **Why it happens:**
-Dead code tools flag the deprecated agent as unused in steps but miss its registration in `index.ts`. Schema reorganization tends to move canonical declarations without auditing all downstream consumers. Searches scoped to the `workflow/` directory miss the eval files one level up in `src/evals/`.
+The cost tracking was built for OpenRouter's specific metadata structure. The Claude Agent SDK provides cost data at a different level (per-`query()` call via the result message `total_cost_usd`, not per-step via `providerMetadata`). Additionally, Claude Code subscription usage is not billed per-token in the same way -- Pro/Max users pay a flat subscription, so "cost" has a different meaning (usage quota consumption vs. dollar amounts).
 
 **How to avoid:**
-1. Before deleting any file: run `grep -rn "from.*<filename>"` across the entire `src/` tree (not just `workflow/`). If any hit exists outside the file itself, update the importer first.
-2. For schema reorganization: maintain re-exports at the old path for at least one commit. Move the declaration, add a re-export at the old path, verify `npx tsc --noEmit` passes, then remove the re-export in a separate commit.
-3. The `02a-initial-hypothesis-extractor-agent.ts` deletion specifically requires removing both its `import` and its entry in `workflowAgents` in `index.ts`, and removing the reference in `README.md`.
+1. **Create a provider-agnostic cost extraction interface** that abstracts over `extractCostFromResult()`. For OpenRouter: read `providerMetadata.openrouter.usage.cost`. For Claude Code: read from the SDK result message's `total_cost_usd` field.
+2. **Decide what "cost" means for subscription users** -- Claude Code usage costs $0 in API terms (subscription covers it), but users still care about usage quota consumption. Consider displaying "tokens used" instead of "$X.XX" for Claude Code mode.
+3. **Handle the case where cost is genuinely unavailable** -- the Claude Agent SDK's cost tracking is per-`query()` call, not per-AI-SDK-step. The AI SDK provider wrapper may not expose `total_cost_usd` through the same `providerMetadata` path at all.
 
 **Warning signs:**
-- `npx tsc --noEmit` produces `Cannot find module` errors after a deletion.
-- A file is deleted but `src/mastra/workflow/index.ts` still imports it.
-- `src/evals/zero-shot-solver.ts` fails to import after `workflow-schemas.ts` is restructured — this file lives outside the workflow directory and is easy to miss in a local search.
+- Cost display stuck at $0.00 during Claude Code workflow execution
+- No cost warning toasts firing even for long/expensive operations
+- Cost tracking works fine for OpenRouter but silently returns 0 for Claude Code
+- `updateCumulativeCost()` never emits `data-cost-update` events during Claude Code runs
 
-**Phase to address:** Dead-code-removal phase (first in the refactor sequence). Run `npx tsc --noEmit` and `npm run eval -- --problem <id>` after each deletion.
+**Phase to address:**
+Phase 2 or Phase 3 -- after basic agent execution works. Can be deferred if cost display is not critical for initial Claude Code integration, but must be addressed before the feature is considered complete.
 
 ---
 
-### Pitfall 5: Schema Reorganization Producing Duplicate Symbol Errors via Re-Exports
+### Pitfall 5: Permission Mode Foot Guns in Server-Side Context
 
 **What goes wrong:**
-`workflow-schemas.ts` and `request-context-types.ts` already have a dual-export pattern for `Rule`: it is defined in `workflow-schemas.ts` and re-exported from `request-context-types.ts`. If schema reorganization splits `workflow-schemas.ts` into domain files and introduces a barrel `schemas/index.ts` that re-exports everything, consumers that import the same type from both the barrel and a direct path will produce TypeScript duplicate-import errors. With Zod 4, this is further complicated because inferred types and schema objects share similar names (`Rule` type vs `ruleSchema` object), and a barrel re-export of both can create `TS2300: Duplicate identifier` errors if two source files in the barrel export the same name.
+The Claude Agent SDK requires explicit permission handling for tool execution. In a server-side context (Next.js API route), there is no user to approve tool permissions interactively. Using `permissionMode: 'default'` causes the agent to hang waiting for user approval that never comes. Using `permissionMode: 'bypassPermissions'` grants full autonomous system access including file writes outside the project directory and arbitrary command execution via Bash. A documented bug (issue #29048) shows that even with `sandbox.filesystem.allowWrite` configured, the Write tool can create files outside the intended directory when `bypassPermissions` is active.
+
+Additionally, `allowedTools` restrictions may be ignored when `bypassPermissions` is set (documented issue #14279), though `disallowedTools` works correctly in all modes. And when a parent agent uses `bypassPermissions`, all subagents unconditionally inherit this mode (issue #20264), creating privilege escalation concerns.
 
 **Why it happens:**
-Barrel files feel like the natural solution to "one import for everything," but they cause TypeScript to see the same symbol through two different module paths. The Zod pattern of `const ruleSchema = z.object(...)` + `type Rule = z.infer<typeof ruleSchema>` is particularly prone to this when reorganized across multiple files.
+The Claude Agent SDK was designed for interactive CLI use where a human approves each tool action. The permission model assumes interactive prompting. Server-side headless use requires `bypassPermissions`, but this was designed as a "trust everything" escape hatch, not a fine-grained authorization layer.
 
 **How to avoid:**
-1. Do not create a barrel `index.ts` that re-exports from multiple schema files. Keep the existing `workflow-schemas.ts` as the canonical single point of import for all schemas. If it needs to be split, move declarations into sub-files and import them into `workflow-schemas.ts` — consumers continue to import from `workflow-schemas.ts`.
-2. Use `import type` for all type-only imports to prevent runtime value conflicts.
-3. Never re-export the same symbol from two different module paths.
-4. The safest approach for v1.5: do not split `workflow-schemas.ts` at all. At 407 lines it is well-organized. Scope schema reorganization only to `request-context-helpers.ts` domain functions.
+1. **For agents that need only MCP tools (not built-in tools):** Use `disallowedTools` to block dangerous built-in tools (`Bash`, `Write`, `Edit`, `Read`, `WebSearch`, `WebFetch`). Only allow the specific MCP tools you defined. `disallowedTools` works reliably in all permission modes.
+2. **Use `disallowedTools` over `allowedTools`** -- the former works reliably in all permission modes; the latter may be ignored with `bypassPermissions`.
+3. **If `bypassPermissions` is necessary**, run in a sandboxed environment (container, VM) where file system damage is contained.
+4. **Never expose the Claude Code provider path to arbitrary user prompts** without sandboxing -- the agent has access to the server's file system.
+5. **Set `systemPrompt: undefined` and `loadFileSystemSettings: false`** (v2.0.0+ defaults) to prevent the agent from loading CLAUDE.md or settings.json from the filesystem, which could contain unexpected instructions.
 
 **Warning signs:**
-- `npx tsc --noEmit` reports `TS2300: Duplicate identifier` after a barrel file is introduced.
-- A schema is imported from both `./workflow-schemas` and `./schemas/index` in the same file.
-- A Zod schema name and its inferred type name collide in a re-export barrel.
+- Agent hangs indefinitely during workflow execution (waiting for permission approval)
+- Unexpected files appearing in the project directory or home directory
+- Agent executing Bash commands on the server
+- Server-side logs showing tool permission requests with no handler
+- Agent reading CLAUDE.md and behaving as a coding assistant instead of a linguistics solver
 
-**Phase to address:** Schema reorganization phase. Verify with `npx tsc --noEmit` before and after each schema move.
+**Phase to address:**
+Phase 1 (provider integration) -- permission mode must be configured correctly from the first agent call. Get this wrong and the agent either hangs or has unsafe access.
 
 ---
 
-### Pitfall 6: Model-Specific Prompt Assumptions Breaking Cross-Agent Behavior
+### Pitfall 6: Streaming Behavior and Event Emission Mismatch
 
 **What goes wrong:**
-GPT-5-mini (extraction agents), Gemini 3 Flash (reasoning agents), and GPT-OSS-120B (testing mode fallback) each follow different instruction patterns. Gemini 3 models default to efficient/terse output and require explicit requests for detailed reasoning. GPT-5-mini responds well to markdown delimiters (`###`, `---`) but does not need chain-of-thought encouragement. Writing a uniform "improved" prompt template and applying it to all 13 Mastra agents ignores these differences.
+The current workflow emits real-time trace events (`data-agent-text-chunk`, `data-agent-start`, `data-agent-end`, `data-tool-call`, etc.) by consuming `textStream` chunks from `streamWithRetry()`. The Claude Code provider's streaming behavior is fundamentally different:
+1. Tool Streaming is explicitly marked as "unsupported" for all Claude Code models on the AI SDK provider page
+2. The provider streams the full Claude agent session (which may include multiple internal turns, tool calls, thinking), not a single model response
+3. The `textStream` from the provider includes Claude's internal reasoning and tool execution output mixed together, not clean separated text chunks
+4. The Claude Code provider's streaming includes built-in tool execution output (file reads, bash outputs) that are not present in OpenRouter responses
 
-The extraction agents (steps 1 and 2a-extractor) use GPT-5-mini and produce structured JSON. If the new prompt for these agents adopts Gemini-style XML tags (`<output>`, `<reasoning>`), GPT-5-mini may wrap its JSON in XML-like prose, and the downstream Zod parse fails silently — the extractor returns an empty result rather than throwing.
-
-Critically: all eval runs use `TESTING_MODEL = 'openai/gpt-oss-120b'`. Model-specific issues introduced for Gemini 3 Flash or GPT-5-mini prompts only surface when running `--mode production`. A prompt rewrite can appear to "pass" testing-mode evals while being broken in production.
+This means the frontend trace display will either show garbled mixed content or miss tool execution events entirely when using the Claude Code provider.
 
 **Why it happens:**
-Prompt engineering guides present best practices as universal. Developers apply the "correct" pattern from one model's guide to all agents without realizing the testing model runs all eval tests.
+OpenRouter provides a direct model API -- one request, one streamed response, clean text chunks. The Claude Code provider wraps an autonomous agent session that internally makes multiple model calls, executes tools, and streams all of this as a single output. The streaming semantics are architecturally different.
 
 **How to avoid:**
-1. Treat extraction agents (GPT-5-mini) and reasoning agents (Gemini 3 Flash) as separate prompt engineering workstreams. Do not port reasoning agent prompt structures to extraction agents.
-2. For extraction agents: prioritize exact output format instructions. Include JSON schema in the prompt, concrete examples of the expected output object, explicit "output ONLY valid JSON" constraint.
-3. For Gemini 3 Flash reasoning agents: use structural headings, keep temperature at default 1.0 (per Google's explicit recommendation), use directness rather than persuasive framing.
-4. Run at least one `npm run eval -- --problem <id> --mode production` after rewriting each extraction agent prompt to catch production-mode regressions.
+1. **Accept degraded streaming for Claude Code mode** -- show a simplified progress display instead of the full hierarchical trace. The trace events that depend on per-tool-call granularity (`data-tool-call`, `data-agent-text-chunk`) may not be available with the same fidelity.
+2. **Use the Claude Agent SDK's message-level events** instead of text stream chunks. The SDK emits typed messages (`assistant`, `tool_use`, `tool_result`, `result`) that can be mapped to trace events, but this requires hooking into the raw SDK output, not the AI SDK's `textStream`.
+3. **Branch the streaming logic** in `streamWithRetry()` based on provider type. For OpenRouter: use the current `textStream` consumption. For Claude Code: use `generateWithRetry()` instead (non-streaming) for initial implementation, then optionally add SDK-level streaming later.
+4. **Do not assume `response.steps` has the same structure** -- with OpenRouter, each step corresponds to one model call. With Claude Code, the entire `query()` call may appear as a single step regardless of how many internal turns the agent took.
 
 **Warning signs:**
-- An extraction agent's prompt adds `<reasoning>` or `<thinking>` XML tags not present before.
-- `scoreExtraction` in `intermediate-scorers.ts` returns `questionsFound: 0` after a prompt change.
-- Zod parsing of structured output starts producing more `success: false` results in eval intermediate scores.
-- An eval passes in `--mode testing` but fails in `--mode production`.
+- Frontend trace panel shows raw internal reasoning mixed with tool output
+- Tool call events missing from the trace timeline
+- Agent text chunks arriving in unexpected formats (e.g., XML tool use blocks)
+- "Tool Streaming" warnings in console from the AI SDK
+- `onTextChunk` callback receiving very large chunks instead of incremental tokens
 
-**Phase to address:** Prompt engineering phase, specifically when touching `01-structured-problem-extractor-instructions.ts` and `02a-initial-hypothesis-extractor-instructions.ts`.
+**Phase to address:**
+Phase 3 (frontend integration) -- streaming adaptation requires changes to both the backend event emission and frontend trace display. Can be deprioritized if initial integration uses non-streaming `generateWithRetry()`.
 
 ---
 
-### Pitfall 7: emitToolTraceEvent Silent No-Op After Helper Extraction
+### Pitfall 7: Rate Limiting and Throttling Under Subscription Model
 
 **What goes wrong:**
-The codebase has a documented caution: `ctx.writer?.custom()` inside tools is a silent no-op when agents run inside workflow steps. Events must be emitted via the `step-writer` from `RequestContext` using `emitToolTraceEvent`. During the DevTracePanel cleanup — extracting event handlers into helper functions — developers copy the tool execute signature but drop the `requestContext` threading needed to access `step-writer`. The result is tools that run correctly but produce no trace events in the frontend.
+Claude Code Pro/Max subscriptions have usage quotas that are fundamentally different from API pay-per-token pricing. The solver workflow makes 15-30+ agent calls per solve (extractors, dispatchers, hypothesizers, verifiers, tester tools, improvers, answerers across multiple rounds). With a Pro subscription ($20/month), the 5-hour rolling window allows roughly 45 messages. A single workflow run could consume 30-60% of the window quota. Two back-to-back solves could trigger throttling where responses slow dramatically or are queued.
+
+Additionally, usage is shared between Claude.ai (web) and Claude Code -- if the user has been chatting on Claude.ai, their remaining quota for the workflow is reduced. Once 50 sessions per month are reached, access throttling may also occur.
 
 **Why it happens:**
-The normal mental model for emitting events from an async function is `writer.write(event)`. The `step-writer` workaround is project-specific knowledge. When logic is extracted into helper functions, the `requestContext` parameter is often omitted to keep the helper signature clean.
+The workflow was designed around API pricing where more calls = more cost but no hard limits. Subscription plans invert this: cost is fixed but capacity is limited. The workflow's multi-agent architecture (12+ agents, multiple rounds of verify/improve) was optimized for cost-per-call, not calls-per-window.
 
 **How to avoid:**
-1. Any function that calls `emitToolTraceEvent` must receive `requestContext` as an explicit parameter — do not thread it through a closure or module-level variable.
-2. When extracting helper functions from tool execute bodies, verify each helper that previously emitted events continues to emit events after extraction.
-3. Add a comment above each `emitToolTraceEvent` call in extracted helpers: `// requires step-writer via requestContext; ctx.writer is a no-op inside workflow steps`.
+1. **Document subscription tier requirements** -- recommend Max 5x ($100/month, ~225 messages per 5 hours) minimum for workflow usage. Pro tier is likely insufficient for repeated solves.
+2. **Add quota awareness** -- before starting a workflow, warn users about estimated message consumption.
+3. **Consider agent consolidation for Claude Code mode** -- combine sequential agents that do not use tools into single, longer prompts. For example, the two-agent chain (reasoner + extractor) could become a single call with structured output, halving the call count for those steps.
+4. **Implement graceful throttle handling** -- detect rate limit responses (429 or similar) and show a user-friendly "quota exceeded, please wait" message instead of a generic error.
 
 **Warning signs:**
-- A tool's event (e.g., `data-tool-call`) no longer appears in the DevTracePanel after a refactoring commit.
-- A helper function was extracted from a tool execute body but its signature does not include `requestContext`.
-- The frontend trace shows agent-level events but gaps where tool-level events used to appear.
+- Workflow runs getting progressively slower during a session
+- 429 responses from the Claude API
+- Agent calls timing out (not from model latency, but from queue wait times)
+- Users reporting "it worked earlier but now it's slow/broken"
 
-**Phase to address:** DevTracePanel / frontend component cleanup phase. Verify by running a full solve in dev mode and checking that all expected trace events appear for at least one tool call.
+**Phase to address:**
+Phase 3 (UX integration) -- throttle detection and user messaging. Phase 1 should document the quota impact per workflow run.
 
 ---
 
-### Pitfall 8: Mastra v1 API Breaking Changes in Agent Property Access
+### Pitfall 8: MCP Tool Prompt Requires Streaming Input Mode (Async Generator)
 
 **What goes wrong:**
-Mastra v1 deprecated direct property access to `agent.llm`, `agent.tools`, and `agent.instructions` in favor of getter methods (`agent.getLLM()`, `agent.getTools()`, `agent.getInstructions()`). The refactoring milestone touches agent definitions across 13 files. If any refactoring introduces code that reads these properties directly (e.g., in a factory's test helper, in a README example, or in a diagnostic utility), the code will fail at runtime without a TypeScript error — the properties exist but return deprecated values.
-
-Similarly, `mastra.getAgents()` was renamed to `mastra.listAgents()`. If any diagnostic or eval code calls `getAgents()`, it fails at runtime.
+Custom MCP tools registered via `createSdkMcpServer` require the `prompt` parameter to use streaming input mode -- an async generator/iterable, not a simple string. The current workflow passes prompts as plain strings to `agent.generate()` and `agent.stream()`. If the MCP bridge is used for tool bridging (Pitfall 1's solution), but prompts are passed as strings, the MCP tools will not be discovered or callable by the agent. The Claude Agent SDK docs explicitly state: "Custom MCP tools require streaming input mode. You must use an async generator/iterable for the prompt parameter - a simple string will not work with MCP servers."
 
 **Why it happens:**
-The old property names worked in previous Mastra versions and the change is not enforced at the TypeScript type level in all code paths. Developers copy patterns from older code or documentation without noticing the deprecation.
+The streaming input requirement is an implementation detail of the Claude Agent SDK's MCP integration. It exists because MCP tool discovery and registration happens during the streaming handshake. With a simple string prompt, the handshake phase is skipped.
 
 **How to avoid:**
-1. When writing any factory helper or diagnostic code that introspects agents, always use getter methods.
-2. Search for `agent.llm`, `agent.tools`, `agent.instructions`, and `mastra.getAgents()` before marking a refactoring phase complete.
-3. Check `node_modules/@mastra/core` type definitions for the current installed version (1.8.0) to confirm which methods are available.
+1. **Wrap string prompts in an async generator** before passing to the Claude Code provider when MCP tools are configured:
+   ```typescript
+   async function* wrapPrompt(text: string) {
+     yield {
+       type: 'user' as const,
+       message: { role: 'user' as const, content: text }
+     };
+   }
+   ```
+2. **Apply this wrapping conditionally** -- only when the provider is Claude Code and MCP tools are needed. OpenRouter agents should continue using string prompts.
+3. **Test MCP tool discovery** by verifying the agent actually calls an MCP tool in a test prompt, not just that the prompt compiles.
 
 **Warning signs:**
-- A newly written factory test helper accesses `agent.tools` instead of `agent.getTools()`.
-- `mastra.getAgents()` appears in any new utility or diagnostic file.
-- Runtime errors in dev mode mentioning deprecated property access.
+- MCP tools registered but agent never calls them
+- Agent responds with "I don't have access to any tools" despite MCP server being configured
+- Tool discovery works in unit tests but not in the actual workflow
+- No `tool_use` messages in the SDK response
 
-**Phase to address:** Factory pattern phase and any phase that introduces agent introspection utilities.
+**Phase to address:**
+Phase 2 (tool bridging) -- this is part of the MCP bridge implementation. Must be resolved alongside Pitfall 1.
 
 ---
 
 ## Technical Debt Patterns
 
-Shortcuts that seem reasonable but create long-term problems.
-
 | Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
 |----------|-------------------|----------------|-----------------|
-| Rewriting all 19 prompts in one batch | Faster milestone delivery | Cannot isolate which prompt caused a regression; eval scores become meaningless for diagnosis | Never — always do one agent at a time with an eval checkpoint |
-| Using a barrel `index.ts` for schemas | Single import path for consumers | Circular import risk, duplicate symbol errors, tree-shaking problems in Next.js | Only if the barrel imports from true leaf files with no cross-dependencies |
-| Deleting deprecated agents without grepping all consumers | Cleaner codebase faster | Breaks `src/evals/zero-shot-solver.ts` or other out-of-tree importers silently | Never — always grep `src/` first |
-| Applying one factory to all 13 agents at once | Less incremental work | Mistakes propagate to all agents; harder to bisect a regression | Start with 2-3 agents, verify, then scale |
-| Skipping `npx tsc --noEmit` between refactoring steps | Faster iteration | Circular imports and broken re-exports accumulate undetected | Never during schema reorganization |
-| Running only `--mode testing` evals for prompt rewrites | Fast iteration cycle | Production-mode model-specific regressions invisible until production use | Never for extraction agents; acceptable for a first pass on reasoning agents |
-
----
+| Hard-coding `providerMetadata.openrouter` in cost tracking | Works for current single-provider setup | Must refactor for every new provider added | Never -- should be abstracted now that multi-provider is confirmed |
+| Skipping streaming for Claude Code provider (using `generateWithRetry` instead) | Simplifies initial integration significantly | Users get degraded UX with no real-time trace for Claude Code mode | Acceptable for MVP of Claude Code mode; fix in follow-up phase |
+| Using `bypassPermissions` without sandboxing | Agent executes without hanging | Full system access from server-side code | Only in development; never in production without container isolation |
+| Duplicating tool definitions (Mastra tools + MCP wrappers) | Quick integration path | Two definitions to maintain per tool | Acceptable if tool count is stable (currently 10); wrap with adapter function to reduce duplication |
+| Treating Claude Code cost as $0 in the UI | Avoids cost tracking complexity | Users have no visibility into quota consumption | Acceptable for initial phase; must add quota/token display before feature is considered complete |
+| Skipping the two-agent chain for Claude Code mode | Fewer API calls, stays within quota | Different code path for different providers; behavior divergence over time | Acceptable if clearly documented and the output schemas are identical |
 
 ## Integration Gotchas
 
-Common mistakes when connecting to external services or internal boundaries.
-
 | Integration | Common Mistake | Correct Approach |
 |-------------|----------------|------------------|
-| Mastra v1 Agent API | Accessing `agent.llm`, `agent.tools`, `agent.instructions` as properties | Use `agent.getLLM()`, `agent.getTools()`, `agent.getInstructions()` — direct property access deprecated in Mastra v1 |
-| Mastra RequestContext in factory | Passing model string to factory, constructing `openrouter(modelId)` at factory call time | Pass `productionModel: string` to factory; factory must construct `({ requestContext }) => getOpenRouterProvider(requestContext)(...)` |
-| OpenRouter per-request key | Creating provider once at module load and capturing it in closure | Create provider per-request via `createOpenRouterProvider(state.apiKey)` inside the step; do not cache across requests |
-| Eval harness as regression gate | Running eval only at end of milestone | Run `npm run eval -- --problem <id>` in testing mode after every prompt change; run full `--comparison` eval before and after milestone |
-| `emitToolTraceEvent` in extracted helpers | Omitting `requestContext` from helper function signature | Always pass `requestContext` explicitly; never rely on module-scope capture |
-| Zod 4 `._def` access | Accessing `schema._def` for schema introspection (Zod 3 pattern) | Zod 4 moved internal definition to `schema._zod.def`; avoid `._def` access in any reorganized schema code |
-| `src/evals/` during schema reorganization | Scoping schema import audit to `src/mastra/workflow/` only | `src/evals/zero-shot-solver.ts` imports from `@/mastra/workflow/workflow-schemas`; always audit the full `src/` tree |
-
----
+| Claude Code Provider auth | Assuming `claude login` persists forever; deploying without auth strategy | Use `claude setup-token` for 1-year server auth; handle 401 with re-read of credentials file |
+| Structured output | Passing complex Zod schemas unchanged; assuming `response.object` will always be populated | Audit schemas against supported JSON Schema subset; always check `response.object !== null` before parsing; watch for `.catchall()` and `format` constraints |
+| Tool bridging | Trying to pass AI SDK `tools` option directly to Claude Code provider | Wrap tools as MCP server tools via `createSdkMcpServer`; use `allowedTools` with `mcp__<server-name>__<tool-name>` prefix naming |
+| MCP tool prompts | Using simple string prompts with MCP servers | MCP tools require streaming input mode -- use async generator/iterable for the `prompt` parameter, not a plain string |
+| Permission mode | Using `permissionMode: 'default'` in server context | Use `disallowedTools` to block built-in tools; never rely on `allowedTools` alone with `bypassPermissions` |
+| Provider metadata for cost | Reading `providerMetadata.openrouter.usage.cost` and expecting it to work for all providers | Create provider-aware cost extraction that checks provider type first; Claude Code uses `total_cost_usd` on result message |
+| Agent model resolution | Using `openrouter('model-id')` call pattern for Claude Code provider | Claude Code provider is called differently -- `claudeCode('claude-opus-4-6')` -- different call signature and different model ID format |
+| Error classification in retry logic | Assuming all API errors have the same error names/messages | `generateWithRetry` checks for `AI_APICallError` and OpenRouter-specific error messages; Claude Code errors may have different names/shapes |
+| File system settings | Letting the agent load CLAUDE.md and settings.json from the project | Set `loadFileSystemSettings: false` (v2.0.0+ default) to prevent the linguistics solver agent from acting as a coding assistant |
+| Session persistence | Letting the provider persist sessions to disk | Set `persistSession: false` to prevent Claude Code from writing session data to `~/.claude/` |
 
 ## Performance Traps
 
-Patterns that work but silently degrade eval score or runtime performance.
-
 | Trap | Symptoms | Prevention | When It Breaks |
 |------|----------|------------|----------------|
-| Prompt length exceeding 3,000 tokens | LLM reasoning degrades; rule quality score drops; more verifier iterations needed | Audit token count after each prompt rewrite; keep system prompts under 2,000 tokens; put dynamic content in user message, not system message | Above ~3,000 tokens in system prompt per research findings |
-| Duplicate instructions across tool-injection and system prompt | LLM receives conflicting format requirements; produces malformed tool calls | The hypothesizer agent injects `{{RULES_TOOLS_INSTRUCTIONS}}` and `{{VOCABULARY_TOOLS_INSTRUCTIONS}}` via template substitution; do not duplicate these sections in the base prompt | Any prompt rewrite that copies tool documentation inline rather than using the template placeholder |
-| Over-specifying output format for reasoning agents | Gemini 3 Flash produces shorter, less nuanced reasoning; rule coverage decreases | Keep Gemini reasoning agents directive but not overly constrained; use structural headings, not rigid JSON-extraction constraints on reasoning steps | When a rewritten prompt adds `RETURN ONLY` or a JSON schema to a reasoning (not extraction) agent |
-| Testing mode masking production prompt issues | All eval runs use `TESTING_MODEL` (`gpt-oss-120b`); production-model-specific regressions invisible | Run at least one `--mode production` eval for prompts intended for Gemini 3 Flash or GPT-5-mini | Any prompt that uses model-specific formatting not supported by `gpt-oss-120b` |
+| Subscription quota exhaustion | Workflow slows then stalls, 429 errors | Document per-run quota cost (~20-30 messages); recommend Max tier; consolidate agent calls for Claude Code mode | After 1-2 full workflow runs on Pro tier within a 5-hour window |
+| Session startup latency | First agent call takes 3-10s longer than OpenRouter | Accept higher TTFT for Claude Code; show loading indicator; consider reusing sessions across calls | Every workflow start (cold session overhead from CLI subprocess spawn) |
+| Token refresh during workflow | Mid-workflow auth failure, unrecoverable without re-login | Use `setup-token` for 1-year auth; serialize all agent calls | After 8-12 hours of session with OAuth login, or any concurrent process |
+| MCP server initialization overhead | Tool discovery adds latency per agent call | Initialize MCP server once at workflow start, pass to all Claude Code agent calls | Every agent call that uses MCP tools, especially if server is created per-call |
+| Verify/improve loop message explosion | Each round adds 5-10+ agent calls; 3 rounds = 15-30 calls from verification alone | Cap rounds more aggressively for Claude Code mode (2 instead of 3-5); consolidate tester calls | When `maxRounds` is 3+ and the problem requires multiple improvement iterations |
 
----
+## Security Mistakes
+
+| Mistake | Risk | Prevention |
+|---------|------|------------|
+| Using `bypassPermissions` on a user-facing Next.js server | Agent can execute arbitrary commands, read/write any file on the server | Use `disallowedTools` to block `Bash`, `Write`, `Edit`, `Read`; only allow your MCP tools |
+| Storing `setup-token` in `.env` and accidentally committing | Token grants full Claude account access for 1 year | `.env` is already gitignored; add `setup-token` to `.gitignore` documentation; never expose via API responses |
+| Passing user-controlled prompt text directly to Claude Code agent | Prompt injection could instruct agent to use built-in tools maliciously if not blocked | Restrict via `disallowedTools` for all dangerous built-in tools; sanitize user input |
+| Running Claude Code provider in same process as production Next.js | Agent's built-in tools share filesystem with the app; even with disallowed tools, sandbox bugs exist | Consider subprocess isolation for Claude Code execution in production |
+| Allowing agent to load filesystem settings | Agent reads CLAUDE.md from project and follows its instructions (designed for coding) instead of linguistics solver instructions | Set `loadFileSystemSettings: false` explicitly |
+
+## UX Pitfalls
+
+| Pitfall | User Impact | Better Approach |
+|---------|-------------|-----------------|
+| Showing $0.00 cost for Claude Code runs | User thinks feature is free; unaware of quota consumption | Display token count or "included in subscription" indicator; show estimated messages remaining |
+| Same trace display for both providers | Claude Code trace shows garbled mix of reasoning + tool output | Provider-aware trace display: simplified progress mode for Claude Code showing step completion without per-chunk streaming |
+| No feedback during permission waits | Workflow appears frozen if permission mode is misconfigured | Add timeout on agent calls; surface error if no response within 60s; log permission mode for debugging |
+| No indication of quota remaining | User starts workflow, hits rate limit mid-run, loses partial progress | Check/display quota before workflow start if API provides it; warn if subscription tier is Pro |
+| Silent fallback from structured to prose output | Extraction step appears to succeed but `response.object` is null | Validate `response.object` is non-null immediately; show explicit error "Claude Code provider returned prose instead of structured data -- schema may be incompatible" |
+| Provider toggle does not indicate capability differences | User switches to Claude Code expecting identical behavior | Show informational note when Claude Code is selected: "Streaming trace may be limited; tool execution uses MCP bridge" |
 
 ## "Looks Done But Isn't" Checklist
 
-Things that appear complete but are missing critical pieces.
-
-- [ ] **02-hypothesize.ts split:** Run `npm run eval` after split to confirm the multi-round hypothesis loop still terminates correctly. The sub-phase files must preserve all `await setState(...)` calls in the correct sequence; a missing setState between phases corrupts round state.
-- [ ] **Dead code removal:** Verify `src/evals/zero-shot-solver.ts` still compiles after any schema change — it lives outside `workflow/` and imports `questionsAnsweredSchema`.
-- [ ] **Factory pattern migration:** Verify `--mode testing` and `--mode production` model toggle still works by checking logged model IDs in at least one eval run after migration.
-- [ ] **Prompt rewrite for extraction agents:** Verify with `npm run eval -- --problem <id> --mode production` that `scoreExtraction` still returns `success: true` and `questionsFound` matches `expectedQuestions`.
-- [ ] **DevTracePanel cleanup:** After any handler extraction, trigger a full solve in dev mode and confirm all trace event types still appear in the panel (`data-tool-call`, `data-vocabulary-update`, `data-rules-update`).
-- [ ] **Type safety improvements:** Replacing `as any` in `03a-rule-tester-tool.ts` and `03a-sentence-tester-tool.ts` for `abort-signal` access requires confirming the new typed pattern works identically at runtime to `(ctx.requestContext as any)?.get?.('abort-signal')`.
-- [ ] **Claude Code agent prompts (6 agents):** The agents in `claude-code/.claude/agents/` use markdown-file workspace state, not Mastra RequestContext. Applying Mastra-style tool instruction patterns to these agents is a category error; they must retain PIPELINE.md references.
-
----
+- [ ] **Tool bridging:** Tools registered as MCP tools and visible -- verify agents actually CALL the tools during execution by checking `response.steps` for tool_use events, not just that tool registration succeeded
+- [ ] **Structured output:** `generateObject`/`streamObject` returns data -- verify the `response.object` field is populated (not just `response.text` containing JSON-like text); test with EVERY schema, especially `structuredProblemDataSchema` which uses `.catchall()`
+- [ ] **Cost tracking:** Cost display shows numbers -- verify the numbers come from the Claude Code provider's actual usage data, not stale OpenRouter metadata returning 0
+- [ ] **Auth persistence:** Login works once -- verify auth survives a full 8-12 hour session; run two workflow executions 9 hours apart to confirm token refresh works
+- [ ] **Permission mode:** Agent runs without hanging -- verify it also runs WITHOUT excess permissions: confirm `Bash`, `Write`, `Edit` built-in tools are not accessible by attempting to invoke them
+- [ ] **Streaming:** Text appears in the trace panel -- verify it is the agent's actual reasoning output, not internal tool execution output, XML markup, or empty chunks
+- [ ] **Provider toggle:** UI toggle switches mode -- verify the BACKEND actually creates the correct provider instance (not still using OpenRouter); log the provider type at workflow start
+- [ ] **Error handling:** Happy path works -- verify error messages from Claude Code are surfaced correctly by the retry logic (not swallowed as unrecognized error types or shown as generic "Empty response")
+- [ ] **Retry logic:** `generateWithRetry`/`streamWithRetry` retries work -- verify Claude Code error types are classified as retryable; the current check for `AI_APICallError` and OpenRouter-specific messages may not match Claude Code error shapes
+- [ ] **Filesystem isolation:** Agent cannot read project files -- verify `loadFileSystemSettings: false` prevents CLAUDE.md injection; verify `systemPrompt` is set to the linguistics solver instructions, not the default Claude Code prompt
 
 ## Recovery Strategies
 
-When pitfalls occur despite prevention, how to recover.
-
 | Pitfall | Recovery Cost | Recovery Steps |
 |---------|---------------|----------------|
-| Circular import discovered at runtime | LOW | `git diff --stat` to find new import edges; use `import type` to break the cycle; re-run `npx tsc --noEmit` |
-| Prompt regression found in eval | MEDIUM | `git log --oneline` to find the prompt change commit; revert that one file; re-run eval to confirm score restores; then re-attempt the rewrite with a more conservative change |
-| Factory pattern broke model switching | LOW | Compare factory implementation against the original dynamic-model pattern in `03a-verifier-orchestrator-agent.ts`; ensure the function is `({ requestContext }) => ...` not a static value |
-| Schema reorganization broke evals import | LOW | Add a re-export at the old path (`export { questionsAnsweredSchema } from './schemas/new-location'`); run `npx tsc --noEmit`; do not delete old re-export until all consumers are migrated |
-| Dead code deletion broke observability registry | LOW | Restore the import and export in `index.ts`; mark the agent with `// DEPRECATED` rather than deleting its registration |
-| emitToolTraceEvent stopped emitting from extracted helper | LOW | Add `requestContext` parameter to the helper; thread it from the tool execute context |
-
----
+| Tools not working via Claude Code provider | MEDIUM | Implement MCP bridge layer; wrap each Mastra tool as MCP tool; wrap prompts in async generators; test each tool individually |
+| OAuth token race condition | LOW | Switch to `setup-token` auth; restart workflow; no code changes needed |
+| Structured output silent fallback | MEDIUM | Audit and simplify the failing schema; remove `.catchall()` or `format` constraints; add explicit null check on `response.object`; test each schema individually |
+| Cost tracking returning $0 | LOW | Add provider-type branching in `extractCostFromResult()`; read `total_cost_usd` from Claude Code SDK result; add "subscription" cost display mode |
+| Permission mode hanging | LOW | Change config to add `disallowedTools` for built-in tools; redeploy; no architectural changes |
+| Streaming mismatch | HIGH | Requires architectural changes to event emission; may need separate code path for Claude Code provider; or accept degraded non-streaming mode |
+| Rate limiting mid-workflow | LOW | Wait for 5-hour quota refresh window; switch to OpenRouter for immediate retry; reduce `maxRounds` for Claude Code mode |
+| MCP prompt format wrong | LOW | Wrap string prompts in async generator; test tool discovery; no architectural changes |
+| Error retry classification | LOW | Add Claude Code error patterns to the `isRetryable` check in `generateWithRetry`; test with intentional failures |
 
 ## Pitfall-to-Phase Mapping
 
-How roadmap phases should address these pitfalls.
-
 | Pitfall | Prevention Phase | Verification |
 |---------|------------------|--------------|
-| Circular imports from file-splitting | File-splitting phase (02-hypothesize.ts) | `npx tsc --noEmit` passes; `npm run eval -- --problem <id>` passes after each split |
-| Prompt regression without baseline | Pre-prompt-engineering setup | Baseline eval scores captured and saved before any prompt is touched |
-| Factory pattern breaking dynamic model | Factory pattern phase | `--mode testing` and `--mode production` log different model IDs after factory migration |
-| Dead code removal breaking importers | Dead code removal phase (first) | `grep -rn "from.*<deleted-file>"` across full `src/` returns zero hits before deletion |
-| Schema re-export duplicate symbols | Schema reorganization phase | `npx tsc --noEmit` produces zero new errors; `src/evals/` compiles cleanly |
-| Model-specific prompt breaking extraction | Prompt engineering phase (extraction agents) | `scoreExtraction` returns `success: true` in `--mode production` eval |
-| emitToolTraceEvent silent no-op | DevTracePanel cleanup phase | Full solve in dev mode shows all expected trace event types in the panel |
-| Mastra v1 API deprecated properties | Factory pattern phase | No direct `agent.llm`/`agent.tools`/`agent.instructions` property access in any new code |
-
----
+| AI SDK custom tools unsupported | Phase 1: Provider integration | Run a tool-using agent (verifier orchestrator) through Claude Code; verify tool calls execute and return results |
+| OAuth token race condition | Phase 1: Auth setup | Run workflow end-to-end with `setup-token`; verify no auth failures over 24h |
+| Structured output fallback | Phase 2: Schema validation | Run each structured output schema through Claude Code provider; verify `response.object` is non-null for all 5 schemas |
+| Cost tracking OpenRouter-specific | Phase 2-3: Cost abstraction | Run workflow with Claude Code; verify frontend displays non-zero cost/token information |
+| Permission mode foot guns | Phase 1: Provider config | Verify agent cannot execute `Bash` or `Write` built-in tools; verify no hanging on permission prompts; verify filesystem settings not loaded |
+| Streaming mismatch | Phase 3: Frontend adaptation | Verify trace panel displays meaningful content for Claude Code runs without garbled output |
+| Rate limiting/throttling | Phase 3: UX guards | Run 2 consecutive solves on Pro tier; verify graceful throttle messaging |
+| MCP prompt async generator | Phase 2: Tool bridging | Verify MCP tools are discovered and callable; test with both string and async generator prompts |
+| Error retry classification | Phase 2: Error handling | Simulate Claude Code errors; verify retry logic classifies them correctly |
 
 ## Sources
 
-- Codebase analysis: `/home/cervo/Code/LO-Solver/src/mastra/workflow/` — direct examination of 39 import edges across schema files, agent definitions, and step files
-- Mastra v1 migration guide: [Agent Class | v1 Migration Guide | Mastra Docs](https://mastra.ai/guides/migrations/upgrade-to-v1/agent) — breaking changes for `requestContext`, property accessor deprecations
-- Prompt regression research: [When "Better" Prompts Hurt](https://arxiv.org/html/2601.22025v1) — 10% extraction pass rate drop and 13% RAG compliance drop from generic prompt improvements on Llama 3
-- Automated prompt regression testing: [Traceloop — Automated Prompt Regression Testing](https://www.traceloop.com/blog/automated-prompt-regression-testing-with-llm-as-a-judge-and-ci-cd) — "prompt drift is silent but costly"
-- Gemini prompting strategies: [Gemini API Prompt Design Strategies](https://ai.google.dev/gemini-api/docs/prompting-strategies) — temperature 1.0 recommendation, directness over persuasive framing, few-shot example guidance
-- TypeScript circular dependencies: [How to Fix Circular Dependency Issues in TypeScript](https://medium.com/visual-development/how-to-fix-nasty-circular-dependency-issues-once-and-for-all-in-javascript-typescript-a04c987cf0de) — `import type` as a safe workaround
-- Barrel file pitfalls: [Tree shaking doesn't work with TypeScript barrel files](https://github.com/vercel/next.js/issues/12557) — confirmed still an issue in Next.js projects
-- Zod 4 migration: [Lessons from Upgrading to Zod 4](https://www.viget.com/articles/lessons-learned-upgrading-a-large-typescript-application-from-zod-3-to-4) — `._def` moved to `._zod.def`, stricter `.pipe()` typing
-- LLM prompt engineering testing: [LLM Testing in 2026 — Top Methods](https://www.confident-ai.com/blog/llm-testing-in-2024-top-methods-and-strategies)
-- Dead code removal: [How to Delete Dead Code in TypeScript Projects](https://camchenry.com/blog/deleting-dead-code-in-typescript)
+- [ai-sdk-provider-claude-code GitHub (ben-vargas)](https://github.com/ben-vargas/ai-sdk-provider-claude-code) -- PRIMARY source for provider capabilities, tool support (none), structured output limitations, permission modes, Zod 4 requirement, streaming behavior
+- [AI SDK Community Providers: Claude Code](https://ai-sdk.dev/providers/community-providers/claude-code) -- Tool support matrix showing Tool Usage and Tool Streaming as unsupported across all models
+- [Claude Agent SDK Custom Tools docs](https://platform.claude.com/docs/en/agent-sdk/custom-tools) -- MCP tool bridging pattern using `createSdkMcpServer` + `tool()`; streaming input requirement for MCP tools
+- [Claude Agent SDK Cost Tracking docs](https://platform.claude.com/docs/en/agent-sdk/cost-tracking) -- `total_cost_usd` on result message, `modelUsage` per-model breakdowns, per-query (not per-session) cost reporting
+- [Claude Agent SDK Structured Outputs docs](https://platform.claude.com/docs/en/agent-sdk/structured-outputs) -- Supported JSON Schema features for constrained decoding
+- [GitHub Issue #27933: OAuth token refresh race condition](https://github.com/anthropics/claude-code/issues/27933) -- CONFIRMED race condition with concurrent sessions, single-use refresh tokens, no file locking
+- [GitHub Issue #24317: Frequent re-authentication with concurrent sessions](https://github.com/anthropics/claude-code/issues/24317) -- Root issue for token race condition; closed but not fixed
+- [GitHub Issue #29048: sandbox.filesystem.allowWrite not enforced in bypassPermissions](https://github.com/anthropics/claude-code/issues/29048) -- Write tool bypasses sandbox in bypassPermissions mode
+- [GitHub Issue #14279: Tool execution requires approval despite bypassPermissions](https://github.com/anthropics/claude-code/issues/14279) -- allowedTools may be ignored with bypassPermissions
+- [GitHub Issue #20264: Subagents inherit bypassPermissions unconditionally](https://github.com/anthropics/claude-code/issues/20264) -- Privilege escalation concern
+- [Claude Agent SDK Permissions docs](https://platform.claude.com/docs/en/agent-sdk/permissions) -- Permission modes: default, acceptEdits, bypassPermissions, plan
+- [Claude Code rate limits guide (Portkey)](https://portkey.ai/blog/claude-code-limits/) -- Subscription tier quotas, 5-hour rolling window, session limits
+- [Claude Code rate limits and pricing (Northflank)](https://northflank.com/blog/claude-rate-limits-claude-code-pricing-cost) -- Dual-layer usage framework, weekly ceiling
+- [claude-code-mastra integration (t3ta)](https://github.com/t3ta/claude-code-mastra) -- Reference Mastra integration; security warning about built-in tool restriction features not working as expected
+- [GitHub Issue #15007: /login does not recover active session after token expiry](https://github.com/anthropics/claude-code/issues/15007) -- 401 error loop after token expiry during active session
+- Codebase analysis: `request-context-helpers.ts:202` (`extractCostFromResult`), `agent-utils.ts` (`generateWithRetry`/`streamWithRetry`), `agent-factory.ts` (`createWorkflowAgent`), `vocabulary-tools.ts`, `workflow-schemas.ts` -- integration surface area for provider switching
 
 ---
-
-*Pitfalls research for: LO-Solver v1.5 Refactor and Prompt Engineering milestone*
-*Researched: 2026-03-08*
+*Pitfalls research for: Claude Code provider integration into LO-Solver Mastra workflow (v1.6 milestone)*
+*Researched: 2026-03-10*
