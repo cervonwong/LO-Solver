@@ -9,7 +9,7 @@ import {
   useRegisterKeyControl,
 } from '@/contexts/workflow-control-context';
 import { useApiKey } from '@/hooks/use-api-key';
-import { ModelModeToggle } from '@/components/model-mode-toggle';
+import { ProviderModeToggle } from '@/components/provider-mode-toggle';
 import { WorkflowSliders } from '@/components/workflow-sliders';
 import { CreditsBadge } from '@/components/credits-badge';
 import { ApiKeyDialog } from '@/components/api-key-dialog';
@@ -102,7 +102,7 @@ function NavBar() {
         >
           <WorkflowSliders disabled={isRunning} />
           <div className="h-5 w-px bg-border" />
-          <ModelModeToggle disabled={isRunning} />
+          <ProviderModeToggle disabled={isRunning} />
         </div>
         <div className="h-5 w-px bg-border" />
         <CreditsBadge
