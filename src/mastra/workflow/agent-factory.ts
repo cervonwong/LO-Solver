@@ -1,5 +1,6 @@
 import { Agent } from '@mastra/core/agent';
 import { UnicodeNormalizer } from '@mastra/core/processors';
+import { claudeCode } from '../claude-code-provider';
 import { TESTING_MODEL, type ProviderMode } from '../openrouter';
 import { getOpenRouterProvider } from './request-context-helpers';
 
@@ -23,6 +24,8 @@ export interface WorkflowAgentConfig {
   tools?: ToolsInput;
   /** Whether to add UnicodeNormalizer input processor. Defaults to true. */
   useUnicodeNormalizer?: boolean;
+  /** Claude Code model shortcut (e.g., 'claude-opus-4-6', 'claude-sonnet-4-6'). Defaults to 'claude-sonnet-4-6'. */
+  claudeCodeModel?: string;
   /** Zod schema for requestContext validation (tester agents only). */
   requestContextSchema?: import('zod').ZodType<any>;
 }
@@ -40,6 +43,7 @@ export function createWorkflowAgent(config: WorkflowAgentConfig): Agent {
     instructions,
     productionModel,
     testingModel = TESTING_MODEL,
+    claudeCodeModel = 'claude-sonnet-4-6',
     tools = {},
     useUnicodeNormalizer = true,
     requestContextSchema,
@@ -51,6 +55,10 @@ export function createWorkflowAgent(config: WorkflowAgentConfig): Agent {
     instructions,
     model: ({ requestContext }) => {
       const providerMode = requestContext?.get('provider-mode') as ProviderMode | undefined;
+      if (providerMode === 'claude-code') {
+        return claudeCode(claudeCodeModel);
+      }
+      // OpenRouter path (unchanged logic)
       const modelId = providerMode === 'openrouter-production' ? productionModel : testingModel;
       return getOpenRouterProvider(requestContext)(modelId);
     },
