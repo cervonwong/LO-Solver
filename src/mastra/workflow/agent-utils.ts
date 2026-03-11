@@ -118,6 +118,16 @@ export async function generateWithRetry<TOptions extends Parameters<Agent['gener
         throw lastError;
       }
 
+      // Non-retryable: auth failures and billing errors should fail fast
+      const isNonRetryable =
+        lastError.message.includes('authentication_failed') ||
+        lastError.message.includes('not authenticated') ||
+        lastError.message.includes('billing_error') ||
+        lastError.message.includes('ENOENT'); // CLI not found
+      if (isNonRetryable) {
+        throw lastError;
+      }
+
       // Check if this is a retryable error
       const isRetryable =
         lastError.name === 'AI_APICallError' ||
@@ -128,7 +138,10 @@ export async function generateWithRetry<TOptions extends Parameters<Agent['gener
         lastError.message.includes('ETIMEDOUT') ||
         lastError.message.includes('fetch failed') ||
         lastError.message.includes('network') ||
-        lastError.message.includes('Empty response from model');
+        lastError.message.includes('Empty response from model') ||
+        lastError.message.includes('rate_limit') ||
+        lastError.message.includes('server_error') ||
+        lastError.message.includes('overloaded');
 
       if (!isRetryable || attempt === maxRetries) {
         throw lastError;
@@ -287,6 +300,16 @@ export async function streamWithRetry<TOptions extends Parameters<Agent['generat
         throw lastError;
       }
 
+      // Non-retryable: auth failures and billing errors should fail fast
+      const isNonRetryable =
+        lastError.message.includes('authentication_failed') ||
+        lastError.message.includes('not authenticated') ||
+        lastError.message.includes('billing_error') ||
+        lastError.message.includes('ENOENT'); // CLI not found
+      if (isNonRetryable) {
+        throw lastError;
+      }
+
       // Check if this is a retryable error
       const isRetryable =
         lastError.name === 'AI_APICallError' ||
@@ -297,7 +320,10 @@ export async function streamWithRetry<TOptions extends Parameters<Agent['generat
         lastError.message.includes('ETIMEDOUT') ||
         lastError.message.includes('fetch failed') ||
         lastError.message.includes('network') ||
-        lastError.message.includes('Empty response from model');
+        lastError.message.includes('Empty response from model') ||
+        lastError.message.includes('rate_limit') ||
+        lastError.message.includes('server_error') ||
+        lastError.message.includes('overloaded');
 
       if (!isRetryable || attempt === maxRetries) {
         throw lastError;
