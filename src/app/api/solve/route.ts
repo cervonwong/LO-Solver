@@ -26,7 +26,7 @@ export async function POST(req: Request) {
   if (providerMode === 'claude-code') {
     try {
       await generateText({
-        model: claudeCode('claude-sonnet-4-6'),
+        model: claudeCode('sonnet'),
         prompt: 'Respond with OK',
         maxOutputTokens: 10,
       });
