@@ -1,4 +1,4 @@
-import type { ModelMode, OpenRouterProvider } from '../openrouter';
+import type { ProviderMode, OpenRouterProvider } from '../openrouter';
 import type { VocabularyEntry } from './vocabulary-tools';
 
 /**
@@ -50,8 +50,8 @@ export interface WorkflowRequestContext {
   /** Log file path for writing tool output */
   'log-file': string;
 
-  /** Model mode: 'testing' uses cheap model, 'production' uses per-agent models */
-  'model-mode': ModelMode;
+  /** Provider mode: controls which provider and model tier to use */
+  'provider-mode': ProviderMode;
 
   /** Step writer for emitting trace events from tools (bypasses broken ctx.writer) */
   'step-writer': StepWriter;

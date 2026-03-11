@@ -48,7 +48,7 @@ export const workflowStateSchema = z.object({
   logFile: z.string().default(''), // Will be set in first step
   startTime: z.string().default(''), // Will be set in first step (ISO string)
   stepTimings: z.array(stepTimingSchema).default([]),
-  modelMode: z.enum(['testing', 'production']).default('testing'),
+  providerMode: z.enum(['openrouter-testing', 'openrouter-production', 'claude-code']).default('openrouter-testing'),
   currentRound: z.number().default(0),
   maxRounds: z.number().default(3),
   perspectiveCount: z.number().default(3),
@@ -70,7 +70,7 @@ export const initializeWorkflowState = (): WorkflowState => {
     logFile,
     startTime,
     stepTimings: [],
-    modelMode: 'testing' as const,
+    providerMode: 'openrouter-testing' as const,
     currentRound: 0,
     maxRounds: 3,
     perspectiveCount: 3,
@@ -80,7 +80,7 @@ export const initializeWorkflowState = (): WorkflowState => {
 
 export const rawProblemInputSchema = z.object({
   rawProblemText: z.string(),
-  modelMode: z.enum(['testing', 'production']).default('testing'),
+  providerMode: z.enum(['openrouter-testing', 'openrouter-production', 'claude-code']).default('openrouter-testing'),
   maxRounds: z.number().min(1).max(5).default(3),
   perspectiveCount: z.number().min(2).max(7).default(3),
   apiKey: z.string().optional(),

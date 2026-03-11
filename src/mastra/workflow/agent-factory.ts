@@ -1,6 +1,6 @@
 import { Agent } from '@mastra/core/agent';
 import { UnicodeNormalizer } from '@mastra/core/processors';
-import { TESTING_MODEL, type ModelMode } from '../openrouter';
+import { TESTING_MODEL, type ProviderMode } from '../openrouter';
 import { getOpenRouterProvider } from './request-context-helpers';
 
 // ToolsInput is not publicly re-exported from @mastra/core; use Record<string, any> as equivalent.
@@ -50,8 +50,8 @@ export function createWorkflowAgent(config: WorkflowAgentConfig): Agent {
     name,
     instructions,
     model: ({ requestContext }) => {
-      const mode = requestContext?.get('model-mode') as ModelMode | undefined;
-      const modelId = mode === 'production' ? productionModel : testingModel;
+      const providerMode = requestContext?.get('provider-mode') as ProviderMode | undefined;
+      const modelId = providerMode === 'openrouter-production' ? productionModel : testingModel;
       return getOpenRouterProvider(requestContext)(modelId);
     },
     tools,

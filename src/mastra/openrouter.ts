@@ -44,13 +44,20 @@ export function createOpenRouterProvider(apiKey: string): OpenRouterProvider {
   return wrapProvider(base);
 }
 
-/** Model mode for switching between cheap testing and production models. */
-export type ModelMode = 'testing' | 'production';
+/** Provider mode controlling which provider and model tier to use. */
+export type ProviderMode = 'openrouter-testing' | 'openrouter-production' | 'claude-code';
 
-/** Cheap model used by all agents in testing mode. */
+/** Cheap model used by all agents in openrouter-testing mode. */
 export const TESTING_MODEL = 'openai/gpt-oss-120b';
 
-/** Returns the actual model ID being used given the current mode and the production model. */
-export function activeModelId(mode: ModelMode, productionModel: string): string {
-  return mode === 'production' ? productionModel : TESTING_MODEL;
+/** Returns a display-friendly model ID for the current provider mode. */
+export function activeModelId(
+  providerMode: ProviderMode,
+  productionModel: string,
+  claudeCodeModel?: string,
+): string {
+  if (providerMode === 'claude-code') {
+    return `claude-code/${claudeCodeModel ?? 'sonnet'}`;
+  }
+  return providerMode === 'openrouter-production' ? productionModel : TESTING_MODEL;
 }
