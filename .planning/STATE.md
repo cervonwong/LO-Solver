@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Claude Code Provider
 status: executing
-stopped_at: Completed 33-04-PLAN.md
-last_updated: "2026-03-11T12:20:23.100Z"
-last_activity: 2026-03-11 — Completed 33-04 Agent Factory and Auth Gate plan
+stopped_at: Completed 33-05-PLAN.md
+last_updated: "2026-03-11T14:27:01.361Z"
+last_activity: 2026-03-11 — Completed 33-05 Agent Model Configuration plan
 progress:
   total_phases: 4
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 6
-  completed_plans: 5
+  completed_plans: 6
 ---
 
 # Project State
@@ -25,9 +25,9 @@ See: .planning/PROJECT.md (updated 2026-03-10)
 ## Current Position
 
 Phase: 33 of 36 (Provider Foundation)
-Plan: 5 of 6 completed in current phase
+Plan: 6 of 6 completed in current phase
 Status: executing
-Last activity: 2026-03-11 — Completed 33-04 Agent Factory and Auth Gate plan
+Last activity: 2026-03-11 — Completed 33-05 Agent Model Configuration plan
 
 ## Performance Metrics
 
@@ -54,6 +54,8 @@ Recent decisions affecting current work:
 - [Phase 33]: claudeCodeModel defaults to claude-sonnet-4-6 when not specified per-agent
 - [Phase 33]: Auth gate uses generateText probe with maxOutputTokens 10 for lightweight pre-check
 - [Phase 33]: Non-retryable errors (auth, billing, ENOENT) checked before retryable in retry functions
+- [Phase 33]: Shorthand model IDs (sonnet/opus) for Claude Code, not full form (claude-sonnet-4-6)
+- [Phase 33]: Claude Code streaming + structuredOutput returns empty responses -- gap for future investigation
 
 ### Pending Todos
 
@@ -66,10 +68,10 @@ Recent decisions affecting current work:
 
 - MCP bridge for tool-using agents is MEDIUM confidence — spike with one tool before wrapping all 12
 - OAuth race condition (#27933) — use `setup-token` instead of `claude login`
-- Structured output silent fallback on `.catchall()` schemas — audit needed in Phase 33
+- Structured output via Claude Code streaming returns empty responses — needs generate-fallback or text-to-JSON workaround (PROV-04 incomplete)
 
 ## Session Continuity
 
-Last session: 2026-03-11T12:19:03Z
-Stopped at: Completed 33-04-PLAN.md
+Last session: 2026-03-11T14:26:00Z
+Stopped at: Completed 33-05-PLAN.md
 Resume file: None

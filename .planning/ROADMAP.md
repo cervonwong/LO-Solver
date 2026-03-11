@@ -84,7 +84,7 @@
 
 **Milestone Goal:** Add Claude Code as an alternative model provider, enabling users to run the solver workflow using their Claude subscription instead of OpenRouter API credits.
 
-- [ ] **Phase 33: Provider Foundation** - Provider module, auth, agent factory, schema changes, tool-free agents validated
+- [x] **Phase 33: Provider Foundation** - Provider module, auth, agent factory, schema changes, tool-free agents validated (completed 2026-03-11)
 - [ ] **Phase 34: MCP Tool Bridge** - MCP server wrapping Mastra tools, tool-using agents validated
 - [ ] **Phase 35: Frontend Integration** - Three-way provider toggle, auth status, cost display
 - [ ] **Phase 36: Evaluation Support** - Eval harness provider flag and cross-provider comparison
@@ -108,7 +108,7 @@ Plans:
 - [ ] 33-02-PLAN.md — Mechanical rename: modelMode to providerMode in 9 step/agent files
 - [ ] 33-03-PLAN.md — Eval rename: modelMode to providerMode in 4 eval files
 - [ ] 33-04-PLAN.md — Agent factory extension, auth gate, error handling (3 files)
-- [ ] 33-05-PLAN.md — Add claudeCodeModel to 12 agents, validate structured output
+- [x] 33-05-PLAN.md — Add claudeCodeModel to 12 agents, validate structured output
 - [ ] 33-06-PLAN.md — Frontend hook and toggle rename to providerMode
 
 ### Phase 34: MCP Tool Bridge
@@ -191,7 +191,7 @@ Phases execute in numeric order: 33 -> 34 -> 35 -> 36
 | 30. Mastra Prompt Engineering | v1.5 | 3/3 | Complete | 2026-03-09 |
 | 31. Claude Code Prompt Engineering | v1.5 | 1/1 | Complete | 2026-03-10 |
 | 32. Frontend Cleanup | v1.5 | 1/1 | Complete | 2026-03-10 |
-| 33. Provider Foundation | 5/6 | In Progress|  | - |
+| 33. Provider Foundation | v1.6 | 6/6 | Complete | 2026-03-11 |
 | 34. MCP Tool Bridge | v1.6 | 0/? | Not started | - |
 | 35. Frontend Integration | v1.6 | 0/? | Not started | - |
 | 36. Evaluation Support | v1.6 | 0/? | Not started | - |
