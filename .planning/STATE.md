@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Claude Code Provider
-status: planning
-stopped_at: Phase 33 context gathered
-last_updated: "2026-03-11T11:09:30.049Z"
-last_activity: 2026-03-10 — Roadmap created for v1.6 Claude Code Provider milestone
+status: executing
+stopped_at: Completed 33-01-PLAN.md
+last_updated: "2026-03-11T12:07:21.900Z"
+last_activity: 2026-03-11 — Completed 33-01 Provider Foundation plan
 progress:
   total_phases: 4
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 6
+  completed_plans: 1
 ---
 
 # Project State
@@ -25,9 +25,9 @@ See: .planning/PROJECT.md (updated 2026-03-10)
 ## Current Position
 
 Phase: 33 of 36 (Provider Foundation)
-Plan: 0 of ? in current phase
-Status: Ready to plan
-Last activity: 2026-03-10 — Roadmap created for v1.6 Claude Code Provider milestone
+Plan: 1 of 6 in current phase
+Status: executing
+Last activity: 2026-03-11 — Completed 33-01 Provider Foundation plan
 
 ## Performance Metrics
 
@@ -46,6 +46,8 @@ Recent decisions affecting current work:
 
 - [v1.5]: Agent factory (`createWorkflowAgent()`) — hook point for provider switching
 - [v1.3]: Per-request provider factory via RequestContext — same pattern extends to Claude Code
+- [Phase 33]: createClaudeCode uses defaultSettings wrapper matching SDK API
+- [Phase 33]: ProviderMode type replaces ModelMode: 3 values (openrouter-testing, openrouter-production, claude-code)
 
 ### Pending Todos
 
@@ -61,6 +63,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-11T11:09:30.045Z
-Stopped at: Phase 33 context gathered
-Resume file: .planning/phases/33-provider-foundation/33-CONTEXT.md
+Last session: 2026-03-11T12:07:21.898Z
+Stopped at: Completed 33-01-PLAN.md
+Resume file: None

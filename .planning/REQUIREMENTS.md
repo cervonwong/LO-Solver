@@ -9,11 +9,11 @@ Requirements for Claude Code provider integration. Each maps to roadmap phases.
 
 ### Provider Integration
 
-- [ ] **PROV-01**: User can select between OpenRouter Testing, OpenRouter Production, and Claude Code as provider mode
+- [x] **PROV-01**: User can select between OpenRouter Testing, OpenRouter Production, and Claude Code as provider mode
 - [ ] **PROV-02**: Agent factory resolves to Claude Code or OpenRouter model based on provider mode
 - [ ] **PROV-03**: Per-agent model mapping translates OpenRouter model IDs to Claude Code model shortcuts
 - [ ] **PROV-04**: All 8 tool-free agents produce correct output through Claude Code provider
-- [ ] **PROV-05**: Workflow schema uses three-value `providerMode` enum replacing binary `modelMode`
+- [x] **PROV-05**: Workflow schema uses three-value `providerMode` enum replacing binary `modelMode`
 - [ ] **PROV-06**: Cost tracking shows "Subscription" label for Claude Code mode instead of $0.00
 
 ### Tool Compatibility
@@ -68,11 +68,11 @@ Requirements for Claude Code provider integration. Each maps to roadmap phases.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PROV-01 | Phase 33 | Pending |
+| PROV-01 | Phase 33 | Complete |
 | PROV-02 | Phase 33 | Pending |
 | PROV-03 | Phase 33 | Pending |
 | PROV-04 | Phase 33 | Pending |
-| PROV-05 | Phase 33 | Pending |
+| PROV-05 | Phase 33 | Complete |
 | PROV-06 | Phase 35 | Pending |
 | TOOL-01 | Phase 34 | Pending |
 | TOOL-02 | Phase 34 | Pending |
