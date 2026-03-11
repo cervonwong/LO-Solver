@@ -57,9 +57,10 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-2 pending todos:
+3 pending todos:
 - Investigate production model failures and improve prompts
 - Explore Claude Agent SDK as alternate model provider (now active as v1.6)
+- Add custom port parameter to npm run dev
 
 ### Blockers/Concerns
 
