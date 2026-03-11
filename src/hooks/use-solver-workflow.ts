@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
-import { useModelMode } from '@/hooks/use-model-mode';
+import { useProviderMode } from '@/hooks/use-provider-mode';
 import { useApiKey } from '@/hooks/use-api-key';
 import { useWorkflowSettings } from '@/hooks/use-workflow-settings';
 
@@ -13,7 +13,7 @@ export function useSolverWorkflow({ onReset }: { onReset?: () => void } = {}) {
   const [inputOpen, setInputOpen] = useState(true);
   const [problemText, setProblemText] = useState('');
   const hasSent = useRef(false);
-  const [modelMode] = useModelMode();
+  const [providerMode] = useProviderMode();
   const [apiKey] = useApiKey();
   const [workflowSettings] = useWorkflowSettings();
 
@@ -27,7 +27,7 @@ export function useSolverWorkflow({ onReset }: { onReset?: () => void } = {}) {
               rawProblemText:
                 (messages[messages.length - 1]?.parts?.[0] as { text?: string } | undefined)
                   ?.text ?? '',
-              modelMode,
+              providerMode,
               maxRounds: workflowSettings.maxRounds,
               perspectiveCount: workflowSettings.perspectiveCount,
               ...(apiKey && { apiKey }),
@@ -35,15 +35,15 @@ export function useSolverWorkflow({ onReset }: { onReset?: () => void } = {}) {
           },
         }),
       }),
-    [modelMode, apiKey, workflowSettings],
+    [providerMode, apiKey, workflowSettings],
   );
 
   // Chat id changes when transport-relevant deps change, forcing useChat to
   // recreate the internal Chat instance (which captures transport at construction).
   const chatId = useMemo(
     () =>
-      `solver-${apiKey ? apiKey.slice(-4) : 'none'}-${modelMode}-${workflowSettings.maxRounds}-${workflowSettings.perspectiveCount}`,
-    [apiKey, modelMode, workflowSettings],
+      `solver-${apiKey ? apiKey.slice(-4) : 'none'}-${providerMode}-${workflowSettings.maxRounds}-${workflowSettings.perspectiveCount}`,
+    [apiKey, providerMode, workflowSettings],
   );
 
   const { messages, sendMessage, status, setMessages, stop } = useChat({
