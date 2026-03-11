@@ -4,7 +4,7 @@ import { RequestContext } from '@mastra/core/request-context';
 import { type VocabularyEntry } from '../vocabulary-tools';
 import type { WorkflowRequestContext, DraftStore, StepWriter } from '../request-context-types';
 import type { Rule } from '../request-context-types';
-import type { ModelMode } from '../../openrouter';
+import type { ProviderMode } from '../../openrouter';
 import { createOpenRouterProvider } from '../../openrouter';
 import type { StepTiming } from '../logging-utils';
 import { formatTimestamp, logVerificationResults } from '../logging-utils';
@@ -36,7 +36,7 @@ export interface HypothesizeContext {
   draftStores: Map<string, DraftStore>;
   mainRequestContext: RequestContext<WorkflowRequestContext>;
   logFile: string;
-  modelMode: ModelMode;
+  providerMode: ProviderMode;
   stepId: StepId;
   effectivePerspectiveCount: number;
   workflowStartTime: number;
@@ -90,9 +90,9 @@ export const multiPerspectiveHypothesisStep = createStep({
     });
     const stepStartTime = new Date();
     const effectiveMaxRounds =
-      state.modelMode === 'testing' ? Math.min(state.maxRounds, 2) : state.maxRounds;
+      state.providerMode === 'openrouter-testing' ? Math.min(state.maxRounds, 2) : state.maxRounds;
     const effectivePerspectiveCount =
-      state.modelMode === 'testing' ? Math.min(state.perspectiveCount, 2) : state.perspectiveCount;
+      state.providerMode === 'openrouter-testing' ? Math.min(state.perspectiveCount, 2) : state.perspectiveCount;
 
     // Initialize main RequestContext with empty main stores
     const mainRequestContext = new RequestContext<WorkflowRequestContext>();
@@ -104,7 +104,7 @@ export const multiPerspectiveHypothesisStep = createStep({
     mainRequestContext.set('draft-stores', draftStores);
     mainRequestContext.set('structured-problem', structuredProblem);
     mainRequestContext.set('log-file', logFile);
-    mainRequestContext.set('model-mode', state.modelMode as ModelMode);
+    mainRequestContext.set('provider-mode', state.providerMode as ProviderMode);
     mainRequestContext.set('step-writer', writer);
     mainRequestContext.set('step-id', stepId);
     mainRequestContext.set('workflow-start-time', state.workflowStartTime);
@@ -128,7 +128,7 @@ export const multiPerspectiveHypothesisStep = createStep({
       draftStores,
       mainRequestContext,
       logFile,
-      modelMode: state.modelMode as ModelMode,
+      providerMode: state.providerMode as ProviderMode,
       stepId,
       effectivePerspectiveCount,
       workflowStartTime: state.workflowStartTime,

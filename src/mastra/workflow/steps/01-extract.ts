@@ -1,6 +1,6 @@
 import { createStep } from '@mastra/core/workflows';
 import { RequestContext } from '@mastra/core/request-context';
-import type { ModelMode } from '../../openrouter';
+import type { ProviderMode } from '../../openrouter';
 import { activeModelId, createOpenRouterProvider } from '../../openrouter';
 import {
   recordStepTiming,
@@ -29,10 +29,10 @@ export const extractionStep = createStep({
   execute: async ({ inputData, mastra, bail, state, setState, writer, abortSignal }) => {
     // Initialize workflow state at the start of the workflow
     const initialState = initializeWorkflowState();
-    const modelMode = inputData.modelMode ?? 'testing';
+    const providerMode = inputData.providerMode ?? 'openrouter-testing';
     const maxRounds = inputData.maxRounds ?? 3;
     const perspectiveCount = inputData.perspectiveCount ?? 3;
-    const stateWithMode = { ...initialState, modelMode, maxRounds, perspectiveCount, apiKey: inputData.apiKey };
+    const stateWithMode = { ...initialState, providerMode, maxRounds, perspectiveCount, apiKey: inputData.apiKey };
     await setState(stateWithMode);
     const logFile = initialState.logFile;
 
@@ -43,7 +43,7 @@ export const extractionStep = createStep({
     });
 
     const requestContext = new RequestContext<WorkflowRequestContext>();
-    requestContext.set('model-mode', modelMode as ModelMode);
+    requestContext.set('provider-mode', providerMode as ProviderMode);
     requestContext.set('workflow-start-time', initialState.workflowStartTime);
     requestContext.set('cumulative-cost', 0);
     if (inputData.apiKey) {
@@ -58,7 +58,7 @@ export const extractionStep = createStep({
         id: extractAgentId,
         stepId,
         agentName: 'Structured Problem Extractor',
-        model: activeModelId(modelMode, 'openai/gpt-5-mini'),
+        model: activeModelId(providerMode, 'openai/gpt-5-mini'),
         task: extractPrompt.slice(0, 500),
         timestamp: new Date().toISOString(),
       },

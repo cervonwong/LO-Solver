@@ -1,7 +1,7 @@
 import { createStep } from '@mastra/core/workflows';
 import { RequestContext } from '@mastra/core/request-context';
 import type { WorkflowRequestContext } from '../request-context-types';
-import type { ModelMode } from '../../openrouter';
+import type { ProviderMode } from '../../openrouter';
 import { activeModelId, createOpenRouterProvider } from '../../openrouter';
 import {
   recordStepTiming,
@@ -51,7 +51,7 @@ export const answerQuestionsStep = createStep({
     });
 
     const requestContext = new RequestContext<WorkflowRequestContext>();
-    requestContext.set('model-mode', state.modelMode as ModelMode);
+    requestContext.set('provider-mode', state.providerMode as ProviderMode);
     requestContext.set('workflow-start-time', state.workflowStartTime);
     requestContext.set('cumulative-cost', 0);
     if (state.apiKey) {
@@ -65,7 +65,7 @@ export const answerQuestionsStep = createStep({
         id: answererAgentId,
         stepId,
         agentName: 'Question Answerer',
-        model: activeModelId(state.modelMode as ModelMode, 'google/gemini-3-flash-preview'),
+        model: activeModelId(state.providerMode as ProviderMode, 'google/gemini-3-flash-preview'),
         task: answererPrompt.slice(0, 500),
         timestamp: new Date().toISOString(),
       },

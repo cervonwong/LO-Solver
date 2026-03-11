@@ -32,7 +32,7 @@ export async function runVerify(
     verifyRequestContext.set('structured-problem', ctx.structuredProblem);
     verifyRequestContext.set('current-rules', Array.from(draftStore.rules.values()));
     verifyRequestContext.set('log-file', ctx.logFile);
-    verifyRequestContext.set('model-mode', ctx.modelMode);
+    verifyRequestContext.set('provider-mode', ctx.providerMode);
     verifyRequestContext.set('step-writer', params.writer);
     verifyRequestContext.set('step-id', ctx.stepId);
     verifyRequestContext.set('event-source', 'draft');
@@ -59,7 +59,7 @@ export async function runVerify(
         perspectiveId: perspective.id,
         stepId: ctx.stepId,
         agentName: `Verifier (${perspective.name})`,
-        model: activeModelId(ctx.modelMode, 'google/gemini-3-flash-preview'),
+        model: activeModelId(ctx.providerMode, 'google/gemini-3-flash-preview'),
         task: verifierPrompt.slice(0, 500),
         timestamp: new Date().toISOString(),
       },
@@ -131,7 +131,7 @@ export async function runVerify(
         perspectiveId: perspective.id,
         stepId: ctx.stepId,
         agentName: `Feedback Extractor (${perspective.name})`,
-        model: activeModelId(ctx.modelMode, 'openai/gpt-5-mini'),
+        model: activeModelId(ctx.providerMode, 'openai/gpt-5-mini'),
         task: extractorPrompt.slice(0, 500),
         timestamp: new Date().toISOString(),
       },

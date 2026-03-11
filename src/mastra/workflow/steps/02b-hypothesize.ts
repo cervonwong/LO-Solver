@@ -49,7 +49,7 @@ export async function runHypothesize(
     perspectiveRequestContext.set('rules-state', draftStore.rules);
     perspectiveRequestContext.set('structured-problem', ctx.structuredProblem);
     perspectiveRequestContext.set('log-file', ctx.logFile);
-    perspectiveRequestContext.set('model-mode', ctx.modelMode);
+    perspectiveRequestContext.set('provider-mode', ctx.providerMode);
     perspectiveRequestContext.set('step-writer', params.writer);
     perspectiveRequestContext.set('step-id', ctx.stepId);
     perspectiveRequestContext.set('event-source', 'draft');
@@ -78,7 +78,7 @@ export async function runHypothesize(
         perspectiveId: perspective.id,
         stepId: ctx.stepId,
         agentName: `Hypothesizer (${perspective.name})`,
-        model: activeModelId(ctx.modelMode, 'google/gemini-3-flash-preview'),
+        model: activeModelId(ctx.providerMode, 'google/gemini-3-flash-preview'),
         task: hypothesizerPrompt.slice(0, 500),
         timestamp: new Date().toISOString(),
       },

@@ -77,7 +77,7 @@ export async function runSynthesize(
       id: synthesizerAgentId,
       stepId: ctx.stepId,
       agentName: `Hypothesis Synthesizer (Round ${round})`,
-      model: activeModelId(ctx.modelMode, 'google/gemini-3-flash-preview'),
+      model: activeModelId(ctx.providerMode, 'google/gemini-3-flash-preview'),
       task: synthesizerPrompt.slice(0, 500),
       timestamp: new Date().toISOString(),
     },
@@ -161,7 +161,7 @@ export async function runSynthesize(
   convergenceRequestContext.set('structured-problem', ctx.structuredProblem);
   convergenceRequestContext.set('current-rules', Array.from(ctx.mainRules.values()));
   convergenceRequestContext.set('log-file', ctx.logFile);
-  convergenceRequestContext.set('model-mode', ctx.modelMode);
+  convergenceRequestContext.set('provider-mode', ctx.providerMode);
   convergenceRequestContext.set('step-writer', params.writer);
   convergenceRequestContext.set('step-id', ctx.stepId);
   convergenceRequestContext.set('event-source', 'merged');
@@ -183,7 +183,7 @@ export async function runSynthesize(
       id: convergenceAgentId,
       stepId: ctx.stepId,
       agentName: `Convergence Verifier (Round ${round})`,
-      model: activeModelId(ctx.modelMode, 'google/gemini-3-flash-preview'),
+      model: activeModelId(ctx.providerMode, 'google/gemini-3-flash-preview'),
       task: convergenceVerifierPrompt.slice(0, 500),
       timestamp: new Date().toISOString(),
     },
@@ -243,7 +243,7 @@ export async function runSynthesize(
       id: convergenceExtractorAgentId,
       stepId: ctx.stepId,
       agentName: `Convergence Extractor (Round ${round})`,
-      model: activeModelId(ctx.modelMode, 'openai/gpt-5-mini'),
+      model: activeModelId(ctx.providerMode, 'openai/gpt-5-mini'),
       task: convergenceExtractorPrompt.slice(0, 500),
       timestamp: new Date().toISOString(),
     },
