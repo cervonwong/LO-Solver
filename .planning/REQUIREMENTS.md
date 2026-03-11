@@ -10,8 +10,8 @@ Requirements for Claude Code provider integration. Each maps to roadmap phases.
 ### Provider Integration
 
 - [x] **PROV-01**: User can select between OpenRouter Testing, OpenRouter Production, and Claude Code as provider mode
-- [ ] **PROV-02**: Agent factory resolves to Claude Code or OpenRouter model based on provider mode
-- [ ] **PROV-03**: Per-agent model mapping translates OpenRouter model IDs to Claude Code model shortcuts
+- [x] **PROV-02**: Agent factory resolves to Claude Code or OpenRouter model based on provider mode
+- [x] **PROV-03**: Per-agent model mapping translates OpenRouter model IDs to Claude Code model shortcuts
 - [ ] **PROV-04**: All 8 tool-free agents produce correct output through Claude Code provider
 - [x] **PROV-05**: Workflow schema uses three-value `providerMode` enum replacing binary `modelMode`
 - [ ] **PROV-06**: Cost tracking shows "Subscription" label for Claude Code mode instead of $0.00
@@ -26,9 +26,9 @@ Requirements for Claude Code provider integration. Each maps to roadmap phases.
 
 ### Authentication & Security
 
-- [ ] **AUTH-01**: Auth gate detects Claude Code CLI presence and auth status before solve
-- [ ] **AUTH-02**: `disallowedTools` blocks Claude Code built-in filesystem tools (Bash, Read, Write, Edit)
-- [ ] **AUTH-03**: `generateWithRetry` handles Claude Code error shapes alongside OpenRouter errors
+- [x] **AUTH-01**: Auth gate detects Claude Code CLI presence and auth status before solve
+- [x] **AUTH-02**: `disallowedTools` blocks Claude Code built-in filesystem tools (Bash, Read, Write, Edit)
+- [x] **AUTH-03**: `generateWithRetry` handles Claude Code error shapes alongside OpenRouter errors
 
 ### Frontend UX
 
@@ -69,8 +69,8 @@ Requirements for Claude Code provider integration. Each maps to roadmap phases.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | PROV-01 | Phase 33 | Complete |
-| PROV-02 | Phase 33 | Pending |
-| PROV-03 | Phase 33 | Pending |
+| PROV-02 | Phase 33 | Complete |
+| PROV-03 | Phase 33 | Complete |
 | PROV-04 | Phase 33 | Pending |
 | PROV-05 | Phase 33 | Complete |
 | PROV-06 | Phase 35 | Pending |
@@ -79,9 +79,9 @@ Requirements for Claude Code provider integration. Each maps to roadmap phases.
 | TOOL-03 | Phase 34 | Pending |
 | TOOL-04 | Phase 34 | Pending |
 | TOOL-05 | Phase 34 | Pending |
-| AUTH-01 | Phase 33 | Pending |
-| AUTH-02 | Phase 33 | Pending |
-| AUTH-03 | Phase 33 | Pending |
+| AUTH-01 | Phase 33 | Complete |
+| AUTH-02 | Phase 33 | Complete |
+| AUTH-03 | Phase 33 | Complete |
 | UI-01 | Phase 35 | Pending |
 | UI-02 | Phase 35 | Pending |
 | UI-03 | Phase 35 | Pending |
