@@ -80,7 +80,7 @@
 
 </details>
 
-### 🚧 v1.6 Claude Code Provider (In Progress)
+### v1.6 Claude Code Provider (In Progress)
 
 **Milestone Goal:** Add Claude Code as an alternative model provider, enabling users to run the solver workflow using their Claude subscription instead of OpenRouter API credits.
 
@@ -101,7 +101,7 @@
   3. Solve attempt with unauthenticated Claude Code CLI is blocked with a clear error message before any LLM call is made
   4. Claude Code agent cannot access filesystem tools (Bash, Read, Write, Edit) during server-side execution
   5. A transient Claude Code error during solve triggers retry logic and surfaces a meaningful error message (not an unhandled crash)
-**Plans**: 6 plans
+**Plans**: 7 plans
 
 Plans:
 - [ ] 33-01-PLAN.md — Core types: package install, provider module, providerMode rename in 7 core files
@@ -110,6 +110,7 @@ Plans:
 - [ ] 33-04-PLAN.md — Agent factory extension, auth gate, error handling (3 files)
 - [x] 33-05-PLAN.md — Add claudeCodeModel to 12 agents, validate structured output
 - [ ] 33-06-PLAN.md — Frontend hook and toggle rename to providerMode
+- [ ] 33-07-PLAN.md — Gap closure: Claude Code generate-fallback for structured output (PROV-04)
 
 ### Phase 34: MCP Tool Bridge
 **Goal**: The 4 tool-using agents (hypothesizer, synthesizer, verifier orchestrator, rules improver) execute their tool calls correctly through Claude Code via MCP bridge
@@ -191,7 +192,7 @@ Phases execute in numeric order: 33 -> 34 -> 35 -> 36
 | 30. Mastra Prompt Engineering | v1.5 | 3/3 | Complete | 2026-03-09 |
 | 31. Claude Code Prompt Engineering | v1.5 | 1/1 | Complete | 2026-03-10 |
 | 32. Frontend Cleanup | v1.5 | 1/1 | Complete | 2026-03-10 |
-| 33. Provider Foundation | v1.6 | 6/6 | Complete | 2026-03-11 |
+| 33. Provider Foundation | v1.6 | 6/7 | In progress | - |
 | 34. MCP Tool Bridge | v1.6 | 0/? | Not started | - |
 | 35. Frontend Integration | v1.6 | 0/? | Not started | - |
 | 36. Evaluation Support | v1.6 | 0/? | Not started | - |
