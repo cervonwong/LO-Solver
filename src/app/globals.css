@@ -865,6 +865,17 @@
   );
 }
 
+/* Persistent cyan hatching for active/selected state (not hover-only) */
+.hover-hatch-active {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 7px,
+    rgba(0, 255, 255, 0.15) 7px,
+    rgba(0, 255, 255, 0.15) 8px
+  );
+}
+
 /* Compose with hover-hatch-* for borderless elements that need a hover border */
 .hover-hatch-border {
   border: 1px solid transparent;

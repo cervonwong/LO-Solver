@@ -1,6 +1,7 @@
 'use client';
 
 import { useProviderMode } from '@/hooks/use-provider-mode';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
 type ProviderMode = 'openrouter-testing' | 'openrouter-production' | 'claude-code';
 
@@ -14,22 +15,24 @@ export function ProviderModeToggle({ disabled }: { disabled?: boolean }) {
   const [mode, setMode] = useProviderMode();
 
   return (
-    <div
-      className={`flex items-center gap-1 font-heading text-sm${disabled ? ' opacity-50 pointer-events-none' : ''}`}
+    <ToggleGroup
+      type="single"
+      value={mode}
+      onValueChange={(v) => {
+        if (v) setMode(v as ProviderMode);
+      }}
+      disabled={disabled ?? false}
+      className="gap-0 border border-border"
     >
       {OPTIONS.map(({ value, label }) => (
-        <button
+        <ToggleGroupItem
           key={value}
-          type="button"
-          disabled={disabled}
-          onClick={() => setMode(value)}
-          className={`px-2 py-0.5 transition-colors ${
-            mode === value ? 'text-accent' : 'text-muted-foreground hover:text-foreground'
-          }`}
+          value={value}
+          className={`rounded-none border-none bg-transparent px-3 py-1 font-heading text-xs uppercase tracking-wider text-muted-foreground transition-colors hover:bg-transparent hover:text-foreground data-[state=on]:bg-transparent data-[state=on]:text-accent data-[state=on]:shadow-none [&:not(:first-child)]:border-l [&:not(:first-child)]:border-border${mode === value ? ' hover-hatch-active' : ' hover-hatch-cyan'}`}
         >
           {label}
-        </button>
+        </ToggleGroupItem>
       ))}
-    </div>
+    </ToggleGroup>
   );
 }

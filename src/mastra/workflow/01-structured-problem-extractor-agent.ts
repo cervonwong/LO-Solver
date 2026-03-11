@@ -7,5 +7,5 @@ export const structuredProblemExtractorAgent = createWorkflowAgent({
   name: '[Step 1] Structured Problem Extractor Agent',
   instructions: STRUCTURED_PROBLEM_EXTRACTOR_INSTRUCTIONS,
   productionModel: 'openai/gpt-5-mini',
-  claudeCodeModel: 'claude-sonnet-4-6',
+  claudeCodeModel: 'sonnet',
 });

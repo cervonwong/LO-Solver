@@ -10,5 +10,5 @@ export const questionAnswererAgent = createWorkflowAgent({
   name: '[Step 4] Question Answerer Agent',
   instructions: QUESTION_ANSWERER_INSTRUCTIONS,
   productionModel: 'google/gemini-3-flash-preview',
-  claudeCodeModel: 'claude-opus-4-6',
+  claudeCodeModel: 'opus',
 });

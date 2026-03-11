@@ -11,5 +11,5 @@ export const improverDispatcherAgent = createWorkflowAgent({
   name: '[Step 2] Improver Dispatcher Agent',
   instructions: { role: 'system', content: IMPROVER_DISPATCHER_INSTRUCTIONS },
   productionModel: 'google/gemini-3-flash-preview',
-  claudeCodeModel: 'claude-opus-4-6',
+  claudeCodeModel: 'opus',
 });

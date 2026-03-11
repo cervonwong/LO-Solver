@@ -24,7 +24,7 @@ export interface WorkflowAgentConfig {
   tools?: ToolsInput;
   /** Whether to add UnicodeNormalizer input processor. Defaults to true. */
   useUnicodeNormalizer?: boolean;
-  /** Claude Code model shortcut (e.g., 'claude-opus-4-6', 'claude-sonnet-4-6'). Defaults to 'claude-sonnet-4-6'. */
+  /** Claude Code model shortcut ('opus', 'sonnet', 'haiku'). Defaults to 'sonnet'. */
   claudeCodeModel?: string;
   /** Zod schema for requestContext validation (tester agents only). */
   requestContextSchema?: import('zod').ZodType<any>;
@@ -43,7 +43,7 @@ export function createWorkflowAgent(config: WorkflowAgentConfig): Agent {
     instructions,
     productionModel,
     testingModel = TESTING_MODEL,
-    claudeCodeModel = 'claude-sonnet-4-6',
+    claudeCodeModel = 'sonnet',
     tools = {},
     useUnicodeNormalizer = true,
     requestContextSchema,

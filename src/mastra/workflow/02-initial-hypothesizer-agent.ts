@@ -23,7 +23,7 @@ export const initialHypothesizerAgent = createWorkflowAgent({
   name: '[Step 2] Initial Hypothesizer Agent',
   instructions: { role: 'system', content: instructions },
   productionModel: 'google/gemini-3-flash-preview',
-  claudeCodeModel: 'claude-opus-4-6',
+  claudeCodeModel: 'opus',
   tools: {
     ...vocabularyTools,
     ...rulesTools,
