@@ -29,7 +29,7 @@ export interface WorkflowAgentConfig {
 
 /**
  * Create a workflow agent with standard boilerplate:
- * - Dynamic model resolution via requestContext model-mode
+ * - Dynamic model resolution via requestContext provider-mode
  * - UnicodeNormalizer input processor (when enabled)
  * - OpenRouter provider from requestContext
  */

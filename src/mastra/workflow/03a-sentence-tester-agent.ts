@@ -13,6 +13,6 @@ export const sentenceTesterAgent = createWorkflowAgent({
   productionModel: 'openai/gpt-5-mini',
   useUnicodeNormalizer: false,
   requestContextSchema: z.object({
-    'model-mode': z.enum(['testing', 'production']),
+    'provider-mode': z.enum(['openrouter-testing', 'openrouter-production', 'claude-code']),
   }),
 });
