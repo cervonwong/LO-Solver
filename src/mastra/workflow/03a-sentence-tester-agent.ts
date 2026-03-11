@@ -11,6 +11,7 @@ export const sentenceTesterAgent = createWorkflowAgent({
   name: '[Step 3] Sentence Tester Agent',
   instructions: SENTENCE_TESTER_INSTRUCTIONS,
   productionModel: 'openai/gpt-5-mini',
+  claudeCodeModel: 'claude-sonnet-4-6',
   useUnicodeNormalizer: false,
   requestContextSchema: z.object({
     'provider-mode': z.enum(['openrouter-testing', 'openrouter-production', 'claude-code']),

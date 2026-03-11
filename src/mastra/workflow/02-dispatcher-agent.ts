@@ -11,4 +11,5 @@ export const dispatcherAgent = createWorkflowAgent({
   name: '[Step 2] Perspective Dispatcher Agent',
   instructions: { role: 'system', content: DISPATCHER_INSTRUCTIONS },
   productionModel: 'google/gemini-3-flash-preview',
+  claudeCodeModel: 'claude-opus-4-6',
 });

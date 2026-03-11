@@ -7,4 +7,5 @@ export const rulesImprovementExtractorAgent = createWorkflowAgent({
   name: '[Step 3] Rules Improvement Extractor Agent',
   instructions: { role: 'system', content: RULES_IMPROVEMENT_EXTRACTOR_INSTRUCTIONS },
   productionModel: 'openai/gpt-5-mini',
+  claudeCodeModel: 'claude-sonnet-4-6',
 });
