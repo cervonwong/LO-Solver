@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Claude Code Provider
 status: executing
-stopped_at: Completed 33-06-PLAN.md
-last_updated: "2026-03-11T12:12:45.636Z"
+stopped_at: Completed 33-02-PLAN.md
+last_updated: "2026-03-11T12:13:03.709Z"
 last_activity: 2026-03-11 — Completed 33-06 Frontend Provider Mode plan
 progress:
   total_phases: 4
@@ -49,6 +49,7 @@ Recent decisions affecting current work:
 - [Phase 33]: createClaudeCode uses defaultSettings wrapper matching SDK API
 - [Phase 33]: ProviderMode type replaces ModelMode: 3 values (openrouter-testing, openrouter-production, claude-code)
 - [Phase 33]: Duplicated ProviderMode type in client hook to avoid importing server module
+- [Phase 33]: Testing-mode guards updated from 'testing' to 'openrouter-testing' to match new 3-value enum
 
 ### Pending Todos
 
@@ -64,6 +65,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-11T12:12:45.634Z
-Stopped at: Completed 33-06-PLAN.md
+Last session: 2026-03-11T12:13:03.705Z
+Stopped at: Completed 33-02-PLAN.md
 Resume file: None
