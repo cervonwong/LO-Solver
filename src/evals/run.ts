@@ -2,6 +2,7 @@ import { execSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 
 import { mastra } from '@/mastra';
+import type { ProviderMode } from '@/mastra/openrouter';
 
 import { scoreExtraction, scoreRuleQuality } from './intermediate-scorers';
 import type { EvalProblem, GroundTruthAnswer } from './problems';
@@ -16,7 +17,7 @@ import { solveZeroShot } from './zero-shot-solver';
 // ---------------------------------------------------------------------------
 
 interface CliArgs {
-  mode: 'testing' | 'production';
+  providerMode: ProviderMode;
   concurrency: number;
   problem: string | undefined;
   comparison: boolean;
@@ -39,7 +40,7 @@ Options:
 
 function parseArgs(): CliArgs {
   const args = process.argv.slice(2);
-  let mode: 'testing' | 'production' = 'testing';
+  let providerMode: ProviderMode = 'openrouter-testing';
   let concurrency = 1;
   let problem: string | undefined;
   let comparison = false;
@@ -57,7 +58,7 @@ function parseArgs(): CliArgs {
         console.error('Error: --mode must be "testing" or "production"');
         process.exit(1);
       }
-      mode = val;
+      providerMode = val === 'production' ? 'openrouter-production' : 'openrouter-testing';
       i++;
     } else if (arg === '--concurrency') {
       const val = args[i + 1];
@@ -101,7 +102,7 @@ function parseArgs(): CliArgs {
     }
   }
 
-  return { mode, concurrency, problem, comparison, maxRounds, perspectiveCount };
+  return { providerMode, concurrency, problem, comparison, maxRounds, perspectiveCount };
 }
 
 // ---------------------------------------------------------------------------
@@ -171,11 +172,17 @@ function getGitCommit(): string | undefined {
 // ---------------------------------------------------------------------------
 
 async function main(): Promise<void> {
-  const { mode, concurrency, problem: problemFilter, comparison, maxRounds, perspectiveCount } =
-    parseArgs();
+  const {
+    providerMode,
+    concurrency,
+    problem: problemFilter,
+    comparison,
+    maxRounds,
+    perspectiveCount,
+  } = parseArgs();
 
   console.log(`\nEval runner starting`);
-  console.log(`  Mode: ${mode}`);
+  console.log(`  Mode: ${providerMode}`);
   console.log(`  Concurrency: ${concurrency}`);
   console.log(`  Rounds: ${maxRounds}`);
   console.log(`  Perspectives: ${perspectiveCount}`);
@@ -214,7 +221,7 @@ async function main(): Promise<void> {
       return run.start({
         inputData: {
           rawProblemText: evalProblem.rawProblemText,
-          modelMode: mode,
+          providerMode,
           maxRounds,
           perspectiveCount,
         },
@@ -222,7 +229,7 @@ async function main(): Promise<void> {
     })();
 
     const zeroShotPromise = comparison
-      ? solveZeroShot(evalProblem.rawProblemText, mode)
+      ? solveZeroShot(evalProblem.rawProblemText, providerMode)
       : undefined;
 
     const [result, zeroShotResult] = await Promise.all([
@@ -411,7 +418,7 @@ async function main(): Promise<void> {
   const evalRunResult: EvalRunResult = {
     id: randomUUID(),
     timestamp: new Date().toISOString(),
-    modelMode: mode,
+    providerMode,
     gitCommit: getGitCommit(),
     duration,
     comparison,
@@ -518,7 +525,7 @@ async function main(): Promise<void> {
   }
 
   console.log(`Duration: ${(duration / 1000).toFixed(1)}s`);
-  console.log(`Mode: ${mode}`);
+  console.log(`Mode: ${providerMode}`);
   if (evalRunResult.gitCommit !== undefined) {
     console.log(`Git commit: ${evalRunResult.gitCommit}`);
   }

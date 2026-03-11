@@ -2,7 +2,7 @@ import { Agent } from '@mastra/core/agent';
 import { RequestContext } from '@mastra/core/request-context';
 import { z } from 'zod';
 
-import { openrouter, TESTING_MODEL, type ModelMode } from '@/mastra/openrouter';
+import { openrouter, TESTING_MODEL, type ProviderMode } from '@/mastra/openrouter';
 import { questionsAnsweredSchema } from '@/mastra/workflow/workflow-schemas';
 
 type QuestionsAnswered = z.infer<typeof questionsAnsweredSchema>;
@@ -35,7 +35,7 @@ const zeroShotAgent = new Agent({
   instructions: ZERO_SHOT_INSTRUCTIONS,
   model: ({ requestContext }) =>
     openrouter(
-      requestContext?.get('model-mode') === 'production'
+      requestContext?.get('provider-mode') === 'openrouter-production'
         ? 'google/gemini-3-flash-preview'
         : TESTING_MODEL,
     ),
@@ -48,11 +48,11 @@ const zeroShotAgent = new Agent({
  */
 export async function solveZeroShot(
   rawProblemText: string,
-  modelMode: ModelMode,
+  providerMode: ProviderMode,
 ): Promise<QuestionsAnswered> {
   try {
-    const requestContext = new RequestContext<{ 'model-mode': ModelMode }>();
-    requestContext.set('model-mode', modelMode);
+    const requestContext = new RequestContext<{ 'provider-mode': ProviderMode }>();
+    requestContext.set('provider-mode', providerMode);
 
     const result = await zeroShotAgent.generate(rawProblemText, {
       requestContext,

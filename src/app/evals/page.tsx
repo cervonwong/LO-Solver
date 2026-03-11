@@ -73,7 +73,7 @@ interface EvalProblemResult {
 interface EvalRunResult {
   id: string;
   timestamp: string;
-  modelMode: 'testing' | 'production';
+  providerMode: string;
   gitCommit?: string;
   duration: number;
   problems: EvalProblemResult[];
@@ -391,7 +391,7 @@ export default function EvalsPage() {
                 <TableCell className="text-foreground/80">{formatDate(run.timestamp)}</TableCell>
                 <TableCell>
                   <Badge variant="outline" className="text-xs">
-                    {run.modelMode}
+                    {run.providerMode}
                   </Badge>
                   {run.comparison && (
                     <Badge variant="secondary" className="ml-1 text-xs">
@@ -461,7 +461,7 @@ export default function EvalsPage() {
               )}
               <div className="ml-auto text-right text-xs text-muted-foreground">
                 <div>{formatDate(selectedRun.timestamp)}</div>
-                <div>{selectedRun.modelMode} mode</div>
+                <div>{selectedRun.providerMode} mode</div>
                 <div>{formatDuration(selectedRun.duration)}</div>
                 {selectedRun.gitCommit && (
                   <div className="font-mono">{selectedRun.gitCommit.slice(0, 7)}</div>

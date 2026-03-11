@@ -1,6 +1,7 @@
 import { mkdir, readdir, readFile, writeFile } from 'fs/promises';
 import { join, resolve } from 'path';
 
+import type { ProviderMode } from '@/mastra/openrouter';
 import type { ExtractionScore, RuleQualityScore } from './intermediate-scorers';
 
 export interface EvalProblemResult {
@@ -40,7 +41,7 @@ export interface EvalProblemResult {
 export interface EvalRunResult {
   id: string; // UUID
   timestamp: string; // ISO-8601
-  modelMode: 'testing' | 'production';
+  providerMode: ProviderMode;
   gitCommit?: string | undefined; // from `git rev-parse --short HEAD`
   duration: number; // ms
   problems: EvalProblemResult[];
@@ -71,6 +72,19 @@ export interface EvalRunResult {
 
 /** Directory where eval run result JSON files are stored, relative to cwd. */
 const RESULTS_DIR = resolve(process.cwd(), 'evals', 'results');
+
+/**
+ * Migrate a raw JSON eval run from old `modelMode` field to `providerMode`.
+ * Old files stored `modelMode: 'testing' | 'production'`; map to ProviderMode values.
+ */
+function migrateEvalRun(raw: Record<string, unknown>): EvalRunResult {
+  if (!('providerMode' in raw) && 'modelMode' in raw) {
+    const old = raw.modelMode as string;
+    raw.providerMode = old === 'production' ? 'openrouter-production' : 'openrouter-testing';
+    delete raw.modelMode;
+  }
+  return raw as unknown as EvalRunResult;
+}
 
 /**
  * Format an ISO timestamp for use in a filename.
@@ -108,7 +122,7 @@ export async function loadEvalRuns(): Promise<EvalRunResult[]> {
 
   for (const file of jsonFiles) {
     const content = await readFile(join(RESULTS_DIR, file), 'utf-8');
-    results.push(JSON.parse(content) as EvalRunResult);
+    results.push(migrateEvalRun(JSON.parse(content) as Record<string, unknown>));
   }
 
   results.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
@@ -133,5 +147,5 @@ export async function loadEvalRun(id: string): Promise<EvalRunResult | null> {
   }
 
   const content = await readFile(join(RESULTS_DIR, match), 'utf-8');
-  return JSON.parse(content) as EvalRunResult;
+  return migrateEvalRun(JSON.parse(content) as Record<string, unknown>);
 }
