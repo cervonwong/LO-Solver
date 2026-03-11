@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Claude Code Provider
 status: executing
-stopped_at: Completed 33-01-PLAN.md
-last_updated: "2026-03-11T12:07:21.900Z"
-last_activity: 2026-03-11 — Completed 33-01 Provider Foundation plan
+stopped_at: Completed 33-06-PLAN.md
+last_updated: "2026-03-11T12:12:45.636Z"
+last_activity: 2026-03-11 — Completed 33-06 Frontend Provider Mode plan
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 6
-  completed_plans: 1
+  completed_plans: 3
 ---
 
 # Project State
@@ -25,9 +25,9 @@ See: .planning/PROJECT.md (updated 2026-03-10)
 ## Current Position
 
 Phase: 33 of 36 (Provider Foundation)
-Plan: 1 of 6 in current phase
+Plan: 6 of 6 in current phase
 Status: executing
-Last activity: 2026-03-11 — Completed 33-01 Provider Foundation plan
+Last activity: 2026-03-11 — Completed 33-06 Frontend Provider Mode plan
 
 ## Performance Metrics
 
@@ -48,6 +48,7 @@ Recent decisions affecting current work:
 - [v1.3]: Per-request provider factory via RequestContext — same pattern extends to Claude Code
 - [Phase 33]: createClaudeCode uses defaultSettings wrapper matching SDK API
 - [Phase 33]: ProviderMode type replaces ModelMode: 3 values (openrouter-testing, openrouter-production, claude-code)
+- [Phase 33]: Duplicated ProviderMode type in client hook to avoid importing server module
 
 ### Pending Todos
 
@@ -63,6 +64,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-11T12:07:21.898Z
-Stopped at: Completed 33-01-PLAN.md
+Last session: 2026-03-11T12:12:45.634Z
+Stopped at: Completed 33-06-PLAN.md
 Resume file: None
