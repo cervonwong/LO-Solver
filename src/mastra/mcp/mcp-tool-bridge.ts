@@ -53,18 +53,16 @@ function errorResult(message: string): MinimalCallToolResult {
 // ---------------------------------------------------------------------------
 
 /**
- * Construct a ToolExecuteContext that delegates to closure-captured state.
- * The requestContext and mastra references are captured once when the
- * MCP server is created and shared across all tool handlers.
+ * Construct a ToolExecuteContext from closure-captured state.
+ * Passes the real RequestContext (not a proxy) so tester tools can forward
+ * it to sub-agent generate() calls where Mastra validates the full instance.
  */
 function buildToolContext(
   requestContext: RequestContext<WorkflowRequestContext>,
   mastra: Mastra,
 ): ToolExecuteContext {
   return {
-    requestContext: {
-      get: (key: keyof WorkflowRequestContext) => requestContext.get(key),
-    },
+    requestContext,
     mastra,
   } as unknown as ToolExecuteContext;
 }
