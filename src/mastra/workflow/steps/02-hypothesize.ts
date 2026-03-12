@@ -10,6 +10,10 @@ import type { StepTiming } from '../logging-utils';
 import { formatTimestamp, logVerificationResults } from '../logging-utils';
 import { emitTraceEvent, clearAllDraftStores } from '../request-context-helpers';
 import type { StepId } from '@/lib/workflow-events';
+import { createMcpToolServer } from '../../mcp/mcp-tool-bridge';
+import { createClaudeCode } from 'ai-sdk-provider-claude-code';
+import { CLAUDE_CODE_DISALLOWED_TOOLS } from '../../claude-code-provider';
+import type { Mastra } from '@mastra/core/mastra';
 import {
   workflowStateSchema,
   structuredProblemDataSchema,
@@ -20,13 +24,39 @@ import {
   type RoundResult,
   type VerificationMetadata,
 } from '../workflow-schemas';
-import type { Mastra } from '@mastra/core/mastra';
 import { runDispatch } from './02a-dispatch';
 import { runHypothesize } from './02b-hypothesize';
 import { runVerify } from './02c-verify';
 import { runSynthesize } from './02d-synthesize';
 
 export type { StepTiming } from '../logging-utils';
+
+/**
+ * Attach a per-execution Claude Code provider with MCP tools to a RequestContext.
+ * Only activates when providerMode is 'claude-code'; no-op otherwise.
+ * Must be called AFTER all RequestContext keys are set (tool handlers read them via closure).
+ */
+export function attachMcpProvider(
+  rc: RequestContext<WorkflowRequestContext>,
+  mastra: Mastra,
+  providerMode: ProviderMode,
+  testToolMode: 'committed' | 'draft',
+): void {
+  if (providerMode !== 'claude-code') return;
+  const mcpServer = createMcpToolServer(rc, mastra, { testToolMode });
+  const provider = createClaudeCode({
+    defaultSettings: {
+      disallowedTools: [...CLAUDE_CODE_DISALLOWED_TOOLS],
+      permissionMode: 'bypassPermissions',
+      allowDangerouslySkipPermissions: true,
+      maxToolResultSize: 50000,
+      mcpServers: {
+        'lo-solver-tools': mcpServer,
+      },
+    },
+  });
+  rc.set('claude-code-provider', provider);
+}
 
 /** Shared context carrying references to main stores and immutable problem data. Maps are passed by reference (STR-03). */
 export interface HypothesizeContext {

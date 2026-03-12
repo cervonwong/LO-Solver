@@ -1,4 +1,5 @@
 import type { HypothesizeContext, StepParams, HypothesizeResult } from './02-hypothesize';
+import { attachMcpProvider } from './02-hypothesize';
 import type { StepTiming } from '../logging-utils';
 import type { Perspective } from '../workflow-schemas';
 import type { WorkflowRequestContext } from '../request-context-types';
@@ -57,6 +58,9 @@ export async function runHypothesize(
     perspectiveRequestContext.set('abort-signal', params.abortSignal);
     const mainProvider = ctx.mainRequestContext.get('openrouter-provider');
     if (mainProvider) perspectiveRequestContext.set('openrouter-provider', mainProvider);
+
+    // Attach MCP tools for Claude Code mode (draft-mode testers for hypothesizer)
+    attachMcpProvider(perspectiveRequestContext, params.mastra, ctx.providerMode, 'draft');
 
     const existingRules = isImproverRound ? Array.from(ctx.mainRules.values()) : [];
     const existingVocabulary = isImproverRound

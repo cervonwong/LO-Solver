@@ -1,4 +1,5 @@
 import type { HypothesizeContext, StepParams, SynthesizeResult } from './02-hypothesize';
+import { attachMcpProvider } from './02-hypothesize';
 import type { StepTiming } from '../logging-utils';
 import type { Perspective, PerspectiveResult } from '../workflow-schemas';
 import type { WorkflowRequestContext } from '../request-context-types';
@@ -62,6 +63,9 @@ export async function runSynthesize(
       vocabularyCount: result.vocabularyCount,
     };
   });
+
+  // Attach MCP tools for Claude Code mode (draft-mode testers for synthesizer)
+  attachMcpProvider(ctx.mainRequestContext, params.mastra, ctx.providerMode, 'draft');
 
   const synthesizerPrompt = JSON.stringify({
     structuredProblem: ctx.structuredProblem,
@@ -169,6 +173,9 @@ export async function runSynthesize(
   convergenceRequestContext.set('abort-signal', params.abortSignal);
   const convProvider = ctx.mainRequestContext.get('openrouter-provider');
   if (convProvider) convergenceRequestContext.set('openrouter-provider', convProvider);
+
+  // Attach MCP tools for Claude Code mode (committed-mode testers for convergence verifier)
+  attachMcpProvider(convergenceRequestContext, params.mastra, ctx.providerMode, 'committed');
 
   const convergenceVerifierPrompt = JSON.stringify({
     vocabulary: Array.from(ctx.mainVocabulary.values()),

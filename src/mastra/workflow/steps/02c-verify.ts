@@ -1,4 +1,5 @@
 import type { HypothesizeContext, StepParams, VerifyResult, HypothesizeResult } from './02-hypothesize';
+import { attachMcpProvider } from './02-hypothesize';
 import type { StepTiming } from '../logging-utils';
 import type { WorkflowRequestContext } from '../request-context-types';
 import { RequestContext } from '@mastra/core/request-context';
@@ -40,6 +41,9 @@ export async function runVerify(
     verifyRequestContext.set('abort-signal', params.abortSignal);
     const verifyProvider = ctx.mainRequestContext.get('openrouter-provider');
     if (verifyProvider) verifyRequestContext.set('openrouter-provider', verifyProvider);
+
+    // Attach MCP tools for Claude Code mode (committed-mode testers for verifier)
+    attachMcpProvider(verifyRequestContext, params.mastra, ctx.providerMode, 'committed');
 
     const verifyVocabulary = Array.from(draftStore.vocabulary.values());
     const verifyRules = Array.from(draftStore.rules.values());
