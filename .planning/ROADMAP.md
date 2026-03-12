@@ -121,11 +121,11 @@ Plans:
   2. Rules tools (get, add, update) are callable by Claude Code agents and correctly read/write RequestContext state
   3. Tester tools (testRule, testSentence) are callable by Claude Code agents and return structured pass/fail results
   4. A full end-to-end solve completes through Claude Code provider with all 12 agents (tool-free and tool-using) producing correct output
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 34-01: TBD
-- [ ] 34-02: TBD
+- [ ] 34-01-PLAN.md — MCP tool bridge infrastructure: server factory, tool descriptions, RequestContext provider key, agent factory lookup
+- [ ] 34-02-PLAN.md — Workflow step wiring and E2E validation checkpoint
 
 ### Phase 35: Frontend Integration
 **Goal**: Users can select Claude Code as their provider from the UI and see appropriate feedback throughout the solve
@@ -192,8 +192,8 @@ Phases execute in numeric order: 33 -> 34 -> 35 -> 36
 | 30. Mastra Prompt Engineering | v1.5 | 3/3 | Complete | 2026-03-09 |
 | 31. Claude Code Prompt Engineering | v1.5 | 1/1 | Complete | 2026-03-10 |
 | 32. Frontend Cleanup | v1.5 | 1/1 | Complete | 2026-03-10 |
-| 33. Provider Foundation | 7/7 | Complete    | 2026-03-12 | - |
-| 34. MCP Tool Bridge | v1.6 | 0/? | Not started | - |
+| 33. Provider Foundation | v1.6 | 7/7 | Complete | 2026-03-12 |
+| 34. MCP Tool Bridge | v1.6 | 0/2 | Not started | - |
 | 35. Frontend Integration | v1.6 | 0/? | Not started | - |
 | 36. Evaluation Support | v1.6 | 0/? | Not started | - |
 
