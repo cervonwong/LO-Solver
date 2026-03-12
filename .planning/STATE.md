@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Claude Code Provider
 status: executing
-stopped_at: Completed 33-05-PLAN.md
-last_updated: "2026-03-11T14:27:01.361Z"
-last_activity: 2026-03-11 — Completed 33-05 Agent Model Configuration plan
+stopped_at: Completed 33-07-PLAN.md
+last_updated: "2026-03-12T02:01:16.086Z"
+last_activity: 2026-03-12 — Completed 33-07 PROV-04 Structured Output Fix plan
 progress:
   total_phases: 4
   completed_phases: 1
-  total_plans: 6
-  completed_plans: 6
+  total_plans: 7
+  completed_plans: 7
 ---
 
 # Project State
@@ -25,9 +25,9 @@ See: .planning/PROJECT.md (updated 2026-03-10)
 ## Current Position
 
 Phase: 33 of 36 (Provider Foundation)
-Plan: 6 of 6 completed in current phase
+Plan: 7 of 7 completed in current phase
 Status: executing
-Last activity: 2026-03-11 — Completed 33-05 Agent Model Configuration plan
+Last activity: 2026-03-12 — Completed 33-07 PROV-04 Structured Output Fix plan
 
 ## Performance Metrics
 
@@ -56,6 +56,7 @@ Recent decisions affecting current work:
 - [Phase 33]: Non-retryable errors (auth, billing, ENOENT) checked before retryable in retry functions
 - [Phase 33]: Shorthand model IDs (sonnet/opus) for Claude Code, not full form (claude-sonnet-4-6)
 - [Phase 33]: Claude Code streaming + structuredOutput returns empty responses -- gap for future investigation
+- [Phase 33]: Claude Code structured output fallback: streamWithRetry delegates to generateWithRetry when claude-code + structuredOutput detected
 
 ### Pending Todos
 
@@ -68,10 +69,10 @@ Recent decisions affecting current work:
 
 - MCP bridge for tool-using agents is MEDIUM confidence — spike with one tool before wrapping all 12
 - OAuth race condition (#27933) — use `setup-token` instead of `claude login`
-- Structured output via Claude Code streaming returns empty responses — needs generate-fallback or text-to-JSON workaround (PROV-04 incomplete)
+- ~~Structured output via Claude Code streaming returns empty responses~~ — resolved: streamWithRetry delegates to generateWithRetry for claude-code + structuredOutput (PROV-04 complete)
 
 ## Session Continuity
 
-Last session: 2026-03-11T14:26:00Z
-Stopped at: Completed 33-05-PLAN.md
+Last session: 2026-03-12T02:01:16.083Z
+Stopped at: Completed 33-07-PLAN.md
 Resume file: None
