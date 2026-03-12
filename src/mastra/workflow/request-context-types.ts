@@ -1,4 +1,5 @@
 import type { ProviderMode, OpenRouterProvider } from '../openrouter';
+import type { ClaudeCodeProvider } from '../claude-code-provider';
 import type { VocabularyEntry } from './vocabulary-tools';
 
 /**
@@ -76,4 +77,7 @@ export interface WorkflowRequestContext {
 
   /** Per-request OpenRouter provider (set when user provides their own API key) */
   'openrouter-provider'?: OpenRouterProvider;
+
+  /** Per-execution Claude Code provider with MCP tools attached (set for tool-using agents in claude-code mode) */
+  'claude-code-provider'?: ClaudeCodeProvider;
 }

@@ -1,6 +1,6 @@
 import { Agent } from '@mastra/core/agent';
 import { UnicodeNormalizer } from '@mastra/core/processors';
-import { claudeCode } from '../claude-code-provider';
+import { claudeCode, type ClaudeCodeProvider } from '../claude-code-provider';
 import { TESTING_MODEL, type ProviderMode } from '../openrouter';
 import { getOpenRouterProvider } from './request-context-helpers';
 
@@ -56,6 +56,14 @@ export function createWorkflowAgent(config: WorkflowAgentConfig): Agent {
     model: ({ requestContext }) => {
       const providerMode = requestContext?.get('provider-mode') as ProviderMode | undefined;
       if (providerMode === 'claude-code') {
+        // Use per-execution provider with MCP tools if available (tool-using agents)
+        const mcpProvider = requestContext?.get('claude-code-provider') as
+          | ClaudeCodeProvider
+          | undefined;
+        if (mcpProvider) {
+          return mcpProvider(claudeCodeModel);
+        }
+        // Fall back to singleton (for tool-free agents)
         return claudeCode(claudeCodeModel);
       }
       // OpenRouter path (unchanged logic)
