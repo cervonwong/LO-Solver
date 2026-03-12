@@ -209,6 +209,47 @@ export async function streamWithRetry<TOptions extends Parameters<Agent['generat
     responseCheck: explicitResponseCheck,
   }: StreamWithRetryOptions<TOptions>,
 ): Promise<FullOutput> {
+  // Claude Code provider does not populate result.object when streaming with structuredOutput.
+  // Fall back to generateWithRetry which uses agent.generate() (non-streaming) for correct structured output.
+  const hasStructuredOutput = options && typeof options === 'object' && 'structuredOutput' in options;
+  const requestContext =
+    options && typeof options === 'object' && 'requestContext' in options
+      ? (options as Record<string, unknown>).requestContext
+      : undefined;
+  const providerMode =
+    requestContext && typeof requestContext === 'object' && 'get' in requestContext
+      ? (requestContext as { get: (key: string) => unknown }).get('provider-mode')
+      : undefined;
+  const isClaudeCode = providerMode === 'claude-code';
+
+  if (isClaudeCode && hasStructuredOutput) {
+    // Delegate to generateWithRetry -- it uses agent.generate() which produces correct result.object.
+    // The onTextChunk callback won't receive incremental chunks (generate is non-streaming),
+    // but the full text is emitted once at completion for trace event consistency.
+    const generateOpts: GenerateWithRetryOptions<TOptions> = {
+      prompt,
+      options,
+      timeoutMs,
+      maxRetries,
+    };
+    if (callerSignal) {
+      generateOpts.abortSignal = callerSignal;
+    }
+    if (explicitResponseCheck) {
+      generateOpts.responseCheck = explicitResponseCheck;
+    }
+    const result = await generateWithRetry(agent, generateOpts);
+
+    // Emit the complete text as a single chunk so trace events still show reasoning
+    if (onTextChunk && result.text) {
+      onTextChunk(result.text);
+    }
+
+    // Convert Agent.generate() result to FullOutput shape for caller compatibility.
+    // The generate result already has the same fields (text, object, steps, usage, etc.)
+    return result as unknown as FullOutput;
+  }
+
   let lastError: Error | undefined;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
