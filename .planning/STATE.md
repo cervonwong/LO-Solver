@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Claude Code Provider
 status: executing
-stopped_at: Phase 34 context gathered
-last_updated: "2026-03-12T03:49:05.858Z"
-last_activity: 2026-03-12 — Completed 33-07 PROV-04 Structured Output Fix plan
+stopped_at: Completed 34-01-PLAN.md
+last_updated: "2026-03-12T12:39:12Z"
+last_activity: 2026-03-12 — Completed 34-01 MCP Tool Bridge Infrastructure plan
 progress:
   total_phases: 4
   completed_phases: 1
-  total_plans: 7
-  completed_plans: 7
+  total_plans: 2
+  completed_plans: 1
 ---
 
 # Project State
@@ -20,14 +20,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-10)
 
 **Core value:** The agentic workflow must produce measurably better results than zero-shotting the same LLMs without orchestration.
-**Current focus:** Phase 33 — Provider Foundation
+**Current focus:** Phase 34 — MCP Tool Bridge
 
 ## Current Position
 
-Phase: 33 of 36 (Provider Foundation)
-Plan: 7 of 7 completed in current phase
+Phase: 34 of 36 (MCP Tool Bridge)
+Plan: 1 of 2 completed in current phase
 Status: executing
-Last activity: 2026-03-12 — Completed 33-07 PROV-04 Structured Output Fix plan
+Last activity: 2026-03-12 — Completed 34-01 MCP Tool Bridge Infrastructure plan
 
 ## Performance Metrics
 
@@ -57,6 +57,9 @@ Recent decisions affecting current work:
 - [Phase 33]: Shorthand model IDs (sonnet/opus) for Claude Code, not full form (claude-sonnet-4-6)
 - [Phase 33]: Claude Code streaming + structuredOutput returns empty responses -- gap for future investigation
 - [Phase 33]: Claude Code structured output fallback: streamWithRetry delegates to generateWithRetry when claude-code + structuredOutput detected
+- [Phase 34]: MCP tool annotations use Hint-suffixed names (readOnlyHint, destructiveHint, openWorldHint)
+- [Phase 34]: testToolMode parameter controls which tester variant registers under testRule/testSentence names
+- [Phase 34]: Per-execution Claude Code provider via 'claude-code-provider' RequestContext key with singleton fallback
 
 ### Pending Todos
 
@@ -73,6 +76,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-12T03:49:05.850Z
-Stopped at: Phase 34 context gathered
-Resume file: .planning/phases/34-mcp-tool-bridge/34-CONTEXT.md
+Last session: 2026-03-12T12:39:12Z
+Stopped at: Completed 34-01-PLAN.md
+Resume file: .planning/phases/34-mcp-tool-bridge/34-01-SUMMARY.md

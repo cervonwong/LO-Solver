@@ -18,10 +18,10 @@ Requirements for Claude Code provider integration. Each maps to roadmap phases.
 
 ### Tool Compatibility
 
-- [ ] **TOOL-01**: MCP server wraps Mastra vocabulary tools (5 tools) for Claude Code provider
-- [ ] **TOOL-02**: MCP server wraps Mastra rules tools (3 tools) for Claude Code provider
-- [ ] **TOOL-03**: MCP server wraps tester tools (testRule, testSentence) for Claude Code provider
-- [ ] **TOOL-04**: MCP tool handlers capture RequestContext via closure for state access
+- [x] **TOOL-01**: MCP server wraps Mastra vocabulary tools (5 tools) for Claude Code provider
+- [x] **TOOL-02**: MCP server wraps Mastra rules tools (3 tools) for Claude Code provider
+- [x] **TOOL-03**: MCP server wraps tester tools (testRule, testSentence) for Claude Code provider
+- [x] **TOOL-04**: MCP tool handlers capture RequestContext via closure for state access
 - [ ] **TOOL-05**: All 4 tool-using agents produce correct output through Claude Code with MCP tools
 
 ### Authentication & Security
@@ -74,10 +74,10 @@ Requirements for Claude Code provider integration. Each maps to roadmap phases.
 | PROV-04 | Phase 33 | Complete |
 | PROV-05 | Phase 33 | Complete |
 | PROV-06 | Phase 35 | Pending |
-| TOOL-01 | Phase 34 | Pending |
-| TOOL-02 | Phase 34 | Pending |
-| TOOL-03 | Phase 34 | Pending |
-| TOOL-04 | Phase 34 | Pending |
+| TOOL-01 | Phase 34 | Complete |
+| TOOL-02 | Phase 34 | Complete |
+| TOOL-03 | Phase 34 | Complete |
+| TOOL-04 | Phase 34 | Complete |
 | TOOL-05 | Phase 34 | Pending |
 | AUTH-01 | Phase 33 | Complete |
 | AUTH-02 | Phase 33 | Complete |
