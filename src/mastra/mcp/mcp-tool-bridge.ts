@@ -80,13 +80,19 @@ function createHandler(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   mastraTool: any,
   ctx: ToolExecuteContext,
+  toolName: string,
 ): (args: Record<string, unknown>, extra: unknown) => Promise<MinimalCallToolResult> {
   return async (args) => {
+    const startTime = Date.now();
+    console.log(`[CLAUDE] MCP tool call: ${toolName}`);
     try {
       const result = await mastraTool.execute(args, ctx);
+      console.log(`[CLAUDE] MCP tool complete: ${toolName} (${Date.now() - startTime}ms)`);
       return jsonResult(result);
     } catch (err) {
-      return errorResult(err instanceof Error ? err.message : 'Unknown error');
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      console.error(`[CLAUDE] MCP tool error: ${toolName} — ${msg} (${Date.now() - startTime}ms)`);
+      return errorResult(msg);
     }
   };
 }
@@ -113,16 +119,18 @@ export function createMcpToolServer(
   const testToolMode = options?.testToolMode ?? 'committed';
   const ctx = buildToolContext(requestContext, mastra);
 
+  console.log(`[CLAUDE] Creating MCP tool server (testToolMode=${testToolMode})`);
+
   // Select which handler to register under the testRule / testSentence names
   const testRuleHandler =
     testToolMode === 'committed'
-      ? createHandler(testRuleTool, ctx)
-      : createHandler(testRuleWithRulesetTool, ctx);
+      ? createHandler(testRuleTool, ctx, 'testRule')
+      : createHandler(testRuleWithRulesetTool, ctx, 'testRule');
 
   const testSentenceHandler =
     testToolMode === 'committed'
-      ? createHandler(testSentenceTool, ctx)
-      : createHandler(testSentenceWithRulesetTool, ctx);
+      ? createHandler(testSentenceTool, ctx, 'testSentence')
+      : createHandler(testSentenceWithRulesetTool, ctx, 'testSentence');
 
   // Input schemas matching the selected handlers
   const testRuleInputSchema =
@@ -168,7 +176,7 @@ export function createMcpToolServer(
       getVocabulary: {
         description: MCP_TOOL_DESCRIPTIONS.getVocabulary,
         inputSchema: z.object({}),
-        handler: createHandler(getVocabulary, ctx),
+        handler: createHandler(getVocabulary, ctx, 'getVocabulary'),
         annotations: { readOnlyHint: true, openWorldHint: false },
       },
       addVocabulary: {
@@ -178,7 +186,7 @@ export function createMcpToolServer(
             .array(vocabularyEntrySchema)
             .describe('Array of new vocabulary entries to add.'),
         }),
-        handler: createHandler(addVocabulary, ctx),
+        handler: createHandler(addVocabulary, ctx, 'addVocabulary'),
         annotations: { destructiveHint: false, openWorldHint: false },
       },
       updateVocabulary: {
@@ -188,7 +196,7 @@ export function createMcpToolServer(
             .array(vocabularyEntrySchema)
             .describe('Array of vocabulary entries to update.'),
         }),
-        handler: createHandler(updateVocabulary, ctx),
+        handler: createHandler(updateVocabulary, ctx, 'updateVocabulary'),
         annotations: { destructiveHint: false, openWorldHint: false },
       },
       removeVocabulary: {
@@ -198,13 +206,13 @@ export function createMcpToolServer(
             .array(z.string())
             .describe('Array of foreignForm keys to remove from vocabulary.'),
         }),
-        handler: createHandler(removeVocabulary, ctx),
+        handler: createHandler(removeVocabulary, ctx, 'removeVocabulary'),
         annotations: { destructiveHint: false, openWorldHint: false },
       },
       clearVocabulary: {
         description: MCP_TOOL_DESCRIPTIONS.clearVocabulary,
         inputSchema: z.object({}),
-        handler: createHandler(clearVocabulary, ctx),
+        handler: createHandler(clearVocabulary, ctx, 'clearVocabulary'),
         annotations: { destructiveHint: true, openWorldHint: false },
       },
 
@@ -212,7 +220,7 @@ export function createMcpToolServer(
       getRules: {
         description: MCP_TOOL_DESCRIPTIONS.getRules,
         inputSchema: z.object({}),
-        handler: createHandler(getRules, ctx),
+        handler: createHandler(getRules, ctx, 'getRules'),
         annotations: { readOnlyHint: true, openWorldHint: false },
       },
       addRules: {
@@ -220,7 +228,7 @@ export function createMcpToolServer(
         inputSchema: z.object({
           entries: z.array(ruleSchema).describe('Array of new rules to add.'),
         }),
-        handler: createHandler(addRules, ctx),
+        handler: createHandler(addRules, ctx, 'addRules'),
         annotations: { destructiveHint: false, openWorldHint: false },
       },
       updateRules: {
@@ -228,7 +236,7 @@ export function createMcpToolServer(
         inputSchema: z.object({
           entries: z.array(ruleSchema).describe('Array of rules to update.'),
         }),
-        handler: createHandler(updateRules, ctx),
+        handler: createHandler(updateRules, ctx, 'updateRules'),
         annotations: { destructiveHint: false, openWorldHint: false },
       },
       removeRules: {
@@ -236,13 +244,13 @@ export function createMcpToolServer(
         inputSchema: z.object({
           titles: z.array(z.string()).describe('Array of rule titles to remove.'),
         }),
-        handler: createHandler(removeRules, ctx),
+        handler: createHandler(removeRules, ctx, 'removeRules'),
         annotations: { destructiveHint: false, openWorldHint: false },
       },
       clearRules: {
         description: MCP_TOOL_DESCRIPTIONS.clearRules,
         inputSchema: z.object({}),
-        handler: createHandler(clearRules, ctx),
+        handler: createHandler(clearRules, ctx, 'clearRules'),
         annotations: { destructiveHint: true, openWorldHint: false },
       },
 
@@ -261,7 +269,7 @@ export function createMcpToolServer(
             .array(ruleSchema)
             .describe('The full ruleset context (all rules you are proposing).'),
         }),
-        handler: createHandler(testRuleWithRulesetTool, ctx),
+        handler: createHandler(testRuleWithRulesetTool, ctx, 'testRuleWithRuleset'),
         annotations: { readOnlyHint: true, openWorldHint: false },
       },
       testSentence: {
@@ -285,7 +293,7 @@ export function createMcpToolServer(
             .array(ruleSchema)
             .describe('The full ruleset to use for translation.'),
         }),
-        handler: createHandler(testSentenceWithRulesetTool, ctx),
+        handler: createHandler(testSentenceWithRulesetTool, ctx, 'testSentenceWithRuleset'),
         annotations: { readOnlyHint: true, openWorldHint: false },
       },
     },

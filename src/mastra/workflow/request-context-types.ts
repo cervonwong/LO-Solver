@@ -78,6 +78,6 @@ export interface WorkflowRequestContext {
   /** Per-request OpenRouter provider (set when user provides their own API key) */
   'openrouter-provider'?: OpenRouterProvider;
 
-  /** Per-execution Claude Code provider with MCP tools attached (set for tool-using agents in claude-code mode) */
-  'claude-code-provider'?: ClaudeCodeProvider;
+  /** Factory that creates a fresh Claude Code provider with MCP tools per agent call (avoids transport reuse) */
+  'claude-code-provider-factory'?: () => ClaudeCodeProvider;
 }

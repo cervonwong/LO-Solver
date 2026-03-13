@@ -226,6 +226,8 @@ export async function streamWithRetry<TOptions extends Parameters<Agent['generat
     // Delegate to generateWithRetry -- it uses agent.generate() which produces correct result.object.
     // The onTextChunk callback won't receive incremental chunks (generate is non-streaming),
     // but the full text is emitted once at completion for trace event consistency.
+    console.log(`[CLAUDE] Starting generate (structured) for agent "${agent.id}"`);
+    const generateStartTime = Date.now();
     const generateOpts: GenerateWithRetryOptions<TOptions> = {
       prompt,
       options,
@@ -239,6 +241,9 @@ export async function streamWithRetry<TOptions extends Parameters<Agent['generat
       generateOpts.responseCheck = explicitResponseCheck;
     }
     const result = await generateWithRetry(agent, generateOpts);
+    console.log(
+      `[CLAUDE] Finished generate (structured) for agent "${agent.id}" (${((Date.now() - generateStartTime) / 1000).toFixed(1)}s)`,
+    );
 
     // Emit the complete text as a single chunk so trace events still show reasoning
     if (onTextChunk && result.text) {
@@ -249,6 +254,11 @@ export async function streamWithRetry<TOptions extends Parameters<Agent['generat
     // The generate result already has the same fields (text, object, steps, usage, etc.)
     return result as unknown as FullOutput;
   }
+
+  if (isClaudeCode) {
+    console.log(`[CLAUDE] Starting stream for agent "${agent.id}"`);
+  }
+  const streamOverallStart = Date.now();
 
   let lastError: Error | undefined;
 
@@ -326,6 +336,12 @@ export async function streamWithRetry<TOptions extends Parameters<Agent['generat
         }
       }
 
+      if (isClaudeCode) {
+        const steps = result.steps?.length ?? 0;
+        console.log(
+          `[CLAUDE] Finished stream for agent "${agent.id}" (${((Date.now() - streamOverallStart) / 1000).toFixed(1)}s, ${steps} steps)`,
+        );
+      }
       return result;
     } catch (error) {
       clearTimeout(hardTimeoutId!);

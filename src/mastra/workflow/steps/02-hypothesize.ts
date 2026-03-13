@@ -32,9 +32,13 @@ import { runSynthesize } from './02d-synthesize';
 export type { StepTiming } from '../logging-utils';
 
 /**
- * Attach a per-execution Claude Code provider with MCP tools to a RequestContext.
+ * Attach a Claude Code provider factory to a RequestContext.
  * Only activates when providerMode is 'claude-code'; no-op otherwise.
  * Must be called AFTER all RequestContext keys are set (tool handlers read them via closure).
+ *
+ * Stores a factory function (not a provider instance) so each agent.generate() call
+ * gets a fresh MCP server + transport, avoiding "Already connected to a transport" errors
+ * when multiple agents share the same RequestContext.
  */
 export function attachMcpProvider(
   rc: RequestContext<WorkflowRequestContext>,
@@ -43,19 +47,20 @@ export function attachMcpProvider(
   testToolMode: 'committed' | 'draft',
 ): void {
   if (providerMode !== 'claude-code') return;
-  const mcpServer = createMcpToolServer(rc, mastra, { testToolMode });
-  const provider = createClaudeCode({
-    defaultSettings: {
-      disallowedTools: [...CLAUDE_CODE_DISALLOWED_TOOLS],
-      permissionMode: 'bypassPermissions',
-      allowDangerouslySkipPermissions: true,
-      maxToolResultSize: 50000,
-      mcpServers: {
-        'lo-solver-tools': mcpServer,
+  rc.set('claude-code-provider-factory', () => {
+    const mcpServer = createMcpToolServer(rc, mastra, { testToolMode });
+    return createClaudeCode({
+      defaultSettings: {
+        disallowedTools: [...CLAUDE_CODE_DISALLOWED_TOOLS],
+        permissionMode: 'bypassPermissions',
+        allowDangerouslySkipPermissions: true,
+        maxToolResultSize: 50000,
+        mcpServers: {
+          'lo-solver-tools': mcpServer,
+        },
       },
-    },
+    });
   });
-  rc.set('claude-code-provider', provider);
 }
 
 /** Shared context carrying references to main stores and immutable problem data. Maps are passed by reference (STR-03). */

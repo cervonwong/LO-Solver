@@ -56,14 +56,17 @@ export function createWorkflowAgent(config: WorkflowAgentConfig): Agent {
     model: ({ requestContext }) => {
       const providerMode = requestContext?.get('provider-mode') as ProviderMode | undefined;
       if (providerMode === 'claude-code') {
-        // Use per-execution provider with MCP tools if available (tool-using agents)
-        const mcpProvider = requestContext?.get('claude-code-provider') as
-          | ClaudeCodeProvider
+        // Use factory to create a fresh provider+MCP server per agent call (avoids transport reuse)
+        const providerFactory = requestContext?.get('claude-code-provider-factory') as
+          | (() => ClaudeCodeProvider)
           | undefined;
-        if (mcpProvider) {
-          return mcpProvider(claudeCodeModel);
+        if (providerFactory) {
+          console.log(`[CLAUDE] Creating Claude Code provider with MCP tools for agent "${id}"`);
+          const provider = providerFactory();
+          return provider(claudeCodeModel);
         }
         // Fall back to singleton (for tool-free agents)
+        console.log(`[CLAUDE] Using singleton Claude Code provider for agent "${id}"`);
         return claudeCode(claudeCodeModel);
       }
       // OpenRouter path (unchanged logic)
