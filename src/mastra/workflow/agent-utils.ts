@@ -37,12 +37,22 @@ export async function generateWithRetry<TOptions extends Parameters<Agent['gener
   {
     prompt,
     options,
-    timeoutMs = 600_000,
+    timeoutMs: explicitTimeoutMs,
     maxRetries = 2,
     abortSignal: callerSignal,
     responseCheck: explicitResponseCheck,
   }: GenerateWithRetryOptions<TOptions>,
 ): Promise<Awaited<ReturnType<Agent['generate']>>> {
+  // Claude Code spawns subprocesses per call — use 20min default vs 10min for API calls
+  const requestContext =
+    options && typeof options === 'object' && 'requestContext' in options
+      ? (options as Record<string, unknown>).requestContext
+      : undefined;
+  const isClaudeCodeGen =
+    requestContext && typeof requestContext === 'object' && 'get' in requestContext
+      ? (requestContext as { get: (key: string) => unknown }).get('provider-mode') === 'claude-code'
+      : false;
+  const timeoutMs = explicitTimeoutMs ?? (isClaudeCodeGen ? 1_200_000 : 600_000);
   let lastError: Error | undefined;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
@@ -202,7 +212,7 @@ export async function streamWithRetry<TOptions extends Parameters<Agent['generat
   {
     prompt,
     options,
-    timeoutMs = 600_000,
+    timeoutMs: explicitTimeoutMs,
     maxRetries = 2,
     abortSignal: callerSignal,
     onTextChunk,
@@ -221,6 +231,8 @@ export async function streamWithRetry<TOptions extends Parameters<Agent['generat
       ? (requestContext as { get: (key: string) => unknown }).get('provider-mode')
       : undefined;
   const isClaudeCode = providerMode === 'claude-code';
+  // Claude Code spawns subprocesses per call — use 20min default vs 10min for API calls
+  const timeoutMs = explicitTimeoutMs ?? (isClaudeCode ? 1_200_000 : 600_000);
 
   if (isClaudeCode && hasStructuredOutput) {
     // Delegate to generateWithRetry -- it uses agent.generate() which produces correct result.object.

@@ -109,6 +109,23 @@ async function executeSentenceTest({
   requestContext,
   abortSignal,
 }: ExecuteSentenceTestParams): Promise<z.infer<typeof sentenceTestResultSchema>> {
+  // Create a lightweight RequestContext for the tester sub-agent.
+  // Copies essential fields but strips claude-code-provider-factory so the tester
+  // uses the singleton Claude Code provider (no MCP overhead — testers don't need tools).
+  let testerRequestContext: RequestContext | undefined;
+  if (requestContext) {
+    testerRequestContext = new RequestContext();
+    const keysToForward = [
+      'provider-mode',
+      'workflow-start-time',
+      'abort-signal',
+      'openrouter-provider',
+    ] as const;
+    for (const key of keysToForward) {
+      const val = requestContext.get(key as any);
+      if (val !== undefined) (testerRequestContext as any).set(key, val);
+    }
+  }
   // Phase 1: Blind Translation - agent does NOT see expected translation
   const prompt = `
 Translate and validate the following sentence using the provided ruleset:
@@ -143,7 +160,7 @@ Attempt to translate this sentence step by step using the rules and vocabulary a
       ...(abortSignal && { abortSignal }),
       options: {
         maxSteps: 100,
-        ...(requestContext && { requestContext }),
+        ...(testerRequestContext && { requestContext: testerRequestContext }),
         structuredOutput: {
           schema: agentResponseSchema,
         },

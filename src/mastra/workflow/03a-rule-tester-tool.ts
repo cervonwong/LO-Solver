@@ -81,6 +81,23 @@ async function executeRuleTest({
   requestContext,
   abortSignal,
 }: ExecuteRuleTestParams): Promise<z.infer<typeof ruleTestResultSchema>> {
+  // Create a lightweight RequestContext for the tester sub-agent.
+  // Copies essential fields but strips claude-code-provider-factory so the tester
+  // uses the singleton Claude Code provider (no MCP overhead — testers don't need tools).
+  let testerRequestContext: RequestContext | undefined;
+  if (requestContext) {
+    testerRequestContext = new RequestContext();
+    const keysToForward = [
+      'provider-mode',
+      'workflow-start-time',
+      'abort-signal',
+      'openrouter-provider',
+    ] as const;
+    for (const key of keysToForward) {
+      const val = requestContext.get(key as any);
+      if (val !== undefined) (testerRequestContext as any).set(key, val);
+    }
+  }
   // Format all rules, highlighting the one being tested
   const formattedRules = allRules
     .map((r, i) => {
@@ -134,7 +151,7 @@ ${JSON.stringify(structuredProblem.questions, null, 2)}
       ...(abortSignal && { abortSignal }),
       options: {
         maxSteps: 100,
-        ...(requestContext && { requestContext }),
+        ...(testerRequestContext && { requestContext: testerRequestContext }),
         structuredOutput: {
           schema: ruleTestSuccessSchema,
         },
