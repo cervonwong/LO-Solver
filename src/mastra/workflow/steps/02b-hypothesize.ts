@@ -1,5 +1,5 @@
-import type { HypothesizeContext, StepParams, HypothesizeResult } from './02-hypothesize';
-import { attachMcpProvider } from './02-hypothesize';
+import type { HypothesizeContext, StepParams, HypothesizeResult } from './02-shared';
+import { attachMcpProvider } from './02-shared';
 import type { StepTiming } from '../logging-utils';
 import type { Perspective } from '../workflow-schemas';
 import type { WorkflowRequestContext } from '../request-context-types';

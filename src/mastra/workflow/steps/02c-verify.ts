@@ -1,5 +1,5 @@
-import type { HypothesizeContext, StepParams, VerifyResult, HypothesizeResult } from './02-hypothesize';
-import { attachMcpProvider } from './02-hypothesize';
+import type { HypothesizeContext, StepParams, VerifyResult, HypothesizeResult } from './02-shared';
+import { attachMcpProvider } from './02-shared';
 import type { StepTiming } from '../logging-utils';
 import type { WorkflowRequestContext } from '../request-context-types';
 import { RequestContext } from '@mastra/core/request-context';

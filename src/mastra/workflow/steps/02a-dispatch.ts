@@ -1,4 +1,4 @@
-import type { HypothesizeContext, StepParams, DispatchResult } from './02-hypothesize';
+import type { HypothesizeContext, StepParams, DispatchResult } from './02-shared';
 import type { StepTiming } from '../logging-utils';
 import { streamWithRetry } from '../agent-utils';
 import {
