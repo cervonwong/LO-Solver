@@ -67,7 +67,7 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-12 pending todos:
+11 pending todos:
 - Investigate production model failures and improve prompts
 - Explore Claude Agent SDK as alternate model provider (now active as v1.6)
 - Add custom port parameter to npm run dev
@@ -78,7 +78,6 @@ Recent decisions affecting current work:
 - Add parallelisation of Claude Code agent instances
 - Fix tool rendering for testSentence and testRule in UI
 - Investigate cost estimation for Claude via tokens
-- Make vocab and rules table horizontally scrollable
 - Add testing and production mode to Claude Code provider
 
 ### Blockers/Concerns
