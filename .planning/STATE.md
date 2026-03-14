@@ -88,6 +88,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-03-14T03:50:35Z
-Stopped at: Completed 34-02-PLAN.md (Phase 34 complete)
-Resume file: .planning/phases/34-mcp-tool-bridge/34-02-SUMMARY.md
+Last session: 2026-03-14T04:10:09Z
+Stopped at: Completed quick-2 (horizontal table scrolling)
+Resume file: .planning/quick/2-make-vocabulary-and-rules-panel-tables-h/2-SUMMARY.md
