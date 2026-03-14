@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Claude Code Provider
 status: executing
-stopped_at: Completed 34-01-PLAN.md
-last_updated: "2026-03-12T12:39:12Z"
-last_activity: 2026-03-12 — Completed 34-01 MCP Tool Bridge Infrastructure plan
+stopped_at: Completed 34-02-PLAN.md (Phase 34 complete)
+last_updated: "2026-03-14T03:50:35Z"
+last_activity: 2026-03-14 — Completed 34-02 Workflow Step Wiring and E2E Validation
 progress:
   total_phases: 4
-  completed_phases: 1
-  total_plans: 2
-  completed_plans: 1
+  completed_phases: 2
+  total_plans: 9
+  completed_plans: 9
 ---
 
 # Project State
@@ -25,9 +25,9 @@ See: .planning/PROJECT.md (updated 2026-03-10)
 ## Current Position
 
 Phase: 34 of 36 (MCP Tool Bridge)
-Plan: 1 of 2 completed in current phase
+Plan: 2 of 2 completed in current phase (Phase 34 complete)
 Status: executing
-Last activity: 2026-03-12 — Completed 34-01 MCP Tool Bridge Infrastructure plan
+Last activity: 2026-03-14 — Completed 34-02 Workflow Step Wiring and E2E Validation
 
 ## Performance Metrics
 
@@ -60,6 +60,10 @@ Recent decisions affecting current work:
 - [Phase 34]: MCP tool annotations use Hint-suffixed names (readOnlyHint, destructiveHint, openWorldHint)
 - [Phase 34]: testToolMode parameter controls which tester variant registers under testRule/testSentence names
 - [Phase 34]: Per-execution Claude Code provider via 'claude-code-provider' RequestContext key with singleton fallback
+- [Phase 34]: Shared attachMcpProvider helper extracted to 02-shared.ts to break circular import dependencies
+- [Phase 34]: MCP provider cached on RequestContext after first creation to avoid transport reuse errors
+- [Phase 34]: Tester sub-agents stripped of MCP servers in Claude Code mode (run as sub-agents, not standalone)
+- [Phase 34]: Claude Code tool-activity detection routes through streamWithRetry for correct MCP attachment
 
 ### Pending Todos
 
@@ -79,12 +83,12 @@ Recent decisions affecting current work:
 
 ### Blockers/Concerns
 
-- MCP bridge for tool-using agents is MEDIUM confidence — spike with one tool before wrapping all 12
+- ~~MCP bridge for tool-using agents is MEDIUM confidence~~ — resolved: full E2E solve validated through Claude Code with all 14 MCP tools (Phase 34 complete)
 - OAuth race condition (#27933) — use `setup-token` instead of `claude login`
 - ~~Structured output via Claude Code streaming returns empty responses~~ — resolved: streamWithRetry delegates to generateWithRetry for claude-code + structuredOutput (PROV-04 complete)
 
 ## Session Continuity
 
-Last session: 2026-03-12T12:39:12Z
-Stopped at: Completed 34-01-PLAN.md
-Resume file: .planning/phases/34-mcp-tool-bridge/34-01-SUMMARY.md
+Last session: 2026-03-14T03:50:35Z
+Stopped at: Completed 34-02-PLAN.md (Phase 34 complete)
+Resume file: .planning/phases/34-mcp-tool-bridge/34-02-SUMMARY.md

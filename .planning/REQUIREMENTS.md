@@ -22,7 +22,7 @@ Requirements for Claude Code provider integration. Each maps to roadmap phases.
 - [x] **TOOL-02**: MCP server wraps Mastra rules tools (3 tools) for Claude Code provider
 - [x] **TOOL-03**: MCP server wraps tester tools (testRule, testSentence) for Claude Code provider
 - [x] **TOOL-04**: MCP tool handlers capture RequestContext via closure for state access
-- [ ] **TOOL-05**: All 4 tool-using agents produce correct output through Claude Code with MCP tools
+- [x] **TOOL-05**: All 4 tool-using agents produce correct output through Claude Code with MCP tools
 
 ### Authentication & Security
 
@@ -78,7 +78,7 @@ Requirements for Claude Code provider integration. Each maps to roadmap phases.
 | TOOL-02 | Phase 34 | Complete |
 | TOOL-03 | Phase 34 | Complete |
 | TOOL-04 | Phase 34 | Complete |
-| TOOL-05 | Phase 34 | Pending |
+| TOOL-05 | Phase 34 | Complete |
 | AUTH-01 | Phase 33 | Complete |
 | AUTH-02 | Phase 33 | Complete |
 | AUTH-03 | Phase 33 | Complete |
