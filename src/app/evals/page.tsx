@@ -314,9 +314,11 @@ export default function EvalsPage() {
   const [runs, setRuns] = useState<EvalRunResult[]>([]);
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [providerFilter, setProviderFilter] = useState<string>('all');
 
   const fetchRuns = useCallback(async () => {
     setLoading(true);
+    setProviderFilter('all');
     try {
       const res = await fetch('/api/evals');
       const data = await res.json();
@@ -332,7 +334,10 @@ export default function EvalsPage() {
     fetchRuns();
   }, [fetchRuns]);
 
-  const selectedRun = runs.find((r) => r.id === selectedRunId) ?? null;
+  const providerModes = [...new Set(runs.map((r) => r.providerMode))].sort();
+  const filteredRuns =
+    providerFilter === 'all' ? runs : runs.filter((r) => r.providerMode === providerFilter);
+  const selectedRun = filteredRuns.find((r) => r.id === selectedRunId) ?? null;
 
   if (loading) {
     return (
@@ -368,7 +373,23 @@ export default function EvalsPage() {
 
       {/* Run history table */}
       <BlueprintCard className="mb-6">
-        <h2 className="mb-3 font-heading text-base text-foreground">Run History</h2>
+        <div className="mb-3 flex items-center gap-3">
+          <h2 className="font-heading text-base text-foreground">Run History</h2>
+          {providerModes.length > 1 && (
+            <select
+              value={providerFilter}
+              onChange={(e) => setProviderFilter(e.target.value)}
+              className="hover-hatch-cyan border border-border-subtle bg-transparent px-2 py-1 text-xs uppercase tracking-wider text-muted-foreground focus:border-accent focus:text-foreground focus:outline-none"
+            >
+              <option value="all">All providers</option>
+              {providerModes.map((pm) => (
+                <option key={pm} value={pm}>
+                  {pm}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
         <Table>
           <TableHeader>
             <TableRow>
@@ -382,7 +403,7 @@ export default function EvalsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {runs.map((run) => (
+            {filteredRuns.map((run) => (
               <TableRow
                 key={run.id}
                 className={`cursor-pointer ${selectedRunId === run.id ? 'bg-surface-2' : ''}`}
