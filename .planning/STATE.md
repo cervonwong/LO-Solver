@@ -4,8 +4,8 @@ milestone: null
 milestone_name: null
 status: idle
 stopped_at: null
-last_updated: "2026-03-14T07:30:44.421Z"
-last_activity: "2026-03-14 - Completed quick task 3: Fix STRUCTURED_OUTPUT_SCHEMA_VALIDATION_FAILED errors caused by Zod v3/v4 conflict"
+last_updated: "2026-03-14T10:28:20Z"
+last_activity: "2026-03-14 - Completed quick task 4: Fix SentenceTestToolCard field names for testSentence tool rendering"
 progress:
   total_phases: 0
   completed_phases: 0
@@ -63,9 +63,10 @@ No active milestone. v1.6 shipped 2026-03-14.
 | 1 | Fix abort dialog background zoom glitch | 2026-03-10 | d1aacad | [1-fix-abort-dialog-background-zoom-glitch](./quick/1-fix-abort-dialog-background-zoom-glitch/) |
 | 2 | Make vocabulary and rules panel tables horizontally scrollable | 2026-03-14 | 1c72018 | [2-make-vocabulary-and-rules-panel-tables-h](./quick/2-make-vocabulary-and-rules-panel-tables-h/) |
 | 3 | Fix structured output schema validation (zod v4 to v3 downgrade) | 2026-03-14 | 3f47700 | [3-fix-structured-output-schema-validation-](./quick/3-fix-structured-output-schema-validation-/) |
+| 4 | Fix SentenceTestToolCard field names for tool rendering | 2026-03-14 | b12667f | [4-fix-tool-rendering-for-testsentence-and-](./quick/4-fix-tool-rendering-for-testsentence-and-/) |
 
 ## Session Continuity
 
 Last session: 2026-03-14
-Stopped at: Completed quick task 3 (fix structured output schema validation)
+Stopped at: Completed quick task 4 (fix SentenceTestToolCard field names)
 Resume file: None
