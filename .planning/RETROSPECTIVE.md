@@ -286,6 +286,55 @@
 
 ---
 
+## Milestone: v1.6 — Claude Code Provider
+
+**Shipped:** 2026-03-14
+**Phases:** 4 | **Plans:** 14 | **Commits:** 69
+
+### What Was Built
+- Claude Code AI SDK provider integration with auth gate, error handling, and structured output fallback
+- MCP tool bridge wrapping all 14 Mastra tools as in-process MCP server for Claude Code agents
+- 4-way provider toggle (OR Test/Prod, CC Test/Prod) with tier-based model resolution
+- Frontend auth status indicator, "Subscription" cost label, and CC badge on agent trace events
+- Eval harness `--provider` flag for cross-provider benchmarking with zero-shot Claude Code support
+- Provider filter dropdown in eval results viewer for cross-provider comparison
+
+### What Worked
+- `ai-sdk-provider-claude-code` community provider wrapped cleanly into existing agent factory pattern — minimal disruption
+- MCP in-process server approach gave full tool fidelity without modifying tool implementations
+- Agent factory's hook-point design (from v1.5) made provider switching a config change, not a code rewrite
+- Per-execution RequestContext provider caching solved transport reuse errors cleanly
+- 4-way provider split (testing/production x OpenRouter/Claude Code) reused existing tier patterns
+- Audit-first approach: ran audit before completion, found only non-critical tech debt
+
+### What Was Inefficient
+- Phase 33 had 7 plans (3 were mechanical renames that could have been combined) — over-decomposition
+- Token pipeline (`extractTokensFromResult`) built but never wired — CC badge shows "0 tokens" alongside correct cost
+- Rules CRUD tools registered on verifier MCP server unnecessarily — by design but adds unused surface
+- `claude login` OAuth race condition (#27933) required workaround with `setup-token`
+
+### Patterns Established
+- MCP tool bridge: `createMcpToolServer(tools, descriptions)` factory wraps Mastra tools as in-process MCP endpoints
+- Per-execution provider injection: `claude-code-provider` RequestContext key with singleton fallback
+- `attachMcpProvider` helper: shared helper for conditional MCP server wiring (extracted to break circular deps)
+- Provider mode helpers: `isClaudeCodeMode()` / `isOpenRouterMode()` for branching on provider type
+- Structured output fallback: streamWithRetry detects claude-code + structuredOutput and delegates to generateWithRetry
+- Auth gate via lightweight `generateText` probe (maxOutputTokens: 10) for fast pre-check
+
+### Key Lessons
+1. Community providers can integrate cleanly with existing patterns — the agent factory's hook-point design paid off
+2. MCP in-process bridges preserve full tool fidelity without modifying tool implementations
+3. Mechanical renames should be combined into fewer plans — 3 separate rename plans was over-decomposition
+4. Token/cost pipelines should be wired end-to-end during implementation, not deferred as tech debt
+5. Provider architecture benefits from testing/production tiers from the start — 3-way to 4-way expansion was smooth
+
+### Cost Observations
+- Model mix: opus for phase execution, haiku for summaries and plan checks
+- Sessions: ~4 across 4 days
+- Notable: 14 plans across 4 phases — most plans per milestone, but mechanical renames inflated count
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -298,6 +347,7 @@
 | v1.3 | 26 | 2 | User-facing feature; pattern copying; verification-driven bug fixes |
 | v1.4 | 62 | 8 | Markdown-only deliverables; 2.3min/plan average; audit-driven gap closure |
 | v1.5 | 68 | 6 | Pure refactoring; factory + decomposition + prompt engineering; no behavioral changes |
+| v1.6 | 69 | 4 | Provider integration; MCP tool bridge; 4-way toggle; cross-provider eval |
 
 ### Cumulative Quality
 
@@ -309,6 +359,7 @@
 | v1.3 | 4 Linguini | 9/9 satisfied | 15,656 TS |
 | v1.4 | 4 Linguini | 27/27 satisfied | 15,656 TS + 3,494 MD |
 | v1.5 | 4 Linguini | 17/20 satisfied (3 user-skipped) | 14,751 TS + 3,494 MD |
+| v1.6 | 4 Linguini | 19/19 satisfied | 15,904 TS + 3,494 MD |
 
 ### Top Lessons (Verified Across Milestones)
 
@@ -324,3 +375,6 @@
 10. Refactoring milestones are safe and fast — zero behavioral changes means zero regressions (verified v1.5)
 11. XML delimiters are the universal structural pattern across all major LLM providers (verified v1.5)
 12. Eval verification should not be optional for prompt engineering work (lesson learned v1.5)
+13. Community providers can integrate cleanly when the codebase has hook-point architecture (verified v1.6)
+14. MCP in-process bridges preserve full tool fidelity without modifying implementations (verified v1.6)
+15. Mechanical renames should be combined into fewer plans to avoid over-decomposition (lesson learned v1.6)
