@@ -14,7 +14,7 @@ Requirements for Claude Code provider integration. Each maps to roadmap phases.
 - [x] **PROV-03**: Per-agent model mapping translates OpenRouter model IDs to Claude Code model shortcuts
 - [x] **PROV-04**: All 8 tool-free agents produce correct output through Claude Code provider
 - [x] **PROV-05**: Workflow schema uses three-value `providerMode` enum replacing binary `modelMode`
-- [ ] **PROV-06**: Cost tracking shows "Subscription" label for Claude Code mode instead of $0.00
+- [x] **PROV-06**: Cost tracking shows "Subscription" label for Claude Code mode instead of $0.00
 
 ### Tool Compatibility
 
@@ -32,7 +32,7 @@ Requirements for Claude Code provider integration. Each maps to roadmap phases.
 
 ### Frontend UX
 
-- [ ] **UI-01**: Three-way provider selector replaces binary model mode toggle
+- [x] **UI-01**: Three-way provider selector replaces binary model mode toggle
 - [ ] **UI-02**: API key dialog hidden when Claude Code mode is selected
 - [ ] **UI-03**: Auth status indicator shows Claude Code authentication state
 
@@ -73,7 +73,7 @@ Requirements for Claude Code provider integration. Each maps to roadmap phases.
 | PROV-03 | Phase 33 | Complete |
 | PROV-04 | Phase 33 | Complete |
 | PROV-05 | Phase 33 | Complete |
-| PROV-06 | Phase 35 | Pending |
+| PROV-06 | Phase 35 | Complete |
 | TOOL-01 | Phase 34 | Complete |
 | TOOL-02 | Phase 34 | Complete |
 | TOOL-03 | Phase 34 | Complete |
@@ -82,7 +82,7 @@ Requirements for Claude Code provider integration. Each maps to roadmap phases.
 | AUTH-01 | Phase 33 | Complete |
 | AUTH-02 | Phase 33 | Complete |
 | AUTH-03 | Phase 33 | Complete |
-| UI-01 | Phase 35 | Pending |
+| UI-01 | Phase 35 | Complete |
 | UI-02 | Phase 35 | Pending |
 | UI-03 | Phase 35 | Pending |
 | EVAL-01 | Phase 36 | Pending |

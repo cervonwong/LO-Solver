@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Claude Code Provider
 status: executing
-stopped_at: Phase 35 context gathered
-last_updated: "2026-03-14T04:31:17.053Z"
-last_activity: "2026-03-14 - Completed quick task 2: Make vocabulary and rules panel tables horizontally scrollable"
+stopped_at: Completed 35-01-PLAN.md
+last_updated: "2026-03-14T05:12:37.042Z"
+last_activity: "2026-03-14 - Completed plan 35-01: Backend provider mode expansion"
 progress:
   total_phases: 4
   completed_phases: 2
-  total_plans: 9
-  completed_plans: 9
+  total_plans: 12
+  completed_plans: 10
 ---
 
 # Project State
@@ -20,14 +20,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-10)
 
 **Core value:** The agentic workflow must produce measurably better results than zero-shotting the same LLMs without orchestration.
-**Current focus:** Phase 34 — MCP Tool Bridge
+**Current focus:** Phase 35 — Frontend Integration
 
 ## Current Position
 
-Phase: 34 of 36 (MCP Tool Bridge)
-Plan: 2 of 2 completed in current phase (Phase 34 complete)
+Phase: 35 of 36 (Frontend Integration)
+Plan: 1 of 3 completed in current phase
 Status: executing
-Last activity: 2026-03-14 - Completed quick task 2: Make vocabulary and rules panel tables horizontally scrollable
+Last activity: 2026-03-14 - Completed plan 35-01: Backend provider mode expansion
 
 ## Performance Metrics
 
@@ -64,6 +64,9 @@ Recent decisions affecting current work:
 - [Phase 34]: MCP provider cached on RequestContext after first creation to avoid transport reuse errors
 - [Phase 34]: Tester sub-agents stripped of MCP servers in Claude Code mode (run as sub-agents, not standalone)
 - [Phase 34]: Claude Code tool-activity detection routes through streamWithRetry for correct MCP attachment
+- [Phase 35]: Split claude-code into claude-code-testing and claude-code-production for 4-way provider toggle
+- [Phase 35]: Extraction agents: haiku (CC testing) / sonnet (CC production); Reasoning agents: sonnet (CC testing) / opus (CC production)
+- [Phase 35]: Claude Code cost events emit per-call (subscription); OpenRouter at dollar-boundary (pay-per-use)
 
 ### Pending Todos
 
@@ -92,9 +95,10 @@ Recent decisions affecting current work:
 |---|-------------|------|--------|-----------|
 | 1 | Fix abort dialog background zoom glitch | 2026-03-10 | d1aacad | [1-fix-abort-dialog-background-zoom-glitch](./quick/1-fix-abort-dialog-background-zoom-glitch/) |
 | 2 | Make vocabulary and rules panel tables horizontally scrollable | 2026-03-14 | 1c72018 | [2-make-vocabulary-and-rules-panel-tables-h](./quick/2-make-vocabulary-and-rules-panel-tables-h/) |
+| Phase 35 P01 | 5min | 2 tasks | 21 files |
 
 ## Session Continuity
 
-Last session: 2026-03-14T04:31:17.051Z
-Stopped at: Phase 35 context gathered
-Resume file: .planning/phases/35-frontend-integration/35-CONTEXT.md
+Last session: 2026-03-14T05:12:37.040Z
+Stopped at: Completed 35-01-PLAN.md
+Resume file: None
