@@ -86,7 +86,7 @@
 
 - [x] **Phase 33: Provider Foundation** - Provider module, auth, agent factory, schema changes, tool-free agents validated (completed 2026-03-11)
 - [x] **Phase 34: MCP Tool Bridge** - MCP server wrapping Mastra tools, tool-using agents validated (completed 2026-03-14)
-- [ ] **Phase 35: Frontend Integration** - Three-way provider toggle, auth status, cost display
+- [ ] **Phase 35: Frontend Integration** - Four-way provider toggle, auth status, cost display, test result bug fix, CC visualisation
 - [ ] **Phase 36: Evaluation Support** - Eval harness provider flag and cross-provider comparison
 
 ## Phase Details
@@ -128,18 +128,22 @@ Plans:
 - [ ] 34-02-PLAN.md — Workflow step wiring and E2E validation checkpoint
 
 ### Phase 35: Frontend Integration
-**Goal**: Users can select Claude Code as their provider from the UI and see appropriate feedback throughout the solve
+**Goal**: Users can select Claude Code as their provider from the UI (4-way toggle with testing/production tiers) and see appropriate feedback throughout the solve
 **Depends on**: Phase 33 (schema changes), Phase 34 (full pipeline working)
 **Requirements**: UI-01, UI-02, UI-03, PROV-06
 **Success Criteria** (what must be TRUE):
-  1. User can switch between OpenRouter Testing, OpenRouter Production, and Claude Code via a three-way selector in the UI
+  1. User can switch between OpenRouter Testing, OpenRouter Production, Claude Code Testing, and Claude Code Production via a four-way selector in the UI
   2. API key dialog is hidden and not prompted when Claude Code mode is selected
   3. Auth status indicator shows whether Claude Code CLI is authenticated (visible when Claude Code mode is active)
   4. Cost display shows "Subscription" label instead of dollar amounts during Claude Code solves
-**Plans**: TBD
+  5. Sentence test tool cards correctly show PASS/FAIL status (bug fix)
+  6. Claude Code agent events are visually identifiable in the trace panel
+**Plans**: 3 plans
 
 Plans:
-- [ ] 35-01: TBD
+- [ ] 35-01-PLAN.md — Backend enum expansion to 4 values, helper functions, agent factory tiers, cost extraction
+- [ ] 35-02-PLAN.md — Frontend toggle, auth endpoint, auth hook, badge, solve guard
+- [ ] 35-03-PLAN.md — Test result rendering fix, CC instance visualisation
 
 ### Phase 36: Evaluation Support
 **Goal**: Eval harness can benchmark Claude Code provider runs alongside OpenRouter runs for cross-provider comparison
@@ -194,7 +198,7 @@ Phases execute in numeric order: 33 -> 34 -> 35 -> 36
 | 32. Frontend Cleanup | v1.5 | 1/1 | Complete | 2026-03-10 |
 | 33. Provider Foundation | v1.6 | 7/7 | Complete | 2026-03-12 |
 | 34. MCP Tool Bridge | 2/2 | Complete    | 2026-03-14 | - |
-| 35. Frontend Integration | v1.6 | 0/? | Not started | - |
+| 35. Frontend Integration | v1.6 | 0/3 | Not started | - |
 | 36. Evaluation Support | v1.6 | 0/? | Not started | - |
 
 _v1.0: 7 phases, 16 plans. All complete._
