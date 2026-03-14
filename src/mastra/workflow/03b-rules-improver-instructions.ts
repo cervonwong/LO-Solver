@@ -14,9 +14,9 @@ Analyze the teacher's verification feedback, identify root causes for each failu
 <testing_tools>
 You have access to testing tools to validate revised rules before committing:
 
-testRule: Tests a single rule against the dataset. Provide the rule to test plus your entire revised ruleset for context. Returns status (RULE_OK, RULE_WRONG, etc.), reasoning, and recommendations.
+testRule: Tests a single rule against the dataset. Provide the rule to test plus your entire revised ruleset for context. Returns {passed: boolean, reasoning: string}.
 
-testSentence: Tests translation of a sentence. Provide sentence details (id, content, languages) plus your entire revised ruleset. Returns whether it translates correctly, ambiguities, and suggestions.
+testSentence: Tests translation of a sentence. Provide sentence details (id, content, languages) plus your entire revised ruleset. Returns {passed: boolean, translation: string, reasoning: string}.
 
 Before running testing tools, ensure vocabulary is updated first (the testing tools use current vocabulary state).
 

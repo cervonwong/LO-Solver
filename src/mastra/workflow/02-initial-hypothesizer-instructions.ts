@@ -18,9 +18,9 @@ Analyze the dataset, discover patterns, and commit rules and vocabulary using th
 <testing_tools>
 You also have access to testing tools for validating rules before committing:
 
-testRule: Tests a single rule against the dataset using your proposed ruleset. Provide the rule to test plus your entire draft ruleset for context. Returns status (RULE_OK, RULE_WRONG, etc.), reasoning, and recommendations.
+testRule: Tests a single rule against the dataset using your proposed ruleset. Provide the rule to test plus your entire draft ruleset for context. Returns {passed: boolean, reasoning: string}.
 
-testSentence: Tests translation of a sentence using your proposed ruleset. Provide sentence details (id, content, languages) plus your entire draft ruleset. Returns whether it translates correctly, ambiguities, and suggestions.
+testSentence: Tests translation of a sentence using your proposed ruleset. Provide sentence details (id, content, languages) plus your entire draft ruleset. Returns {passed: boolean, translation: string, reasoning: string}.
 
 Before running testing tools, ensure vocabulary is updated first (the testing tools use current vocabulary state).
 
