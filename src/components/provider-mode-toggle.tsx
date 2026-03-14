@@ -11,8 +11,8 @@ type ProviderMode =
   | 'claude-code-production';
 
 const OPTIONS: { value: ProviderMode; label: string }[] = [
-  { value: 'openrouter-testing', label: 'Test' },
-  { value: 'openrouter-production', label: 'Prod' },
+  { value: 'openrouter-testing', label: 'OR Test' },
+  { value: 'openrouter-production', label: 'OR Prod' },
   { value: 'claude-code-testing', label: 'CC Test' },
   { value: 'claude-code-production', label: 'CC Prod' },
 ];
