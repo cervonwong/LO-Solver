@@ -14,6 +14,6 @@ export const sentenceTesterAgent = createWorkflowAgent({
   claudeCodeModel: 'sonnet',
   useUnicodeNormalizer: false,
   requestContextSchema: z.object({
-    'provider-mode': z.enum(['openrouter-testing', 'openrouter-production', 'claude-code']),
+    'provider-mode': z.enum(['openrouter-testing', 'openrouter-production', 'claude-code-testing', 'claude-code-production']),
   }),
 });
