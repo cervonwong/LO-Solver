@@ -152,10 +152,11 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. Running `npm run eval -- --provider claude-code` executes the eval suite through the Claude Code provider
   2. Eval result JSON files record which provider was used, and the eval results viewer can filter/compare results by provider
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 36-01: TBD
+- [ ] 36-01-PLAN.md — CLI --provider flag, auth gate, concurrency warning, zero-shot Claude Code support
+- [ ] 36-02-PLAN.md — Frontend provider filter dropdown for cross-provider comparison
 
 ## Progress
 
@@ -199,7 +200,7 @@ Phases execute in numeric order: 33 -> 34 -> 35 -> 36
 | 33. Provider Foundation | v1.6 | 7/7 | Complete | 2026-03-12 |
 | 34. MCP Tool Bridge | 2/2 | Complete    | 2026-03-14 | - |
 | 35. Frontend Integration | 3/3 | Complete    | 2026-03-14 | - |
-| 36. Evaluation Support | v1.6 | 0/? | Not started | - |
+| 36. Evaluation Support | v1.6 | 0/2 | Not started | - |
 
 _v1.0: 7 phases, 16 plans. All complete._
 _v1.1: 6 phases, 9 plans. All complete._
@@ -207,4 +208,4 @@ _v1.2: 3 phases, 7 plans. All complete._
 _v1.3: 2 phases, 4 plans. All complete._
 _v1.4: 8 phases, 9 plans. All complete._
 _v1.5: 6 phases, 11 plans. All complete._
-_v1.6: 4 phases, ? plans. In progress._
+_v1.6: 4 phases, 14 plans. In progress._
