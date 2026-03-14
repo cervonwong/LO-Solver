@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Claude Code Provider
 status: executing
-stopped_at: Completed 35-03-PLAN.md
-last_updated: "2026-03-14T05:16:54.970Z"
-last_activity: "2026-03-14 - Completed plan 35-03: Test result bug fix and CC badge"
+stopped_at: Completed 35-02-PLAN.md
+last_updated: "2026-03-14T05:40:13.355Z"
+last_activity: "2026-03-14 - Completed plan 35-02: Frontend provider toggle and auth badge"
 progress:
   total_phases: 4
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 12
-  completed_plans: 11
+  completed_plans: 12
 ---
 
 # Project State
@@ -25,9 +25,9 @@ See: .planning/PROJECT.md (updated 2026-03-10)
 ## Current Position
 
 Phase: 35 of 36 (Frontend Integration)
-Plan: 2 of 3 completed in current phase
+Plan: 3 of 3 completed in current phase
 Status: executing
-Last activity: 2026-03-14 - Completed plan 35-03: Test result bug fix and CC badge
+Last activity: 2026-03-14 - Completed plan 35-02: Frontend provider toggle and auth badge
 
 ## Performance Metrics
 
@@ -68,6 +68,9 @@ Recent decisions affecting current work:
 - [Phase 35]: Extraction agents: haiku (CC testing) / sonnet (CC production); Reasoning agents: sonnet (CC testing) / opus (CC production)
 - [Phase 35]: Claude Code cost events emit per-call (subscription); OpenRouter at dollar-boundary (pay-per-use)
 - [Phase 35]: CC badge placed in AgentCard (tool-call-cards.tsx) where agent events render, not trace-event-card.tsx
+- [Phase 35]: Auth endpoint uses claude auth status --json via child_process with loggedIn field
+- [Phase 35]: ccCostData channel in WorkflowControlContext bridges cost events to NavBar badge
+- [Phase 35]: Toggle labels use OR Test/OR Prod/CC Test/CC Prod for clarity
 
 ### Pending Todos
 
@@ -98,9 +101,10 @@ Recent decisions affecting current work:
 | 2 | Make vocabulary and rules panel tables horizontally scrollable | 2026-03-14 | 1c72018 | [2-make-vocabulary-and-rules-panel-tables-h](./quick/2-make-vocabulary-and-rules-panel-tables-h/) |
 | Phase 35 P01 | 5min | 2 tasks | 21 files |
 | Phase 35 P03 | 2min | 2 tasks | 2 files |
+| Phase 35 P02 | 12min | 2 tasks | 8 files |
 
 ## Session Continuity
 
-Last session: 2026-03-14T05:16:54.968Z
-Stopped at: Completed 35-03-PLAN.md
+Last session: 2026-03-14T05:40:12.207Z
+Stopped at: Completed 35-02-PLAN.md
 Resume file: None
