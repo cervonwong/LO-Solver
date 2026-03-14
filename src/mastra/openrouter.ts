@@ -71,7 +71,7 @@ export function activeModelId(
   claudeCodeModel?: string,
 ): string {
   if (isClaudeCodeMode(providerMode)) {
-    return `claude-code/${claudeCodeModel ?? 'sonnet'}`;
+    return `claude-code/${claudeCodeModel ?? 'haiku'}`;
   }
   return providerMode === 'openrouter-production' ? productionModel : TESTING_MODEL;
 }

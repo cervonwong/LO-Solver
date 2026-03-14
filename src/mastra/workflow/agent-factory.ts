@@ -24,7 +24,7 @@ export interface WorkflowAgentConfig {
   tools?: ToolsInput;
   /** Whether to add UnicodeNormalizer input processor. Defaults to true. */
   useUnicodeNormalizer?: boolean;
-  /** Claude Code model shortcut for testing mode ('opus', 'sonnet', 'haiku'). Defaults to 'sonnet'. */
+  /** Claude Code model shortcut for testing mode ('opus', 'sonnet', 'haiku'). Defaults to 'haiku'. */
   claudeCodeTestingModel?: string;
   /** Claude Code model shortcut for production mode ('opus', 'sonnet', 'haiku'). Defaults to 'sonnet'. */
   claudeCodeProductionModel?: string;
@@ -45,7 +45,7 @@ export function createWorkflowAgent(config: WorkflowAgentConfig): Agent {
     instructions,
     productionModel,
     testingModel = TESTING_MODEL,
-    claudeCodeTestingModel = 'sonnet',
+    claudeCodeTestingModel = 'haiku',
     claudeCodeProductionModel = 'sonnet',
     tools = {},
     useUnicodeNormalizer = true,
