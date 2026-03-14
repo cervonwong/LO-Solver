@@ -22,20 +22,23 @@ import { generateWithRetry } from './agent-utils';
 // Shared Schemas
 // ============================================================================
 
-const suggestionSchema = z.object({
-  suggestion: z.string().describe('The suggested translation or interpretation'),
-  likelihood: z
-    .enum(['HIGH', 'MEDIUM', 'LOW'])
-    .describe('Likelihood of this suggestion being correct'),
-  reasoning: z.string().describe('Why this suggestion might be correct'),
+const sentenceTestAgentSchema = z.object({
+  passed: z
+    .boolean()
+    .describe('Whether the sentence can be confidently and unambiguously translated using the ruleset'),
+  translation: z.string().describe('The attempted translation, or empty string if not possible'),
+  reasoning: z
+    .string()
+    .describe(
+      'Explain the translation process step by step. Note any ambiguities, missing rules, or issues. If failed, suggest how to fix the rules.',
+    ),
 });
 
 const sentenceTestSuccessSchema = z.object({
   success: z.literal(true),
-  canTranslate: z
-    .boolean()
-    .describe('Whether the sentence can be confidently translated using the ruleset'),
-  translation: z.string().describe('The attempted translation, or empty if not possible'),
+  passed: z.boolean(),
+  translation: z.string(),
+  reasoning: z.string(),
   matchesExpected: z
     .boolean()
     .nullable()
@@ -44,13 +47,6 @@ const sentenceTestSuccessSchema = z.object({
     .string()
     .nullable()
     .describe('The expected translation for reference (null if not provided)'),
-  ambiguities: z.array(z.string()).describe('List of ambiguous or confusing parts encountered'),
-  suggestions: z
-    .array(suggestionSchema)
-    .describe('3 different suggestions for improvement, ranked by likelihood'),
-  overallStatus: z
-    .enum(['SENTENCE_OK', 'SENTENCE_AMBIGUOUS', 'SENTENCE_UNTRANSLATABLE'])
-    .describe('Overall status of the sentence translation attempt'),
 });
 
 const sentenceTestErrorSchema = z.object({
@@ -62,15 +58,6 @@ const sentenceTestResultSchema = z.discriminatedUnion('success', [
   sentenceTestSuccessSchema,
   sentenceTestErrorSchema,
 ]);
-
-// Schema for the agent's response (without matchesExpected, expectedTranslation)
-const agentResponseSchema = z.object({
-  canTranslate: z.boolean(),
-  translation: z.string(),
-  ambiguities: z.array(z.string()),
-  suggestions: z.array(suggestionSchema),
-  overallStatus: z.enum(['SENTENCE_OK', 'SENTENCE_AMBIGUOUS', 'SENTENCE_UNTRANSLATABLE']),
-});
 
 // ============================================================================
 // Core Execution Function
@@ -162,15 +149,15 @@ Attempt to translate this sentence step by step using the rules and vocabulary a
         maxSteps: 100,
         ...(testerRequestContext && { requestContext: testerRequestContext }),
         structuredOutput: {
-          schema: agentResponseSchema,
+          schema: sentenceTestAgentSchema,
         },
       },
     });
 
-    const agentResult = result.object as z.infer<typeof agentResponseSchema>;
+    const agentResult = result.object as z.infer<typeof sentenceTestAgentSchema>;
     const durationSec = ((Date.now() - testStartTime) / 1000).toFixed(1);
     console.log(
-      `${formatTimestamp(wfStartTime)} [TOOL:testSentence] Sentence-tester for "${id}" completed in ${durationSec}s — ${agentResult.overallStatus}`,
+      `${formatTimestamp(wfStartTime)} [TOOL:testSentence] Sentence-tester for "${id}" completed in ${durationSec}s — ${agentResult.passed ? 'PASS' : 'FAIL'}`,
     );
 
     // Phase 2: Post-hoc Comparison (if expected translation provided)
@@ -183,18 +170,16 @@ Attempt to translate this sentence step by step using the rules and vocabulary a
 
     // Log result only if logFile is provided (i.e., using committed rules)
     if (logFile) {
-      logSentenceTestResult(logFile, id, agentResult.overallStatus, wfStartTime);
+      logSentenceTestResult(logFile, id, agentResult.passed ? 'PASS' : 'FAIL', wfStartTime);
     }
 
     return {
       success: true as const,
-      canTranslate: agentResult.canTranslate,
+      passed: agentResult.passed,
       translation: agentResult.translation,
+      reasoning: agentResult.reasoning,
       matchesExpected,
       expectedTranslation: expectedTranslation ?? null,
-      ambiguities: agentResult.ambiguities,
-      suggestions: agentResult.suggestions,
-      overallStatus: agentResult.overallStatus,
     };
   } catch (err) {
     const durationSec = ((Date.now() - testStartTime) / 1000).toFixed(1);
