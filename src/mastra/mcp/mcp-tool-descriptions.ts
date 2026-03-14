@@ -22,11 +22,11 @@ export const MCP_TOOL_DESCRIPTIONS = {
   removeRules: 'Remove rules by title. Returns {removed, notFound, total}.',
   clearRules: 'Remove ALL rules. Only use for complete rewrites. Returns {removed}.',
   testRule:
-    'Test a single rule against the dataset using committed rules from the store. Provide the rule\'s title and description. Spawns a sub-agent. Returns {success, status, reasoning, recommendation}.',
+    'Test a single rule against the dataset using committed rules from the store. Provide the rule\'s title and description. Spawns a sub-agent. Returns {success, passed, reasoning}.',
   testRuleWithRuleset:
-    'Test a single rule against the dataset using a provided draft ruleset. Pass the rule to test plus your entire proposed ruleset for context. Returns {success, status, reasoning, recommendation}.',
+    'Test a single rule against the dataset using a provided draft ruleset. Pass the rule to test plus your entire proposed ruleset for context. Returns {success, passed, reasoning}.',
   testSentence:
-    'Test a sentence translation using committed rules from the store. Spawns a sub-agent for blind translation. Returns {success, canTranslate, translation, matchesExpected, overallStatus, ambiguities, suggestions}.',
+    'Test a sentence translation using committed rules from the store. Spawns a sub-agent for blind translation. Returns {success, passed, translation, reasoning, matchesExpected}.',
   testSentenceWithRuleset:
-    'Test a sentence translation using a provided draft ruleset. Pass sentence details plus your entire proposed ruleset. Returns {success, canTranslate, translation, matchesExpected, overallStatus, ambiguities, suggestions}.',
+    'Test a sentence translation using a provided draft ruleset. Pass sentence details plus your entire proposed ruleset. Returns {success, passed, translation, reasoning, matchesExpected}.',
 };
