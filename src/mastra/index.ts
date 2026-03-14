@@ -3,7 +3,7 @@ import { PinoLogger } from '@mastra/loggers';
 import { LibSQLStore } from '@mastra/libsql';
 import { workflowAgents } from './workflow';
 import { solverWorkflow } from './workflow/workflow';
-import { Observability } from '@mastra/observability';
+import { Observability, DefaultExporter } from '@mastra/observability';
 import { resolve } from 'node:path';
 import { translationAccuracyScorer } from '@/evals/translation-scorer';
 
@@ -28,6 +28,11 @@ export const mastra = new Mastra({
     translationAccuracy: translationAccuracyScorer,
   },
   observability: new Observability({
-    default: { enabled: true },
+    configs: {
+      default: {
+        serviceName: 'lo-solver',
+        exporters: [new DefaultExporter()],
+      },
+    },
   }),
 });
