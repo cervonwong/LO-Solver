@@ -4,8 +4,8 @@ milestone: null
 milestone_name: null
 status: idle
 stopped_at: null
-last_updated: "2026-03-14T11:52:58Z"
-last_activity: "2026-03-14 - Completed quick task 5: Wire extractTokensFromResult into step files for token count display"
+last_updated: "2026-03-14T12:32:47Z"
+last_activity: "2026-03-14 - Completed quick task 6: Fix Mastra observability deprecation warning"
 progress:
   total_phases: 0
   completed_phases: 0
@@ -63,9 +63,10 @@ No active milestone. v1.6 shipped 2026-03-14.
 | 3 | Fix structured output schema validation (zod v4 to v3 downgrade) | 2026-03-14 | 3f47700 | [3-fix-structured-output-schema-validation-](./quick/3-fix-structured-output-schema-validation-/) |
 | 4 | Fix SentenceTestToolCard field names for tool rendering | 2026-03-14 | b12667f | [4-fix-tool-rendering-for-testsentence-and-](./quick/4-fix-tool-rendering-for-testsentence-and-/) |
 | 5 | Wire extractTokensFromResult into step files for token count display | 2026-03-14 | 9be661a | [5-fix-token-count-showing-0-in-claude-code](./quick/5-fix-token-count-showing-0-in-claude-code/) |
+| 6 | Fix Mastra observability deprecation warning | 2026-03-14 | 49aa2ef | [6-fix-mastra-observability-warning](./quick/6-fix-mastra-observability-warning/) |
 
 ## Session Continuity
 
 Last session: 2026-03-14
-Stopped at: Completed quick task 5 (wire extractTokensFromResult into step files)
+Stopped at: Completed quick task 6 (fix Mastra observability deprecation warning)
 Resume file: None
