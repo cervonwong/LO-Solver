@@ -137,8 +137,8 @@ function SentenceTestToolCard({ toolCall }: SentenceTestToolCardProps) {
   const [open, setOpen] = useState(false);
   const sentenceId = (toolCall.data.input.sentenceId ?? toolCall.data.input.id ?? '?') as string;
   const result = toolCall.data.result;
-  const status = result.status as string | undefined;
-  const passed = status === 'SENTENCE_OK' || status === 'PASS';
+  const overallStatus = result.overallStatus as string | undefined;
+  const passed = overallStatus === 'SENTENCE_OK';
   const details = result.details as string | undefined;
   const expected = result.expected as string | undefined;
   const actual = result.actual as string | undefined;
@@ -192,9 +192,17 @@ export function BulkToolCallGroup({ toolName, toolCalls, depth }: BulkToolCallGr
   let failCount = 0;
   if (isTest) {
     for (const tc of toolCalls) {
-      const status = tc.data.result.status as string | undefined;
-      if (status === 'RULE_OK' || status === 'SENTENCE_OK' || status === 'PASS') passCount++;
-      else failCount++;
+      const isRule = isRuleTestTool(tc.data.toolName);
+      if (isRule) {
+        const status = tc.data.result.status as string | undefined;
+        if (status === 'RULE_OK') passCount++;
+        else failCount++;
+      } else {
+        // Sentence test uses overallStatus field
+        const overallStatus = tc.data.result.overallStatus as string | undefined;
+        if (overallStatus === 'SENTENCE_OK') passCount++;
+        else failCount++;
+      }
     }
   }
 
