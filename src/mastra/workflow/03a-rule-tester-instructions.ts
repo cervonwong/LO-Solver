@@ -13,18 +13,9 @@ No external tools. Evaluate the rule by applying it to each relevant dataset ite
 
 <output_format>
 {
-  "status": "RULE_OK | RULE_WRONG | RULE_INCONSISTENT | RULE_UNCLEAR | RULE_NEEDS_UPDATE | RULE_NEW_NEEDED",
-  "reasoning": "string - 1-2 sentences with SPECIFIC evidence. Cite item IDs (e.g., #1, #5).",
-  "recommendation": "string - actionable fix. Empty string if RULE_OK."
+  "passed": "boolean - true if the rule correctly predicts all relevant dataset examples; false otherwise",
+  "reasoning": "string - 1-2 sentences with SPECIFIC evidence. Cite item IDs (e.g., #1, #5). If the rule failed, explain what's wrong and suggest how to fix it."
 }
-
-Status criteria:
-- RULE_OK: Rule is correct, consistent, and sufficient for all relevant examples.
-- RULE_WRONG: Rule contradicts the data or produces incorrect outputs.
-- RULE_INCONSISTENT: Rule works for some examples but needs exceptions or conditions.
-- RULE_UNCLEAR: Rule is too vague or ambiguous to apply consistently.
-- RULE_NEEDS_UPDATE: Rule needs modification to better fit the data.
-- RULE_NEW_NEEDED: Testing reveals a pattern that suggests a new rule is needed.
 </output_format>
 
 <process>
@@ -37,9 +28,8 @@ Status criteria:
 
 <example>
 {
-  "status": "RULE_INCONSISTENT",
-  "reasoning": "Rule states adjectives follow nouns, but item #5 'red house' = 'aka ie' shows 'aka' (red) preceding 'ie' (house). Items #2, #7, #9 follow the rule correctly.",
-  "recommendation": "Add exception: Color adjectives precede nouns, while other adjectives follow nouns."
+  "passed": false,
+  "reasoning": "Rule states adjectives follow nouns, but item #5 'red house' = 'aka ie' shows 'aka' (red) preceding 'ie' (house). Items #2, #7, #9 follow the rule correctly. Fix: add exception for color adjectives, which precede nouns."
 }
 </example>
 
