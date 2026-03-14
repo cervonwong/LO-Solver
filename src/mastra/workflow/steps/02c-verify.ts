@@ -7,6 +7,7 @@ import { streamWithRetry } from '../agent-utils';
 import {
   emitTraceEvent,
   extractCostFromResult,
+  extractTokensFromResult,
   updateCumulativeCost,
 } from '../request-context-helpers';
 import { recordStepTiming, logAgentOutput, formatTimestamp } from '../logging-utils';
@@ -95,7 +96,8 @@ export async function runVerify(
 
     // Track API cost
     const verifyCost = extractCostFromResult(verifierResponse);
-    await updateCumulativeCost(ctx.mainRequestContext, params.writer, verifyCost);
+    const verifyTokens = extractTokensFromResult(verifierResponse);
+    await updateCumulativeCost(ctx.mainRequestContext, params.writer, verifyCost, verifyTokens);
 
     await emitTraceEvent(params.writer, {
       type: 'data-agent-end',
@@ -170,7 +172,8 @@ export async function runVerify(
 
     // Track API cost
     const extractorCost = extractCostFromResult(extractorResponse);
-    await updateCumulativeCost(ctx.mainRequestContext, params.writer, extractorCost);
+    const extractorTokens = extractTokensFromResult(extractorResponse);
+    await updateCumulativeCost(ctx.mainRequestContext, params.writer, extractorCost, extractorTokens);
 
     await emitTraceEvent(params.writer, {
       type: 'data-agent-end',

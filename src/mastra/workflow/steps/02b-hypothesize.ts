@@ -9,6 +9,7 @@ import {
   emitTraceEvent,
   createDraftStore,
   extractCostFromResult,
+  extractTokensFromResult,
   updateCumulativeCost,
 } from '../request-context-helpers';
 import { recordStepTiming, logAgentOutput, formatTimestamp } from '../logging-utils';
@@ -114,7 +115,8 @@ export async function runHypothesize(
 
     // Track API cost (accumulates on mainRequestContext across all perspectives)
     const hypCost = extractCostFromResult(hypothesizerResponse);
-    await updateCumulativeCost(ctx.mainRequestContext, params.writer, hypCost);
+    const hypTokens = extractTokensFromResult(hypothesizerResponse);
+    await updateCumulativeCost(ctx.mainRequestContext, params.writer, hypCost, hypTokens);
 
     await emitTraceEvent(params.writer, {
       type: 'data-agent-end',

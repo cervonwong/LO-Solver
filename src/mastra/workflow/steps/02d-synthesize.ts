@@ -8,6 +8,7 @@ import { streamWithRetry } from '../agent-utils';
 import {
   emitTraceEvent,
   extractCostFromResult,
+  extractTokensFromResult,
   updateCumulativeCost,
 } from '../request-context-helpers';
 import { recordStepTiming, logAgentOutput, formatTimestamp } from '../logging-utils';
@@ -108,7 +109,8 @@ export async function runSynthesize(
   ctx.mainRequestContext.set('parent-agent-id', undefined);
 
   const synthesizerCost = extractCostFromResult(synthesizerResponse);
-  await updateCumulativeCost(ctx.mainRequestContext, params.writer, synthesizerCost);
+  const synthesizerTokens = extractTokensFromResult(synthesizerResponse);
+  await updateCumulativeCost(ctx.mainRequestContext, params.writer, synthesizerCost, synthesizerTokens);
 
   await emitTraceEvent(params.writer, {
     type: 'data-agent-end',
@@ -217,7 +219,8 @@ export async function runSynthesize(
   convergenceRequestContext.set('parent-agent-id', undefined);
 
   const convergenceCost = extractCostFromResult(convergenceVerifierResponse);
-  await updateCumulativeCost(ctx.mainRequestContext, params.writer, convergenceCost);
+  const convergenceTokens = extractTokensFromResult(convergenceVerifierResponse);
+  await updateCumulativeCost(ctx.mainRequestContext, params.writer, convergenceCost, convergenceTokens);
 
   await emitTraceEvent(params.writer, {
     type: 'data-agent-end',
@@ -285,7 +288,8 @@ export async function runSynthesize(
   convergenceRequestContext.set('parent-agent-id', undefined);
 
   const convergenceExtractorCost = extractCostFromResult(convergenceExtractorResponse);
-  await updateCumulativeCost(ctx.mainRequestContext, params.writer, convergenceExtractorCost);
+  const convergenceExtractorTokens = extractTokensFromResult(convergenceExtractorResponse);
+  await updateCumulativeCost(ctx.mainRequestContext, params.writer, convergenceExtractorCost, convergenceExtractorTokens);
 
   await emitTraceEvent(params.writer, {
     type: 'data-agent-end',

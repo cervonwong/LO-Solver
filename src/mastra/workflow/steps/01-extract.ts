@@ -9,7 +9,7 @@ import {
   formatTimestamp,
 } from '../logging-utils';
 import { streamWithRetry } from '../agent-utils';
-import { emitTraceEvent, extractCostFromResult, updateCumulativeCost } from '../request-context-helpers';
+import { emitTraceEvent, extractCostFromResult, extractTokensFromResult, updateCumulativeCost } from '../request-context-helpers';
 import type { WorkflowRequestContext } from '../request-context-types';
 import type { StepId } from '@/lib/workflow-events';
 import { generateEventId } from '@/lib/workflow-events';
@@ -89,7 +89,8 @@ export const extractionStep = createStep({
 
     // Track API cost
     const callCost = extractCostFromResult(response);
-    await updateCumulativeCost(requestContext, writer, callCost);
+    const callTokens = extractTokensFromResult(response);
+    await updateCumulativeCost(requestContext, writer, callCost, callTokens);
 
     await emitTraceEvent(writer, {
       type: 'data-agent-end',
