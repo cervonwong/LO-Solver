@@ -136,11 +136,22 @@ interface SentenceTestToolCardProps {
 function SentenceTestToolCard({ toolCall }: SentenceTestToolCardProps) {
   const [open, setOpen] = useState(false);
   const sentenceId = (toolCall.data.input.sentenceId ?? toolCall.data.input.id ?? '?') as string;
+  const sentenceContent = toolCall.data.input.content as string | undefined;
   const result = toolCall.data.result;
+  const isError = result.success === false;
   const passed = (result.passed as boolean | undefined) ?? false;
-  const details = result.details as string | undefined;
-  const expected = result.expected as string | undefined;
-  const actual = result.actual as string | undefined;
+  const translation = result.translation as string | undefined;
+  const expectedTranslation = result.expectedTranslation as string | undefined;
+  const matchesExpected = result.matchesExpected as boolean | null | undefined;
+  const reasoning = result.reasoning as string | undefined;
+  const errorMsg = result.error as string | undefined;
+
+  const badgeClass = isError
+    ? 'border-status-error text-status-error'
+    : passed
+      ? 'border-status-success text-status-success'
+      : 'border-status-error text-status-error';
+  const badgeLabel = isError ? 'ERROR' : passed ? 'PASS' : 'FAIL';
 
   return (
     <RawJsonToggle data={toolCall.data}>
@@ -148,28 +159,61 @@ function SentenceTestToolCard({ toolCall }: SentenceTestToolCardProps) {
         <CollapsibleTrigger className="hover-hatch-cyan flex w-full items-center gap-2 py-0.5 text-left text-xs">
           <Badge
             variant="outline"
-            className={`${passed ? 'border-status-success text-status-success' : 'border-status-error text-status-error'} bg-transparent text-[10px]`}
+            className={`${badgeClass} bg-transparent text-[10px]`}
           >
-            {passed ? 'PASS' : 'FAIL'}
+            {badgeLabel}
           </Badge>
-          <span className="flex-1 truncate">Sentence {sentenceId}</span>
+          <span className="flex-1 truncate">
+            Sentence {sentenceId}
+            {sentenceContent && (
+              <span className="ml-1 text-muted-foreground text-[11px]">
+                &mdash; {sentenceContent}
+              </span>
+            )}
+          </span>
+          {matchesExpected === false && !isError && (
+            <Badge
+              variant="outline"
+              className="border-status-warning text-status-warning bg-transparent text-[10px]"
+            >
+              MISMATCH
+            </Badge>
+          )}
           <ChevronIcon open={open} />
         </CollapsibleTrigger>
         <CollapsibleContent
           forceMount
           className="data-[state=closed]:hidden pl-6 pr-2 py-1 text-[11px] text-muted-foreground"
         >
-          {expected && (
-            <p>
-              <span className="font-medium">Expected:</span> {expected}
-            </p>
+          {isError ? (
+            <p className="text-status-error">{errorMsg ?? 'Unknown error'}</p>
+          ) : (
+            <>
+              {translation && (
+                <p>
+                  <span className="font-medium">Translation:</span> {translation}
+                </p>
+              )}
+              {expectedTranslation && (
+                <p>
+                  <span className="font-medium">Expected:</span> {expectedTranslation}
+                </p>
+              )}
+              {matchesExpected != null && (
+                <p>
+                  <span className="font-medium">Match:</span>{' '}
+                  <span
+                    className={
+                      matchesExpected ? 'text-status-success' : 'text-status-error'
+                    }
+                  >
+                    {matchesExpected ? 'Yes' : 'No'}
+                  </span>
+                </p>
+              )}
+              {reasoning && <p className="mt-1">{reasoning}</p>}
+            </>
           )}
-          {actual && (
-            <p>
-              <span className="font-medium">Actual:</span> {actual}
-            </p>
-          )}
-          {details && <p className="mt-1">{details}</p>}
         </CollapsibleContent>
       </Collapsible>
     </RawJsonToggle>
