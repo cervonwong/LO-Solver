@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Claude Code Provider
 status: executing
-stopped_at: Completed 36-02-PLAN.md
-last_updated: "2026-03-14T06:20:06.168Z"
+stopped_at: Completed 36-01-PLAN.md
+last_updated: "2026-03-14T06:20:48.928Z"
 last_activity: "2026-03-14 - Completed plan 36-02: Provider filter dropdown in eval run history"
 progress:
   total_phases: 4
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 14
-  completed_plans: 13
+  completed_plans: 14
 ---
 
 # Project State
@@ -73,6 +73,8 @@ Recent decisions affecting current work:
 - [Phase 35]: Toggle labels use OR Test/OR Prod/CC Test/CC Prod for clarity
 - [Phase 36]: Dropdown conditionally renders only when 2+ provider modes exist in data
 - [Phase 36]: selectedRun derived from filteredRuns so detail panel hides when run is filtered out
+- [Phase 36]: Combine --provider and --mode flags via template literal into ProviderMode
+- [Phase 36]: Zero-shot model mapping: haiku for CC testing, sonnet for CC production
 
 ### Pending Todos
 
@@ -105,9 +107,10 @@ Recent decisions affecting current work:
 | Phase 35 P03 | 2min | 2 tasks | 2 files |
 | Phase 35 P02 | 12min | 2 tasks | 8 files |
 | Phase 36 P02 | 2min | 1 tasks | 1 files |
+| Phase 36 P01 | 2min | 2 tasks | 2 files |
 
 ## Session Continuity
 
-Last session: 2026-03-14T06:20:06.165Z
-Stopped at: Completed 36-02-PLAN.md
+Last session: 2026-03-14T06:20:48.926Z
+Stopped at: Completed 36-01-PLAN.md
 Resume file: None

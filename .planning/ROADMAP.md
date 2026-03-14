@@ -87,7 +87,7 @@
 - [x] **Phase 33: Provider Foundation** - Provider module, auth, agent factory, schema changes, tool-free agents validated (completed 2026-03-11)
 - [x] **Phase 34: MCP Tool Bridge** - MCP server wrapping Mastra tools, tool-using agents validated (completed 2026-03-14)
 - [x] **Phase 35: Frontend Integration** - Four-way provider toggle, auth status, cost display, test result bug fix, CC visualisation (completed 2026-03-14)
-- [ ] **Phase 36: Evaluation Support** - Eval harness provider flag and cross-provider comparison
+- [x] **Phase 36: Evaluation Support** - Eval harness provider flag and cross-provider comparison (completed 2026-03-14)
 
 ## Phase Details
 
@@ -200,7 +200,7 @@ Phases execute in numeric order: 33 -> 34 -> 35 -> 36
 | 33. Provider Foundation | v1.6 | 7/7 | Complete | 2026-03-12 |
 | 34. MCP Tool Bridge | 2/2 | Complete    | 2026-03-14 | - |
 | 35. Frontend Integration | 3/3 | Complete    | 2026-03-14 | - |
-| 36. Evaluation Support | 1/2 | In Progress|  | - |
+| 36. Evaluation Support | 2/2 | Complete   | 2026-03-14 | - |
 
 _v1.0: 7 phases, 16 plans. All complete._
 _v1.1: 6 phases, 9 plans. All complete._

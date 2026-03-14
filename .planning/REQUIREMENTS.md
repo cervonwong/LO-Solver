@@ -38,7 +38,7 @@ Requirements for Claude Code provider integration. Each maps to roadmap phases.
 
 ### Evaluation
 
-- [ ] **EVAL-01**: Eval harness accepts `--provider claude-code` flag for Claude Code provider runs
+- [x] **EVAL-01**: Eval harness accepts `--provider claude-code` flag for Claude Code provider runs
 - [x] **EVAL-02**: Eval results record which provider was used for cross-provider comparison
 
 ## Future Requirements
@@ -85,7 +85,7 @@ Requirements for Claude Code provider integration. Each maps to roadmap phases.
 | UI-01 | Phase 35 | Complete |
 | UI-02 | Phase 35 | Complete |
 | UI-03 | Phase 35 | Complete |
-| EVAL-01 | Phase 36 | Pending |
+| EVAL-01 | Phase 36 | Complete |
 | EVAL-02 | Phase 36 | Complete |
 
 **Coverage:**
