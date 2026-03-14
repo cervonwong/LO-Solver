@@ -44,15 +44,12 @@ No active milestone. v1.6 shipped 2026-03-14.
 
 ### Pending Todos
 
-9 pending todos:
-- Investigate production model failures and improve prompts
+6 pending todos:
 - Add custom port parameter to npm run dev
 - Explore Mastra programmatic tool calling to improve results
 - Explore solving LO problems as code using sandboxes
-- Optimise prompts with ChatGPT 5.4 and Claude prompting guide
 - Add visualisation for running Claude Code instances
 - Add parallelisation of Claude Code agent instances
-- Investigate cost estimation for Claude via tokens
 - Wire extractTokensFromResult into step files (CC token display shows 0)
 
 ### Blockers/Concerns
