@@ -65,9 +65,10 @@ No active milestone. v1.6 shipped 2026-03-14.
 |---|-------------|------|--------|-----------|
 | 1 | Fix abort dialog background zoom glitch | 2026-03-10 | d1aacad | [1-fix-abort-dialog-background-zoom-glitch](./quick/1-fix-abort-dialog-background-zoom-glitch/) |
 | 2 | Make vocabulary and rules panel tables horizontally scrollable | 2026-03-14 | 1c72018 | [2-make-vocabulary-and-rules-panel-tables-h](./quick/2-make-vocabulary-and-rules-panel-tables-h/) |
+| 3 | Fix structured output schema validation (zod v4 to v3 downgrade) | 2026-03-14 | 3f47700 | [3-fix-structured-output-schema-validation-](./quick/3-fix-structured-output-schema-validation-/) |
 
 ## Session Continuity
 
 Last session: 2026-03-14
-Stopped at: Milestone v1.6 complete
+Stopped at: Completed quick task 3 (fix structured output schema validation)
 Resume file: None
