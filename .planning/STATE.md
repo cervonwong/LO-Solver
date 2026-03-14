@@ -4,8 +4,8 @@ milestone: null
 milestone_name: null
 status: idle
 stopped_at: null
-last_updated: "2026-03-14T10:28:20Z"
-last_activity: "2026-03-14 - Completed quick task 4: Fix SentenceTestToolCard field names for testSentence tool rendering"
+last_updated: "2026-03-14T11:52:58Z"
+last_activity: "2026-03-14 - Completed quick task 5: Wire extractTokensFromResult into step files for token count display"
 progress:
   total_phases: 0
   completed_phases: 0
@@ -44,14 +44,12 @@ No active milestone. v1.6 shipped 2026-03-14.
 
 ### Pending Todos
 
-6 pending todos:
+5 pending todos:
 - Add custom port parameter to npm run dev
 - Explore Mastra programmatic tool calling to improve results
 - Explore solving LO problems as code using sandboxes
 - Add visualisation for running Claude Code instances
 - Add parallelisation of Claude Code agent instances
-- Wire extractTokensFromResult into step files (CC token display shows 0)
-
 ### Blockers/Concerns
 
 - OAuth race condition (#27933) — use `setup-token` instead of `claude login`
@@ -64,9 +62,10 @@ No active milestone. v1.6 shipped 2026-03-14.
 | 2 | Make vocabulary and rules panel tables horizontally scrollable | 2026-03-14 | 1c72018 | [2-make-vocabulary-and-rules-panel-tables-h](./quick/2-make-vocabulary-and-rules-panel-tables-h/) |
 | 3 | Fix structured output schema validation (zod v4 to v3 downgrade) | 2026-03-14 | 3f47700 | [3-fix-structured-output-schema-validation-](./quick/3-fix-structured-output-schema-validation-/) |
 | 4 | Fix SentenceTestToolCard field names for tool rendering | 2026-03-14 | b12667f | [4-fix-tool-rendering-for-testsentence-and-](./quick/4-fix-tool-rendering-for-testsentence-and-/) |
+| 5 | Wire extractTokensFromResult into step files for token count display | 2026-03-14 | 9be661a | [5-fix-token-count-showing-0-in-claude-code](./quick/5-fix-token-count-showing-0-in-claude-code/) |
 
 ## Session Continuity
 
 Last session: 2026-03-14
-Stopped at: Completed quick task 4 (fix SentenceTestToolCard field names)
+Stopped at: Completed quick task 5 (wire extractTokensFromResult into step files)
 Resume file: None
