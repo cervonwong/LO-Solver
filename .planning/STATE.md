@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Claude Code Provider
 status: executing
-stopped_at: Completed 35-02-PLAN.md
-last_updated: "2026-03-14T05:44:25.395Z"
-last_activity: "2026-03-14 - Completed plan 35-02: Frontend provider toggle and auth badge"
+stopped_at: Completed 36-02-PLAN.md
+last_updated: "2026-03-14T06:20:06.168Z"
+last_activity: "2026-03-14 - Completed plan 36-02: Provider filter dropdown in eval run history"
 progress:
   total_phases: 4
   completed_phases: 3
-  total_plans: 12
-  completed_plans: 12
+  total_plans: 14
+  completed_plans: 13
 ---
 
 # Project State
@@ -20,14 +20,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-10)
 
 **Core value:** The agentic workflow must produce measurably better results than zero-shotting the same LLMs without orchestration.
-**Current focus:** Phase 35 — Frontend Integration
+**Current focus:** Phase 36 — Evaluation Support
 
 ## Current Position
 
-Phase: 35 of 36 (Frontend Integration)
-Plan: 3 of 3 completed in current phase
+Phase: 36 of 36 (Evaluation Support)
+Plan: 2 of 2 completed in current phase
 Status: executing
-Last activity: 2026-03-14 - Completed plan 35-02: Frontend provider toggle and auth badge
+Last activity: 2026-03-14 - Completed plan 36-02: Provider filter dropdown in eval run history
 
 ## Performance Metrics
 
@@ -71,6 +71,8 @@ Recent decisions affecting current work:
 - [Phase 35]: Auth endpoint uses claude auth status --json via child_process with loggedIn field
 - [Phase 35]: ccCostData channel in WorkflowControlContext bridges cost events to NavBar badge
 - [Phase 35]: Toggle labels use OR Test/OR Prod/CC Test/CC Prod for clarity
+- [Phase 36]: Dropdown conditionally renders only when 2+ provider modes exist in data
+- [Phase 36]: selectedRun derived from filteredRuns so detail panel hides when run is filtered out
 
 ### Pending Todos
 
@@ -102,9 +104,10 @@ Recent decisions affecting current work:
 | Phase 35 P01 | 5min | 2 tasks | 21 files |
 | Phase 35 P03 | 2min | 2 tasks | 2 files |
 | Phase 35 P02 | 12min | 2 tasks | 8 files |
+| Phase 36 P02 | 2min | 1 tasks | 1 files |
 
 ## Session Continuity
 
-Last session: 2026-03-14T05:40:12.207Z
-Stopped at: Completed 35-02-PLAN.md
+Last session: 2026-03-14T06:20:06.165Z
+Stopped at: Completed 36-02-PLAN.md
 Resume file: None
