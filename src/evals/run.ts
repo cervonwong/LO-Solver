@@ -1,8 +1,11 @@
 import { execSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 
+import { generateText } from 'ai';
+
+import { claudeCode } from '@/mastra/claude-code-provider';
 import { mastra } from '@/mastra';
-import type { ProviderMode } from '@/mastra/openrouter';
+import { isClaudeCodeMode, type ProviderMode } from '@/mastra/openrouter';
 
 import { scoreExtraction, scoreRuleQuality } from './intermediate-scorers';
 import type { EvalProblem, GroundTruthAnswer } from './problems';
@@ -29,18 +32,20 @@ function printHelp(): void {
   console.log(`Usage: npm run eval -- [options]
 
 Options:
-  --mode <testing|production>   Model mode (default: testing)
-  --concurrency <N>             Parallel problem execution (default: 1)
-  --problem <id>                Run a single problem by ID
-  --comparison                  Run with zero-shot comparison
-  --rounds <N>                  Max verify/improve rounds, 1-5 (default: 3)
-  --perspectives <N>            Number of hypothesis perspectives, 2-7 (default: 3)
-  --help                        Show this help message`);
+  --provider <openrouter|claude-code>  Provider to use (default: openrouter)
+  --mode <testing|production>          Model mode (default: testing)
+  --concurrency <N>                    Parallel problem execution (default: 1)
+  --problem <id>                       Run a single problem by ID
+  --comparison                         Run with zero-shot comparison
+  --rounds <N>                         Max verify/improve rounds, 1-5 (default: 3)
+  --perspectives <N>                   Number of hypothesis perspectives, 2-7 (default: 3)
+  --help                               Show this help message`);
 }
 
 function parseArgs(): CliArgs {
   const args = process.argv.slice(2);
-  let providerMode: ProviderMode = 'openrouter-testing';
+  let provider: 'openrouter' | 'claude-code' = 'openrouter';
+  let mode: 'testing' | 'production' = 'testing';
   let concurrency = 1;
   let problem: string | undefined;
   let comparison = false;
@@ -52,13 +57,21 @@ function parseArgs(): CliArgs {
     if (arg === '--help') {
       printHelp();
       process.exit(0);
+    } else if (arg === '--provider') {
+      const val = args[i + 1];
+      if (val !== 'openrouter' && val !== 'claude-code') {
+        console.error('Error: --provider must be "openrouter" or "claude-code"');
+        process.exit(1);
+      }
+      provider = val;
+      i++;
     } else if (arg === '--mode') {
       const val = args[i + 1];
       if (val !== 'testing' && val !== 'production') {
         console.error('Error: --mode must be "testing" or "production"');
         process.exit(1);
       }
-      providerMode = val === 'production' ? 'openrouter-production' : 'openrouter-testing';
+      mode = val;
       i++;
     } else if (arg === '--concurrency') {
       const val = args[i + 1];
@@ -102,6 +115,7 @@ function parseArgs(): CliArgs {
     }
   }
 
+  const providerMode = `${provider}-${mode}` as ProviderMode;
   return { providerMode, concurrency, problem, comparison, maxRounds, perspectiveCount };
 }
 
@@ -180,6 +194,32 @@ async function main(): Promise<void> {
     maxRounds,
     perspectiveCount,
   } = parseArgs();
+
+  // Claude Code auth gate
+  if (isClaudeCodeMode(providerMode)) {
+    console.log('Verifying Claude Code authentication...');
+    try {
+      await generateText({
+        model: claudeCode('sonnet'),
+        prompt: 'Respond with OK',
+        maxOutputTokens: 10,
+      });
+      console.log('Claude Code authenticated.\n');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(`Claude Code authentication failed: ${message}`);
+      console.error('Run `claude login` in your terminal, then try again.');
+      process.exit(1);
+    }
+  }
+
+  // Concurrency warning for Claude Code
+  if (isClaudeCodeMode(providerMode) && concurrency > 1) {
+    console.warn(
+      `Warning: Claude Code with concurrency ${concurrency} spawns many subprocesses. ` +
+        `Consider --concurrency 1 if you encounter rate limits or errors.\n`,
+    );
+  }
 
   console.log(`\nEval runner starting`);
   console.log(`  Mode: ${providerMode}`);
