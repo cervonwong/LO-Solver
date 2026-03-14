@@ -104,7 +104,13 @@ export async function generateWithRetry<TOptions extends Parameters<Agent['gener
           throw new Error('Empty response from model');
         }
       } else if (check === 'toolActivity') {
-        if (!result.steps || result.steps.length <= 1) {
+        // Claude Code handles tool calls via MCP internally — the AI SDK never sees them
+        // as separate steps. Fall back to non-empty text check for Claude Code mode.
+        if (isClaudeCodeGen) {
+          if (!result.text || result.text.trim() === '') {
+            throw new Error('Empty response from model');
+          }
+        } else if (!result.steps || result.steps.length <= 1) {
           throw new Error('Empty response from model (no tool activity)');
         }
       } else {
@@ -234,15 +240,18 @@ export async function streamWithRetry<TOptions extends Parameters<Agent['generat
   // Claude Code spawns subprocesses per call — use 20min default vs 10min for API calls
   const timeoutMs = explicitTimeoutMs ?? (isClaudeCode ? 1_200_000 : 600_000);
 
-  if (isClaudeCode && hasStructuredOutput) {
-    // Delegate to generateWithRetry -- it uses agent.generate() which produces correct result.object.
+  if (isClaudeCode && (hasStructuredOutput || explicitResponseCheck === 'toolActivity')) {
+    // Claude Code streaming does not reliably populate result.object (structuredOutput)
+    // or result.steps (multi-step tool use via MCP). Fall back to generateWithRetry which
+    // uses agent.generate() (non-streaming) for correct results.
     // The onTextChunk callback won't receive incremental chunks (generate is non-streaming),
     // but the full text is emitted once at completion for trace event consistency.
-    console.log(`[CLAUDE] Starting generate (structured) for agent "${agent.id}"`);
+    const reason = hasStructuredOutput ? 'structured' : 'tool-activity';
+    console.log(`[CLAUDE] Starting generate (${reason}) for agent "${agent.id}"`);
     const generateStartTime = Date.now();
     const generateOpts: GenerateWithRetryOptions<TOptions> = {
       prompt,
-      options,
+      ...(options !== undefined && { options }),
       timeoutMs,
       maxRetries,
     };
@@ -253,8 +262,9 @@ export async function streamWithRetry<TOptions extends Parameters<Agent['generat
       generateOpts.responseCheck = explicitResponseCheck;
     }
     const result = await generateWithRetry(agent, generateOpts);
+    const steps = result.steps?.length ?? 0;
     console.log(
-      `[CLAUDE] Finished generate (structured) for agent "${agent.id}" (${((Date.now() - generateStartTime) / 1000).toFixed(1)}s)`,
+      `[CLAUDE] Finished generate (${reason}) for agent "${agent.id}" (${((Date.now() - generateStartTime) / 1000).toFixed(1)}s, ${steps} steps)`,
     );
 
     // Emit the complete text as a single chunk so trace events still show reasoning

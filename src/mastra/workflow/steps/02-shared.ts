@@ -7,7 +7,7 @@ import type { ProviderMode } from '../../openrouter';
 import type { StepTiming } from '../logging-utils';
 import type { StepId } from '@/lib/workflow-events';
 import { createMcpToolServer } from '../../mcp/mcp-tool-bridge';
-import { createClaudeCode } from 'ai-sdk-provider-claude-code';
+import { createClaudeCode, type ClaudeCodeProvider } from 'ai-sdk-provider-claude-code';
 import { CLAUDE_CODE_DISALLOWED_TOOLS } from '../../claude-code-provider';
 import type { Mastra } from '@mastra/core/mastra';
 import { structuredProblemDataSchema, verifierFeedbackSchema } from '../workflow-schemas';
@@ -31,9 +31,15 @@ export function attachMcpProvider(
   testToolMode: 'committed' | 'draft',
 ): void {
   if (providerMode !== 'claude-code') return;
+  // Cache the provider in the closure so repeated model() calls within a single
+  // generate() reuse the same MCP server (model resolver fires per tool-use step).
+  // Each attachMcpProvider call creates a new closure, so separate generate() calls
+  // on different requestContexts still get fresh providers.
+  let cached: ClaudeCodeProvider | null = null;
   rc.set('claude-code-provider-factory', () => {
+    if (cached) return cached;
     const mcpServer = createMcpToolServer(rc, mastra, { testToolMode });
-    return createClaudeCode({
+    cached = createClaudeCode({
       defaultSettings: {
         disallowedTools: [...CLAUDE_CODE_DISALLOWED_TOOLS],
         permissionMode: 'bypassPermissions',
@@ -44,6 +50,7 @@ export function attachMcpProvider(
         },
       },
     });
+    return cached;
   });
 }
 
