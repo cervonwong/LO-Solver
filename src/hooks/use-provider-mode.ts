@@ -2,7 +2,11 @@
 
 import { useCallback, useSyncExternalStore } from 'react';
 
-type ProviderMode = 'openrouter-testing' | 'openrouter-production' | 'claude-code';
+type ProviderMode =
+  | 'openrouter-testing'
+  | 'openrouter-production'
+  | 'claude-code-testing'
+  | 'claude-code-production';
 
 const STORAGE_KEY = 'lo-solver-provider-mode';
 const OLD_STORAGE_KEY = 'lo-solver-model-mode';
@@ -10,8 +14,17 @@ const DEFAULT_MODE: ProviderMode = 'openrouter-testing';
 const VALID_MODES: readonly ProviderMode[] = [
   'openrouter-testing',
   'openrouter-production',
-  'claude-code',
+  'claude-code-testing',
+  'claude-code-production',
 ];
+
+export function isClaudeCodeMode(mode: ProviderMode): boolean {
+  return mode === 'claude-code-testing' || mode === 'claude-code-production';
+}
+
+export function isOpenRouterMode(mode: ProviderMode): boolean {
+  return mode === 'openrouter-testing' || mode === 'openrouter-production';
+}
 
 function getSnapshot(): ProviderMode {
   if (typeof window === 'undefined') return DEFAULT_MODE;
@@ -30,6 +43,13 @@ function getSnapshot(): ProviderMode {
   }
 
   const stored = localStorage.getItem(STORAGE_KEY);
+
+  // Migrate from old 'claude-code' value to 'claude-code-testing'
+  if (stored === 'claude-code') {
+    localStorage.setItem(STORAGE_KEY, 'claude-code-testing');
+    return 'claude-code-testing';
+  }
+
   if (stored && VALID_MODES.includes(stored as ProviderMode)) {
     return stored as ProviderMode;
   }

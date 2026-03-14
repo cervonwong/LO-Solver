@@ -10,6 +10,12 @@ import {
   type ReactNode,
 } from 'react';
 
+interface CcCostData {
+  cumulativeTokens: number;
+  cumulativeCost: number;
+  isSubscription: boolean;
+}
+
 interface WorkflowControlContextValue {
   isRunning: boolean;
   hasStarted: boolean;
@@ -18,6 +24,7 @@ interface WorkflowControlContextValue {
   handleReset: () => void;
   requiresKeyEntry: boolean;
   openKeyDialog: () => void;
+  ccCostData: CcCostData | null;
 }
 
 interface RegisterCallbacks {
@@ -25,6 +32,7 @@ interface RegisterCallbacks {
   setHasStarted: (value: boolean) => void;
   setIsAborting: (value: boolean) => void;
   setRequiresKeyEntry: (value: boolean) => void;
+  setCcCostData: (value: CcCostData | null) => void;
   stopRef: React.MutableRefObject<() => void>;
   handleResetRef: React.MutableRefObject<() => void>;
   openKeyDialogRef: React.MutableRefObject<() => void>;
@@ -40,6 +48,7 @@ export function WorkflowControlProvider({ children }: { children: ReactNode }) {
   const [hasStarted, setHasStarted] = useState(false);
   const [isAborting, setIsAborting] = useState(false);
   const [requiresKeyEntry, setRequiresKeyEntry] = useState(false);
+  const [ccCostData, setCcCostData] = useState<CcCostData | null>(null);
   const stopRef = useRef<() => void>(noop);
   const handleResetRef = useRef<() => void>(noop);
   const openKeyDialogRef = useRef<() => void>(noop);
@@ -49,6 +58,7 @@ export function WorkflowControlProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const handleReset = useCallback(() => {
+    setCcCostData(null);
     handleResetRef.current();
   }, []);
 
@@ -64,6 +74,7 @@ export function WorkflowControlProvider({ children }: { children: ReactNode }) {
     handleReset,
     requiresKeyEntry,
     openKeyDialog,
+    ccCostData,
   };
 
   const registerValue: RegisterCallbacks = {
@@ -71,6 +82,7 @@ export function WorkflowControlProvider({ children }: { children: ReactNode }) {
     setHasStarted,
     setIsAborting,
     setRequiresKeyEntry,
+    setCcCostData,
     stopRef,
     handleResetRef,
     openKeyDialogRef,
@@ -142,4 +154,11 @@ export function useRegisterKeyControl(opts: {
   useEffect(() => {
     openKeyDialogRef.current = opts.openKeyDialog;
   }, [opts.openKeyDialog, openKeyDialogRef]);
+}
+
+export function useRegisterCcCostData() {
+  const register = useContext(RegisterContext);
+  if (!register)
+    throw new Error('useRegisterCcCostData must be used within WorkflowControlProvider');
+  return register.setCcCostData;
 }

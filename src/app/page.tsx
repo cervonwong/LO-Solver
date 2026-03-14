@@ -6,14 +6,17 @@ import { MascotProvider, useMascotState } from '@/contexts/mascot-context';
 import {
   useRegisterWorkflowControl,
   useWorkflowControl,
+  useRegisterCcCostData,
 } from '@/contexts/workflow-control-context';
 import { useApiKey } from '@/hooks/use-api-key';
+import { useProviderMode, isClaudeCodeMode } from '@/hooks/use-provider-mode';
 import { useMediaQuery } from '@/hooks/use-media-query';
 import { useExamples } from '@/hooks/use-examples';
 import { useSolverWorkflow } from '@/hooks/use-solver-workflow';
 import { useWorkflowData } from '@/hooks/use-workflow-data';
 import { useWorkflowProgress } from '@/hooks/use-workflow-progress';
 import { useWorkflowToasts } from '@/hooks/use-workflow-toasts';
+import { toast } from 'sonner';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -97,10 +100,27 @@ function SolverPageInner() {
   // Key-guard: auto-open dialog when no key is available, auto-solve after key entry
   const { requiresKeyEntry, openKeyDialog } = useWorkflowControl();
   const [apiKey] = useApiKey();
+  const [providerMode] = useProviderMode();
+  const setCcCostData = useRegisterCcCostData();
   const pendingSolveRef = useRef<string | null>(null);
 
   const guardedHandleSolve = useCallback(
     async (text: string) => {
+      if (isClaudeCodeMode(providerMode)) {
+        try {
+          const res = await fetch('/api/claude-auth');
+          const data = await res.json();
+          if (!data.authenticated) {
+            toast.error('Claude Code is not authenticated. Run `claude login` in your terminal.');
+            return;
+          }
+        } catch {
+          toast.error('Failed to check Claude Code auth status.');
+          return;
+        }
+        await handleSolve(text);
+        return;
+      }
       if (requiresKeyEntry) {
         pendingSolveRef.current = text;
         openKeyDialog();
@@ -108,7 +128,7 @@ function SolverPageInner() {
       }
       await handleSolve(text);
     },
-    [requiresKeyEntry, openKeyDialog, handleSolve],
+    [providerMode, requiresKeyEntry, openKeyDialog, handleSolve],
   );
 
   // Auto-trigger solve when apiKey becomes available after dialog save
@@ -123,6 +143,30 @@ function SolverPageInner() {
   // Derive allParts from messages (wiring between hooks)
   const assistantMessages = messages.filter((m) => m.role === 'assistant');
   const allParts = assistantMessages.flatMap((m) => m.parts ?? []);
+
+  // Bridge cost events from the workflow event stream to the shared context
+  useEffect(() => {
+    const costEvents = allParts.filter(
+      (p) => 'type' in p && (p as { type: string }).type === 'data-cost-update',
+    ) as Array<{
+      type: string;
+      data: {
+        cumulativeCost: number;
+        cumulativeTokens?: number;
+        isSubscription?: boolean;
+      };
+    }>;
+    if (costEvents.length === 0) return;
+    const latest = costEvents[costEvents.length - 1]!.data;
+    if (latest.isSubscription) {
+      setCcCostData({
+        cumulativeTokens: latest.cumulativeTokens ?? 0,
+        cumulativeCost: latest.cumulativeCost,
+        isSubscription: true,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allParts.length]);
 
   const {
     steps,
@@ -281,10 +325,7 @@ function SolverPageInner() {
                       </svg>
                     </CollapsibleTrigger>
                     <CollapsibleContent className="pt-4">
-                      <StepProgress
-                        steps={displaySteps}
-                        onStepClick={handleStepClick}
-                      />
+                      <StepProgress steps={displaySteps} onStepClick={handleStepClick} />
                       {isFailed && (
                         <div className="mt-4 border border-destructive p-4 text-sm text-destructive">
                           <p className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-destructive">

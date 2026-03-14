@@ -9,6 +9,7 @@ import {
   useRegisterKeyControl,
 } from '@/contexts/workflow-control-context';
 import { useApiKey } from '@/hooks/use-api-key';
+import { useProviderMode, isClaudeCodeMode, isOpenRouterMode } from '@/hooks/use-provider-mode';
 import { ProviderModeToggle } from '@/components/provider-mode-toggle';
 import { WorkflowSliders } from '@/components/workflow-sliders';
 import { CreditsBadge } from '@/components/credits-badge';
@@ -29,6 +30,7 @@ function NavBar() {
   const [apiKeyDialogOpen, setApiKeyDialogOpen] = useState(false);
   const [hasServerKey, setHasServerKey] = useState<boolean | null>(null);
   const [apiKey] = useApiKey();
+  const [providerMode] = useProviderMode();
 
   const requiresKeyEntry = !apiKey && hasServerKey === false;
   const openKeyDialog = useCallback(() => setApiKeyDialogOpen(true), []);
@@ -106,8 +108,9 @@ function NavBar() {
         </div>
         <div className="h-5 w-px bg-border" />
         <CreditsBadge
-          onClick={() => setApiKeyDialogOpen(true)}
-          onServerKeyStatus={setHasServerKey}
+          providerMode={providerMode}
+          onClick={isOpenRouterMode(providerMode) ? () => setApiKeyDialogOpen(true) : undefined}
+          onServerKeyStatus={isOpenRouterMode(providerMode) ? setHasServerKey : undefined}
         />
         <div className="h-5 w-px bg-border" />
         <div className="flex items-center gap-2">

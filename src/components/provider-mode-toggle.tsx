@@ -1,14 +1,20 @@
 'use client';
 
-import { useProviderMode } from '@/hooks/use-provider-mode';
+import { toast } from 'sonner';
+import { useProviderMode, isClaudeCodeMode } from '@/hooks/use-provider-mode';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
-type ProviderMode = 'openrouter-testing' | 'openrouter-production' | 'claude-code';
+type ProviderMode =
+  | 'openrouter-testing'
+  | 'openrouter-production'
+  | 'claude-code-testing'
+  | 'claude-code-production';
 
 const OPTIONS: { value: ProviderMode; label: string }[] = [
-  { value: 'openrouter-testing', label: 'Testing ($)' },
-  { value: 'openrouter-production', label: 'Production ($$$)' },
-  { value: 'claude-code', label: 'Claude Code' },
+  { value: 'openrouter-testing', label: 'Test' },
+  { value: 'openrouter-production', label: 'Prod' },
+  { value: 'claude-code-testing', label: 'CC Test' },
+  { value: 'claude-code-production', label: 'CC Prod' },
 ];
 
 export function ProviderModeToggle({ disabled }: { disabled?: boolean }) {
@@ -23,7 +29,17 @@ export function ProviderModeToggle({ disabled }: { disabled?: boolean }) {
         type="single"
         value={mode}
         onValueChange={(v) => {
-          if (v) setMode(v as ProviderMode);
+          if (v) {
+            const newMode = v as ProviderMode;
+            setMode(newMode);
+            const option = OPTIONS.find((o) => o.value === newMode);
+            if (option) {
+              const message = isClaudeCodeMode(newMode)
+                ? `Switched to ${option.label}. Checking authentication...`
+                : `Switched to ${option.label}`;
+              toast(message);
+            }
+          }
         }}
         disabled={disabled ?? false}
         className="gap-0 border border-border"
