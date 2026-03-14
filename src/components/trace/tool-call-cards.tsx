@@ -200,7 +200,21 @@ export function AgentCard({ group, depth = 0 }: AgentCardProps) {
         >
           <span className="flex items-center gap-2 min-w-0">
             <span className="font-medium truncate">{agentStart.data.agentName}</span>
-            <span className="text-muted-foreground shrink-0">({agentStart.data.model})</span>
+            {agentStart.data.model.startsWith('claude-code/') ? (
+              <>
+                <Badge
+                  variant="outline"
+                  className="text-[9px] border-violet-500 text-violet-400 bg-transparent shrink-0"
+                >
+                  CC
+                </Badge>
+                <span className="text-muted-foreground shrink-0">
+                  ({agentStart.data.model.slice('claude-code/'.length)})
+                </span>
+              </>
+            ) : (
+              <span className="text-muted-foreground shrink-0">({agentStart.data.model})</span>
+            )}
             {isActive && <span className="animate-blink text-accent text-[10px]">●</span>}
             {isComplete && (
               <svg
