@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.6
 milestone_name: Claude Code Provider
 status: executing
-stopped_at: Completed 35-01-PLAN.md
-last_updated: "2026-03-14T05:12:37.042Z"
-last_activity: "2026-03-14 - Completed plan 35-01: Backend provider mode expansion"
+stopped_at: Completed 35-03-PLAN.md
+last_updated: "2026-03-14T05:16:54.970Z"
+last_activity: "2026-03-14 - Completed plan 35-03: Test result bug fix and CC badge"
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 12
-  completed_plans: 10
+  completed_plans: 11
 ---
 
 # Project State
@@ -25,9 +25,9 @@ See: .planning/PROJECT.md (updated 2026-03-10)
 ## Current Position
 
 Phase: 35 of 36 (Frontend Integration)
-Plan: 1 of 3 completed in current phase
+Plan: 2 of 3 completed in current phase
 Status: executing
-Last activity: 2026-03-14 - Completed plan 35-01: Backend provider mode expansion
+Last activity: 2026-03-14 - Completed plan 35-03: Test result bug fix and CC badge
 
 ## Performance Metrics
 
@@ -67,6 +67,7 @@ Recent decisions affecting current work:
 - [Phase 35]: Split claude-code into claude-code-testing and claude-code-production for 4-way provider toggle
 - [Phase 35]: Extraction agents: haiku (CC testing) / sonnet (CC production); Reasoning agents: sonnet (CC testing) / opus (CC production)
 - [Phase 35]: Claude Code cost events emit per-call (subscription); OpenRouter at dollar-boundary (pay-per-use)
+- [Phase 35]: CC badge placed in AgentCard (tool-call-cards.tsx) where agent events render, not trace-event-card.tsx
 
 ### Pending Todos
 
@@ -96,9 +97,10 @@ Recent decisions affecting current work:
 | 1 | Fix abort dialog background zoom glitch | 2026-03-10 | d1aacad | [1-fix-abort-dialog-background-zoom-glitch](./quick/1-fix-abort-dialog-background-zoom-glitch/) |
 | 2 | Make vocabulary and rules panel tables horizontally scrollable | 2026-03-14 | 1c72018 | [2-make-vocabulary-and-rules-panel-tables-h](./quick/2-make-vocabulary-and-rules-panel-tables-h/) |
 | Phase 35 P01 | 5min | 2 tasks | 21 files |
+| Phase 35 P03 | 2min | 2 tasks | 2 files |
 
 ## Session Continuity
 
-Last session: 2026-03-14T05:12:37.040Z
-Stopped at: Completed 35-01-PLAN.md
+Last session: 2026-03-14T05:16:54.968Z
+Stopped at: Completed 35-03-PLAN.md
 Resume file: None

@@ -34,7 +34,7 @@ Requirements for Claude Code provider integration. Each maps to roadmap phases.
 
 - [x] **UI-01**: Three-way provider selector replaces binary model mode toggle
 - [ ] **UI-02**: API key dialog hidden when Claude Code mode is selected
-- [ ] **UI-03**: Auth status indicator shows Claude Code authentication state
+- [x] **UI-03**: Auth status indicator shows Claude Code authentication state
 
 ### Evaluation
 
@@ -84,7 +84,7 @@ Requirements for Claude Code provider integration. Each maps to roadmap phases.
 | AUTH-03 | Phase 33 | Complete |
 | UI-01 | Phase 35 | Complete |
 | UI-02 | Phase 35 | Pending |
-| UI-03 | Phase 35 | Pending |
+| UI-03 | Phase 35 | Complete |
 | EVAL-01 | Phase 36 | Pending |
 | EVAL-02 | Phase 36 | Pending |
 
