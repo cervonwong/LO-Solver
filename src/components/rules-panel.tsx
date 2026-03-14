@@ -122,83 +122,85 @@ export function RulesPanel({ rules, activityEvents, isRunning }: RulesPanelProps
               : 'No rules yet.'}
           </div>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-10 text-xs uppercase tracking-wider text-muted-foreground">
-                  #
-                </TableHead>
-                <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">
-                  Title
-                </TableHead>
-                <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">
-                  Description
-                </TableHead>
-                <TableHead className="w-20 text-xs uppercase tracking-wider text-muted-foreground">
-                  Confidence
-                </TableHead>
-                <TableHead className="w-14 text-xs uppercase tracking-wider text-muted-foreground">
-                  Status
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rules.map((rule, index) => {
-                const isExpanded = expandedRows.has(rule.title);
-                const confidenceUpper = rule.confidence?.toUpperCase() ?? '';
-                const variant = CONFIDENCE_VARIANT[confidenceUpper] ?? 'secondary';
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-10 text-xs uppercase tracking-wider text-muted-foreground">
+                    #
+                  </TableHead>
+                  <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">
+                    Title
+                  </TableHead>
+                  <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">
+                    Description
+                  </TableHead>
+                  <TableHead className="w-20 text-xs uppercase tracking-wider text-muted-foreground">
+                    Confidence
+                  </TableHead>
+                  <TableHead className="w-14 text-xs uppercase tracking-wider text-muted-foreground">
+                    Status
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {rules.map((rule, index) => {
+                  const isExpanded = expandedRows.has(rule.title);
+                  const confidenceUpper = rule.confidence?.toUpperCase() ?? '';
+                  const variant = CONFIDENCE_VARIANT[confidenceUpper] ?? 'secondary';
 
-                return (
-                  <TableRow
-                    key={rule.title}
-                    data-rule-title={rule.title}
-                    className="animate-slide-in-row cursor-pointer select-none transition-all"
-                    onClick={() => toggleRow(rule.title)}
-                  >
-                    <TableCell className="align-top text-xs text-muted-foreground">
-                      {index + 1}
-                    </TableCell>
-                    <TableCell className="align-top text-xs">
-                      <div className="flex items-center gap-1.5">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="12"
-                          height="12"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          className={`shrink-0 transition-transform duration-150 ${isExpanded ? 'rotate-90' : ''}`}
-                        >
-                          <polyline points="9 18 15 12 9 6" />
-                        </svg>
-                        {rule.title}
-                      </div>
-                    </TableCell>
-                    <TableCell className="align-top text-xs text-muted-foreground">
-                      {isExpanded ? (
-                        <span className="whitespace-pre-wrap">{rule.description}</span>
-                      ) : (
-                        truncate(rule.description, 60)
-                      )}
-                    </TableCell>
-                    <TableCell className="align-top">
-                      {rule.confidence && (
-                        <Badge variant={variant} className="text-xs">
-                          {rule.confidence.toUpperCase()}
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="align-top">
-                      <TestStatusIcon status={rule.testStatus} />
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+                  return (
+                    <TableRow
+                      key={rule.title}
+                      data-rule-title={rule.title}
+                      className="animate-slide-in-row cursor-pointer select-none transition-all"
+                      onClick={() => toggleRow(rule.title)}
+                    >
+                      <TableCell className="align-top text-xs text-muted-foreground">
+                        {index + 1}
+                      </TableCell>
+                      <TableCell className="align-top text-xs">
+                        <div className="flex items-center gap-1.5">
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="12"
+                            height="12"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className={`shrink-0 transition-transform duration-150 ${isExpanded ? 'rotate-90' : ''}`}
+                          >
+                            <polyline points="9 18 15 12 9 6" />
+                          </svg>
+                          {rule.title}
+                        </div>
+                      </TableCell>
+                      <TableCell className="align-top text-xs text-muted-foreground">
+                        {isExpanded ? (
+                          <span className="whitespace-pre-wrap">{rule.description}</span>
+                        ) : (
+                          truncate(rule.description, 60)
+                        )}
+                      </TableCell>
+                      <TableCell className="align-top">
+                        {rule.confidence && (
+                          <Badge variant={variant} className="text-xs">
+                            {rule.confidence.toUpperCase()}
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="align-top">
+                        <TestStatusIcon status={rule.testStatus} />
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
         )}
       </ScrollArea>
     </div>

@@ -54,38 +54,40 @@ export function VocabularyPanel({ vocabulary, activityEvents, isRunning }: Vocab
               : 'No vocabulary entries yet.'}
           </div>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">
-                  Form
-                </TableHead>
-                <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">
-                  Meaning
-                </TableHead>
-                <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">
-                  Type
-                </TableHead>
-                <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">
-                  Notes
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {vocabulary.map((entry) => (
-                <TableRow key={entry.foreignForm} className="animate-slide-in-row">
-                  <TableCell className="text-xs">{entry.foreignForm}</TableCell>
-                  <TableCell className="text-xs">{entry.meaning}</TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
-                    {entry.type ?? '\u2014'}
-                  </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
-                    {entry.notes ?? '\u2014'}
-                  </TableCell>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">
+                    Form
+                  </TableHead>
+                  <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">
+                    Meaning
+                  </TableHead>
+                  <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">
+                    Type
+                  </TableHead>
+                  <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">
+                    Notes
+                  </TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {vocabulary.map((entry) => (
+                  <TableRow key={entry.foreignForm} className="animate-slide-in-row">
+                    <TableCell className="text-xs">{entry.foreignForm}</TableCell>
+                    <TableCell className="text-xs">{entry.meaning}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {entry.type ?? '\u2014'}
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {entry.notes ?? '\u2014'}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         )}
       </ScrollArea>
     </div>
