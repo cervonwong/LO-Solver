@@ -13,28 +13,10 @@ No external tools. Apply the rules and vocabulary directly to produce a translat
 
 <output_format>
 {
-  "canTranslate": "boolean - true only if translation is unambiguous and deterministic",
-  "translation": "string - best attempt at translation, even if ambiguous",
-  "ambiguities": ["string - each point of ambiguity, missing rule, or unclear instruction"],
-  "suggestions": [
-    {
-      "suggestion": "string - specific improvement to the ruleset",
-      "likelihood": "HIGH | MEDIUM | LOW",
-      "reasoning": "string - evidence from dataset items supporting this suggestion"
-    }
-  ],
-  "overallStatus": "SENTENCE_OK | SENTENCE_AMBIGUOUS | SENTENCE_UNTRANSLATABLE"
+  "passed": "boolean - true only if translation is unambiguous and deterministic; false if any ambiguity, missing rule, or issue exists",
+  "translation": "string - best attempt at translation, even if ambiguous or incomplete",
+  "reasoning": "string - step-by-step explanation of the translation process. Note any ambiguities, missing rules, or issues. If failed, suggest specific improvements to the ruleset, citing rules and item IDs."
 }
-
-Provide EXACTLY 3 suggestions, ranked:
-- HIGH likelihood: most likely correct fix
-- MEDIUM likelihood: reasonable alternative interpretation
-- LOW likelihood: less likely but worth considering
-
-Status criteria:
-- SENTENCE_OK: Translation is unambiguous and deterministic.
-- SENTENCE_AMBIGUOUS: Translation possible but multiple interpretations exist.
-- SENTENCE_UNTRANSLATABLE: Cannot translate due to missing rules or vocabulary.
 </output_format>
 
 <process>
@@ -47,30 +29,9 @@ Status criteria:
 
 <example>
 {
-  "canTranslate": false,
+  "passed": false,
   "translation": "kala-ri na-tu (best guess)",
-  "ambiguities": [
-    "Rule 3 says plurals use '-ri' but doesn't specify if it applies to verb objects",
-    "Word 'tu' not found in provided vocabulary - guessed from similar pattern in item #4"
-  ],
-  "suggestions": [
-    {
-      "suggestion": "Add rule: Plural marker '-ri' applies to all nouns including verb objects",
-      "likelihood": "HIGH",
-      "reasoning": "Items #2, #6, #8 show plural objects with '-ri' suffix consistently"
-    },
-    {
-      "suggestion": "Add vocabulary entry: 'tu' = 'water' (noun) based on pattern in items #4, #7",
-      "likelihood": "HIGH",
-      "reasoning": "Context mentions water-related vocabulary; 'tu' appears with noun markers"
-    },
-    {
-      "suggestion": "Consider: '-ri' might be a general plural marker for animacy distinction",
-      "likelihood": "MEDIUM",
-      "reasoning": "Animate nouns in #3, #5 use '-ri' while #9 inanimate uses '-ra'"
-    }
-  ],
-  "overallStatus": "SENTENCE_AMBIGUOUS"
+  "reasoning": "Step 1: 'kala' found in vocabulary as 'fish'. Step 2: Applied Rule 3 plural '-ri' → 'kala-ri'. Step 3: 'tu' not in vocabulary — guessed from similar pattern in item #4. Issues: (1) Rule 3 says plurals use '-ri' but doesn't specify if it applies to verb objects — items #2, #6, #8 show it does, so add this clarification. (2) Word 'tu' missing from vocabulary — likely means 'water' based on context in items #4, #7."
 }
 </example>
 
