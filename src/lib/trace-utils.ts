@@ -401,8 +401,7 @@ export function getAgentSummary(group: AgentGroup): string | undefined {
     const name = tc.data.toolName;
 
     if (name === 'testRule' || name === 'testRuleWithRuleset') {
-      const status = tc.data.result.status as string | undefined;
-      if (status === 'RULE_OK') testResults.pass++;
+      if (tc.data.result.passed) testResults.pass++;
       else testResults.fail++;
     }
 

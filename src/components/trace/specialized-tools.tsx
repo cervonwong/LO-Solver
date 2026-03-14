@@ -137,8 +137,7 @@ function SentenceTestToolCard({ toolCall }: SentenceTestToolCardProps) {
   const [open, setOpen] = useState(false);
   const sentenceId = (toolCall.data.input.sentenceId ?? toolCall.data.input.id ?? '?') as string;
   const result = toolCall.data.result;
-  const overallStatus = result.overallStatus as string | undefined;
-  const passed = overallStatus === 'SENTENCE_OK';
+  const passed = (result.passed as boolean | undefined) ?? false;
   const details = result.details as string | undefined;
   const expected = result.expected as string | undefined;
   const actual = result.actual as string | undefined;
@@ -192,17 +191,8 @@ export function BulkToolCallGroup({ toolName, toolCalls, depth }: BulkToolCallGr
   let failCount = 0;
   if (isTest) {
     for (const tc of toolCalls) {
-      const isRule = isRuleTestTool(tc.data.toolName);
-      if (isRule) {
-        const status = tc.data.result.status as string | undefined;
-        if (status === 'RULE_OK') passCount++;
-        else failCount++;
-      } else {
-        // Sentence test uses overallStatus field
-        const overallStatus = tc.data.result.overallStatus as string | undefined;
-        if (overallStatus === 'SENTENCE_OK') passCount++;
-        else failCount++;
-      }
+      if (tc.data.result.passed) passCount++;
+      else failCount++;
     }
   }
 
@@ -244,10 +234,8 @@ function RuleTestCard({ toolCall }: RuleTestCardProps) {
   const [open, setOpen] = useState(false);
   const title = (toolCall.data.input.title as string) || 'Unknown rule';
   const result = toolCall.data.result;
-  const status = result.status as string | undefined;
-  const passed = status === 'RULE_OK';
+  const passed = (result.passed as boolean | undefined) ?? false;
   const reasoning = result.reasoning as string | undefined;
-  const recommendation = result.recommendation as string | undefined;
 
   return (
     <RawJsonToggle data={toolCall.data}>
@@ -267,7 +255,6 @@ function RuleTestCard({ toolCall }: RuleTestCardProps) {
           className="data-[state=closed]:hidden pl-6 pr-2 py-1 text-[11px] text-muted-foreground"
         >
           {reasoning && <p>{reasoning}</p>}
-          {recommendation && <p className="mt-1 italic">{recommendation}</p>}
         </CollapsibleContent>
       </Collapsible>
     </RawJsonToggle>
