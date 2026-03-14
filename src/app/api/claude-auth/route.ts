@@ -11,7 +11,7 @@ export async function GET() {
     });
 
     const parsed = JSON.parse(stdout);
-    const authenticated = parsed?.authenticated === true;
+    const authenticated = parsed?.loggedIn === true;
 
     return NextResponse.json({
       authenticated,
