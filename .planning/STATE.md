@@ -4,8 +4,8 @@ milestone: null
 milestone_name: null
 status: idle
 stopped_at: null
-last_updated: "2026-03-14T14:32:11Z"
-last_activity: "2026-03-14 - Completed quick task 8: Change CC testing configuration to use haiku"
+last_updated: "2026-03-14T14:32:44Z"
+last_activity: "2026-03-14 - Completed quick task 7: Fix vocabulary and rules panel table horizontal scrolling"
 progress:
   total_phases: 0
   completed_phases: 0
@@ -64,10 +64,11 @@ No active milestone. v1.6 shipped 2026-03-14.
 | 4 | Fix SentenceTestToolCard field names for tool rendering | 2026-03-14 | b12667f | [4-fix-tool-rendering-for-testsentence-and-](./quick/4-fix-tool-rendering-for-testsentence-and-/) |
 | 5 | Wire extractTokensFromResult into step files for token count display | 2026-03-14 | 9be661a | [5-fix-token-count-showing-0-in-claude-code](./quick/5-fix-token-count-showing-0-in-claude-code/) |
 | 6 | Fix Mastra observability deprecation warning | 2026-03-14 | 49aa2ef | [6-fix-mastra-observability-warning](./quick/6-fix-mastra-observability-warning/) |
+| 7 | Fix vocabulary and rules panel table horizontal scrolling | 2026-03-14 | 4360338 | [7-fix-vocabulary-and-rules-ui-panel-table-](./quick/7-fix-vocabulary-and-rules-ui-panel-table-/) |
 | 8 | Change CC testing configuration to use haiku | 2026-03-14 | 00537d5 | [8-change-cc-testing-configuration-to-use-h](./quick/8-change-cc-testing-configuration-to-use-h/) |
 
 ## Session Continuity
 
 Last session: 2026-03-14
-Stopped at: Completed quick task 8 (change CC testing configuration to use haiku)
+Stopped at: Completed quick task 7 (fix vocabulary and rules panel table horizontal scrolling)
 Resume file: None
