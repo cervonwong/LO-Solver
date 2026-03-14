@@ -12,7 +12,7 @@ export const verifierOrchestratorAgent = createWorkflowAgent({
   name: '[Step 3] Verifier Orchestrator Agent',
   instructions: VERIFIER_ORCHESTRATOR_INSTRUCTIONS,
   productionModel: 'google/gemini-3-flash-preview',
-  claudeCodeModel: 'opus',
+  claudeCodeProductionModel: 'opus',
   tools: {
     testRule: testRuleTool,
     testSentence: testSentenceTool,

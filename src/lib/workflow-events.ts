@@ -264,6 +264,8 @@ export interface CostUpdateEvent {
   type: 'data-cost-update';
   data: {
     cumulativeCost: number;
+    cumulativeTokens?: number;
+    isSubscription?: boolean;
     timestamp: string;
   };
 }

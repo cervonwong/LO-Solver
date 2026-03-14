@@ -1,6 +1,7 @@
 import type { Agent } from '@mastra/core/agent';
 import type { FullOutput } from '@mastra/core/stream';
 import { formatTimestamp } from './logging-utils';
+import { isClaudeCodeMode, type ProviderMode } from '../openrouter';
 
 /**
  * What constitutes a valid (non-empty) response from the agent.
@@ -48,10 +49,11 @@ export async function generateWithRetry<TOptions extends Parameters<Agent['gener
     options && typeof options === 'object' && 'requestContext' in options
       ? (options as Record<string, unknown>).requestContext
       : undefined;
-  const isClaudeCodeGen =
+  const providerModeValue =
     requestContext && typeof requestContext === 'object' && 'get' in requestContext
-      ? (requestContext as { get: (key: string) => unknown }).get('provider-mode') === 'claude-code'
-      : false;
+      ? ((requestContext as { get: (key: string) => unknown }).get('provider-mode') as ProviderMode | undefined)
+      : undefined;
+  const isClaudeCodeGen = providerModeValue ? isClaudeCodeMode(providerModeValue) : false;
   const timeoutMs = explicitTimeoutMs ?? (isClaudeCodeGen ? 1_200_000 : 600_000);
   let lastError: Error | undefined;
 
@@ -232,11 +234,11 @@ export async function streamWithRetry<TOptions extends Parameters<Agent['generat
     options && typeof options === 'object' && 'requestContext' in options
       ? (options as Record<string, unknown>).requestContext
       : undefined;
-  const providerMode =
+  const streamProviderMode =
     requestContext && typeof requestContext === 'object' && 'get' in requestContext
-      ? (requestContext as { get: (key: string) => unknown }).get('provider-mode')
+      ? ((requestContext as { get: (key: string) => unknown }).get('provider-mode') as ProviderMode | undefined)
       : undefined;
-  const isClaudeCode = providerMode === 'claude-code';
+  const isClaudeCode = streamProviderMode ? isClaudeCodeMode(streamProviderMode) : false;
   // Claude Code spawns subprocesses per call — use 20min default vs 10min for API calls
   const timeoutMs = explicitTimeoutMs ?? (isClaudeCode ? 1_200_000 : 600_000);
 

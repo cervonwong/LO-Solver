@@ -75,6 +75,9 @@ export interface WorkflowRequestContext {
   /** Cumulative API cost in dollars across all agent calls in this workflow step */
   'cumulative-cost': number;
 
+  /** Cumulative token count across all agent calls in this workflow step */
+  'cumulative-tokens': number;
+
   /** Per-request OpenRouter provider (set when user provides their own API key) */
   'openrouter-provider'?: OpenRouterProvider;
 

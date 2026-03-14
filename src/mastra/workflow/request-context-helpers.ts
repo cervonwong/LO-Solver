@@ -13,7 +13,7 @@ import type { VocabularyEntry } from './vocabulary-tools';
 import type { Mastra } from '@mastra/core/mastra';
 import type { ToolStream } from '@mastra/core/tools';
 import { generateEventId } from '@/lib/workflow-events';
-import { openrouter, type OpenRouterProvider } from '../openrouter';
+import { openrouter, isClaudeCodeMode, type OpenRouterProvider, type ProviderMode } from '../openrouter';
 
 /**
  * Type for the tool execute context that includes requestContext, mastra, and writer.
@@ -189,9 +189,16 @@ export async function emitToolTraceEvent(
 /** Shape of the cost-related metadata nested in agent results. */
 interface AgentResultCostInfo {
   steps?: Array<{
-    providerMetadata?: { openrouter?: { usage?: { cost?: number } } } | undefined;
+    providerMetadata?: {
+      openrouter?: { usage?: { cost?: number } };
+      'claude-code'?: { costUsd?: number };
+    } | undefined;
   }>;
-  providerMetadata?: { openrouter?: { usage?: { cost?: number } } } | undefined;
+  providerMetadata?: {
+    openrouter?: { usage?: { cost?: number } };
+    'claude-code'?: { costUsd?: number };
+  } | undefined;
+  usage?: { inputTokens?: number | undefined; outputTokens?: number | undefined };
 }
 
 /**
@@ -211,7 +218,30 @@ export function extractCostFromResult(result: AgentResultCostInfo): number {
     const topCost = result.providerMetadata?.openrouter?.usage?.cost;
     if (typeof topCost === 'number') callCost = topCost;
   }
+  // Claude Code path (per-step)
+  if (callCost === 0 && result.steps && Array.isArray(result.steps)) {
+    for (const step of result.steps) {
+      const ccCost = step?.providerMetadata?.['claude-code']?.costUsd;
+      if (typeof ccCost === 'number') callCost += ccCost;
+    }
+  }
+  // Claude Code path (top-level)
+  if (callCost === 0) {
+    const ccCost = result.providerMetadata?.['claude-code']?.costUsd;
+    if (typeof ccCost === 'number') callCost = ccCost;
+  }
   return callCost;
+}
+
+/**
+ * Extract token counts from an agent response.
+ * Reads usage.inputTokens and usage.outputTokens, defaulting to 0.
+ */
+export function extractTokensFromResult(result: AgentResultCostInfo): { input: number; output: number } {
+  return {
+    input: result.usage?.inputTokens ?? 0,
+    output: result.usage?.outputTokens ?? 0,
+  };
 }
 
 /** Typed read/write interface for RequestContext in cost-tracking helpers. */
@@ -224,34 +254,58 @@ type RequestContextReadWrite = {
 };
 
 /**
- * Update cumulative cost in a RequestContext and emit data-cost-update events
- * at each $1 boundary crossing.
+ * Update cumulative cost in a RequestContext and emit data-cost-update events.
+ * For OpenRouter: emits at each $1 boundary crossing.
+ * For Claude Code: emits on every call when callCost > 0 (subscription model).
  * Must be called with the full RequestContext (has set()) from step files.
  */
 export async function updateCumulativeCost(
   requestContext: RequestContextReadWrite,
   writer: StepWriter | undefined,
   callCost: number,
+  callTokens?: { input: number; output: number },
 ): Promise<void> {
-  if (callCost <= 0) return;
+  if (callCost <= 0 && (!callTokens || (callTokens.input === 0 && callTokens.output === 0))) return;
 
   const prevCost = (requestContext.get('cumulative-cost') as number) ?? 0;
   const newCost = prevCost + callCost;
   requestContext.set('cumulative-cost', newCost);
 
-  // Check if we crossed a $1 boundary
-  const prevBucket = Math.floor(prevCost);
-  const newBucket = Math.floor(newCost);
-  if (newBucket > prevBucket) {
-    // Emit one event for each $1 boundary crossed (handles >$1 single calls)
-    for (let i = prevBucket + 1; i <= newBucket; i++) {
+  // Accumulate tokens
+  const prevTokens = (requestContext.get('cumulative-tokens') as number) ?? 0;
+  const newTokens = prevTokens + (callTokens ? callTokens.input + callTokens.output : 0);
+  requestContext.set('cumulative-tokens', newTokens);
+
+  const providerMode = requestContext.get('provider-mode') as ProviderMode | undefined;
+  const isSubscription = providerMode ? isClaudeCodeMode(providerMode) : false;
+
+  if (isSubscription) {
+    // Claude Code: emit on every call when cost > 0
+    if (callCost > 0) {
       await emitTraceEvent(writer, {
         type: 'data-cost-update',
         data: {
-          cumulativeCost: i,
+          cumulativeCost: newCost,
+          cumulativeTokens: newTokens,
+          isSubscription: true,
           timestamp: new Date().toISOString(),
         },
       });
+    }
+  } else {
+    // OpenRouter: emit at each $1 boundary crossing
+    const prevBucket = Math.floor(prevCost);
+    const newBucket = Math.floor(newCost);
+    if (newBucket > prevBucket) {
+      for (let i = prevBucket + 1; i <= newBucket; i++) {
+        await emitTraceEvent(writer, {
+          type: 'data-cost-update',
+          data: {
+            cumulativeCost: i,
+            timestamp: new Date().toISOString(),
+          },
+        });
+      }
     }
   }
 }

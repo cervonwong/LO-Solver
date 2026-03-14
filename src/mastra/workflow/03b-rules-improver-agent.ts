@@ -21,7 +21,7 @@ export const rulesImproverAgent = createWorkflowAgent({
   name: '[Step 3] Rules Improver Agent',
   instructions: { role: 'system', content: instructions },
   productionModel: 'google/gemini-3-flash-preview',
-  claudeCodeModel: 'opus',
+  claudeCodeProductionModel: 'opus',
   tools: {
     ...vocabularyTools,
     testRule: testRuleWithRulesetTool,

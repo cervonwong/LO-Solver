@@ -11,7 +11,7 @@ export const ruleTesterAgent = createWorkflowAgent({
   name: '[Step 3] Rule Tester Agent',
   instructions: RULE_TESTER_INSTRUCTIONS,
   productionModel: 'openai/gpt-5-mini',
-  claudeCodeModel: 'sonnet',
+  claudeCodeTestingModel: 'haiku',
   useUnicodeNormalizer: false,
   requestContextSchema: z.object({
     'provider-mode': z.enum(['openrouter-testing', 'openrouter-production', 'claude-code-testing', 'claude-code-production']),

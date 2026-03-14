@@ -7,5 +7,5 @@ export const verifierFeedbackExtractorAgent = createWorkflowAgent({
   name: '[Step 3] Verifier Feedback Extractor Agent',
   instructions: { role: 'system', content: VERIFIER_FEEDBACK_EXTRACTOR_INSTRUCTIONS },
   productionModel: 'openai/gpt-5-mini',
-  claudeCodeModel: 'sonnet',
+  claudeCodeTestingModel: 'haiku',
 });

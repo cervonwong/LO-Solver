@@ -1,6 +1,7 @@
 import { toAISdkStream } from '@mastra/ai-sdk';
 import { generateText, createUIMessageStream, createUIMessageStreamResponse } from 'ai';
 import { claudeCode } from '@/mastra/claude-code-provider';
+import { isClaudeCodeMode, isOpenRouterMode, type ProviderMode } from '@/mastra/openrouter';
 import { mastra } from '@/mastra';
 import { activeRuns } from './active-runs';
 
@@ -12,10 +13,10 @@ export async function POST(req: Request) {
   // Extract API key from inputData — key stays in inputData for the workflow schema
   // but we check availability here for early rejection
   const apiKey: string | undefined = params.inputData?.apiKey;
-  const providerMode = params.inputData?.providerMode ?? 'openrouter-testing';
+  const providerMode = (params.inputData?.providerMode ?? 'openrouter-testing') as ProviderMode;
 
   // OpenRouter modes require an API key
-  if (providerMode !== 'claude-code' && !apiKey && !process.env.OPENROUTER_API_KEY) {
+  if (isOpenRouterMode(providerMode) && !apiKey && !process.env.OPENROUTER_API_KEY) {
     return new Response(JSON.stringify({ error: 'No API key provided' }), {
       status: 401,
       headers: { 'Content-Type': 'application/json' },
@@ -23,7 +24,7 @@ export async function POST(req: Request) {
   }
 
   // Claude Code auth gate: verify authentication before starting the workflow
-  if (providerMode === 'claude-code') {
+  if (isClaudeCodeMode(providerMode)) {
     try {
       await generateText({
         model: claudeCode('sonnet'),

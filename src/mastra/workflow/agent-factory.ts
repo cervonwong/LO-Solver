@@ -1,7 +1,7 @@
 import { Agent } from '@mastra/core/agent';
 import { UnicodeNormalizer } from '@mastra/core/processors';
 import { claudeCode, type ClaudeCodeProvider } from '../claude-code-provider';
-import { TESTING_MODEL, type ProviderMode } from '../openrouter';
+import { TESTING_MODEL, type ProviderMode, isClaudeCodeMode } from '../openrouter';
 import { getOpenRouterProvider } from './request-context-helpers';
 
 // ToolsInput is not publicly re-exported from @mastra/core; use Record<string, any> as equivalent.
@@ -24,8 +24,10 @@ export interface WorkflowAgentConfig {
   tools?: ToolsInput;
   /** Whether to add UnicodeNormalizer input processor. Defaults to true. */
   useUnicodeNormalizer?: boolean;
-  /** Claude Code model shortcut ('opus', 'sonnet', 'haiku'). Defaults to 'sonnet'. */
-  claudeCodeModel?: string;
+  /** Claude Code model shortcut for testing mode ('opus', 'sonnet', 'haiku'). Defaults to 'sonnet'. */
+  claudeCodeTestingModel?: string;
+  /** Claude Code model shortcut for production mode ('opus', 'sonnet', 'haiku'). Defaults to 'sonnet'. */
+  claudeCodeProductionModel?: string;
   /** Zod schema for requestContext validation (tester agents only). */
   requestContextSchema?: import('zod').ZodType<any>;
 }
@@ -43,7 +45,8 @@ export function createWorkflowAgent(config: WorkflowAgentConfig): Agent {
     instructions,
     productionModel,
     testingModel = TESTING_MODEL,
-    claudeCodeModel = 'sonnet',
+    claudeCodeTestingModel = 'sonnet',
+    claudeCodeProductionModel = 'sonnet',
     tools = {},
     useUnicodeNormalizer = true,
     requestContextSchema,
@@ -55,17 +58,20 @@ export function createWorkflowAgent(config: WorkflowAgentConfig): Agent {
     instructions,
     model: ({ requestContext }) => {
       const providerMode = requestContext?.get('provider-mode') as ProviderMode | undefined;
-      if (providerMode === 'claude-code') {
+      if (providerMode && isClaudeCodeMode(providerMode)) {
+        const ccModel = providerMode === 'claude-code-testing'
+          ? claudeCodeTestingModel
+          : claudeCodeProductionModel;
         // Use factory to get provider (factory caches internally per attachMcpProvider call)
         const providerFactory = requestContext?.get('claude-code-provider-factory') as
           | (() => ClaudeCodeProvider)
           | undefined;
         if (providerFactory) {
           const provider = providerFactory();
-          return provider(claudeCodeModel);
+          return provider(ccModel);
         }
         // Fall back to singleton (for tool-free agents)
-        return claudeCode(claudeCodeModel);
+        return claudeCode(ccModel);
       }
       // OpenRouter path (unchanged logic)
       const modelId = providerMode === 'openrouter-production' ? productionModel : testingModel;

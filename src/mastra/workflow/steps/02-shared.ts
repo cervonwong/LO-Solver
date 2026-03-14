@@ -3,7 +3,7 @@ import { RequestContext } from '@mastra/core/request-context';
 import type { VocabularyEntry } from '../vocabulary-tools';
 import type { WorkflowRequestContext, DraftStore, StepWriter } from '../request-context-types';
 import type { Rule } from '../request-context-types';
-import type { ProviderMode } from '../../openrouter';
+import { isClaudeCodeMode, type ProviderMode } from '../../openrouter';
 import type { StepTiming } from '../logging-utils';
 import type { StepId } from '@/lib/workflow-events';
 import { createMcpToolServer } from '../../mcp/mcp-tool-bridge';
@@ -30,7 +30,7 @@ export function attachMcpProvider(
   providerMode: ProviderMode,
   testToolMode: 'committed' | 'draft',
 ): void {
-  if (providerMode !== 'claude-code') return;
+  if (!isClaudeCodeMode(providerMode)) return;
   // Cache the provider in the closure so repeated model() calls within a single
   // generate() reuse the same MCP server (model resolver fires per tool-use step).
   // Each attachMcpProvider call creates a new closure, so separate generate() calls
