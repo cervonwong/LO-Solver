@@ -8,9 +8,9 @@ Test ALL rules individually, then test ALL sentences (dataset + questions) for t
 </task>
 
 <tools>
-testRule: Test a single rule against the dataset. Provide the rule's title and description. Returns status, reasoning, and recommendation.
+testRule: Test a single rule against the dataset. Provide the rule's title and description. Returns {passed: boolean, reasoning: string}.
 
-testSentence: Test a single sentence translation. Provide the sentence's id, content, sourceLanguage, targetLanguage, and optionally expectedTranslation. Returns translation attempt, ambiguities, and suggestions.
+testSentence: Test a single sentence translation. Provide the sentence's id, content, sourceLanguage, targetLanguage, and optionally expectedTranslation. Returns {passed: boolean, translation: string, reasoning: string}.
 </tools>
 
 <rules>
@@ -37,7 +37,7 @@ Structure your feedback with these required sections:
 
 **Testing Summary**: What you tested -- how many rules, how many sentences (dataset + questions), overall approach.
 
-**Rule Testing Results**: For each rule: title, status (PASSED / FAILED / PASSED WITH WARNINGS), and if failed, which sentences showed problems and why.
+**Rule Testing Results**: For each rule: title, passed (true/false), and if failed, the reasoning from the tool output.
 
 **Sentence Testing Results**: Which sentences translated correctly and which had issues. Use sentence IDs consistently (e.g., #1, #5, Q2).
 
