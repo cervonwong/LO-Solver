@@ -5,7 +5,7 @@ milestone_name: Claude Code Provider
 status: executing
 stopped_at: Completed 34-02-PLAN.md (Phase 34 complete)
 last_updated: "2026-03-14T03:59:44.062Z"
-last_activity: 2026-03-14 — Completed 34-02 Workflow Step Wiring and E2E Validation
+last_activity: 2026-03-14 - Completed quick task 2: Make vocabulary and rules panel tables horizontally scrollable
 progress:
   total_phases: 4
   completed_phases: 2
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-03-10)
 Phase: 34 of 36 (MCP Tool Bridge)
 Plan: 2 of 2 completed in current phase (Phase 34 complete)
 Status: executing
-Last activity: 2026-03-14 — Completed 34-02 Workflow Step Wiring and E2E Validation
+Last activity: 2026-03-14 - Completed quick task 2: Make vocabulary and rules panel tables horizontally scrollable
 
 ## Performance Metrics
 
@@ -85,6 +85,13 @@ Recent decisions affecting current work:
 - ~~MCP bridge for tool-using agents is MEDIUM confidence~~ — resolved: full E2E solve validated through Claude Code with all 14 MCP tools (Phase 34 complete)
 - OAuth race condition (#27933) — use `setup-token` instead of `claude login`
 - ~~Structured output via Claude Code streaming returns empty responses~~ — resolved: streamWithRetry delegates to generateWithRetry for claude-code + structuredOutput (PROV-04 complete)
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 1 | Fix abort dialog background zoom glitch | 2026-03-10 | d1aacad | [1-fix-abort-dialog-background-zoom-glitch](./quick/1-fix-abort-dialog-background-zoom-glitch/) |
+| 2 | Make vocabulary and rules panel tables horizontally scrollable | 2026-03-14 | 1c72018 | [2-make-vocabulary-and-rules-panel-tables-h](./quick/2-make-vocabulary-and-rules-panel-tables-h/) |
 
 ## Session Continuity
 
