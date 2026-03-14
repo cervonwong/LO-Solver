@@ -1,5 +1,29 @@
 # Milestones
 
+## v1.6 Claude Code Provider (Shipped: 2026-03-14)
+
+**Phases:** 4 | **Plans:** 14 | **LOC:** 15,904 TypeScript
+**Timeline:** 4 days (2026-03-11 → 2026-03-14)
+**Git range:** 1f8eca3..b77b379 (98 files changed, +7,618 / -423)
+
+**Delivered:** Claude Code as an alternative model provider via `ai-sdk-provider-claude-code`, with MCP tool bridge for all 14 Mastra tools, 4-way provider toggle (OpenRouter/Claude Code x Testing/Production), auth gate, cost tracking, and eval harness cross-provider benchmarking.
+
+**Key accomplishments:**
+1. Claude Code AI SDK provider with auth gate, error handling, and structured output fallback
+2. MCP tool bridge wrapping all 14 Mastra tools for Claude Code agent tool calls via in-process MCP server
+3. 4-way provider toggle (OR Test/Prod, CC Test/Prod) with tier-based model resolution (haiku/sonnet/opus)
+4. Frontend auth status indicator, "Subscription" cost label, and CC badge on agent trace events
+5. Eval harness `--provider` flag for cross-provider benchmarking with zero-shot Claude Code support
+6. Provider filter dropdown in eval results viewer for cross-provider comparison
+
+### Known Gaps
+
+Tech debt (non-blocking):
+- `extractTokensFromResult` exported but never called — CC badge shows "0 tokens" alongside correct cost
+- Rules CRUD tools registered on verifier MCP server but intentionally unused (by design)
+
+---
+
 ## v1.5 Refactor & Prompt Engineering (Shipped: 2026-03-10)
 
 **Phases:** 6 | **Plans:** 11 | **LOC:** 14,751 TypeScript

@@ -2,7 +2,7 @@
 
 ## What This Is
 
-LO-Solver is an AI-powered system for solving Linguistics Olympiad Rosetta Stone problems. It has two solver implementations: a **Mastra workflow** (Next.js frontend, OpenRouter LLMs, real-time UI) and a **Claude Code native solver** (subagent-based, terminal-only, file-based state). Both use the same multi-step pipeline: extract structure, generate multi-perspective linguistic hypotheses, verify/improve rules with failure diagnostics, and answer translation questions. An automated evaluation harness proves the agentic workflow outperforms zero-shot LLMs, with a polished observability UI featuring hierarchical agent traces with duck mascots, animated 3-column layout, structured data formatting, workflow abort/reset controls, and live-updating vocabulary and rules panels. The codebase uses an agent factory pattern, decomposed workflow steps, and model-specific prompt engineering across all 19 agent prompts.
+LO-Solver is an AI-powered system for solving Linguistics Olympiad Rosetta Stone problems. It has two solver implementations: a **Mastra workflow** (Next.js frontend, multi-provider LLMs, real-time UI) and a **Claude Code native solver** (subagent-based, terminal-only, file-based state). Both use the same multi-step pipeline: extract structure, generate multi-perspective linguistic hypotheses, verify/improve rules with failure diagnostics, and answer translation questions. The Mastra workflow supports two model providers — **OpenRouter** (GPT-5-mini, Gemini 3 Flash) and **Claude Code** (Haiku, Sonnet, Opus via MCP tool bridge) — with a 4-way provider toggle and cross-provider eval benchmarking. An automated evaluation harness proves the agentic workflow outperforms zero-shot LLMs, with a polished observability UI featuring hierarchical agent traces with duck mascots, animated 3-column layout, structured data formatting, workflow abort/reset controls, and live-updating vocabulary and rules panels.
 
 ## Core Value
 
@@ -75,15 +75,16 @@ The ONE thing that must work: **the agentic workflow must produce measurably bet
 - ✓ Confidence vocabulary standardized across all 19 agent prompts — v1.5
 - ✓ Frontend trace component props cleaned up with named interfaces — v1.5
 
+- ✓ Claude Code AI SDK provider integrated as alternative model provider with auth gate — v1.6
+- ✓ 4-way provider toggle (OR Test/Prod, CC Test/Prod) replacing binary model mode — v1.6
+- ✓ Agent factory updated with tier-based model resolution for both providers — v1.6
+- ✓ MCP tool bridge wrapping all 14 Mastra tools for Claude Code compatibility — v1.6
+- ✓ Frontend auth status indicator and "Subscription" cost tracking for Claude Code — v1.6
+- ✓ Eval harness `--provider` flag with cross-provider comparison and filter UI — v1.6
+
 ### Active
 
-**Current Milestone: v1.6 Claude Code Provider**
-
-- [ ] Claude Code AI SDK provider integrated as alternative model provider
-- [ ] Provider toggle replacing model mode (OpenRouter Testing / OpenRouter Production / Claude Code)
-- [ ] Agent factory updated to support provider switching
-- [ ] Frontend toggle and state management for provider selection
-- [ ] Tool compatibility validated (custom Mastra tools with Claude Code provider)
+(No active milestone — planning next)
 
 ### Out of Scope
 
@@ -97,36 +98,29 @@ The ONE thing that must work: **the agentic workflow must produce measurably bet
 - Server-side key storage — localStorage sufficient, no accounts needed
 - Schema barrel split — 39 import edges, circular dependency risk
 - Full context helpers decomposition — low ROI, already helper-only code
-
-## Current Milestone: v1.6 Claude Code Provider
-
-**Goal:** Add Claude Code as an alternative model provider via `ai-sdk-provider-claude-code`, enabling users to run the solver workflow using their Claude subscription instead of OpenRouter API credits.
-
-**Target features:**
-- Claude Code AI SDK provider integration (`ai-sdk-provider-claude-code`)
-- Three-way provider/mode toggle replacing the current testing/production toggle
-- Backend provider abstraction supporting both OpenRouter and Claude Code
-- Tool compatibility research and bridging (custom Mastra tools via MCP if needed)
+- Direct Anthropic API key support (`@ai-sdk/anthropic`) — different auth model; Claude Code uses subscription
+- OAuth-based `claude login` for server auth — token refresh race condition (#27933); use `setup-token`
+- Claude Code model fine-tuning per agent — defer until baseline validated with more problems
 
 ## Problem Statement
 
-(Resolved in v1.0) The workflow uses multi-perspective hypothesis generation and verified rules. The evaluation harness demonstrates workflow accuracy improvements over zero-shot baselines. (Resolved in v1.1) The observability UI is polished with correct trace hierarchy, structured data display, workflow controls, and animated layout. (Resolved in v1.2) Abort propagation stops in-flight LLM calls, large files are split into focused modules, and toast notifications provide workflow lifecycle feedback. (Resolved in v1.3) Users can provide their own OpenRouter API key, enabling deployment without a server-side key. (Resolved in v1.4) Claude Code native solver implemented with 6 subagents, /solve skill, and file-based workspace — running alongside the Mastra implementation in `claude-code/`. (Resolved in v1.5) Codebase refactored with agent factory, decomposed hypothesize step, and all 19 agent prompts rewritten using model-specific vendor best practices.
+(Resolved in v1.0) The workflow uses multi-perspective hypothesis generation and verified rules. The evaluation harness demonstrates workflow accuracy improvements over zero-shot baselines. (Resolved in v1.1) The observability UI is polished with correct trace hierarchy, structured data display, workflow controls, and animated layout. (Resolved in v1.2) Abort propagation stops in-flight LLM calls, large files are split into focused modules, and toast notifications provide workflow lifecycle feedback. (Resolved in v1.3) Users can provide their own OpenRouter API key, enabling deployment without a server-side key. (Resolved in v1.4) Claude Code native solver implemented with 6 subagents, /solve skill, and file-based workspace — running alongside the Mastra implementation in `claude-code/`. (Resolved in v1.5) Codebase refactored with agent factory, decomposed hypothesize step, and all 19 agent prompts rewritten using model-specific vendor best practices. (Resolved in v1.6) Claude Code integrated as alternative model provider via MCP tool bridge, with 4-way provider toggle, auth gate, cost tracking, and cross-provider eval benchmarking.
 
 ## Context
 
-Shipped v1.5 with 14,751 LOC TypeScript + 3,494 LOC markdown (Claude Code solver).
-Tech stack: TypeScript 5.9.3, Next.js 16.1.6, Mastra 1.8.0, Zod 4.3.6.
-Models (Mastra): GPT-5-mini (extraction), Gemini 3 Flash (reasoning), GPT-OSS-120B (testing).
-Models (Claude Code): Opus 4.6 (all agents except verifier), Sonnet (verifier, cost efficiency).
+Shipped v1.6 with 15,904 LOC TypeScript + 3,494 LOC markdown (Claude Code solver).
+Tech stack: TypeScript 5.9.3, Next.js 16.1.6, Mastra 1.8.0, Zod 4.3.6, ai-sdk-provider-claude-code 0.3.1.
+Models (OpenRouter): GPT-5-mini (extraction), Gemini 3 Flash (reasoning), GPT-OSS-120B (testing).
+Models (Claude Code Testing): Haiku (extraction), Sonnet (reasoning).
+Models (Claude Code Production): Sonnet (extraction), Opus (reasoning).
 Storage: LibSQL for Mastra state, markdown logs for execution traces, JSON for eval results, markdown workspace files for Claude Code solver.
 Frontend: React 19, shadcn/ui, resizable panels (3-column animated layout), AI SDK streaming.
-Evaluation: 4 Linguini ground-truth problems, CLI runner with --comparison and --problem flags.
-UI: Blueprint/cyanotype design system, duck mascots per agent role, workflow abort/reset controls, Sonner toast notifications, user API key dialog.
+Evaluation: 4 Linguini ground-truth problems, CLI runner with --comparison, --problem, and --provider flags.
+UI: Blueprint/cyanotype design system, duck mascots per agent role, workflow abort/reset controls, Sonner toast notifications, user API key dialog, 4-way provider toggle, CC auth badge, provider filter in eval viewer.
 Code structure: Agent factory pattern (`createWorkflowAgent()`), hypothesize step decomposed into 4 sub-phase files, workflow steps in individual files, trace components with named prop interfaces, page hooks in dedicated files. Knip configured for dead code detection.
 Claude Code solver: 6 agent definitions in `claude-code/.claude/agents/`, /solve skill, workspace-based state, PIPELINE.md reference doc.
-Deployment: App can run without server-side OPENROUTER_API_KEY; users provide their own key via browser dialog.
-All 19 agent prompts (13 Mastra + 6 Claude Code) use model-specific best practices with standardized 6-level confidence vocabulary.
-v1.6 integration target: `ai-sdk-provider-claude-code` community provider (wraps Claude Agent SDK `query()` as Vercel AI SDK provider, uses `claude login` auth). Reference integration: https://github.com/t3ta/claude-code-mastra.
+Provider architecture: `ai-sdk-provider-claude-code` wraps Claude Agent SDK `query()` as Vercel AI SDK provider. MCP tool bridge (`createMcpToolServer`) wraps all 14 Mastra tools as in-process MCP tools for Claude Code agents. Per-execution provider cached on RequestContext.
+Deployment: App can run without server-side OPENROUTER_API_KEY; users provide their own key or use Claude Code subscription.
 
 ## Key Decisions
 
@@ -173,14 +167,24 @@ v1.6 integration target: `ai-sdk-provider-claude-code` community provider (wraps
 | XML sections for all prompt styles | GPT-5-mini, Gemini, Claude all use XML delimiters | ✓ Good — consistent structure across models |
 | 6-level confidence scale across all agents | Standardized vocabulary (well-supported → unsupported) | ✓ Good — consistent terminology |
 | Interface (not type) for prop definitions | Matches existing DevTracePanelProps convention | ✓ Good — consistent codebase style |
+| `ai-sdk-provider-claude-code` for CC integration | Wraps Claude Agent SDK as Vercel AI SDK provider; reuses existing agent factory | ✓ Good — minimal code change |
+| MCP tool bridge (not prompt-only tools) | Full tool fidelity via in-process MCP server | ✓ Good — all 14 tools work through Claude Code |
+| 4-way provider toggle (not 3-way) | Separate testing/production tiers for both providers | ✓ Good — consistent tiering |
+| Tier-based model resolution (haiku/sonnet/opus) | Extraction agents use cheaper models; reasoning agents use capable models | ✓ Good — cost control per tier |
+| `disallowedTools` for security sandbox | Blocks Bash, Read, Write, Edit in Claude Code agents | ✓ Good — prevents filesystem access |
+| Auth gate via `generateText` probe | Lightweight pre-check (maxOutputTokens 10) before workflow start | ✓ Good — fast fail for unauth'd users |
+| Structured output fallback (stream→generate) | Claude Code streaming + structuredOutput returns empty; delegate to generate | ✓ Good — reliable structured output |
+| Per-execution MCP provider on RequestContext | Avoid transport reuse errors; cache after first creation | ✓ Good — clean lifecycle management |
+| Shorthand model IDs for Claude Code | `sonnet`/`opus`/`haiku` instead of full `claude-sonnet-4-6` | ✓ Good — cleaner config |
+| `setup-token` instead of `claude login` | OAuth race condition (#27933); token auth is reliable | ✓ Good — avoids auth failures |
 
 ## Constraints
 
 - TypeScript + Next.js + Mastra stack is fixed (no framework changes)
-- All LLM calls go through OpenRouter
+- LLM calls go through OpenRouter or Claude Code (via `ai-sdk-provider-claude-code`)
 - No test framework configured — eval harness is the testing strategy
 - Mastra documentation should be consulted via MCP or web for any new features
-- Budget-conscious: use cheap models for testing, premium for production
+- Budget-conscious: use cheap models for testing, premium for production (applies to both providers)
 
 ## Guidance for Future Phases
 
@@ -191,4 +195,4 @@ When working on any phase that touches Mastra code (agents, workflows, tools, ev
 
 ---
 
-*Last updated: 2026-03-10 after v1.6 milestone start*
+*Last updated: 2026-03-14 after v1.6 milestone*
