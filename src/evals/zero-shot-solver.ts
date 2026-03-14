@@ -2,7 +2,8 @@ import { Agent } from '@mastra/core/agent';
 import { RequestContext } from '@mastra/core/request-context';
 import { z } from 'zod';
 
-import { openrouter, TESTING_MODEL, type ProviderMode } from '@/mastra/openrouter';
+import { claudeCode } from '@/mastra/claude-code-provider';
+import { isClaudeCodeMode, openrouter, TESTING_MODEL, type ProviderMode } from '@/mastra/openrouter';
 import { questionsAnsweredSchema } from '@/mastra/workflow/workflow-schemas';
 
 type QuestionsAnswered = z.infer<typeof questionsAnsweredSchema>;
@@ -33,12 +34,15 @@ const zeroShotAgent = new Agent({
   id: 'zero-shot-solver',
   name: '[Eval] Zero-Shot Solver Agent',
   instructions: ZERO_SHOT_INSTRUCTIONS,
-  model: ({ requestContext }) =>
-    openrouter(
-      requestContext?.get('provider-mode') === 'openrouter-production'
-        ? 'google/gemini-3-flash-preview'
-        : TESTING_MODEL,
-    ),
+  model: ({ requestContext }) => {
+    const pm = requestContext?.get('provider-mode') as ProviderMode | undefined;
+    if (pm && isClaudeCodeMode(pm)) {
+      return claudeCode(pm === 'claude-code-production' ? 'sonnet' : 'haiku');
+    }
+    return openrouter(
+      pm === 'openrouter-production' ? 'google/gemini-3-flash-preview' : TESTING_MODEL,
+    );
+  },
   tools: {},
 });
 
