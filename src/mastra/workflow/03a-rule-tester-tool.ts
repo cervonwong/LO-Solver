@@ -20,26 +20,19 @@ import { ruleSchema } from './workflow-schemas';
 // Shared Schemas
 // ============================================================================
 
-const ruleTestSuccessSchema = z.object({
-  success: z.literal(true),
-  status: z
-    .enum([
-      'RULE_OK',
-      'RULE_WRONG',
-      'RULE_INCONSISTENT',
-      'RULE_UNCLEAR',
-      'RULE_NEEDS_UPDATE',
-      'RULE_NEW_NEEDED',
-    ])
-    .describe('Status of the rule after testing'),
+const ruleTestAgentSchema = z.object({
+  passed: z.boolean().describe('Whether the rule correctly predicts all relevant dataset examples'),
   reasoning: z
     .string()
     .describe(
-      '1-2 sentences explaining why the rule passed or failed, with evidence from the dataset',
+      '1-2 sentences explaining why the rule passed or failed, citing specific item IDs. If failed, include how to fix it.',
     ),
-  recommendation: z
-    .string()
-    .describe('How to improve the rule if it did not pass; empty if RULE_OK'),
+});
+
+const ruleTestSuccessSchema = z.object({
+  success: z.literal(true),
+  passed: z.boolean(),
+  reasoning: z.string(),
 });
 
 const ruleTestErrorSchema = z.object({
@@ -153,20 +146,20 @@ ${JSON.stringify(structuredProblem.questions, null, 2)}
         maxSteps: 100,
         ...(testerRequestContext && { requestContext: testerRequestContext }),
         structuredOutput: {
-          schema: ruleTestSuccessSchema,
+          schema: ruleTestAgentSchema,
         },
       },
     });
 
-    const ruleResult = result.object as z.infer<typeof ruleTestSuccessSchema>;
+    const ruleResult = result.object as z.infer<typeof ruleTestAgentSchema>;
     const durationSec = ((Date.now() - testStartTime) / 1000).toFixed(1);
     console.log(
-      `${formatTimestamp(wfStartTime)} [TOOL:testRule] Rule-tester for "${rule.title}" completed in ${durationSec}s — ${ruleResult.status}`,
+      `${formatTimestamp(wfStartTime)} [TOOL:testRule] Rule-tester for "${rule.title}" completed in ${durationSec}s — ${ruleResult.passed ? 'PASS' : 'FAIL'}`,
     );
 
     // Log result only if logFile is provided (i.e., using committed rules)
     if (logFile) {
-      logRuleTestResult(logFile, rule.title, ruleResult.status, wfStartTime);
+      logRuleTestResult(logFile, rule.title, ruleResult.passed ? 'PASS' : 'FAIL', wfStartTime);
     }
 
     // Emit rule test result for the frontend rules panel
@@ -177,12 +170,16 @@ ${JSON.stringify(structuredProblem.questions, null, 2)}
       type: 'data-rule-test-result',
       data: {
         ruleTitle: rule.title,
-        passed: ruleResult.status === 'RULE_OK',
+        passed: ruleResult.passed,
         timestamp: new Date().toISOString(),
       },
     });
 
-    return ruleResult;
+    return {
+      success: true as const,
+      passed: ruleResult.passed,
+      reasoning: ruleResult.reasoning,
+    };
   } catch (err) {
     const durationSec = ((Date.now() - testStartTime) / 1000).toFixed(1);
     console.error(
