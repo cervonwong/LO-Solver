@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import {
   Table,
   TableBody,
@@ -122,8 +122,7 @@ export function RulesPanel({ rules, activityEvents, isRunning }: RulesPanelProps
               : 'No rules yet.'}
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <Table>
+            <Table className="min-w-[700px]">
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-10 text-xs uppercase tracking-wider text-muted-foreground">
@@ -200,8 +199,8 @@ export function RulesPanel({ rules, activityEvents, isRunning }: RulesPanelProps
                 })}
               </TableBody>
             </Table>
-          </div>
         )}
+        <ScrollBar orientation="horizontal" />
       </ScrollArea>
     </div>
   );

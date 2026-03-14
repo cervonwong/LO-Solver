@@ -1,6 +1,6 @@
 'use client';
 
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import {
   Table,
   TableBody,
@@ -54,8 +54,7 @@ export function VocabularyPanel({ vocabulary, activityEvents, isRunning }: Vocab
               : 'No vocabulary entries yet.'}
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <Table>
+            <Table className="min-w-[600px]">
               <TableHeader>
                 <TableRow>
                   <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">
@@ -87,8 +86,8 @@ export function VocabularyPanel({ vocabulary, activityEvents, isRunning }: Vocab
                 ))}
               </TableBody>
             </Table>
-          </div>
         )}
+        <ScrollBar orientation="horizontal" />
       </ScrollArea>
     </div>
   );
