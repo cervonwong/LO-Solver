@@ -44,11 +44,12 @@ No active milestone. v1.6 shipped 2026-03-14.
 
 ### Pending Todos
 
-4 pending todos:
+5 pending todos:
 - Explore Mastra programmatic tool calling to improve results
 - Explore solving LO problems as code using sandboxes
 - Add visualisation for running Claude Code instances
 - Fix tool rendering for testSentence and testRule in UI
+- Polish VocabularyToolCard and RulesToolCard visual design
 ### Blockers/Concerns
 
 - OAuth race condition (#27933) — use `setup-token` instead of `claude login`
