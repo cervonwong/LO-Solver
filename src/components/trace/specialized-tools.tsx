@@ -13,9 +13,6 @@ import {
   hasVocabularyEntries,
 } from './trace-utils';
 
-// INERT: Tool-call events currently emit `input: { count }`, not the actual entries array.
-// This card activates when events carry `input.entries` — see hasVocabularyEntries().
-// To enable: change vocabulary-tools.ts tool-call events to include the entries data.
 interface VocabularyToolCardProps {
   toolCall: {
     data: {

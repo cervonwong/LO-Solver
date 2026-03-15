@@ -94,7 +94,7 @@ export const addRules = createTool({
       type: 'data-tool-call',
       data: {
         toolName: 'addRules',
-        input: { count: entries.length },
+        input: { entries: addedEntries },
         result,
         timestamp,
       },
@@ -162,7 +162,7 @@ export const updateRules = createTool({
       type: 'data-tool-call',
       data: {
         toolName: 'updateRules',
-        input: { count: entries.length },
+        input: { entries: updatedEntries },
         result,
         timestamp,
       },
@@ -225,7 +225,7 @@ export const removeRules = createTool({
       type: 'data-tool-call',
       data: {
         toolName: 'removeRules',
-        input: { count: titles.length },
+        input: { titles: removedTitles },
         result,
         timestamp,
       },
@@ -271,7 +271,7 @@ export const clearRules = createTool({
       type: 'data-tool-call',
       data: {
         toolName: 'clearRules',
-        input: {},
+        input: { action: 'clear' },
         result: { removed },
         timestamp,
       },

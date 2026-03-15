@@ -117,7 +117,7 @@ export const addVocabulary = createTool({
       type: 'data-tool-call',
       data: {
         toolName: 'addVocabulary',
-        input: { count: entries.length },
+        input: { entries: addedEntries },
         result,
         timestamp,
       },
@@ -192,7 +192,7 @@ export const updateVocabulary = createTool({
       type: 'data-tool-call',
       data: {
         toolName: 'updateVocabulary',
-        input: { count: entries.length },
+        input: { entries: updatedEntries },
         result,
         timestamp,
       },
@@ -263,7 +263,7 @@ export const removeVocabulary = createTool({
       type: 'data-tool-call',
       data: {
         toolName: 'removeVocabulary',
-        input: { count: foreignForms.length },
+        input: { foreignForms: removedForms },
         result,
         timestamp,
       },
@@ -314,7 +314,7 @@ export const clearVocabulary = createTool({
       type: 'data-tool-call',
       data: {
         toolName: 'clearVocabulary',
-        input: {},
+        input: { action: 'clear' },
         result: { removed },
         timestamp,
       },
