@@ -48,7 +48,7 @@ No active milestone. v1.6 shipped 2026-03-14.
 - Explore Mastra programmatic tool calling to improve results
 - Explore solving LO problems as code using sandboxes
 - Add visualisation for running Claude Code instances
-- Add parallelisation of Claude Code agent instances
+- Fix tool rendering for testSentence and testRule in UI
 ### Blockers/Concerns
 
 - OAuth race condition (#27933) — use `setup-token` instead of `claude login`
