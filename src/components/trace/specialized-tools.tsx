@@ -166,6 +166,12 @@ interface RulesToolCardProps {
   };
 }
 
+const confidenceBadgeClass: Record<string, string> = {
+  HIGH: 'border-status-success text-status-success',
+  MEDIUM: 'border-status-warning text-status-warning',
+  LOW: 'border-status-error text-status-error',
+};
+
 function RulesEntryRow({
   entry,
   isRemove,
@@ -176,15 +182,27 @@ function RulesEntryRow({
   const title = typeof entry === 'string' ? entry : (entry.title as string);
   const description =
     typeof entry === 'string' ? undefined : (entry.description as string | undefined);
+  const confidence =
+    typeof entry === 'string' ? undefined : (entry.confidence as string | undefined);
   const truncatedDesc =
     description && description.length > 80 ? description.slice(0, 80) + '...' : description;
 
   return (
     <div
-      className={`border-b border-border-subtle py-0.5 last:border-b-0 ${isRemove ? 'line-through text-muted-foreground' : ''}`}
+      className={`flex items-start justify-between gap-2 border-b border-border-subtle py-0.5 last:border-b-0 ${isRemove ? 'line-through text-muted-foreground' : ''}`}
     >
-      <span className="font-medium text-foreground">{title}</span>
-      {truncatedDesc && <div className="text-muted-foreground truncate">{truncatedDesc}</div>}
+      <div className="min-w-0 flex-1">
+        <span className="font-medium text-foreground">{title}</span>
+        {truncatedDesc && <div className="text-muted-foreground truncate">{truncatedDesc}</div>}
+      </div>
+      {confidence && confidenceBadgeClass[confidence.toUpperCase()] && (
+        <Badge
+          variant="outline"
+          className={`${confidenceBadgeClass[confidence.toUpperCase()]} bg-transparent text-[10px] flex-shrink-0`}
+        >
+          {confidence.toUpperCase()}
+        </Badge>
+      )}
     </div>
   );
 }
