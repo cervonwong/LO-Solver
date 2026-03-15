@@ -24,7 +24,63 @@ interface VocabularyToolCardProps {
   };
 }
 
+function VocabularyEntryRow({
+  entry,
+  isUpdate,
+  isRemove,
+  prev,
+}: {
+  entry: Record<string, unknown>;
+  isUpdate: boolean;
+  isRemove: boolean;
+  prev: Record<string, unknown> | undefined;
+}) {
+  const foreignForm = (entry.foreignForm ?? entry) as string;
+  const meaning = entry.meaning as string | undefined;
+  const type = entry.type as string | undefined;
+  const prevMeaning = prev?.meaning as string | undefined;
+  const prevType = prev?.type as string | undefined;
+
+  return (
+    <div
+      className={`flex items-center gap-2 border-b border-border-subtle py-0.5 last:border-b-0 ${isRemove ? 'line-through text-muted-foreground' : ''}`}
+    >
+      <span className="font-medium text-foreground">{String(foreignForm)}</span>
+      {isUpdate && prev ? (
+        <>
+          {prevMeaning && prevMeaning !== meaning && (
+            <span className="text-muted-foreground">
+              <span className="line-through opacity-60">{prevMeaning}</span>
+              {meaning && <span> &rarr; {meaning}</span>}
+            </span>
+          )}
+          {(!prevMeaning || prevMeaning === meaning) && meaning && (
+            <span className="text-muted-foreground">&rarr; {meaning}</span>
+          )}
+          {prevType && prevType !== type && (
+            <span className="text-muted-foreground">
+              [<span className="line-through opacity-60">{prevType}</span>
+              {type && <span> &rarr; {type}</span>}]
+            </span>
+          )}
+          {(!prevType || prevType === type) && type && (
+            <span className="text-muted-foreground">[{type}]</span>
+          )}
+        </>
+      ) : (
+        <>
+          {meaning && <span className="text-muted-foreground">&rarr; {meaning}</span>}
+          {type && <span className="text-muted-foreground">[{type}]</span>}
+        </>
+      )}
+    </div>
+  );
+}
+
 function VocabularyToolCard({ toolCall }: VocabularyToolCardProps) {
+  const [open, setOpen] = useState(false);
+  const [showMore, setShowMore] = useState(false);
+
   const action = toolCall.data.toolName.replace('Vocabulary', '').toUpperCase();
   const entries = (toolCall.data.input.entries ?? toolCall.data.input.foreignForms ?? []) as Array<
     Record<string, unknown>
@@ -32,91 +88,70 @@ function VocabularyToolCard({ toolCall }: VocabularyToolCardProps) {
   const isUpdate = toolCall.data.toolName === 'updateVocabulary';
   const isRemove = toolCall.data.toolName === 'removeVocabulary';
 
-  // For updates, try to extract previous values from result for diff display
   const previousEntries = isUpdate
     ? ((toolCall.data.result.previous ?? toolCall.data.result.previousEntries ?? []) as Array<
         Record<string, unknown>
       >)
     : [];
 
+  const badgeClass = isRemove
+    ? 'border-status-error text-status-error'
+    : isUpdate
+      ? 'border-status-warning text-status-warning'
+      : 'border-status-success text-status-success';
+
+  const visibleEntries = entries.slice(0, 3);
+  const overflowEntries = entries.slice(3);
+  const hasOverflow = overflowEntries.length > 0;
+
   return (
     <RawJsonToggle data={toolCall.data}>
-      <div className="flex flex-col gap-0.5 text-[11px]">
-        {entries.length <= 5 ? (
-          entries.map((entry, i) => {
-            const foreignForm = (entry.foreignForm ?? entry) as string;
-            const meaning = entry.meaning as string | undefined;
-            const type = entry.type as string | undefined;
-            const prev = isUpdate && previousEntries[i] ? previousEntries[i] : undefined;
-            const prevMeaning = prev?.meaning as string | undefined;
-            const prevType = prev?.type as string | undefined;
-
-            return (
-              <div
-                key={i}
-                className={`flex items-center gap-2 ${isRemove ? 'line-through text-muted-foreground' : ''}`}
-              >
-                <Badge
-                  variant="outline"
-                  className={`text-[9px] shrink-0 ${
-                    isRemove
-                      ? 'border-status-error text-status-error'
-                      : isUpdate
-                        ? 'border-status-warning text-status-warning'
-                        : 'border-status-success text-status-success'
-                  } bg-transparent`}
-                >
-                  {action}
-                </Badge>
-                <span className="font-medium">{String(foreignForm)}</span>
-                {isUpdate && prev ? (
-                  <>
-                    {prevMeaning && prevMeaning !== meaning && (
-                      <span className="text-muted-foreground">
-                        <span className="line-through opacity-60">{prevMeaning}</span>
-                        {meaning && <span> &rarr; {meaning}</span>}
-                      </span>
-                    )}
-                    {(!prevMeaning || prevMeaning === meaning) && meaning && (
-                      <span className="text-muted-foreground">&rarr; {meaning}</span>
-                    )}
-                    {prevType && prevType !== type && (
-                      <span className="text-muted-foreground">
-                        [<span className="line-through opacity-60">{prevType}</span>
-                        {type && <span> &rarr; {type}</span>}]
-                      </span>
-                    )}
-                    {(!prevType || prevType === type) && type && (
-                      <span className="text-muted-foreground">[{type}]</span>
-                    )}
-                  </>
-                ) : (
-                  <>
-                    {meaning && <span className="text-muted-foreground">&rarr; {meaning}</span>}
-                    {type && <span className="text-muted-foreground">[{type}]</span>}
-                  </>
-                )}
-              </div>
-            );
-          })
-        ) : (
-          <div className="flex items-center gap-2">
-            <Badge
-              variant="outline"
-              className={`text-[9px] shrink-0 ${
-                isRemove
-                  ? 'border-status-error text-status-error'
-                  : isUpdate
-                    ? 'border-status-warning text-status-warning'
-                    : 'border-status-success text-status-success'
-              } bg-transparent`}
+      <Collapsible open={open} onOpenChange={setOpen}>
+        <CollapsibleTrigger className="hover-hatch-cyan flex w-full items-center gap-2 py-0.5 text-left text-xs">
+          <Badge variant="outline" className={`${badgeClass} bg-transparent text-[10px]`}>
+            {action}
+          </Badge>
+          <span className="font-medium">{toolCall.data.toolName}</span>
+          <span className="text-muted-foreground">({entries.length} entries)</span>
+          <ChevronIcon open={open} />
+        </CollapsibleTrigger>
+        <CollapsibleContent
+          forceMount
+          className="data-[state=closed]:hidden pl-6 pr-2 py-1 text-[11px] text-muted-foreground"
+        >
+          {visibleEntries.map((entry, i) => (
+            <VocabularyEntryRow
+              key={i}
+              entry={entry}
+              isUpdate={isUpdate}
+              isRemove={isRemove}
+              prev={isUpdate && previousEntries[i] ? previousEntries[i] : undefined}
+            />
+          ))}
+          {hasOverflow && !showMore && (
+            <span
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowMore(true);
+              }}
+              className="text-muted-foreground hover:text-foreground cursor-pointer text-[10px] py-0.5"
             >
-              {action}
-            </Badge>
-            <span>{entries.length} entries</span>
-          </div>
-        )}
-      </div>
+              + {overflowEntries.length} more...
+            </span>
+          )}
+          {hasOverflow &&
+            showMore &&
+            overflowEntries.map((entry, i) => (
+              <VocabularyEntryRow
+                key={i + 3}
+                entry={entry}
+                isUpdate={isUpdate}
+                isRemove={isRemove}
+                prev={isUpdate && previousEntries[i + 3] ? previousEntries[i + 3] : undefined}
+              />
+            ))}
+        </CollapsibleContent>
+      </Collapsible>
     </RawJsonToggle>
   );
 }
@@ -131,69 +166,86 @@ interface RulesToolCardProps {
   };
 }
 
+function RulesEntryRow({
+  entry,
+  isRemove,
+}: {
+  entry: Record<string, unknown> | string;
+  isRemove: boolean;
+}) {
+  const title = typeof entry === 'string' ? entry : (entry.title as string);
+  const description =
+    typeof entry === 'string' ? undefined : (entry.description as string | undefined);
+  const truncatedDesc =
+    description && description.length > 80 ? description.slice(0, 80) + '...' : description;
+
+  return (
+    <div
+      className={`border-b border-border-subtle py-0.5 last:border-b-0 ${isRemove ? 'line-through text-muted-foreground' : ''}`}
+    >
+      <span className="font-medium text-foreground">{title}</span>
+      {truncatedDesc && <div className="text-muted-foreground truncate">{truncatedDesc}</div>}
+    </div>
+  );
+}
+
 function RulesToolCard({ toolCall }: RulesToolCardProps) {
+  const [open, setOpen] = useState(false);
+  const [showMore, setShowMore] = useState(false);
+
   const action = toolCall.data.toolName.replace('Rules', '').toUpperCase();
   const entries = (toolCall.data.input.entries ?? toolCall.data.input.titles ?? []) as Array<
     Record<string, unknown> | string
   >;
-  const isUpdate = toolCall.data.toolName === 'updateRules';
   const isRemove = toolCall.data.toolName === 'removeRules';
+  const isUpdate = toolCall.data.toolName === 'updateRules';
+
+  const badgeClass = isRemove
+    ? 'border-status-error text-status-error'
+    : isUpdate
+      ? 'border-status-warning text-status-warning'
+      : 'border-status-success text-status-success';
+
+  const visibleEntries = entries.slice(0, 3);
+  const overflowEntries = entries.slice(3);
+  const hasOverflow = overflowEntries.length > 0;
 
   return (
     <RawJsonToggle data={toolCall.data}>
-      <div className="flex flex-col gap-0.5 text-[11px]">
-        {entries.length <= 5 ? (
-          entries.map((entry, i) => {
-            const title = typeof entry === 'string' ? entry : (entry.title as string);
-            const description =
-              typeof entry === 'string' ? undefined : (entry.description as string | undefined);
-            const truncatedDesc =
-              description && description.length > 80
-                ? description.slice(0, 80) + '...'
-                : description;
-
-            return (
-              <div
-                key={i}
-                className={`flex items-center gap-2 ${isRemove ? 'line-through text-muted-foreground' : ''}`}
-              >
-                <Badge
-                  variant="outline"
-                  className={`text-[9px] shrink-0 ${
-                    isRemove
-                      ? 'border-status-error text-status-error'
-                      : isUpdate
-                        ? 'border-status-warning text-status-warning'
-                        : 'border-status-success text-status-success'
-                  } bg-transparent`}
-                >
-                  {action}
-                </Badge>
-                <span className="font-medium">{title}</span>
-                {truncatedDesc && (
-                  <span className="text-muted-foreground truncate">{truncatedDesc}</span>
-                )}
-              </div>
-            );
-          })
-        ) : (
-          <div className="flex items-center gap-2">
-            <Badge
-              variant="outline"
-              className={`text-[9px] shrink-0 ${
-                isRemove
-                  ? 'border-status-error text-status-error'
-                  : isUpdate
-                    ? 'border-status-warning text-status-warning'
-                    : 'border-status-success text-status-success'
-              } bg-transparent`}
+      <Collapsible open={open} onOpenChange={setOpen}>
+        <CollapsibleTrigger className="hover-hatch-cyan flex w-full items-center gap-2 py-0.5 text-left text-xs">
+          <Badge variant="outline" className={`${badgeClass} bg-transparent text-[10px]`}>
+            {action}
+          </Badge>
+          <span className="font-medium">{toolCall.data.toolName}</span>
+          <span className="text-muted-foreground">({entries.length} entries)</span>
+          <ChevronIcon open={open} />
+        </CollapsibleTrigger>
+        <CollapsibleContent
+          forceMount
+          className="data-[state=closed]:hidden pl-6 pr-2 py-1 text-[11px] text-muted-foreground"
+        >
+          {visibleEntries.map((entry, i) => (
+            <RulesEntryRow key={i} entry={entry} isRemove={isRemove} />
+          ))}
+          {hasOverflow && !showMore && (
+            <span
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowMore(true);
+              }}
+              className="text-muted-foreground hover:text-foreground cursor-pointer text-[10px] py-0.5"
             >
-              {action}
-            </Badge>
-            <span>{entries.length} entries</span>
-          </div>
-        )}
-      </div>
+              + {overflowEntries.length} more...
+            </span>
+          )}
+          {hasOverflow &&
+            showMore &&
+            overflowEntries.map((entry, i) => (
+              <RulesEntryRow key={i + 3} entry={entry} isRemove={isRemove} />
+            ))}
+        </CollapsibleContent>
+      </Collapsible>
     </RawJsonToggle>
   );
 }
@@ -232,10 +284,7 @@ function SentenceTestToolCard({ toolCall }: SentenceTestToolCardProps) {
     <RawJsonToggle data={toolCall.data}>
       <Collapsible open={open} onOpenChange={setOpen}>
         <CollapsibleTrigger className="hover-hatch-cyan flex w-full items-center gap-2 py-0.5 text-left text-xs">
-          <Badge
-            variant="outline"
-            className={`${badgeClass} bg-transparent text-[10px]`}
-          >
+          <Badge variant="outline" className={`${badgeClass} bg-transparent text-[10px]`}>
             {badgeLabel}
           </Badge>
           <span className="flex-1 truncate">
@@ -277,11 +326,7 @@ function SentenceTestToolCard({ toolCall }: SentenceTestToolCardProps) {
               {matchesExpected != null && (
                 <p>
                   <span className="font-medium">Match:</span>{' '}
-                  <span
-                    className={
-                      matchesExpected ? 'text-status-success' : 'text-status-error'
-                    }
-                  >
+                  <span className={matchesExpected ? 'text-status-success' : 'text-status-error'}>
                     {matchesExpected ? 'Yes' : 'No'}
                   </span>
                 </p>
