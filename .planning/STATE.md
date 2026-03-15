@@ -4,8 +4,8 @@ milestone: null
 milestone_name: null
 status: idle
 stopped_at: null
-last_updated: "2026-03-15T02:13:34Z"
-last_activity: "2026-03-15 - Completed quick task 10: Emit vocabulary and rules data in tool call events"
+last_updated: "2026-03-15T09:18:42Z"
+last_activity: "2026-03-15 - Completed quick task 12: Add confidence badge to RulesToolCard entries"
 progress:
   total_phases: 0
   completed_phases: 0
@@ -68,9 +68,10 @@ No active milestone. v1.6 shipped 2026-03-14.
 | 8 | Change CC testing configuration to use haiku | 2026-03-14 | 00537d5 | [8-change-cc-testing-configuration-to-use-h](./quick/8-change-cc-testing-configuration-to-use-h/) |
 | 9 | Add custom port parameter to npm run dev | 2026-03-15 | 6be7f4e | [9-add-custom-port-parameter-to-npm-run-dev](./quick/9-add-custom-port-parameter-to-npm-run-dev/) |
 | 10 | Emit vocabulary and rules data in tool call events | 2026-03-15 | 4aa4a54 | [10-emit-vocabulary-and-rules-data-in-tool-c](./quick/10-emit-vocabulary-and-rules-data-in-tool-c/) |
+| 12 | Add confidence badge to RulesToolCard entries | 2026-03-15 | d0544e4 | [12-add-confidence-badge-flushed-right-on-ea](./quick/12-add-confidence-badge-flushed-right-on-ea/) |
 
 ## Session Continuity
 
 Last session: 2026-03-15
-Stopped at: Completed quick task 10 (emit vocabulary and rules data in tool call events)
+Stopped at: Completed quick task 12 (add confidence badge to RulesToolCard entries)
 Resume file: None
