@@ -4,9 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "concurrently --names next,mastra --prefix-colors blue,magenta \"next dev --turbopack\" \"mastra dev\"",
-    "dev:next": "next dev --turbopack",
-    "dev:mastra": "mastra dev",
+    "dev": "concurrently --names next,mastra --prefix-colors blue,magenta \"next dev --turbopack --port ${NEXT_PORT:-3000}\" \"PORT=${MASTRA_PORT:-4111} mastra dev\"",
+    "dev:next": "next dev --turbopack --port ${NEXT_PORT:-3000}",
+    "dev:mastra": "PORT=${MASTRA_PORT:-4111} mastra dev",
     "build": "next build",
     "start": "next start",
     "eval": "npx tsx --env-file=.env src/evals/run.ts",
