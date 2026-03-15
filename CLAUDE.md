@@ -4,7 +4,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Commands
 
-- `npm run dev` — Starts Next.js (port 3000, Turbopack) and Mastra dev server (port 4111, includes Mastra Studio) concurrently. `dev:next` / `dev:mastra` run them independently.
+- `npm run dev` — Starts Next.js (port 3000, Turbopack) and Mastra dev server (port 4111, includes Mastra Studio) concurrently. Ports are customizable: `NEXT_PORT=3001 MASTRA_PORT=4200 npm run dev`
+- `dev:next` / `dev:mastra` — Run Next.js or Mastra independently. Support `NEXT_PORT` and `MASTRA_PORT` env vars respectively.
 - `npm run dev:new` — Clear database then start dev server
 - `npm run build` — Next.js production build
 - `npx tsc --noEmit` — Type-check without emitting (run before commits)
