@@ -11,6 +11,7 @@ import {
   isSentenceTestTool,
   isStartedStatus,
   hasVocabularyEntries,
+  hasRulesEntries,
 } from './trace-utils';
 
 interface VocabularyToolCardProps {
@@ -94,6 +95,83 @@ function VocabularyToolCard({ toolCall }: VocabularyToolCardProps) {
                     {meaning && <span className="text-muted-foreground">&rarr; {meaning}</span>}
                     {type && <span className="text-muted-foreground">[{type}]</span>}
                   </>
+                )}
+              </div>
+            );
+          })
+        ) : (
+          <div className="flex items-center gap-2">
+            <Badge
+              variant="outline"
+              className={`text-[9px] shrink-0 ${
+                isRemove
+                  ? 'border-status-error text-status-error'
+                  : isUpdate
+                    ? 'border-status-warning text-status-warning'
+                    : 'border-status-success text-status-success'
+              } bg-transparent`}
+            >
+              {action}
+            </Badge>
+            <span>{entries.length} entries</span>
+          </div>
+        )}
+      </div>
+    </RawJsonToggle>
+  );
+}
+
+interface RulesToolCardProps {
+  toolCall: {
+    data: {
+      toolName: string;
+      input: Record<string, unknown>;
+      result: Record<string, unknown>;
+    };
+  };
+}
+
+function RulesToolCard({ toolCall }: RulesToolCardProps) {
+  const action = toolCall.data.toolName.replace('Rules', '').toUpperCase();
+  const entries = (toolCall.data.input.entries ?? toolCall.data.input.titles ?? []) as Array<
+    Record<string, unknown> | string
+  >;
+  const isUpdate = toolCall.data.toolName === 'updateRules';
+  const isRemove = toolCall.data.toolName === 'removeRules';
+
+  return (
+    <RawJsonToggle data={toolCall.data}>
+      <div className="flex flex-col gap-0.5 text-[11px]">
+        {entries.length <= 5 ? (
+          entries.map((entry, i) => {
+            const title = typeof entry === 'string' ? entry : (entry.title as string);
+            const description =
+              typeof entry === 'string' ? undefined : (entry.description as string | undefined);
+            const truncatedDesc =
+              description && description.length > 80
+                ? description.slice(0, 80) + '...'
+                : description;
+
+            return (
+              <div
+                key={i}
+                className={`flex items-center gap-2 ${isRemove ? 'line-through text-muted-foreground' : ''}`}
+              >
+                <Badge
+                  variant="outline"
+                  className={`text-[9px] shrink-0 ${
+                    isRemove
+                      ? 'border-status-error text-status-error'
+                      : isUpdate
+                        ? 'border-status-warning text-status-warning'
+                        : 'border-status-success text-status-success'
+                  } bg-transparent`}
+                >
+                  {action}
+                </Badge>
+                <span className="font-medium">{title}</span>
+                {truncatedDesc && (
+                  <span className="text-muted-foreground truncate">{truncatedDesc}</span>
                 )}
               </div>
             );
@@ -325,6 +403,10 @@ export function ToolCallRenderer({ toolCall, depth }: ToolCallRendererProps) {
 
   if (isSentenceTestTool(toolCall.data.toolName)) {
     return <SentenceTestToolCard toolCall={toolCall} />;
+  }
+
+  if (hasRulesEntries(toolCall)) {
+    return <RulesToolCard toolCall={toolCall} />;
   }
 
   if (hasVocabularyEntries(toolCall)) {

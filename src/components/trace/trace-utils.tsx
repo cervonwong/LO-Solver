@@ -9,6 +9,14 @@ export function isSentenceTestTool(toolName: string): boolean {
   return toolName === 'testSentence' || toolName === 'testSentenceWithRuleset';
 }
 
+export function hasRulesEntries(toolCall: ToolCallEvent): boolean {
+  if (!['addRules', 'updateRules', 'removeRules'].includes(toolCall.data.toolName)) {
+    return false;
+  }
+  const entries = toolCall.data.input.entries ?? toolCall.data.input.titles;
+  return Array.isArray(entries) && entries.length > 0;
+}
+
 export function hasVocabularyEntries(toolCall: ToolCallEvent): boolean {
   if (!['addVocabulary', 'updateVocabulary', 'removeVocabulary'].includes(toolCall.data.toolName)) {
     return false;
