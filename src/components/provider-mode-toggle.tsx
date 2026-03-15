@@ -48,7 +48,7 @@ export function ProviderModeToggle({ disabled }: { disabled?: boolean }) {
           <ToggleGroupItem
             key={value}
             value={value}
-            className={`rounded-none border-none bg-transparent px-3 py-0.5 font-heading text-sm text-muted-foreground transition-colors hover:bg-transparent hover:text-foreground data-[state=on]:bg-transparent data-[state=on]:text-accent data-[state=on]:shadow-none [&:not(:first-child)]:border-l [&:not(:first-child)]:border-border${mode === value ? ' hover-hatch-active' : ' hover-hatch-cyan'}`}
+            className={`rounded-none border-none bg-transparent px-3 py-0 font-heading text-sm text-muted-foreground transition-colors hover:bg-transparent hover:text-foreground data-[state=on]:bg-transparent data-[state=on]:text-accent data-[state=on]:shadow-none [&:not(:first-child)]:border-l [&:not(:first-child)]:border-border${mode === value ? ' hover-hatch-active' : ' hover-hatch-cyan'}`}
           >
             {label}
           </ToggleGroupItem>

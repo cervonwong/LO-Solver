@@ -7,7 +7,7 @@ export function WorkflowSliders({ disabled }: { disabled?: boolean }) {
 
   return (
     <div
-      className={`flex items-center gap-4 font-heading text-sm${disabled ? ' opacity-50 pointer-events-none' : ''}`}
+      className={`flex flex-col gap-0.5 font-heading text-sm${disabled ? ' opacity-50 pointer-events-none' : ''}`}
     >
       <div className="flex items-center gap-1.5">
         <label htmlFor="slider-rounds" className="text-foreground/80">
