@@ -4,8 +4,8 @@ milestone: null
 milestone_name: null
 status: idle
 stopped_at: null
-last_updated: "2026-03-14T14:32:44Z"
-last_activity: "2026-03-14 - Completed quick task 7: Fix vocabulary and rules panel table horizontal scrolling"
+last_updated: "2026-03-15T01:31:29Z"
+last_activity: "2026-03-15 - Completed quick task 9: Add custom port parameter to npm run dev"
 progress:
   total_phases: 0
   completed_phases: 0
@@ -44,8 +44,7 @@ No active milestone. v1.6 shipped 2026-03-14.
 
 ### Pending Todos
 
-5 pending todos:
-- Add custom port parameter to npm run dev
+4 pending todos:
 - Explore Mastra programmatic tool calling to improve results
 - Explore solving LO problems as code using sandboxes
 - Add visualisation for running Claude Code instances
@@ -66,9 +65,10 @@ No active milestone. v1.6 shipped 2026-03-14.
 | 6 | Fix Mastra observability deprecation warning | 2026-03-14 | 49aa2ef | [6-fix-mastra-observability-warning](./quick/6-fix-mastra-observability-warning/) |
 | 7 | Fix vocabulary and rules panel table horizontal scrolling | 2026-03-14 | 4360338 | [7-fix-vocabulary-and-rules-ui-panel-table-](./quick/7-fix-vocabulary-and-rules-ui-panel-table-/) |
 | 8 | Change CC testing configuration to use haiku | 2026-03-14 | 00537d5 | [8-change-cc-testing-configuration-to-use-h](./quick/8-change-cc-testing-configuration-to-use-h/) |
+| 9 | Add custom port parameter to npm run dev | 2026-03-15 | 6be7f4e | [9-add-custom-port-parameter-to-npm-run-dev](./quick/9-add-custom-port-parameter-to-npm-run-dev/) |
 
 ## Session Continuity
 
-Last session: 2026-03-14
-Stopped at: Completed quick task 7 (fix vocabulary and rules panel table horizontal scrolling)
+Last session: 2026-03-15
+Stopped at: Completed quick task 9 (add custom port parameter to npm run dev)
 Resume file: None
