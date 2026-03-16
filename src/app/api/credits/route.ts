@@ -1,10 +1,16 @@
 import { NextResponse } from 'next/server';
 
-export async function GET(req: Request) {
+export async function POST(req: Request) {
   const hasServerKey = !!process.env.OPENROUTER_API_KEY;
 
-  const url = new URL(req.url);
-  const userKey = url.searchParams.get('key');
+  let userKey: string | null = null;
+  try {
+    const body = (await req.json()) as { key?: unknown };
+    userKey = typeof body.key === 'string' ? body.key : null;
+  } catch {
+    userKey = null;
+  }
+
   const effectiveKey = userKey || process.env.OPENROUTER_API_KEY;
 
   if (!effectiveKey) {
