@@ -4,11 +4,17 @@ export async function POST(req: Request) {
   const hasServerKey = !!process.env.OPENROUTER_API_KEY;
 
   let userKey: string | null = null;
-  try {
-    const body = (await req.json()) as { key?: unknown };
-    userKey = typeof body.key === 'string' ? body.key : null;
-  } catch {
-    userKey = null;
+  const rawBody = await req.text();
+  if (rawBody.trim()) {
+    try {
+      const body = JSON.parse(rawBody) as { key?: unknown };
+      userKey = typeof body.key === 'string' ? body.key : null;
+    } catch {
+      return NextResponse.json(
+        { remaining: null, hasServerKey, error: 'Request body must be valid JSON' },
+        { status: 400 }
+      );
+    }
   }
 
   const effectiveKey = userKey || process.env.OPENROUTER_API_KEY;
