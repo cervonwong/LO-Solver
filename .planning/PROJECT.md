@@ -84,7 +84,17 @@ The ONE thing that must work: **the agentic workflow must produce measurably bet
 
 ### Active
 
-(No active milestone — planning next)
+## Current Milestone: v1.7 Security Fixes
+
+**Goal:** Harden secret handling, close unauthenticated API endpoints, and clean up security-adjacent code debt.
+
+**Target features:**
+- Eliminate API key persistence to disk (workflow state, LibSQL)
+- Move API key transport from query strings to secure headers
+- Add session-scoped cancel and auth guards on API routes
+- Consolidate secret handling into a single server-side policy
+- Opt-in/redacted logging to prevent sensitive data on disk
+- Fix dead code, naming, and nullability issues surfaced by audit
 
 ### Out of Scope
 
@@ -195,4 +205,4 @@ When working on any phase that touches Mastra code (agents, workflows, tools, ev
 
 ---
 
-*Last updated: 2026-03-14 after v1.6 milestone*
+*Last updated: 2026-03-17 after v1.7 milestone start*

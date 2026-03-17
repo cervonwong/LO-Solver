@@ -1,11 +1,11 @@
 ---
 gsd_state_version: 1.0
-milestone: null
-milestone_name: null
-status: idle
+milestone: v1.7
+milestone_name: Security Fixes
+status: active
 stopped_at: null
-last_updated: "2026-03-15T09:37:12Z"
-last_activity: "2026-03-15 - Completed quick task 13: Stack rounds and perspectives sliders vertically"
+last_updated: "2026-03-17T00:00:00Z"
+last_activity: "2026-03-17 - Milestone v1.7 started"
 progress:
   total_phases: 0
   completed_phases: 0
@@ -17,14 +17,17 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-14)
+See: .planning/PROJECT.md (updated 2026-03-17)
 
 **Core value:** The agentic workflow must produce measurably better results than zero-shotting the same LLMs without orchestration.
-**Current focus:** Planning next milestone
+**Current focus:** v1.7 Security Fixes
 
 ## Current Position
 
-No active milestone. v1.6 shipped 2026-03-14.
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-17 — Milestone v1.7 started
 
 ## Performance Metrics
 
