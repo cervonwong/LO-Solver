@@ -110,7 +110,10 @@
   2. Browser network tab shows the API key sent via `x-openrouter-key` request header on both solve and credits requests, with no key in the URL, query string, or request body
   3. Solving a problem with `OPENROUTER_API_KEY` unset and only a user-provided key works end-to-end (key propagates through all workflow steps)
   4. Credits badge fetches and displays balance correctly using header-based key transport
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 39-01-PLAN.md — Remove apiKey from schemas, update workflow steps and route handlers for header-based key propagation
+- [ ] 39-02-PLAN.md — Switch frontend to send API key via x-openrouter-key header
 
 ### Phase 40: Endpoint Guards
 **Goal**: API routes enforce scoped access, rate limits, method restrictions, and minimal response surfaces
@@ -178,7 +181,7 @@ Phases execute in numeric order: 39 → 40 → 41
 | 34. MCP Tool Bridge | v1.6 | 2/2 | Complete | 2026-03-14 |
 | 35. Frontend Integration | v1.6 | 3/3 | Complete | 2026-03-14 |
 | 36. Evaluation Support | v1.6 | 2/2 | Complete | 2026-03-14 |
-| 39. API Key Transport | v1.7 | 0/0 | Not started | - |
+| 39. API Key Transport | v1.7 | 0/2 | Not started | - |
 | 40. Endpoint Guards | v1.7 | 0/0 | Not started | - |
 | 41. Code Quality and Logging | v1.7 | 0/0 | Not started | - |
 
@@ -189,4 +192,4 @@ _v1.3: 2 phases, 4 plans. All complete._
 _v1.4: 8 phases, 9 plans. All complete._
 _v1.5: 6 phases, 11 plans. All complete._
 _v1.6: 4 phases, 14 plans. All complete._
-_v1.7: 3 phases, 0 plans. In progress._
+_v1.7: 3 phases, 2 plans. In progress._
