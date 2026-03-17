@@ -9,6 +9,7 @@
 - ✅ **v1.4 Claude Code Native Solver** — Phases 19-26 (shipped 2026-03-08)
 - ✅ **v1.5 Refactor & Prompt Engineering** — Phases 27-32 (shipped 2026-03-10)
 - ✅ **v1.6 Claude Code Provider** — Phases 33-36 (shipped 2026-03-14)
+- 🚧 **v1.7 Security Fixes** — Phases 39-41 (in progress)
 
 ## Phases
 
@@ -90,7 +91,54 @@
 
 </details>
 
+### 🚧 v1.7 Security Fixes (In Progress)
+
+**Milestone Goal:** Harden secret handling, close unauthenticated API endpoints, and clean up security-adjacent code debt.
+
+- [ ] **Phase 39: API Key Transport** - Move API key out of persisted state and request URLs into secure HTTP headers
+- [ ] **Phase 40: Endpoint Guards** - Add scoped cancellation, rate limiting, bearer token protection, and method enforcement to API routes
+- [ ] **Phase 41: Code Quality and Logging** - Convert logging to async I/O with opt-in gating, fix schema nullability, and clean up dead code
+
+## Phase Details
+
+### Phase 39: API Key Transport
+**Goal**: API key no longer reaches disk (LibSQL) or appears in URLs, request bodies, or browser history
+**Depends on**: Nothing (first phase of v1.7)
+**Requirements**: SEC-01, SEC-02, SEC-03
+**Success Criteria** (what must be TRUE):
+  1. Running a solve with a user-provided API key and then inspecting the LibSQL database shows no API key values in any workflow snapshot or state records
+  2. Browser network tab shows the API key sent via `x-openrouter-key` request header on both solve and credits requests, with no key in the URL, query string, or request body
+  3. Solving a problem with `OPENROUTER_API_KEY` unset and only a user-provided key works end-to-end (key propagates through all workflow steps)
+  4. Credits badge fetches and displays balance correctly using header-based key transport
+**Plans**: TBD
+
+### Phase 40: Endpoint Guards
+**Goal**: API routes enforce scoped access, rate limits, method restrictions, and minimal response surfaces
+**Depends on**: Phase 39 (shared route files modified in Phase 39 must be stable first)
+**Requirements**: GUARD-01, GUARD-02, GUARD-03, GUARD-04, GUARD-05
+**Success Criteria** (what must be TRUE):
+  1. Aborting a solve in one browser tab does not cancel a solve running in a different tab (cancel is scoped to a specific run)
+  2. Rapidly submitting more than 5 solve requests within one minute returns a 429 rate limit response
+  3. Sending a GET request to the solve endpoint (POST-only) returns a 405 Method Not Allowed response
+  4. Accessing `/api/evals` with `EVAL_API_TOKEN` set but no bearer token in the request returns 401 Unauthorized; without the env var set, access is open
+  5. The `/api/claude-auth` response JSON contains only the fields the UI uses (no email or other unnecessary personal data)
+**Plans**: TBD
+
+### Phase 41: Code Quality and Logging
+**Goal**: Logging uses non-blocking async I/O with opt-in gating, and accumulated code quality issues are resolved
+**Depends on**: Phase 40 (highest file-count blast radius; execute on stable codebase)
+**Requirements**: QUAL-01, QUAL-02, QUAL-03, QUAL-04, QUAL-05, QUAL-06
+**Success Criteria** (what must be TRUE):
+  1. Running a solve with `LOG_ENABLED` unset produces no log files on disk; setting `LOG_ENABLED=true` produces log files as before
+  2. No `fs.writeFileSync` or `fs.appendFileSync` calls remain in the logging module (all file I/O is async)
+  3. The trace panel is hidden when `NEXT_PUBLIC_SHOW_TRACE` is unset or set to `false`, and visible when set to `true`
+  4. Running `npx knip` reports no new dead exports or unused dependencies beyond the pre-existing CSS module warning
+  5. The `structuredProblemSchema` nullable fields parse correctly for both null and missing values without runtime errors
+
 ## Progress
+
+**Execution Order:**
+Phases execute in numeric order: 39 → 40 → 41
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 | --- | --- | --- | --- | --- |
@@ -130,6 +178,9 @@
 | 34. MCP Tool Bridge | v1.6 | 2/2 | Complete | 2026-03-14 |
 | 35. Frontend Integration | v1.6 | 3/3 | Complete | 2026-03-14 |
 | 36. Evaluation Support | v1.6 | 2/2 | Complete | 2026-03-14 |
+| 39. API Key Transport | v1.7 | 0/0 | Not started | - |
+| 40. Endpoint Guards | v1.7 | 0/0 | Not started | - |
+| 41. Code Quality and Logging | v1.7 | 0/0 | Not started | - |
 
 _v1.0: 7 phases, 16 plans. All complete._
 _v1.1: 6 phases, 9 plans. All complete._
@@ -138,3 +189,4 @@ _v1.3: 2 phases, 4 plans. All complete._
 _v1.4: 8 phases, 9 plans. All complete._
 _v1.5: 6 phases, 11 plans. All complete._
 _v1.6: 4 phases, 14 plans. All complete._
+_v1.7: 3 phases, 0 plans. In progress._

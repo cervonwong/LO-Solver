@@ -55,26 +55,26 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SEC-01 | — | Pending |
-| SEC-02 | — | Pending |
-| SEC-03 | — | Pending |
-| GUARD-01 | — | Pending |
-| GUARD-02 | — | Pending |
-| GUARD-03 | — | Pending |
-| GUARD-04 | — | Pending |
-| GUARD-05 | — | Pending |
-| QUAL-01 | — | Pending |
-| QUAL-02 | — | Pending |
-| QUAL-03 | — | Pending |
-| QUAL-04 | — | Pending |
-| QUAL-05 | — | Pending |
-| QUAL-06 | — | Pending |
+| SEC-01 | Phase 39 | Pending |
+| SEC-02 | Phase 39 | Pending |
+| SEC-03 | Phase 39 | Pending |
+| GUARD-01 | Phase 40 | Pending |
+| GUARD-02 | Phase 40 | Pending |
+| GUARD-03 | Phase 40 | Pending |
+| GUARD-04 | Phase 40 | Pending |
+| GUARD-05 | Phase 40 | Pending |
+| QUAL-01 | Phase 41 | Pending |
+| QUAL-02 | Phase 41 | Pending |
+| QUAL-03 | Phase 41 | Pending |
+| QUAL-04 | Phase 41 | Pending |
+| QUAL-05 | Phase 41 | Pending |
+| QUAL-06 | Phase 41 | Pending |
 
 **Coverage:**
 - v1.7 requirements: 14 total
-- Mapped to phases: 0
-- Unmapped: 14
+- Mapped to phases: 14
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-17*
-*Last updated: 2026-03-17 after initial definition*
+*Last updated: 2026-03-17 after roadmap creation*

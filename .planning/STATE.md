@@ -5,9 +5,9 @@ milestone_name: Security Fixes
 status: active
 stopped_at: null
 last_updated: "2026-03-17T00:00:00Z"
-last_activity: "2026-03-17 - Milestone v1.7 started"
+last_activity: "2026-03-17 - Roadmap created for v1.7"
 progress:
-  total_phases: 0
+  total_phases: 3
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -20,14 +20,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-17)
 
 **Core value:** The agentic workflow must produce measurably better results than zero-shotting the same LLMs without orchestration.
-**Current focus:** v1.7 Security Fixes
+**Current focus:** v1.7 Security Fixes - Phase 39 (API Key Transport)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 39 of 41 (API Key Transport)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-03-17 — Milestone v1.7 started
+Status: Ready to plan
+Last activity: 2026-03-17 — Roadmap created for v1.7
+
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
@@ -43,7 +45,7 @@ Last activity: 2026-03-17 — Milestone v1.7 started
 
 ### Decisions
 
-(Cleared at milestone boundary — see PROJECT.md Key Decisions for full history)
+(Cleared at milestone boundary -- see PROJECT.md Key Decisions for full history)
 
 ### Pending Todos
 
@@ -53,9 +55,11 @@ Last activity: 2026-03-17 — Milestone v1.7 started
 - Add visualisation for running Claude Code instances
 - Fix tool rendering for testSentence and testRule in UI
 - Polish VocabularyToolCard and RulesToolCard visual design
+
 ### Blockers/Concerns
 
-- OAuth race condition (#27933) — use `setup-token` instead of `claude login`
+- OAuth race condition (#27933) -- use `setup-token` instead of `claude login`
+- Phase 39 research flag: Inspect `mastra_workflow_snapshot` table to confirm whether `inputData` is persisted alongside workflow state (determines key propagation approach)
 
 ### Quick Tasks Completed
 
@@ -76,6 +80,6 @@ Last activity: 2026-03-17 — Milestone v1.7 started
 
 ## Session Continuity
 
-Last session: 2026-03-15
-Stopped at: Completed quick task 13 (stack rounds and perspectives sliders vertically)
+Last session: 2026-03-17
+Stopped at: Roadmap created for v1.7 Security Fixes
 Resume file: None
