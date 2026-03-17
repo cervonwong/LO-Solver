@@ -1,215 +1,411 @@
-# Stack Research: Claude Code Provider Integration
+# Stack Research: Security Hardening
 
-**Domain:** AI SDK provider integration (Claude Code as alternative model provider)
-**Researched:** 2026-03-10
+**Domain:** Security hardening for Next.js + Mastra AI agent solver app
+**Researched:** 2026-03-17
 **Confidence:** HIGH
 
-## Recommended Stack
+## Context
 
-### Core Technologies
+This research covers **only the new libraries and patterns** needed for v1.7 security hardening. The existing stack (Next.js 16.1.6, Mastra 1.8.0, TypeScript 5.9.3, React 19, LibSQL, Pino 10 via @mastra/loggers) is validated and not re-evaluated.
 
-| Technology | Version | Purpose | Why Recommended |
-|------------|---------|---------|-----------------|
-| `ai-sdk-provider-claude-code` | ^3.4.4 | AI SDK v6 community provider wrapping Claude Agent SDK | Only viable path to use Claude Code as a Vercel AI SDK provider. Actively maintained (last published 2026-03-10), compatible with AI SDK v6 and Zod 4. Returns `LanguageModelV3` which Mastra 1.8.0 accepts via `MastraModelConfig`. |
-| `@anthropic-ai/claude-agent-sdk` | ^0.2.63 (transitive) | Underlying SDK powering the provider | Installed automatically as dependency of `ai-sdk-provider-claude-code`. Do NOT install separately -- the provider pins a compatible range (`^0.2.63`; latest is 0.2.72). |
-| Claude Code CLI | >= 2.1.x | Authentication and execution backend | The provider spawns the Claude Code CLI under the hood via the Agent SDK. Already installed on this system (v2.1.62). Requires `claude auth login` for credential setup (already authenticated with Max subscription). |
+The five security concerns to address:
+1. API key transport (currently in JSON body, query strings for credits)
+2. API route protection (no middleware, no rate limiting)
+3. Session-scoped workflow runs (cancel endpoint has no scoping)
+4. Logging redaction (markdown logs write raw agent output to disk)
+5. LibSQL data lifecycle (1.1 GB database with apiKey in workflow snapshots)
 
-### Supporting Libraries
+---
 
-No additional supporting libraries are needed. The provider's dependencies (`@ai-sdk/provider@^3.0.0`, `@ai-sdk/provider-utils@^4.0.1`) are already satisfied by the existing AI SDK v6 installation.
+## Recommended Stack Additions
 
-| Library | Installed Version | Required Version | Status |
-|---------|-------------------|------------------|--------|
-| `ai` (Vercel AI SDK) | 6.0.101 | ^6.0.0 | Compatible |
-| `@ai-sdk/provider` | 3.0.8 | ^3.0.0 | Compatible |
-| `@ai-sdk/provider-utils` | 4.0.15 | ^4.0.1 | Compatible |
-| `zod` | 4.3.6 | ^4.0.0 | Compatible |
-| `@mastra/core` | 1.8.0 | N/A (consumer) | Compatible -- accepts `LanguageModelV3` via `MastraModelConfig` |
+### New Dependencies
 
-### Development Tools
+| Library | Version | Purpose | Why Recommended |
+|---------|---------|---------|-----------------|
+| `rate-limiter-flexible` | ^10.0.1 | In-memory rate limiting for API routes | Zero dependencies, framework-agnostic, supports RateLimiterMemory for single-process apps without Redis. 451+ npm dependents. No external infra needed -- this app is single-user/single-process. |
 
-| Tool | Purpose | Notes |
-|------|---------|-------|
-| Claude Code CLI | Auth backend for provider | Already installed (v2.1.62). Auth via `claude auth login` using browser OAuth. Credentials stored in `~/.claude/`. |
-| No new dev tools needed | -- | The provider works with existing TypeScript/Next.js toolchain. |
+### Existing Dependencies (No Changes Needed)
+
+| Library | Version | Already Installed Via | Security Feature |
+|---------|---------|----------------------|------------------|
+| Pino | 10.1.0 | `@mastra/loggers` | Built-in `redact` option with path-based censoring, ~2% overhead via `fast-redact` |
+| `@mastra/libsql` | 1.6.2 | Direct dependency | `WorkflowsStorage.deleteWorkflowRunById()` for snapshot cleanup |
+| Next.js | 16.1.6 | Direct dependency | `proxy.ts` (replaces deprecated `middleware.ts`) for request interception |
+
+### No New Dependencies Needed For
+
+| Concern | Why No Library | Implementation Approach |
+|---------|---------------|------------------------|
+| API key header transport | Standard HTTP headers (`X-OpenRouter-Key`) | Move key from `inputData.apiKey` in JSON body to `X-OpenRouter-Key` request header. Read via `req.headers.get('x-openrouter-key')` in route handler. |
+| Session-scoped cancel | Use existing `activeRuns` Map with scoping | Add a session token (`crypto.randomUUID()`, no library) to scope cancel to the requesting client's run. |
+| Logging redaction (markdown) | Opt-in flag + string replacement | Controlled by `ENABLE_FILE_LOGGING` env var. When enabled, redact API keys from logged content with regex. |
+| Secure headers (response) | `next.config.ts` headers config or `proxy.ts` | Add security headers (X-Content-Type-Options, X-Frame-Options) via Next.js built-in config. |
+
+---
+
+## Detailed Recommendations
+
+### 1. API Key Transport: Headers Instead of Body/Query String
+
+**Current problem:** The OpenRouter API key travels two insecure paths:
+- `/api/solve`: Key sent in JSON body as `inputData.apiKey`, then stored in workflow state via `setState()` and persisted to LibSQL snapshots
+- `/api/credits`: Key sent as `?key=...` query parameter (visible in server logs, browser history, referrer headers)
+
+**Recommendation:** Use the `X-OpenRouter-Key` custom header.
+
+```typescript
+// Frontend (use-solver-workflow.ts) - send key as header, not body
+const transport = new DefaultChatTransport({
+  api: '/api/solve',
+  headers: apiKey ? { 'X-OpenRouter-Key': apiKey } : undefined,
+  prepareSendMessagesRequest: ({ messages }) => ({
+    body: {
+      inputData: {
+        rawProblemText: /* ... */,
+        providerMode,
+        maxRounds: workflowSettings.maxRounds,
+        perspectiveCount: workflowSettings.perspectiveCount,
+        // apiKey removed from body
+      },
+    },
+  }),
+});
+
+// Backend (api/solve/route.ts) - read from header
+const apiKey = req.headers.get('x-openrouter-key') ?? undefined;
+```
+
+**Why headers over body:**
+- Headers are not logged by default in most proxies/CDNs (unlike query strings)
+- Headers are not persisted in browser history or referrer headers
+- The key never enters Mastra workflow state, so it never reaches LibSQL
+- Standard pattern (OpenRouter's own API uses `Authorization: Bearer`)
+
+**Why `X-OpenRouter-Key` specifically:**
+- Hyphens, not underscores (nginx blocks underscore headers by default)
+- Descriptive name makes audit easy
+- `X-` prefix for custom application headers
+
+**Confidence:** HIGH -- standard HTTP security pattern, verified against Next.js route handler API.
+
+### 2. Rate Limiting: `rate-limiter-flexible` with In-Memory Store
+
+**Recommendation:** `rate-limiter-flexible` v10.0.1 with `RateLimiterMemory`.
+
+```typescript
+// src/lib/rate-limiter.ts
+import { RateLimiterMemory } from 'rate-limiter-flexible';
+
+// Solve endpoint: 5 concurrent solves per minute per IP
+export const solveLimiter = new RateLimiterMemory({
+  points: 5,
+  duration: 60, // seconds
+  keyPrefix: 'solve',
+});
+
+// Credits endpoint: 30 requests per minute per IP
+export const creditsLimiter = new RateLimiterMemory({
+  points: 30,
+  duration: 60,
+  keyPrefix: 'credits',
+});
+
+// Cancel endpoint: 10 requests per minute per IP
+export const cancelLimiter = new RateLimiterMemory({
+  points: 10,
+  duration: 60,
+  keyPrefix: 'cancel',
+});
+```
+
+**Usage in route handlers (not proxy):** Apply rate limiting directly in API route handlers, not via `proxy.ts`. This is because:
+- `proxy.ts` is designed for request interception/routing, not per-route business logic
+- Rate limiting per-route requires different limits for different endpoints
+- The `RateLimiterMemory` store is in-process memory and works naturally in route handlers
+
+```typescript
+// In api/solve/route.ts
+import { solveLimiter } from '@/lib/rate-limiter';
+
+export async function POST(req: Request) {
+  const ip = req.headers.get('x-forwarded-for') ?? 'unknown';
+  try {
+    await solveLimiter.consume(ip);
+  } catch {
+    return new Response(JSON.stringify({ error: 'Too many requests' }), {
+      status: 429,
+      headers: {
+        'Content-Type': 'application/json',
+        'Retry-After': '60',
+      },
+    });
+  }
+  // ... existing handler logic
+}
+```
+
+**Why `rate-limiter-flexible` over alternatives:**
+- Zero dependencies (no Redis, no Upstash account)
+- `RateLimiterMemory` is perfect for single-process apps
+- Framework-agnostic -- works in any Node.js context including Next.js route handlers
+- Supports sliding window, fixed window, and token bucket algorithms
+- 451+ npm dependents, actively maintained (latest release: March 2026)
+
+**Why NOT Upstash `@upstash/ratelimit`:**
+- Requires external Redis instance (Upstash account or self-hosted Redis)
+- Overkill for a single-user dev tool running on one process
+- Adds network latency for rate limit checks
+
+**Why NOT custom Map-based implementation:**
+- `rate-limiter-flexible` handles cleanup of expired entries automatically
+- Handles edge cases (concurrent requests, timer management)
+- Well-tested in production
+
+**Confidence:** HIGH -- verified package exists at v10.0.1, no dependencies, memory store documented.
+
+### 3. Next.js Request Interception: `proxy.ts` for Security Headers
+
+**Important:** In Next.js 16, `middleware.ts` is **deprecated** in favor of `proxy.ts`. The function export name also changes from `middleware` to `proxy`. Both still work in 16.x, but new code should use `proxy.ts`.
+
+**Recommendation:** Use `proxy.ts` only for response security headers, not rate limiting. Rate limiting stays in route handlers (see above).
+
+```typescript
+// proxy.ts (root of src/ or project root)
+import { NextResponse, type NextRequest } from 'next/server';
+
+export default function proxy(request: NextRequest) {
+  const response = NextResponse.next();
+
+  // Security headers
+  response.headers.set('X-Content-Type-Options', 'nosniff');
+  response.headers.set('X-Frame-Options', 'DENY');
+  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+
+  return response;
+}
+
+export const config = {
+  matcher: '/api/:path*',
+};
+```
+
+**Why `proxy.ts` and not `next.config.ts` headers:**
+- `proxy.ts` can add headers conditionally (e.g., only for API routes)
+- `next.config.ts` `headers` config works for static headers but cannot read request context
+- Both approaches work; `proxy.ts` is marginally more flexible
+
+**Confidence:** HIGH -- verified in Next.js 16 release notes and official documentation.
+
+### 4. Logging Redaction: Pino `redact` + Opt-in File Logging
+
+**Pino redaction (structured logs):** The Mastra logger is already Pino 10 (`@mastra/loggers`). Pino supports built-in `redact` paths:
+
+```typescript
+// src/mastra/index.ts
+export const mastra = new Mastra({
+  logger: new PinoLogger({
+    name: 'Mastra',
+    level: 'info',
+    redact: {
+      paths: [
+        'apiKey',
+        'inputData.apiKey',
+        'req.headers.authorization',
+        'req.headers["x-openrouter-key"]',
+      ],
+      censor: '[REDACTED]',
+    },
+  }),
+});
+```
+
+**Note on PinoLogger compatibility:** The `@mastra/loggers` `PinoLogger` constructor may or may not pass through arbitrary Pino options like `redact`. Verify at implementation time whether `PinoLogger` accepts Pino's `redact` config. If not, the redaction must happen in the markdown logging layer instead (see below).
+
+**Markdown file logging (opt-in + redaction):** The custom `logging-utils.ts` writes markdown files to disk. Two changes:
+
+1. **Opt-in via environment variable:** Only write log files when `ENABLE_FILE_LOGGING=true`. Default to disabled.
+
+```typescript
+const isLoggingEnabled = (): boolean => process.env.ENABLE_FILE_LOGGING === 'true';
+
+export const initializeLogFile = (logFile: string, startTime: string): void => {
+  if (!isLoggingEnabled()) return;
+  // ... existing logic
+};
+```
+
+2. **Redact sensitive patterns from logged content:**
+
+```typescript
+const REDACT_PATTERNS = [
+  /sk-or-v1-[a-zA-Z0-9]{64}/g,  // OpenRouter API keys
+  /sk-[a-zA-Z0-9]{48}/g,         // OpenAI-style keys
+  /Bearer\s+[a-zA-Z0-9._-]+/gi,  // Bearer tokens
+];
+
+function redactSecrets(content: string): string {
+  let result = content;
+  for (const pattern of REDACT_PATTERNS) {
+    result = result.replace(pattern, '[REDACTED]');
+  }
+  return result;
+}
+```
+
+**Confidence:** MEDIUM for Pino `PinoLogger` passthrough (need to verify at implementation time), HIGH for markdown logging approach.
+
+### 5. LibSQL Data Lifecycle: Snapshot Cleanup + Schema Fix
+
+**Current problem:** The `mastra.db` file is 1.1 GB. Workflow snapshots include the full state (vocabulary, rules, timing) plus the `apiKey` field. Old snapshots accumulate indefinitely.
+
+**Available API (verified in `@mastra/core` 1.8.0 type definitions):**
+
+```typescript
+// WorkflowsStorage interface provides:
+abstract deleteWorkflowRunById(args: {
+  runId: string;
+  workflowName: string;
+}): Promise<void>;
+
+// StorageDomain base class provides:
+abstract dangerouslyClearAll(): Promise<void>;
+```
+
+**Recommendation:** Two-pronged approach:
+
+1. **Remove apiKey from workflow state entirely.** Once the key moves to headers (recommendation 1), remove `apiKey` from `workflowStateSchema` and `rawProblemInputSchema`. Pass the OpenRouter provider via `RequestContext` set up in the route handler before workflow execution. This prevents future secret persistence.
+
+2. **Add a cleanup script for existing data.** Create `scripts/cleanup-db.ts`:
+
+```typescript
+import { mastra } from '@/mastra';
+
+async function cleanup() {
+  const store = await mastra.getStorage()?.getStore('workflows');
+  if (!store) return;
+
+  const { runs } = await store.listWorkflowRuns({ limit: 1000 });
+  const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000; // 7 days
+
+  for (const run of runs) {
+    if (new Date(run.createdAt).getTime() < cutoff) {
+      await store.deleteWorkflowRunById({
+        runId: run.runId,
+        workflowName: run.workflowName,
+      });
+    }
+  }
+}
+```
+
+3. **Leverage existing `npm run dev:new` pattern.** This already deletes the database. For a single-user dev tool, this is sufficient for routine cleanup; the script above handles selective cleanup.
+
+**Key architectural decision -- how to pass the provider without state persistence:**
+
+Currently, each workflow step reads `state.apiKey` and creates an OpenRouter provider. After removing `apiKey` from state, there are three options:
+
+| Option | Approach | Pros | Cons |
+|--------|----------|------|------|
+| A. Transient input field | Keep `apiKey` in `rawProblemInputSchema` but remove from `workflowStateSchema`; never call `setState({apiKey})` | Minimal code change, key available via `inputData` | Key still in `inputData` which may be persisted in snapshot context |
+| B. Route-level provider creation | Create provider in route handler, pass to workflow via Mastra API | Clean separation | Need to verify Mastra workflow API supports this |
+| C. Separate non-persisted channel | Pass key via a separate mechanism (env var, global per-request store) | No persistence risk | Couples route handler to workflow internals |
+
+**Option A is most pragmatic** but requires verifying whether Mastra persists `inputData` in snapshots (likely yes, based on snapshot documentation). If so, **Option B** is needed: create the provider in the route handler and inject it into the workflow's RequestContext before streaming starts. This needs implementation-time verification of the Mastra workflow API.
+
+**Confidence:** HIGH for `deleteWorkflowRunById` availability (verified in type definitions). MEDIUM for the provider injection approach (needs implementation-time Mastra API verification).
+
+---
 
 ## Installation
 
 ```bash
 # Single new dependency
-npm install ai-sdk-provider-claude-code
+npm install rate-limiter-flexible
 
-# That's it. No other packages needed.
-# The transitive dependency @anthropic-ai/claude-agent-sdk is pulled automatically.
+# No other new dependencies needed -- Pino 10 (redaction), LibSQL (deletion),
+# and Next.js proxy.ts are already available in the current stack.
 ```
 
-**Pre-requisite (already met on this system):**
-```bash
-# Install Claude Code CLI (one-time)
-curl -fsSL https://claude.ai/install.sh | bash
-
-# Authenticate (one-time, stores credentials in ~/.claude/)
-claude auth login
-# Opens browser for OAuth. Requires Claude Pro or Max subscription.
-```
-
-## Version Compatibility Matrix
-
-| Package A | Compatible With | Notes |
-|-----------|-----------------|-------|
-| `ai-sdk-provider-claude-code@3.4.4` | `ai@^6.0.0` | Uses AI SDK v6 provider interfaces (`@ai-sdk/provider@^3.0.0`) |
-| `ai-sdk-provider-claude-code@3.4.4` | `zod@^4.0.0` | Peer dependency. Our Zod 4.3.6 satisfies this. |
-| `ai-sdk-provider-claude-code@3.4.4` | `@mastra/core@1.8.0` | Provider returns `LanguageModelV3`; Mastra accepts it via `MastraModelConfig` which includes `LanguageModelV3` in its union type. |
-| `@anthropic-ai/claude-agent-sdk@^0.2.63` | `zod@^4.0.0` | Peer dependency. Same Zod 4 requirement. |
-| `@anthropic-ai/claude-agent-sdk@^0.2.63` | `node@>=18.0.0` | We run Node 22.21.1 -- well above minimum. |
-
-**Known warning (pre-existing, not caused by new package):** `npm install` will show `ERESOLVE` warnings about `@ai-sdk/ui-utils-v5` inside `@mastra/core` wanting `zod@^3.23.8`. This is a pre-existing Mastra internal compatibility issue with Zod 4 and does not affect functionality. The `--legacy-peer-deps` flag is not needed; npm resolves it automatically.
-
-## Critical Integration Constraint: Tool Incompatibility
-
-**This is the most important finding of this research.**
-
-The `ai-sdk-provider-claude-code` provider **does NOT support AI SDK custom tools** (Zod schemas passed to `generateText`/`streamText`). This is documented explicitly on the [AI SDK community providers page](https://ai-sdk.dev/providers/community-providers/claude-code):
-
-> "This provider does not support AI SDK custom tools (Zod schemas passed to generateText/streamText)."
-
-Instead, it supports:
-1. **Claude's built-in tools** (Bash, Read, Write, Edit, Task)
-2. **MCP servers** via `createSdkMcpServer()` from `@anthropic-ai/claude-agent-sdk`
-
-### Impact on LO-Solver
-
-Of the 13 Mastra workflow agents:
-
-| Agent Category | Count | Has Custom Tools | Claude Code Impact |
-|----------------|-------|------------------|--------------------|
-| Tool-free agents (extractor, dispatcher, tester, answerer) | 8 | No | Direct drop-in -- provider works as-is |
-| Tool-using agents (hypothesizer, synthesizer, verifier-orchestrator, rules-improver) | 5 | Yes (vocabulary CRUD, rules CRUD, test tools) | Require MCP bridge or alternative approach |
-
-**The 5 tool-using agents use Mastra `createTool()` tools that interact with in-process `RequestContext` state** (vocabulary Map, rules array, DraftStore). These tools cannot be naively converted to MCP tools because:
-
-1. MCP tools run in an isolated server context, not in the Mastra workflow's process space
-2. The tools need read/write access to shared mutable state in `RequestContext`
-3. The `createSdkMcpServer` pattern from the Claude Agent SDK would need to bridge back into the Mastra workflow's RequestContext
-
-### Recommended Approach: Two-Tier Provider Strategy
-
-**Tier 1 (straightforward):** Use Claude Code provider for the 8 tool-free agents. These agents only do text generation/extraction and work identically regardless of provider.
-
-**Tier 2 (requires bridging):** For the 5 tool-using agents, create an in-process MCP server via `createSdkMcpServer()` that wraps the Mastra tools' execute functions and receives RequestContext access via closure. The `tool()` helper from `@anthropic-ai/claude-agent-sdk` accepts Zod schemas (same as Mastra's `createTool`), making the conversion mechanical:
-
-```typescript
-// Conceptual bridge pattern
-import { tool, createSdkMcpServer } from '@anthropic-ai/claude-agent-sdk';
-import { z } from 'zod';
-
-function createVocabularyMcpServer(requestContext: WorkflowRequestContext) {
-  return createSdkMcpServer({
-    name: 'vocabulary-tools',
-    version: '1.0.0',
-    tools: [
-      tool(
-        'getVocabulary',
-        'Read all vocabulary entries',
-        {},
-        async () => {
-          const entries = Array.from(requestContext.get('vocabulary-state').values());
-          return { content: [{ type: 'text', text: JSON.stringify({ entries, count: entries.length }) }] };
-        }
-      ),
-      // ... remaining vocabulary tools
-    ]
-  });
-}
-```
-
-**Key constraint:** MCP tools with `createSdkMcpServer` require `streamingInput` mode (async generator for prompt parameter). The `ai-sdk-provider-claude-code` handles this internally when `mcpServers` are configured.
-
-**However**, there is a simpler alternative worth considering: since the `createSdkMcpServer` runs in-process (same Node.js process), the closure over `requestContext` should work. The MCP server is not spawned as a subprocess -- it uses stdio transport internally within the same process. This makes the bridge pattern viable.
+---
 
 ## Alternatives Considered
 
 | Recommended | Alternative | When to Use Alternative |
 |-------------|-------------|-------------------------|
-| `ai-sdk-provider-claude-code` | `@anthropic-ai/sdk` (Anthropic API SDK) | If you have a separate Anthropic API key and want standard API access (not CLI-based). Would lose Claude Code's built-in tools and session management but gain native AI SDK tool support via `@ai-sdk/anthropic`. Not suitable here -- goal is to use existing Claude Pro/Max subscription. |
-| `ai-sdk-provider-claude-code` | `@t3ta/claude-code-mastra` | If you want a full Mastra Agent replacement (not just provider). This package wraps the Claude Code SDK as a complete Mastra Agent with its own tool bridge. However, it targets `@mastra/core@^0.10.8` (pre-1.0) and `@anthropic-ai/claude-code` (deprecated, replaced by `claude-agent-sdk`). Dead package -- do not use. |
-| MCP bridge for tools | Skip tools for Claude Code mode | If the MCP bridge proves too complex. Claude Code agents could receive tool results injected into their prompts by the workflow step (the step code calls tools directly, then passes results as context). Simpler but loses the agent's ability to decide when to use tools. |
-| MCP bridge for tools | Run tool-using agents on OpenRouter even in Claude Code mode | Hybrid approach: only switch tool-free agents. Simpler but defeats the purpose of a full provider toggle. |
+| `rate-limiter-flexible` (in-memory) | `@upstash/ratelimit` + Redis | Multi-instance deployment with shared rate limit state. Not relevant for this single-process app. |
+| `rate-limiter-flexible` (in-memory) | Custom `Map`-based rate limiter | When you want zero runtime dependencies and have simple fixed-window needs. But `rate-limiter-flexible` is also zero-dep and handles edge cases (timer cleanup, concurrent access) better. |
+| `proxy.ts` (Next.js 16) | `middleware.ts` (deprecated) | Only if stuck on Next.js 15 or earlier. Next.js 16 deprecates `middleware.ts`. |
+| Pino `redact` paths | `pino-noir` plugin | Only if you need wildcard path redaction (e.g., `*.password`). Built-in `redact` covers our specific paths. |
+| Header-based key transport | Cookie-based key transport | Multi-page apps with session management. Headers are simpler for SPA-style API calls. |
+| `ENABLE_FILE_LOGGING` env var | Always-on logging with full redaction | Production deployments where logging is mandatory. For a dev tool, opt-in is cleaner. |
 
-## What NOT to Use
+## What NOT to Add
 
 | Avoid | Why | Use Instead |
 |-------|-----|-------------|
-| `@t3ta/claude-code-mastra` | Targets Mastra 0.10.x (pre-1.0) and deprecated `@anthropic-ai/claude-code`. v0.0.1, likely abandoned. | `ai-sdk-provider-claude-code` which targets current AI SDK v6 |
-| `@anthropic-ai/claude-code` (npm package) | Deprecated in favor of `@anthropic-ai/claude-agent-sdk` since Oct 2025. The provider's v2.0.0 migration moved away from it. | `@anthropic-ai/claude-agent-sdk` (installed transitively) |
-| `ai-sdk-cc-provider` | Alternative community provider with less adoption. `ai-sdk-provider-claude-code` is the one listed on the official AI SDK community providers page. | `ai-sdk-provider-claude-code` |
-| `@ai-sdk/anthropic` | Standard Anthropic API provider requiring separate API key. Does not use Claude Pro/Max subscription. Different authentication model entirely. | `ai-sdk-provider-claude-code` for subscription-based access |
-| Directly importing `@anthropic-ai/claude-agent-sdk` as a standalone dep | Version conflicts if pinned differently than the provider's transitive dep. The provider manages the SDK lifecycle internally. | Let the provider manage its SDK dependency |
+| `helmet` | Express-only middleware; does not work with Next.js App Router route handlers | Manual security headers in `proxy.ts` or `next.config.ts` |
+| `express-rate-limit` | Express-only; requires Express app instance | `rate-limiter-flexible` (framework-agnostic) |
+| `@upstash/ratelimit` | Requires external Redis service; overkill for single-process dev tool | `rate-limiter-flexible` with `RateLimiterMemory` |
+| `next-auth` / `auth.js` | Full authentication framework; this app is single-user with no accounts | Simple header-based key validation in route handlers |
+| `jsonwebtoken` / `jose` | JWT session management; unnecessary without user accounts | `crypto.randomUUID()` for session tokens |
+| `better-sqlite3` direct SQL | Already have LibSQL via Mastra; direct SQLite access bypasses Mastra's storage API | Use `@mastra/core` storage domain methods (`deleteWorkflowRunById`) |
+| `winston` / `bunyan` | Alternative loggers; Pino is already installed via `@mastra/loggers` and has built-in redaction | Pino `redact` option |
+| Custom encryption for stored keys | Over-engineering; the fix is to not store keys at all | Remove `apiKey` from workflow state schema |
+| `cors` package | Next.js handles CORS via `next.config.ts` or route-level headers | Built-in Next.js CORS config if needed |
 
-## Stack Patterns by Provider Mode
+## Version Compatibility
 
-**If provider mode = OpenRouter (Testing/Production):**
-- Use existing `createOpenRouterProvider()` / singleton `openrouter`
-- Model IDs: `openai/gpt-5-mini`, `google/gemini-3-flash-preview`, `openai/gpt-oss-120b`
-- All Mastra tools work natively via AI SDK tool calling
-- Per-request API key from user or server env
+| Package | Compatible With | Notes |
+|---------|-----------------|-------|
+| `rate-limiter-flexible@^10.0.1` | Node.js >= 22.13.0 | Zero dependencies, pure JS, no native modules |
+| Pino `redact` option | `pino@10.1.0` (installed) | Built-in feature since Pino v5, uses `fast-redact` internally |
+| `proxy.ts` | Next.js >= 16.0.0 | Replaces deprecated `middleware.ts`; both work in 16.x but `middleware.ts` will be removed in future |
+| `deleteWorkflowRunById` | `@mastra/core@^1.8.0` | Verified in installed type definitions at `node_modules/@mastra/core/dist/storage/domains/workflows/base.d.ts` |
+| `dangerouslyClearAll` | `@mastra/core@^1.8.0` | Abstract method on `StorageDomain` base class, verified in installed type definitions |
 
-**If provider mode = Claude Code:**
-- Use `claudeCode('sonnet')` or `claudeCode('opus')` from `ai-sdk-provider-claude-code`
-- Model aliases: `opus`, `sonnet`, `haiku` (or full IDs like `claude-opus-4-5`)
-- Tool-free agents: direct drop-in, no changes needed
-- Tool-using agents: wrap Mastra tool execute functions in `createSdkMcpServer` + `tool()` and pass via provider settings
-- Auth: Claude CLI credentials (no per-request key needed; uses system-level `claude auth login`)
-- No API key management in frontend for Claude Code mode
-- Parameters like `temperature`, `maxTokens` are NOT supported (Claude Code provider ignores them)
+## Architecture Integration Points
 
-## Provider Factory Integration Point
+### Where Changes Touch Existing Code
 
-The existing `createWorkflowAgent` factory resolves models via:
-```typescript
-model: ({ requestContext }) => {
-  const mode = requestContext?.get('model-mode') as ModelMode;
-  return getOpenRouterProvider(requestContext)(modelId);
-}
-```
+| File | Change | Impact |
+|------|--------|--------|
+| `src/hooks/use-solver-workflow.ts` | Move apiKey from body to header in `DefaultChatTransport` | Frontend only, no backend schema change needed |
+| `src/app/api/solve/route.ts` | Read key from header instead of body; add rate limiting; create provider before workflow | Route handler, backwards compatible |
+| `src/app/api/credits/route.ts` | Read key from header instead of query string; add rate limiting | Route handler, breaking change to credits fetch in frontend |
+| `src/app/api/solve/cancel/route.ts` | Add session-scoped cancel guard; add rate limiting | Route handler |
+| `src/mastra/workflow/workflow-schemas.ts` | Remove `apiKey` from `workflowStateSchema` and `rawProblemInputSchema` | Breaking change to workflow state shape, but no external consumers |
+| `src/mastra/workflow/steps/01-extract.ts` | Remove `apiKey` from `stateWithMode`; receive provider via RequestContext | Step implementation detail |
+| `src/mastra/workflow/steps/02-hypothesize.ts` | Remove `state.apiKey` usage | Step implementation detail |
+| `src/mastra/workflow/steps/03-answer.ts` | Remove `state.apiKey` usage | Step implementation detail |
+| `src/mastra/workflow/logging-utils.ts` | Add opt-in gate (`ENABLE_FILE_LOGGING`) and secret redaction | Backward compatible (default: logging disabled) |
+| `src/mastra/index.ts` | Add Pino redact paths to logger config | Logger config change |
+| `proxy.ts` (new file) | Security response headers for API routes | New file, no conflicts |
+| `src/lib/rate-limiter.ts` (new file) | Rate limiter instances | New file, no conflicts |
 
-For Claude Code integration, this callback needs to branch on a new provider-mode context key:
-```typescript
-model: ({ requestContext }) => {
-  const providerMode = requestContext?.get('provider-mode');
-  if (providerMode === 'claude-code') {
-    return claudeCode('sonnet'); // or opus, based on agent role
-  }
-  const mode = requestContext?.get('model-mode') as ModelMode;
-  return getOpenRouterProvider(requestContext)(modelId);
-}
-```
+### Files That Do NOT Need Changes
 
-The `ModelMode` type expands from `'testing' | 'production'` to a `ProviderMode` of `'openrouter-testing' | 'openrouter-production' | 'claude-code'`.
-
-## Claude Code Provider Configuration Options
-
-| Option | Type | Purpose | Relevant to LO-Solver |
-|--------|------|---------|----------------------|
-| `permissionMode` | `'default' \| 'acceptEdits' \| 'bypassPermissions' \| 'plan'` | Controls tool approval workflow | Set to `'bypassPermissions'` for headless server execution |
-| `maxTurns` | `number` | Limits agent loop iterations | Important for cost control; tool-using agents may need 10+ turns |
-| `mcpServers` | `Record<string, McpServerConfig>` | Custom MCP server configurations | Required for tool bridging |
-| `allowedTools` | `string[]` | Restrict which tools Claude can use | Filter to only vocabulary/rules/test tools, disable Bash/Read/Write |
-| `disallowedTools` | `string[]` | Block specific tools | Block `Bash`, `Read`, `Write`, `Edit` to prevent file system access |
-| `systemPrompt` | `string` | Custom system instructions | The provider maps this; Mastra also passes instructions separately |
-| `cwd` | `string` | Working directory for Claude Code | Set to project root for consistent path resolution |
+| File | Why No Change Needed |
+|------|---------------------|
+| `src/mastra/openrouter.ts` | `createOpenRouterProvider()` already exists; just need to call it from route handler instead of steps |
+| `src/mastra/workflow/request-context-types.ts` | Already has `'openrouter-provider'` key in `WorkflowRequestContext` |
+| `src/mastra/workflow/request-context-helpers.ts` | Already has `getOpenRouterProvider()` that falls back to singleton |
+| `next.config.ts` | No changes needed unless using static security headers instead of `proxy.ts` |
 
 ## Sources
 
-- [ai-sdk-provider-claude-code GitHub](https://github.com/ben-vargas/ai-sdk-provider-claude-code) -- README, package.json, source code for tool handling behavior (HIGH confidence)
-- [AI SDK Community Providers: Claude Code](https://ai-sdk.dev/providers/community-providers/claude-code) -- Official AI SDK listing confirming tool limitation (HIGH confidence)
-- [Claude Agent SDK Custom Tools](https://platform.claude.com/docs/en/agent-sdk/custom-tools) -- MCP bridge pattern with `createSdkMcpServer` and `tool()` (HIGH confidence)
-- [Claude Agent SDK TypeScript Reference](https://platform.claude.com/docs/en/agent-sdk/typescript) -- `query()`, `tool()`, `createSdkMcpServer()` API signatures (HIGH confidence)
-- npm registry (via `npm view`) -- version numbers, dependency trees, publication dates (HIGH confidence)
-- Dry-run `npm install` -- confirmed no blocking version conflicts (HIGH confidence)
-- Local `claude auth status` -- confirmed CLI installed and authenticated with Max subscription (HIGH confidence)
-- `@mastra/core` type definitions -- confirmed `MastraModelConfig` accepts `LanguageModelV3` (HIGH confidence)
+- [Next.js 16 release blog](https://nextjs.org/blog/next-16) -- `proxy.ts` replacing `middleware.ts`, verified HIGH
+- [rate-limiter-flexible npm](https://www.npmjs.com/package/rate-limiter-flexible) -- v10.0.1, zero dependencies, verified HIGH
+- [rate-limiter-flexible GitHub](https://github.com/animir/node-rate-limiter-flexible) -- RateLimiterMemory API, verified HIGH
+- [Pino redaction docs (GitHub)](https://github.com/pinojs/pino/blob/main/docs/redaction.md) -- built-in `redact` option, verified HIGH
+- [Pino redaction best practices (DEV Community)](https://dev.to/francoislp/nodejs-best-practices-redacting-secrets-from-your-pino-logs-1eik) -- path patterns, censor options
+- [Mastra storage overview](https://mastra.ai/reference/storage/overview) -- storage domains and tables
+- [Mastra snapshots docs](https://mastra.ai/docs/workflows/snapshots) -- what data is persisted in workflow snapshots
+- [Mastra LibSQL reference](https://mastra.ai/reference/storage/libsql) -- LibSQLStore configuration
+- `@mastra/core@1.8.0` type definitions (local) -- `deleteWorkflowRunById`, `dangerouslyClearAll` verified in `node_modules/@mastra/core/dist/storage/domains/workflows/base.d.ts`
+- `pino@10.1.0` type definitions (local) -- `redact` option interface verified in `node_modules/pino/pino.d.ts`
+- Codebase analysis (local) -- identified `apiKey` in workflow state schema, query string in credits route, unscoped cancel endpoint, raw markdown logging
 
 ---
-*Stack research for: Claude Code provider integration into LO-Solver v1.6*
-*Researched: 2026-03-10*
+*Stack research for: Security hardening of LO-Solver v1.7*
+*Researched: 2026-03-17*

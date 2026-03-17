@@ -1,236 +1,242 @@
 # Pitfalls Research
 
-**Domain:** Adding Claude Code as alternative model provider to existing Mastra/AI SDK workflow app
-**Researched:** 2026-03-10
-**Confidence:** HIGH (primary findings from official docs, verified GitHub issues, and codebase analysis)
+**Domain:** Security hardening of an existing Next.js + Mastra AI workflow system
+**Researched:** 2026-03-17
+**Confidence:** HIGH (based on direct codebase analysis of all affected systems)
 
 ## Critical Pitfalls
 
-### Pitfall 1: AI SDK Custom Tools Are Not Supported by Claude Code Provider
+### Pitfall 1: Removing apiKey from workflow state breaks step data access
 
 **What goes wrong:**
-The `ai-sdk-provider-claude-code` does not support AI SDK custom tools -- Zod-schema tools passed to `generateText`/`streamText` via the `tools` option are silently ignored. The AI SDK docs page for this provider explicitly marks "Tool Usage" and "Tool Streaming" as unsupported across all models (Opus, Sonnet, Haiku). This means the 10 Mastra tools currently used in the workflow (5 vocabulary CRUD tools, 3 rules CRUD tools, rule tester tool, sentence tester tool) will not work when switching the model provider from OpenRouter to Claude Code. The agents that depend on tool calls (verifier orchestrator, hypothesizers, improvers) will produce text-only responses instead of executing tool calls, breaking the entire verify/improve loop.
+The `apiKey` field in `workflowStateSchema` is the sole mechanism for passing the user's OpenRouter API key from Step 1 (extract) to Steps 2 (hypothesize) and 3 (answer). Each step creates a fresh `RequestContext` and calls `createOpenRouterProvider(state.apiKey)` to build its per-request provider. Removing `apiKey` from the state schema without replacing it with an equivalent propagation mechanism causes Steps 2 and 3 to fall back to the singleton `openrouter` provider (env key), or -- if no env key is set -- to `undefined`, crashing every agent call.
+
+Affected code paths:
+- `steps/01-extract.ts:35` -- sets `apiKey: inputData.apiKey` into state via `setState`
+- `steps/02-hypothesize.ts:79-80` -- reads `state.apiKey` to create per-request provider
+- `steps/03-answer.ts:57-58` -- reads `state.apiKey` to create per-request provider
 
 **Why it happens:**
-The Claude Code provider wraps the Claude Agent SDK `query()` function, which operates Claude as an autonomous agent with its own built-in tools (Bash, Read, Write, Edit, etc.) and MCP-server tools. The AI SDK's tool abstraction (`tool()` with Zod schemas, `maxSteps` for multi-step execution) operates at a different level -- the provider translates prompts into `query()` calls but has no mechanism to inject AI SDK tool definitions into the Claude Agent SDK's tool execution layer.
+The natural security instinct is "don't persist secrets to disk" so the developer removes `apiKey` from `workflowStateSchema`. But Mastra workflow state is the *only* mechanism to transfer data between steps -- `RequestContext` is step-local and dies at step boundaries. The developer doesn't realize that removing the field severs the pipeline's key propagation chain.
 
 **How to avoid:**
-Bridge custom tools via MCP. The Claude Agent SDK supports custom tools through in-process MCP servers (`createSdkMcpServer` + `tool()` from `@anthropic-ai/claude-agent-sdk`). The Mastra vocabulary/rules/tester tools must be re-exposed as MCP tools that the Claude Code provider can discover and call. This requires:
-1. Creating an in-process MCP server wrapping each Mastra tool
-2. Passing the MCP server via the provider's `mcpServers` option
-3. Adding tools to `allowedTools` using the `mcp__<server-name>__<tool-name>` naming pattern
-4. Using streaming input mode (async generator for prompts) -- custom MCP tools require this
-
-Alternatively, for agents that do NOT use tools (extractors, dispatchers, answerers), the Claude Code provider can work directly -- only tool-using agents need MCP bridging.
+Replace `state.apiKey` with a non-persisted propagation mechanism. Options in order of preference:
+1. Use Mastra's workflow-level `requestContext` if it survives across steps (investigate via Mastra docs)
+2. Use an in-memory side-channel keyed by `runId` (similar to the `activeRuns` Map pattern in `active-runs.ts`) -- store the key at workflow start, read it in each step, clean up on completion
+3. Keep `apiKey` in state but strip it from the state object before `setState()` calls in Steps 2 and 3 (so it's in memory during the step but not re-persisted)
+4. As a last resort, keep `apiKey` in state but add a workflow-completion hook to clear the record from LibSQL
 
 **Warning signs:**
-- Agent responses contain prose descriptions of what they "would do" instead of actual tool calls
-- `response.steps` array has length 1 (no multi-step tool execution)
-- `response.toolCalls` is empty or undefined
-- Tests pass for extraction/answering agents but fail for verifier/hypothesizer agents
+- Workflow succeeds with env-key fallback but fails when `OPENROUTER_API_KEY` is unset
+- Steps 2 and 3 silently use the server key instead of the user's key (wrong billing)
+- `createOpenRouterProvider` call disappears from step initialization code
+- Eval harness (which never passes `apiKey`) continues working, masking the regression
 
 **Phase to address:**
-Phase 1 (provider integration) -- this is the blocking architectural decision that determines the entire integration approach. Must be resolved before any agent runs through the Claude Code provider.
+Phase 1 (API key transport) -- this is the foundational change. Must be implemented and verified before any other security work.
 
 ---
 
-### Pitfall 2: OAuth Token Refresh Race Condition With Concurrent Agent Calls
+### Pitfall 2: setState() writes secrets to LibSQL on every call
 
 **What goes wrong:**
-When multiple Claude Code agent calls run concurrently (or near-concurrently), they race on refreshing the single-use OAuth refresh token stored in `~/.claude/.credentials.json`. OAuth refresh tokens are single-use: the first process consumes the token server-side, and the second process receives a 404 `not_found_error` and loses authentication with no automatic recovery. The user must manually run `claude logout && claude login` to re-authenticate. This is a confirmed, documented bug (GitHub issues #27933 and #24317).
+Mastra's `LibSQLStore` in `src/mastra/index.ts` automatically persists workflow state to `mastra.db` on every `setState()` call. Since `apiKey` is in `workflowStateSchema`, every `setState()` writes the plaintext API key to SQLite. The key appears in: (a) the LibSQL database file, (b) WAL/journal files, (c) potentially Mastra's internal logs.
+
+The state is written frequently -- Step 1 calls `setState` twice, Step 2 calls it once per round (up to 3 rounds), and Step 3 calls it once. That's 4-7 writes of the plaintext key per solve.
+
+Even after removing `apiKey` from the schema, old run records in LibSQL still contain the key unless the database is cleared.
 
 **Why it happens:**
-The Claude CLI token manager performs a read-HTTP refresh-write cycle on `.credentials.json` with no file locking or inter-process coordination. When two processes read the same `refresh_token=T1`, the first redemption gets a new token T2 and writes it, but the second process tries the now-consumed T1 and gets a 404. OAuth tokens expire after 8-12 hours, so this race can occur during any workflow execution if tokens need refreshing.
+Mastra manages storage internally. The developer controls the schema but not the persistence mechanism. Every field in `workflowStateSchema` gets serialized and stored via Zod -- there's no "transient" annotation. The `setState()` pattern spreads the full state: `await setState({ ...state, stepTimings: [...] })`, so `apiKey` is included in every write even when unmodified.
 
 **How to avoid:**
-1. **Serialize all Claude Code provider calls** -- never run concurrent `query()` calls within the same workflow execution. The existing workflow already uses sequential agent dispatch (key decision in PROJECT.md: "Sequential agent dispatch, not parallel"), so this aligns. But ensure no parallelism leaks in (e.g., the multi-perspective hypothesizer loop currently dispatches perspectives sequentially, which is safe).
-2. **Use `setup-token` for long-lived auth** -- `claude setup-token` creates a 1-year token designed for automated/headless workflows, avoiding the OAuth refresh cycle entirely. This is the recommended path for a server-side application.
-3. **Single session reuse** -- use the provider's `sessionId` option to maintain a single session across calls, reducing token refresh frequency.
+1. Remove `apiKey` from `workflowStateSchema` as part of the key transport migration (Pitfall 1)
+2. After migration, use `npm run dev:new` (which clears the database) as the cleanup mechanism
+3. Do NOT attempt to add encryption at the LibSQL layer -- overengineering for a dev tool
+4. Do NOT write SQL migration scripts against Mastra-managed tables (see Pitfall 3)
 
 **Warning signs:**
-- Intermittent 401/404 errors during workflow execution
-- "Refresh token is invalid or expired" in logs from `token-manager` service
-- Authentication failures that only occur when the workflow has multiple agent calls in sequence
-- OAuth token expiry (8-12 hours) causing mid-workflow failures on long-running solves
+- `sqlite3 mastra.db "SELECT * FROM ..."` reveals API keys in plaintext
+- The key appears in multiple `setState()` calls per workflow execution
+- State spread pattern (`{ ...state, ... }`) carries the key forward silently
 
 **Phase to address:**
-Phase 1 (provider integration) -- authentication strategy must be decided before the first end-to-end test. The `setup-token` approach should be the default for server-side usage.
+Phase 1 (API key transport) -- the key must stop flowing through state before cleanup matters.
 
 ---
 
-### Pitfall 3: Structured Output Schema Silent Fallback to Prose
+### Pitfall 3: Direct LibSQL manipulation conflicts with Mastra framework assumptions
 
 **What goes wrong:**
-Some JSON Schema features cause the Claude Code CLI to silently fall back to prose generation (no `structured_output` in the response). The workflow uses `structuredOutput: { schema: ... }` extensively in extraction (Step 1), hypothesis extraction (Step 2), verification feedback extraction (Step 3a2), rules improvement extraction (Step 3b2), and question answering (Step 4). If the Zod schema generates JSON Schema features the provider does not support, agents return unstructured text instead of JSON, causing `schema.safeParse(response.object)` to fail with `response.object` being null/undefined.
-
-The specific unsupported JSON Schema features that trigger this silent fallback are:
-- `format` constraints (e.g., `email`, `uri`, `date-time`)
-- Complex regex patterns with lookaheads/backreferences
-- Potentially: `.catchall()` schemas -- used in `structuredProblemDataSchema` for variable dataset fields, which generates `additionalProperties` in JSON Schema
+Attempting to clean up old API keys by directly manipulating LibSQL tables (DELETE, UPDATE on workflow run records) may conflict with Mastra's internal assumptions about table schemas, row lifecycle, and caching. Mastra may have in-memory caches, migration versioning, or integrity checks that break when external tools modify the database.
 
 **Why it happens:**
-The Claude Agent SDK's constrained decoding only supports a subset of JSON Schema. When it encounters unsupported features, it does not error -- it silently drops the `structured_output` constraint and returns free-form text. The provider emits an `unsupported-setting` warning, but this is easy to miss in logs.
+The developer sees plaintext keys in the DB and wants to clean them up immediately. The impulse is to run SQL directly. But Mastra owns the database schema and access patterns -- it's not a user-managed store.
 
 **How to avoid:**
-1. **Audit all Zod schemas** used with `structuredOutput` against the supported JSON Schema subset. The current schemas in `workflow-schemas.ts` use `.catchall()` (on `structuredProblemDataSchema`), `.nullable()`, `.optional()`, `.enum()`, and nested objects/arrays -- `.catchall()` is the highest-risk feature.
-2. **Simplify generation schemas, validate strictly client-side** -- the official workaround from the provider docs. Generate with a simplified schema, then validate with the full schema in application code.
-3. **Test each schema individually** before integrating -- run each `structuredOutput` schema through the Claude Code provider in isolation and verify `response.object` is not null.
-4. **Listen for the `unsupported-setting` warning** emitted by the provider and surface it as an error rather than silently continuing.
+- Use `npm run dev:new` (which clears the database) as the cleanup mechanism -- it already exists
+- If targeted cleanup is needed, check Mastra's API for run deletion/cleanup methods
+- Accept that old run data with keys will be cleared on the next `dev:new` restart
+- Do NOT write migration scripts that directly ALTER or DELETE from Mastra-managed tables
+- Treat `mastra.db*` as ephemeral (already in `.gitignore`)
 
 **Warning signs:**
-- `response.object` is null/undefined when using Claude Code provider but works with OpenRouter
-- `response.text` contains JSON-like content but is not parsed as structured output
-- Extraction steps bail with "Validation failed" errors only on Claude Code mode
-- Provider logs contain `unsupported-setting` warnings
+- Dev server crashes after database modification with schema mismatch errors
+- Mastra logs show "table not found" or "column mismatch" errors
+- Workflow state reads return unexpected shapes after manual edits
 
 **Phase to address:**
-Phase 2 (schema validation) -- after basic provider connectivity is established, but before full workflow integration. Every schema used with `structuredOutput` must be tested against the Claude Code provider.
+Phase 1 -- document the cleanup strategy (use `dev:new`) rather than building tooling for it.
 
 ---
 
-### Pitfall 4: Cost Tracking Uses OpenRouter-Specific Provider Metadata Path
+### Pitfall 4: Moving key from query string to header without updating all consumers
 
 **What goes wrong:**
-The current cost tracking code in `extractCostFromResult()` (at `request-context-helpers.ts:202`) reads cost data from `providerMetadata.openrouter.usage.cost` -- a path that is specific to the OpenRouter provider. The Claude Code provider (via the Claude Agent SDK) reports cost through a completely different mechanism: `total_cost_usd` on the result message and `modelUsage` per-model breakdowns on the result. When using the Claude Code provider, `extractCostFromResult()` will always return 0, and the $1-boundary cost update events will never fire, making the frontend cost display permanently show $0.00.
+The API key currently flows through query strings in one place: `/api/credits?key=${encodeURIComponent(apiKey)}` (in `credits-badge.tsx:50`). The API key also flows through the request body to `/api/solve` (in `use-solver-workflow.ts:33`). Moving the key to a header requires updating both the frontend sender and the backend receiver atomically. If only one side is updated:
+- Frontend sends header, backend reads query string -> key is lost, credits show "ERR"
+- Frontend sends query string, backend reads header -> same result
 
-This function is called in every workflow step (01-extract, 02a-dispatch, 02b-hypothesize, 02c-verify, 02d-synthesize, 03-answer), so the bug affects the entire pipeline -- not just one agent call.
+Additionally, the `inputData.apiKey` field that flows through the POST body to `/api/solve` is a separate transport path from the credits query string. Both must be migrated, but they use different HTTP methods (GET vs POST) and different request structures.
 
 **Why it happens:**
-The cost tracking was built for OpenRouter's specific metadata structure. The Claude Agent SDK provides cost data at a different level (per-`query()` call via the result message `total_cost_usd`, not per-step via `providerMetadata`). Additionally, Claude Code subscription usage is not billed per-token in the same way -- Pro/Max users pay a flat subscription, so "cost" has a different meaning (usage quota consumption vs. dollar amounts).
+The developer migrates the solve endpoint (POST body -> header) but forgets the credits endpoint (GET query string -> header). Or vice versa. The two endpoints have completely different code paths and no shared abstraction for key extraction.
 
 **How to avoid:**
-1. **Create a provider-agnostic cost extraction interface** that abstracts over `extractCostFromResult()`. For OpenRouter: read `providerMetadata.openrouter.usage.cost`. For Claude Code: read from the SDK result message's `total_cost_usd` field.
-2. **Decide what "cost" means for subscription users** -- Claude Code usage costs $0 in API terms (subscription covers it), but users still care about usage quota consumption. Consider displaying "tokens used" instead of "$X.XX" for Claude Code mode.
-3. **Handle the case where cost is genuinely unavailable** -- the Claude Agent SDK's cost tracking is per-`query()` call, not per-AI-SDK-step. The AI SDK provider wrapper may not expose `total_cost_usd` through the same `providerMetadata` path at all.
+1. Create a single server-side helper: `getApiKeyFromRequest(req: Request): string | undefined` that reads from the header
+2. Create a single client-side helper that adds the header to all fetch calls
+3. Update all API routes that accept keys in one PR: `/api/solve`, `/api/credits`, and any future endpoints
+4. Test both the solve flow and the credits polling after migration
+5. Update `use-solver-workflow.ts` to send the key via header instead of in `inputData`
 
 **Warning signs:**
-- Cost display stuck at $0.00 during Claude Code workflow execution
-- No cost warning toasts firing even for long/expensive operations
-- Cost tracking works fine for OpenRouter but silently returns 0 for Claude Code
-- `updateCumulativeCost()` never emits `data-cost-update` events during Claude Code runs
+- Credits badge shows "ERR" or "--" permanently after migration
+- Solve works but credits display is broken (or vice versa)
+- Network tab shows the key still appearing in URLs for some requests
 
 **Phase to address:**
-Phase 2 or Phase 3 -- after basic agent execution works. Can be deferred if cost display is not critical for initial Claude Code integration, but must be addressed before the feature is considered complete.
+Phase 1 (API key transport) -- must be done as an atomic change across all endpoints.
 
 ---
 
-### Pitfall 5: Permission Mode Foot Guns in Server-Side Context
+### Pitfall 5: Cancel endpoint session scoping breaks the existing abort UX
 
 **What goes wrong:**
-The Claude Agent SDK requires explicit permission handling for tool execution. In a server-side context (Next.js API route), there is no user to approve tool permissions interactively. Using `permissionMode: 'default'` causes the agent to hang waiting for user approval that never comes. Using `permissionMode: 'bypassPermissions'` grants full autonomous system access including file writes outside the project directory and arbitrary command execution via Bash. A documented bug (issue #29048) shows that even with `sandbox.filesystem.allowWrite` configured, the Write tool can create files outside the intended directory when `bypassPermissions` is active.
+Adding session-scoped guards to `/api/solve/cancel` (e.g., requiring a session token or matching runId) can break the abort flow if the frontend doesn't send the right credentials. The current cancel endpoint is a simple `POST` that cancels *all* active runs -- it works because there's only ever one active run in a single-user tool. Adding authentication or scoping without updating the frontend's `handleStop()` in `use-solver-workflow.ts` causes 401/403 responses, and the user sees the abort button "do nothing."
 
-Additionally, `allowedTools` restrictions may be ignored when `bypassPermissions` is set (documented issue #14279), though `disallowedTools` works correctly in all modes. And when a parent agent uses `bypassPermissions`, all subagents unconditionally inherit this mode (issue #20264), creating privilege escalation concerns.
+Worse: the cancel endpoint is called via a button click in `handleStop()`. This function calls `stop()` from `useChat` which closes the client stream -- it does NOT call the cancel endpoint directly. The cancel endpoint is only called via explicit fetch from the abort confirmation dialog. If the cancel endpoint now requires the same API key that was used to start the solve, and the user has changed their key since starting, cancellation fails.
 
 **Why it happens:**
-The Claude Agent SDK was designed for interactive CLI use where a human approves each tool action. The permission model assumes interactive prompting. Server-side headless use requires `bypassPermissions`, but this was designed as a "trust everything" escape hatch, not a fine-grained authorization layer.
+The developer applies a security pattern from multi-user systems ("only the session that started a run can cancel it") to a single-user tool where that complexity adds no security value but creates failure modes.
 
 **How to avoid:**
-1. **For agents that need only MCP tools (not built-in tools):** Use `disallowedTools` to block dangerous built-in tools (`Bash`, `Write`, `Edit`, `Read`, `WebSearch`, `WebFetch`). Only allow the specific MCP tools you defined. `disallowedTools` works reliably in all permission modes.
-2. **Use `disallowedTools` over `allowedTools`** -- the former works reliably in all permission modes; the latter may be ignored with `bypassPermissions`.
-3. **If `bypassPermissions` is necessary**, run in a sandboxed environment (container, VM) where file system damage is contained.
-4. **Never expose the Claude Code provider path to arbitrary user prompts** without sandboxing -- the agent has access to the server's file system.
-5. **Set `systemPrompt: undefined` and `loadFileSystemSettings: false`** (v2.0.0+ defaults) to prevent the agent from loading CLAUDE.md or settings.json from the filesystem, which could contain unexpected instructions.
+- Keep the cancel endpoint simple -- it's a local dev tool, not a SaaS API
+- If scoping by runId, return the runId from the solve endpoint and have the frontend send it back for cancellation -- but verify this works with the streaming `createUIMessageStreamResponse` pattern
+- Test the full abort flow end-to-end after any changes: click Solve, wait for activity, click Abort, confirm the workflow stops and UI enters the "aborted" amber state
+- Consider: the `activeRuns` Map already provides natural scoping (only current process runs are cancellable)
 
 **Warning signs:**
-- Agent hangs indefinitely during workflow execution (waiting for permission approval)
-- Unexpected files appearing in the project directory or home directory
-- Agent executing Bash commands on the server
-- Server-side logs showing tool permission requests with no handler
-- Agent reading CLAUDE.md and behaving as a coding assistant instead of a linguistics solver
+- Abort button click produces no visible effect
+- Network tab shows 401/403 on cancel endpoint
+- `activeRuns` Map has entries that never get cleaned up
+- Console shows "cancel() after completion is a no-op" when cancel should have worked
 
 **Phase to address:**
-Phase 1 (provider integration) -- permission mode must be configured correctly from the first agent call. Get this wrong and the agent either hangs or has unsafe access.
+Phase 2 (endpoint guards) -- after key transport (Phase 1) is stable. Test the complete abort flow after changes.
 
 ---
 
-### Pitfall 6: Streaming Behavior and Event Emission Mismatch
+### Pitfall 6: Logging changes that break the eval harness or corrupt data flow
 
 **What goes wrong:**
-The current workflow emits real-time trace events (`data-agent-text-chunk`, `data-agent-start`, `data-agent-end`, `data-tool-call`, etc.) by consuming `textStream` chunks from `streamWithRetry()`. The Claude Code provider's streaming behavior is fundamentally different:
-1. Tool Streaming is explicitly marked as "unsupported" for all Claude Code models on the AI SDK provider page
-2. The provider streams the full Claude agent session (which may include multiple internal turns, tool calls, thinking), not a single model response
-3. The `textStream` from the provider includes Claude's internal reasoning and tool execution output mixed together, not clean separated text chunks
-4. The Claude Code provider's streaming includes built-in tool execution output (file reads, bash outputs) that are not present in OpenRouter responses
+The eval harness (`src/evals/run.ts`) runs the workflow via `workflow.createRun()` + `run.start()`. It reads step outputs from the result: `result.steps['extract-structure']?.output`. The eval doesn't consume logs directly, but logging and data flow share the same variables. In every step file, the same `response.object` is both logged AND parsed:
 
-This means the frontend trace display will either show garbled mixed content or miss tool execution events entirely when using the Claude Code provider.
+```typescript
+// 01-extract.ts:125-131
+logAgentOutput(logFile, 'Step 1', 'Extractor', response.object, ...);  // logged
+const parseResult = structuredProblemSchema.safeParse(response.object);  // parsed
+```
+
+If a "security improvement" mutates the response object before logging (to redact fields), the mutation affects the parser too. JavaScript objects are passed by reference -- `redact(response.object)` that modifies in-place will corrupt the data that `safeParse` receives.
+
+Additionally:
+- If logging becomes mandatory (throws on missing `LOG_DIRECTORY`), evals fail in clean environments
+- If the `logAgentOutput` function signature changes, all 7 call sites across step files must be updated consistently
+- If log file path generation (`getLogFilePath`) is made conditional, `initializeWorkflowState()` may return an empty `logFile` that causes downstream null-path errors
 
 **Why it happens:**
-OpenRouter provides a direct model API -- one request, one streamed response, clean text chunks. The Claude Code provider wraps an autonomous agent session that internally makes multiple model calls, executes tools, and streams all of this as a single output. The streaming semantics are architecturally different.
+Logging and data parsing share the same variables. The developer doesn't realize that modifying the logged object also modifies the parsed object.
 
 **How to avoid:**
-1. **Accept degraded streaming for Claude Code mode** -- show a simplified progress display instead of the full hierarchical trace. The trace events that depend on per-tool-call granularity (`data-tool-call`, `data-agent-text-chunk`) may not be available with the same fidelity.
-2. **Use the Claude Agent SDK's message-level events** instead of text stream chunks. The SDK emits typed messages (`assistant`, `tool_use`, `tool_result`, `result`) that can be mapped to trace events, but this requires hooking into the raw SDK output, not the AI SDK's `textStream`.
-3. **Branch the streaming logic** in `streamWithRetry()` based on provider type. For OpenRouter: use the current `textStream` consumption. For Claude Code: use `generateWithRetry()` instead (non-streaming) for initial implementation, then optionally add SDK-level streaming later.
-4. **Do not assume `response.steps` has the same structure** -- with OpenRouter, each step corresponds to one model call. With Claude Code, the entire `query()` call may appear as a single step regardless of how many internal turns the agent took.
+- Never mutate agent response objects before they are parsed by `safeParse()`
+- If redacting log output, create a shallow copy: `logAgentOutput(logFile, step, agent, { ...response.object, sensitiveField: '[REDACTED]' }, ...)`
+- Keep logging graceful (already is -- `if (!logFile) return;` in all log functions)
+- Run the eval harness after any logging changes: `npm run eval -- --problem linguini-001`
+- Do not make `LOG_DIRECTORY` mandatory
 
 **Warning signs:**
-- Frontend trace panel shows raw internal reasoning mixed with tool output
-- Tool call events missing from the trace timeline
-- Agent text chunks arriving in unexpected formats (e.g., XML tool use blocks)
-- "Tool Streaming" warnings in console from the AI SDK
-- `onTextChunk` callback receiving very large chunks instead of incremental tokens
+- Eval scores drop to 0 after logging changes (parsing failures)
+- `safeParse` fails with "Expected object, received string" after redaction
+- `logAgentOutput` receives `undefined` or `[REDACTED]` instead of actual data
+- Evals work fine but log files show `[REDACTED]` where data should be
 
 **Phase to address:**
-Phase 3 (frontend integration) -- streaming adaptation requires changes to both the backend event emission and frontend trace display. Can be deprioritized if initial integration uses non-streaming `generateWithRetry()`.
+Phase 3 (logging hardening) -- must come after key transport changes are stable. Run evals before and after.
 
 ---
 
-### Pitfall 7: Rate Limiting and Throttling Under Subscription Model
+### Pitfall 7: Over-engineering authentication for a single-user dev tool
 
 **What goes wrong:**
-Claude Code Pro/Max subscriptions have usage quotas that are fundamentally different from API pay-per-token pricing. The solver workflow makes 15-30+ agent calls per solve (extractors, dispatchers, hypothesizers, verifiers, tester tools, improvers, answerers across multiple rounds). With a Pro subscription ($20/month), the 5-hour rolling window allows roughly 45 messages. A single workflow run could consume 30-60% of the window quota. Two back-to-back solves could trigger throttling where responses slow dramatically or are queued.
+The developer adds session management, CSRF tokens, JWT auth, or middleware-based authentication to a tool that runs on `localhost:3000`. This adds complexity without security benefit:
+- Session tokens need storage, expiry, refresh logic
+- CSRF protection is irrelevant for API routes called only by the same-origin SPA
+- JWT adds a dependency and key management overhead
+- Auth middleware can block the Mastra dev server (port 4111, Mastra Studio) or the eval harness (which calls workflow endpoints directly without browser context)
 
-Additionally, usage is shared between Claude.ai (web) and Claude Code -- if the user has been chatting on Claude.ai, their remaining quota for the workflow is reduced. Once 50 sessions per month are reached, access throttling may also occur.
+The eval harness is particularly vulnerable: `run.ts` calls `workflow.createRun()` + `run.start()` directly through the Mastra API (not HTTP endpoints), so HTTP-level auth doesn't affect it -- but if auth guards are added to the workflow itself (e.g., checking for an API key before starting), evals break because they use the env key, not a user-provided key.
 
 **Why it happens:**
-The workflow was designed around API pricing where more calls = more cost but no hard limits. Subscription plans invert this: cost is fixed but capacity is limited. The workflow's multi-agent architecture (12+ agents, multiple rounds of verify/improve) was optimized for cost-per-call, not calls-per-window.
+Security checklists designed for production SaaS get applied wholesale to a dev tool. The developer doesn't distinguish between "protect against network attackers" and "prevent accidental key exposure."
 
 **How to avoid:**
-1. **Document subscription tier requirements** -- recommend Max 5x ($100/month, ~225 messages per 5 hours) minimum for workflow usage. Pro tier is likely insufficient for repeated solves.
-2. **Add quota awareness** -- before starting a workflow, warn users about estimated message consumption.
-3. **Consider agent consolidation for Claude Code mode** -- combine sequential agents that do not use tools into single, longer prompts. For example, the two-agent chain (reasoner + extractor) could become a single call with structured output, halving the call count for those steps.
-4. **Implement graceful throttle handling** -- detect rate limit responses (429 or similar) and show a user-friendly "quota exceeded, please wait" message instead of a generic error.
+- Match security investment to threat model: the threat is "API keys persisted to disk" and "keys in URLs," not "unauthorized users accessing the app"
+- Focus on actual risks: key in state, key in query strings, key in logs
+- Skip: session management, CSRF protection, rate limiting, auth middleware
+- If adding endpoint guards, use the simplest check: "does the request include the expected header?"
+- Never add guards that require the eval harness to pass credentials
 
 **Warning signs:**
-- Workflow runs getting progressively slower during a session
-- 429 responses from the Claude API
-- Agent calls timing out (not from model latency, but from queue wait times)
-- Users reporting "it worked earlier but now it's slow/broken"
+- New middleware files appear (e.g., `middleware.ts`, `auth.ts`)
+- `npm run dev` requires additional setup steps
+- Eval harness needs auth tokens to run
+- Mastra Studio stops working due to auth middleware
 
 **Phase to address:**
-Phase 3 (UX integration) -- throttle detection and user messaging. Phase 1 should document the quota impact per workflow run.
+All phases -- this is a meta-pitfall. Apply "is this proportionate to the threat?" test before every change.
 
 ---
 
-### Pitfall 8: MCP Tool Prompt Requires Streaming Input Mode (Async Generator)
+### Pitfall 8: Rate limiting that hurts development UX
 
 **What goes wrong:**
-Custom MCP tools registered via `createSdkMcpServer` require the `prompt` parameter to use streaming input mode -- an async generator/iterable, not a simple string. The current workflow passes prompts as plain strings to `agent.generate()` and `agent.stream()`. If the MCP bridge is used for tool bridging (Pitfall 1's solution), but prompts are passed as strings, the MCP tools will not be discovered or callable by the agent. The Claude Agent SDK docs explicitly state: "Custom MCP tools require streaming input mode. You must use an async generator/iterable for the prompt parameter - a simple string will not work with MCP servers."
+Adding rate limiting to `/api/solve` or `/api/credits` throttles the developer's own usage. The `/api/credits` endpoint polls every 20 seconds (`credits-badge.tsx:71`). Rate limiting this causes the credits badge to show "ERR" constantly. For `/api/solve`, the workflow internally makes 15-30+ LLM calls -- but the route is only called once per solve. If rate limiting is applied at the API route level, it affects legitimate usage without preventing abuse (since there's no abuse scenario for localhost).
 
 **Why it happens:**
-The streaming input requirement is an implementation detail of the Claude Agent SDK's MCP integration. It exists because MCP tool discovery and registration happens during the streaming handshake. With a simple string prompt, the handshake phase is skipped.
+Rate limiting is on every security hardening checklist. The developer adds it without considering that all requests come from one user on localhost.
 
 **How to avoid:**
-1. **Wrap string prompts in an async generator** before passing to the Claude Code provider when MCP tools are configured:
-   ```typescript
-   async function* wrapPrompt(text: string) {
-     yield {
-       type: 'user' as const,
-       message: { role: 'user' as const, content: text }
-     };
-   }
-   ```
-2. **Apply this wrapping conditionally** -- only when the provider is Claude Code and MCP tools are needed. OpenRouter agents should continue using string prompts.
-3. **Test MCP tool discovery** by verifying the agent actually calls an MCP tool in a test prompt, not just that the prompt compiles.
+- Do not add rate limiting for v1.7 -- it's explicitly out of scope per PROJECT.md ("single-user dev tool")
+- If rate limiting is added later (for deployment), apply it per-API-key (not per-IP) and exclude polling endpoints
+- Use upstream provider rate limits (OpenRouter already has them) instead of application-level limits
 
 **Warning signs:**
-- MCP tools registered but agent never calls them
-- Agent responds with "I don't have access to any tools" despite MCP server being configured
-- Tool discovery works in unit tests but not in the actual workflow
-- No `tool_use` messages in the SDK response
+- Credits badge flickers between value and "ERR"
+- Solve attempts fail with 429
+- Dev workflow requires waiting between solve attempts
 
 **Phase to address:**
-Phase 2 (tool bridging) -- this is part of the MCP bridge implementation. Must be resolved alongside Pitfall 1.
+Explicitly defer to post-v1.7. Document that rate limiting is intentionally omitted.
 
 ---
 
@@ -238,119 +244,110 @@ Phase 2 (tool bridging) -- this is part of the MCP bridge implementation. Must b
 
 | Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
 |----------|-------------------|----------------|-----------------|
-| Hard-coding `providerMetadata.openrouter` in cost tracking | Works for current single-provider setup | Must refactor for every new provider added | Never -- should be abstracted now that multi-provider is confirmed |
-| Skipping streaming for Claude Code provider (using `generateWithRetry` instead) | Simplifies initial integration significantly | Users get degraded UX with no real-time trace for Claude Code mode | Acceptable for MVP of Claude Code mode; fix in follow-up phase |
-| Using `bypassPermissions` without sandboxing | Agent executes without hanging | Full system access from server-side code | Only in development; never in production without container isolation |
-| Duplicating tool definitions (Mastra tools + MCP wrappers) | Quick integration path | Two definitions to maintain per tool | Acceptable if tool count is stable (currently 10); wrap with adapter function to reduce duplication |
-| Treating Claude Code cost as $0 in the UI | Avoids cost tracking complexity | Users have no visibility into quota consumption | Acceptable for initial phase; must add quota/token display before feature is considered complete |
-| Skipping the two-agent chain for Claude Code mode | Fewer API calls, stays within quota | Different code path for different providers; behavior divergence over time | Acceptable if clearly documented and the output schemas are identical |
+| Keeping `apiKey` in workflow state "for now" | Zero refactoring effort | Key persisted to LibSQL on every setState call; grows as more users try the tool | Never -- this is the core problem v1.7 solves |
+| API key in query string (`/api/credits?key=...`) | Simple to implement, already works | Key appears in server logs, browser history, proxy logs, Mastra observability | Never -- move to header immediately |
+| Redacting entire log sections instead of specific fields | Quick fix for "don't log secrets" | Loses debugging value; makes production issues uninvestigable | Never -- redact the specific sensitive field, keep the rest |
+| Adding auth middleware to all routes | "Defense in depth" feeling | Breaks eval harness, Mastra Studio, and development flow | Never for this project -- disproportionate to threat model |
+| Using `JSON.stringify(state)` for debugging | Quick visibility into state during dev | Dumps API key into console/log files | Only with a redaction helper: `JSON.stringify(redactState(state))` |
+| Stripping apiKey from state by omitting in setState spread | Prevents persistence without schema change | Fragile -- any new setState call that includes `...state` re-introduces the key | Acceptable as temporary fix; must be replaced with proper propagation mechanism |
 
 ## Integration Gotchas
 
 | Integration | Common Mistake | Correct Approach |
 |-------------|----------------|------------------|
-| Claude Code Provider auth | Assuming `claude login` persists forever; deploying without auth strategy | Use `claude setup-token` for 1-year server auth; handle 401 with re-read of credentials file |
-| Structured output | Passing complex Zod schemas unchanged; assuming `response.object` will always be populated | Audit schemas against supported JSON Schema subset; always check `response.object !== null` before parsing; watch for `.catchall()` and `format` constraints |
-| Tool bridging | Trying to pass AI SDK `tools` option directly to Claude Code provider | Wrap tools as MCP server tools via `createSdkMcpServer`; use `allowedTools` with `mcp__<server-name>__<tool-name>` prefix naming |
-| MCP tool prompts | Using simple string prompts with MCP servers | MCP tools require streaming input mode -- use async generator/iterable for the `prompt` parameter, not a plain string |
-| Permission mode | Using `permissionMode: 'default'` in server context | Use `disallowedTools` to block built-in tools; never rely on `allowedTools` alone with `bypassPermissions` |
-| Provider metadata for cost | Reading `providerMetadata.openrouter.usage.cost` and expecting it to work for all providers | Create provider-aware cost extraction that checks provider type first; Claude Code uses `total_cost_usd` on result message |
-| Agent model resolution | Using `openrouter('model-id')` call pattern for Claude Code provider | Claude Code provider is called differently -- `claudeCode('claude-opus-4-6')` -- different call signature and different model ID format |
-| Error classification in retry logic | Assuming all API errors have the same error names/messages | `generateWithRetry` checks for `AI_APICallError` and OpenRouter-specific error messages; Claude Code errors may have different names/shapes |
-| File system settings | Letting the agent load CLAUDE.md and settings.json from the project | Set `loadFileSystemSettings: false` (v2.0.0+ default) to prevent the linguistics solver agent from acting as a coding assistant |
-| Session persistence | Letting the provider persist sessions to disk | Set `persistSession: false` to prevent Claude Code from writing session data to `~/.claude/` |
+| Mastra `setState()` | Assuming state is ephemeral; it's persisted to LibSQL | Treat every field in `workflowStateSchema` as "will be written to disk"; never put secrets there |
+| Mastra `RequestContext` | Assuming RequestContext survives across steps | Each step creates a new `RequestContext`; cross-step data must go through workflow state or an in-memory side-channel |
+| `createOpenRouterProvider()` | Creating the provider once and sharing across steps | Must create per-step because RequestContext is step-scoped; the provider holds the API key in its closure |
+| `activeRuns` Map | Assuming entries auto-expire or are always cleaned | Entries clean up in the `finally` block of the stream handler only; crashed or orphaned runs persist until server restart |
+| `createUIMessageStreamResponse` | Trying to set response headers after streaming starts | Headers must be set before `createUIMessageStreamResponse` returns; cannot inject auth tokens mid-stream |
+| Next.js middleware | Applying middleware to all routes including API routes | Middleware runs before API route handlers; can block non-browser callers (eval harness, Mastra Studio) |
+| `chatId` in `use-solver-workflow.ts` | Changing key transport without updating chatId derivation | `chatId` uses `apiKey.slice(-4)` for uniqueness; if key no longer flows through frontend state, chatId stops changing on key update, causing stale transport reuse |
 
 ## Performance Traps
 
 | Trap | Symptoms | Prevention | When It Breaks |
 |------|----------|------------|----------------|
-| Subscription quota exhaustion | Workflow slows then stalls, 429 errors | Document per-run quota cost (~20-30 messages); recommend Max tier; consolidate agent calls for Claude Code mode | After 1-2 full workflow runs on Pro tier within a 5-hour window |
-| Session startup latency | First agent call takes 3-10s longer than OpenRouter | Accept higher TTFT for Claude Code; show loading indicator; consider reusing sessions across calls | Every workflow start (cold session overhead from CLI subprocess spawn) |
-| Token refresh during workflow | Mid-workflow auth failure, unrecoverable without re-login | Use `setup-token` for 1-year auth; serialize all agent calls | After 8-12 hours of session with OAuth login, or any concurrent process |
-| MCP server initialization overhead | Tool discovery adds latency per agent call | Initialize MCP server once at workflow start, pass to all Claude Code agent calls | Every agent call that uses MCP tools, especially if server is created per-call |
-| Verify/improve loop message explosion | Each round adds 5-10+ agent calls; 3 rounds = 15-30 calls from verification alone | Cap rounds more aggressively for Claude Code mode (2 instead of 3-5); consolidate tester calls | When `maxRounds` is 3+ and the problem requires multiple improvement iterations |
+| Module-level `activeRuns` Map without TTL | Crashed workflows leave entries forever; Map grows over many solves | Add a TTL sweep or size check; current `finally` block handles normal cases | After ~50 abandoned solves without server restart |
+| Synchronous `fs.appendFileSync` in logging | Blocks event loop during I/O | Switch to async `fs.promises.appendFile` if concurrent solves are added | Only with concurrent solves + large log files; fine for single-user now |
+| Header-based key extraction on every request | Minimal overhead per request | No real performance concern -- header parsing is O(1) | Never a problem at this scale |
 
 ## Security Mistakes
 
+Domain-specific security issues for this particular system.
+
 | Mistake | Risk | Prevention |
 |---------|------|------------|
-| Using `bypassPermissions` on a user-facing Next.js server | Agent can execute arbitrary commands, read/write any file on the server | Use `disallowedTools` to block `Bash`, `Write`, `Edit`, `Read`; only allow your MCP tools |
-| Storing `setup-token` in `.env` and accidentally committing | Token grants full Claude account access for 1 year | `.env` is already gitignored; add `setup-token` to `.gitignore` documentation; never expose via API responses |
-| Passing user-controlled prompt text directly to Claude Code agent | Prompt injection could instruct agent to use built-in tools maliciously if not blocked | Restrict via `disallowedTools` for all dangerous built-in tools; sanitize user input |
-| Running Claude Code provider in same process as production Next.js | Agent's built-in tools share filesystem with the app; even with disallowed tools, sandbox bugs exist | Consider subprocess isolation for Claude Code execution in production |
-| Allowing agent to load filesystem settings | Agent reads CLAUDE.md from project and follows its instructions (designed for coding) instead of linguistics solver instructions | Set `loadFileSystemSettings: false` explicitly |
+| API key in query string (`/api/credits?key=...`) | Key logged by web servers, proxies, browser history, Mastra observability spans | Move to `Authorization` or `X-Api-Key` header |
+| API key persisted to LibSQL via workflow state | Key on disk in plaintext; survives across sessions; in WAL files even after delete | Remove from `workflowStateSchema`; propagate through non-persisted channel |
+| Mutating response objects during log redaction | Corrupts data flow; `safeParse()` receives redacted data instead of original | Always copy before redacting: `logFn({ ...response.object, key: '[REDACTED]' })` |
+| Console.log of full state objects in step files | API key appears in server console output (e.g., `console.log(state)`) | Never log full state; log specific fields or use a state-redaction helper |
+| API key visible in frontend `chatId` | Last 4 chars of key in React state/devtools; minimal real risk but unnecessary exposure | Use a hash or counter for chatId uniqueness instead of key suffix |
+| LLM responses logged with full JSON | Problem text could contain sensitive linguistic data (minimal risk for this app) | Acceptable for dev tool; document that `logs/` contains problem data |
 
 ## UX Pitfalls
 
 | Pitfall | User Impact | Better Approach |
 |---------|-------------|-----------------|
-| Showing $0.00 cost for Claude Code runs | User thinks feature is free; unaware of quota consumption | Display token count or "included in subscription" indicator; show estimated messages remaining |
-| Same trace display for both providers | Claude Code trace shows garbled mix of reasoning + tool output | Provider-aware trace display: simplified progress mode for Claude Code showing step completion without per-chunk streaming |
-| No feedback during permission waits | Workflow appears frozen if permission mode is misconfigured | Add timeout on agent calls; surface error if no response within 60s; log permission mode for debugging |
-| No indication of quota remaining | User starts workflow, hits rate limit mid-run, loses partial progress | Check/display quota before workflow start if API provides it; warn if subscription tier is Pro |
-| Silent fallback from structured to prose output | Extraction step appears to succeed but `response.object` is null | Validate `response.object` is non-null immediately; show explicit error "Claude Code provider returned prose instead of structured data -- schema may be incompatible" |
-| Provider toggle does not indicate capability differences | User switches to Claude Code expecting identical behavior | Show informational note when Claude Code is selected: "Streaming trace may be limited; tool execution uses MCP bridge" |
+| Adding auth requirements that weren't there before | "It worked yesterday, now it's broken" -- user must figure out new setup | Make all guards transparent; no new setup steps |
+| Moving key from query string to header without updating `credits-badge.tsx` | Credits badge shows "ERR" permanently because endpoint no longer receives the key | Update frontend and backend atomically; test credits polling after changes |
+| Making log directory mandatory | Dev setup requires creating a directory that was previously auto-created | Keep auto-creation behavior (`mkdirSync({ recursive: true })` in `initializeLogFile`) |
+| Breaking the "no env key needed" deployment mode | Users who deploy with user-provided keys get "missing env key" errors on startup | The app already handles missing `OPENROUTER_API_KEY` gracefully; don't add checks that assume it exists |
+| Rate limiting the credits polling endpoint | Credits badge alternates between value and "ERR" every 20 seconds | Exclude polling endpoints from any rate limiting |
 
 ## "Looks Done But Isn't" Checklist
 
-- [ ] **Tool bridging:** Tools registered as MCP tools and visible -- verify agents actually CALL the tools during execution by checking `response.steps` for tool_use events, not just that tool registration succeeded
-- [ ] **Structured output:** `generateObject`/`streamObject` returns data -- verify the `response.object` field is populated (not just `response.text` containing JSON-like text); test with EVERY schema, especially `structuredProblemDataSchema` which uses `.catchall()`
-- [ ] **Cost tracking:** Cost display shows numbers -- verify the numbers come from the Claude Code provider's actual usage data, not stale OpenRouter metadata returning 0
-- [ ] **Auth persistence:** Login works once -- verify auth survives a full 8-12 hour session; run two workflow executions 9 hours apart to confirm token refresh works
-- [ ] **Permission mode:** Agent runs without hanging -- verify it also runs WITHOUT excess permissions: confirm `Bash`, `Write`, `Edit` built-in tools are not accessible by attempting to invoke them
-- [ ] **Streaming:** Text appears in the trace panel -- verify it is the agent's actual reasoning output, not internal tool execution output, XML markup, or empty chunks
-- [ ] **Provider toggle:** UI toggle switches mode -- verify the BACKEND actually creates the correct provider instance (not still using OpenRouter); log the provider type at workflow start
-- [ ] **Error handling:** Happy path works -- verify error messages from Claude Code are surfaced correctly by the retry logic (not swallowed as unrecognized error types or shown as generic "Empty response")
-- [ ] **Retry logic:** `generateWithRetry`/`streamWithRetry` retries work -- verify Claude Code error types are classified as retryable; the current check for `AI_APICallError` and OpenRouter-specific messages may not match Claude Code error shapes
-- [ ] **Filesystem isolation:** Agent cannot read project files -- verify `loadFileSystemSettings: false` prevents CLAUDE.md injection; verify `systemPrompt` is set to the linguistics solver instructions, not the default Claude Code prompt
+- [ ] **API key removed from state schema:** Check that `createOpenRouterProvider(state.apiKey)` in `02-hypothesize.ts:80` and `03-answer.ts:58` have been updated to use the new propagation mechanism. Missing this means the key silently falls back to env key.
+- [ ] **Key moved to headers:** Check that `credits-badge.tsx:50` no longer sends key via query string: `/api/credits?key=${encodeURIComponent(apiKey)}`. Both the frontend fetch and `credits/route.ts` must be updated.
+- [ ] **Cancel endpoint still works:** The frontend abort flow (`handleStop` -> `stop()` + cancel fetch) doesn't send credentials. If cancel now requires auth, the abort button silently fails. Test: Start solve -> Click abort -> Verify amber "aborted" state appears.
+- [ ] **Eval harness still works:** Eval runs the workflow without a user API key (uses env key). If new guards reject requests without user-provided keys, eval breaks. Test: `npm run eval -- --problem linguini-001` produces non-zero scores.
+- [ ] **Log redaction preserves data flow:** Agent response objects are used for both logging and parsing. Verify `response.object` is never mutated before `safeParse()` in any step file (check all 7 `logAgentOutput` call sites).
+- [ ] **Frontend chatId still triggers transport refresh:** The `chatId` in `use-solver-workflow.ts:45` uses `apiKey.slice(-4)`. If key transport changes remove the API key from frontend state (e.g., httpOnly cookies), chatId stops changing on key update, causing stale transport reuse.
+- [ ] **No new env vars required:** If security changes introduce required environment variables, the "zero-config" deployment mode breaks. `OPENROUTER_API_KEY` must remain optional.
 
 ## Recovery Strategies
 
 | Pitfall | Recovery Cost | Recovery Steps |
 |---------|---------------|----------------|
-| Tools not working via Claude Code provider | MEDIUM | Implement MCP bridge layer; wrap each Mastra tool as MCP tool; wrap prompts in async generators; test each tool individually |
-| OAuth token race condition | LOW | Switch to `setup-token` auth; restart workflow; no code changes needed |
-| Structured output silent fallback | MEDIUM | Audit and simplify the failing schema; remove `.catchall()` or `format` constraints; add explicit null check on `response.object`; test each schema individually |
-| Cost tracking returning $0 | LOW | Add provider-type branching in `extractCostFromResult()`; read `total_cost_usd` from Claude Code SDK result; add "subscription" cost display mode |
-| Permission mode hanging | LOW | Change config to add `disallowedTools` for built-in tools; redeploy; no architectural changes |
-| Streaming mismatch | HIGH | Requires architectural changes to event emission; may need separate code path for Claude Code provider; or accept degraded non-streaming mode |
-| Rate limiting mid-workflow | LOW | Wait for 5-hour quota refresh window; switch to OpenRouter for immediate retry; reduce `maxRounds` for Claude Code mode |
-| MCP prompt format wrong | LOW | Wrap string prompts in async generator; test tool discovery; no architectural changes |
-| Error retry classification | LOW | Add Claude Code error patterns to the `isRetryable` check in `generateWithRetry`; test with intentional failures |
+| apiKey removed from state, Steps 2/3 crash | LOW | Add the key back to state temporarily; implement proper propagation. Regression is immediately visible (workflow errors). |
+| Old API keys in LibSQL | LOW | Run `npm run dev:new` to clear the database. No user data at risk. |
+| Credits endpoint broken by partial migration | LOW | Revert the endpoint. The credits route is 30 lines. Fix both frontend and backend together. |
+| Cancel endpoint regression | LOW | Revert the endpoint guard. The cancel route is 16 lines. |
+| Logging changes break evals | MEDIUM | Compare eval scores before/after. Regression may be subtle (lower scores, not crashes). Test with `npm run eval -- --problem linguini-001`. |
+| Over-engineered auth blocks dev workflow | LOW | Delete the middleware file. Auth is additive -- removing it restores original behavior. |
+| Rate limiting breaks credits polling | LOW | Remove rate limiting from `/api/credits`. One-line route change. |
+| Mutated response object corrupts parsing | MEDIUM | Find the mutation site; add shallow copy before redaction. May require re-running affected evals to verify scores are restored. |
 
 ## Pitfall-to-Phase Mapping
 
 | Pitfall | Prevention Phase | Verification |
 |---------|------------------|--------------|
-| AI SDK custom tools unsupported | Phase 1: Provider integration | Run a tool-using agent (verifier orchestrator) through Claude Code; verify tool calls execute and return results |
-| OAuth token race condition | Phase 1: Auth setup | Run workflow end-to-end with `setup-token`; verify no auth failures over 24h |
-| Structured output fallback | Phase 2: Schema validation | Run each structured output schema through Claude Code provider; verify `response.object` is non-null for all 5 schemas |
-| Cost tracking OpenRouter-specific | Phase 2-3: Cost abstraction | Run workflow with Claude Code; verify frontend displays non-zero cost/token information |
-| Permission mode foot guns | Phase 1: Provider config | Verify agent cannot execute `Bash` or `Write` built-in tools; verify no hanging on permission prompts; verify filesystem settings not loaded |
-| Streaming mismatch | Phase 3: Frontend adaptation | Verify trace panel displays meaningful content for Claude Code runs without garbled output |
-| Rate limiting/throttling | Phase 3: UX guards | Run 2 consecutive solves on Pro tier; verify graceful throttle messaging |
-| MCP prompt async generator | Phase 2: Tool bridging | Verify MCP tools are discovered and callable; test with both string and async generator prompts |
-| Error retry classification | Phase 2: Error handling | Simulate Claude Code errors; verify retry logic classifies them correctly |
+| apiKey in workflow state (1) | Phase 1: Key transport | Steps 2/3 work with user key when `OPENROUTER_API_KEY` is unset |
+| setState writes secrets (2) | Phase 1: Key transport | `sqlite3 mastra.db` shows no API keys in current run records |
+| Direct LibSQL manipulation (3) | Phase 1: Key transport | No SQL migration scripts in the PR; use `dev:new` for cleanup |
+| Partial key migration (4) | Phase 1: Key transport | Credits badge shows correct value; network tab shows no keys in URLs |
+| Cancel endpoint regression (5) | Phase 2: Endpoint guards | Full abort flow: Start solve -> Wait for activity -> Abort -> Amber state appears |
+| Logging corrupts data flow (6) | Phase 3: Logging hardening | `npm run eval -- --problem linguini-001` produces non-zero scores matching pre-change baseline |
+| Over-engineering auth (7) | All phases | No new middleware files; eval harness runs without extra config; no new required env vars |
+| Rate limiting (8) | Defer/never | Not implemented in v1.7; documented as intentional omission |
 
 ## Sources
 
-- [ai-sdk-provider-claude-code GitHub (ben-vargas)](https://github.com/ben-vargas/ai-sdk-provider-claude-code) -- PRIMARY source for provider capabilities, tool support (none), structured output limitations, permission modes, Zod 4 requirement, streaming behavior
-- [AI SDK Community Providers: Claude Code](https://ai-sdk.dev/providers/community-providers/claude-code) -- Tool support matrix showing Tool Usage and Tool Streaming as unsupported across all models
-- [Claude Agent SDK Custom Tools docs](https://platform.claude.com/docs/en/agent-sdk/custom-tools) -- MCP tool bridging pattern using `createSdkMcpServer` + `tool()`; streaming input requirement for MCP tools
-- [Claude Agent SDK Cost Tracking docs](https://platform.claude.com/docs/en/agent-sdk/cost-tracking) -- `total_cost_usd` on result message, `modelUsage` per-model breakdowns, per-query (not per-session) cost reporting
-- [Claude Agent SDK Structured Outputs docs](https://platform.claude.com/docs/en/agent-sdk/structured-outputs) -- Supported JSON Schema features for constrained decoding
-- [GitHub Issue #27933: OAuth token refresh race condition](https://github.com/anthropics/claude-code/issues/27933) -- CONFIRMED race condition with concurrent sessions, single-use refresh tokens, no file locking
-- [GitHub Issue #24317: Frequent re-authentication with concurrent sessions](https://github.com/anthropics/claude-code/issues/24317) -- Root issue for token race condition; closed but not fixed
-- [GitHub Issue #29048: sandbox.filesystem.allowWrite not enforced in bypassPermissions](https://github.com/anthropics/claude-code/issues/29048) -- Write tool bypasses sandbox in bypassPermissions mode
-- [GitHub Issue #14279: Tool execution requires approval despite bypassPermissions](https://github.com/anthropics/claude-code/issues/14279) -- allowedTools may be ignored with bypassPermissions
-- [GitHub Issue #20264: Subagents inherit bypassPermissions unconditionally](https://github.com/anthropics/claude-code/issues/20264) -- Privilege escalation concern
-- [Claude Agent SDK Permissions docs](https://platform.claude.com/docs/en/agent-sdk/permissions) -- Permission modes: default, acceptEdits, bypassPermissions, plan
-- [Claude Code rate limits guide (Portkey)](https://portkey.ai/blog/claude-code-limits/) -- Subscription tier quotas, 5-hour rolling window, session limits
-- [Claude Code rate limits and pricing (Northflank)](https://northflank.com/blog/claude-rate-limits-claude-code-pricing-cost) -- Dual-layer usage framework, weekly ceiling
-- [claude-code-mastra integration (t3ta)](https://github.com/t3ta/claude-code-mastra) -- Reference Mastra integration; security warning about built-in tool restriction features not working as expected
-- [GitHub Issue #15007: /login does not recover active session after token expiry](https://github.com/anthropics/claude-code/issues/15007) -- 401 error loop after token expiry during active session
-- Codebase analysis: `request-context-helpers.ts:202` (`extractCostFromResult`), `agent-utils.ts` (`generateWithRetry`/`streamWithRetry`), `agent-factory.ts` (`createWorkflowAgent`), `vocabulary-tools.ts`, `workflow-schemas.ts` -- integration surface area for provider switching
+- Direct codebase analysis of `src/mastra/workflow/steps/` (all step files: 01-extract, 02-hypothesize, 02a-dispatch, 02b-hypothesize, 02c-verify, 02d-synthesize, 03-answer)
+- `src/mastra/workflow/workflow-schemas.ts` -- `apiKey` field in both `workflowStateSchema` and `rawProblemInputSchema`
+- `src/mastra/workflow/request-context-types.ts` -- WorkflowRequestContext interface showing step-local scope
+- `src/mastra/workflow/request-context-helpers.ts` -- `getOpenRouterProvider()` fallback chain, cost tracking
+- `src/app/api/solve/route.ts` -- key extraction from `params.inputData.apiKey`
+- `src/app/api/solve/cancel/route.ts` -- unguarded cancel endpoint (16 lines)
+- `src/app/api/solve/active-runs.ts` -- module-level singleton Map for run tracking
+- `src/app/api/credits/route.ts` -- key via query string `url.searchParams.get('key')`
+- `src/hooks/use-solver-workflow.ts` -- key in POST body via `inputData`, chatId using key suffix
+- `src/hooks/use-api-key.ts` -- localStorage persistence of key
+- `src/components/credits-badge.tsx` -- key in query string for credits polling
+- `src/mastra/workflow/logging-utils.ts` -- all logging functions, synchronous file I/O
+- `src/mastra/index.ts` -- LibSQLStore configuration
+- `src/evals/run.ts` -- eval harness workflow invocation (no HTTP, no user key)
+- `.planning/PROJECT.md` -- v1.7 milestone scope, constraints, out-of-scope items
 
 ---
-*Pitfalls research for: Claude Code provider integration into LO-Solver Mastra workflow (v1.6 milestone)*
-*Researched: 2026-03-10*
+*Pitfalls research for: Security hardening of LO-Solver (v1.7 milestone)*
+*Researched: 2026-03-17*

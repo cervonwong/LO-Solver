@@ -1,435 +1,498 @@
-# Architecture Research
+# Architecture Research: Security Hardening Integration
 
-**Domain:** Claude Code provider integration into Mastra workflow agent factory
-**Researched:** 2026-03-10
-**Confidence:** MEDIUM (tool compatibility is the key risk; provider integration path is HIGH confidence)
+**Domain:** Security fixes for existing Next.js 16 + Mastra AI agent solver
+**Researched:** 2026-03-17
+**Confidence:** HIGH
 
-## System Overview: Current vs Target
+## Current Architecture (Pre-Security)
 
-### Current Architecture (v1.5)
-
-```
-Frontend (React)                      Backend (Mastra Workflow)
- +---------------------------+         +-------------------------------------------+
- | useModelMode hook         |         | Workflow State                             |
- |  localStorage: testing/   |         |  modelMode: testing | production           |
- |    production             |         |  apiKey?: string                           |
- |                           |         +-------------------------------------------+
- | useSolverWorkflow hook    |              |
- |  transport: /api/solve    |              v
- |  body.inputData: {        |         +-------------------------------------------+
- |    modelMode, apiKey      |         | Per-Step RequestContext                    |
- |  }                        |         |  'model-mode': ModelMode                  |
- +---------------------------+         |  'openrouter-provider'?: OpenRouterProvider|
-              |                        +-------------------------------------------+
-              v                             |
- POST /api/solve                            v
-              |                        +-------------------------------------------+
-              v                        | Agent Factory (createWorkflowAgent)        |
- Mastra workflow.createRun()           |  model: ({ requestContext }) => {           |
-   inputData flows through             |    mode = ctx.get('model-mode')            |
-   workflow state to each step         |    modelId = mode==='prod' ? prod : test   |
-                                       |    return getOpenRouterProvider(ctx)(modelId)|
-                                       |  }                                         |
-                                       +-------------------------------------------+
-```
-
-### Target Architecture (v1.6)
+### API Key Data Flow (Current -- Insecure)
 
 ```
-Frontend (React)                      Backend (Mastra Workflow)
- +---------------------------+         +-------------------------------------------+
- | useProviderMode hook      |         | Workflow State                             |
- |  localStorage: provider   |         |  providerMode: 'openrouter-testing'       |
- |    + mode combined into   |         |    | 'openrouter-production'               |
- |    single selection       |         |    | 'claude-code'                         |
- |                           |         |  apiKey?: string (OpenRouter only)         |
- +---------------------------+         +-------------------------------------------+
-              |                             |
-              v                             v
- POST /api/solve                       +-------------------------------------------+
-   body.inputData: {                   | Per-Step RequestContext                    |
-     providerMode,                     |  'provider-mode': ProviderMode             |
-     apiKey                            |  'openrouter-provider'?: OpenRouterProvider|
-   }                                   +-------------------------------------------+
-                                            |
-                                            v
-                                       +-------------------------------------------+
-                                       | Agent Factory (createWorkflowAgent)        |
-                                       |  model: ({ requestContext }) => {           |
-                                       |    mode = ctx.get('provider-mode')          |
-                                       |    if (mode === 'claude-code')              |
-                                       |      return claudeCode('sonnet', opts)      |
-                                       |    else                                     |
-                                       |      return openrouter(modelId)             |
-                                       |  }                                         |
-                                       +-------------------------------------------+
+Client (localStorage)
+    |
+    |--- POST /api/solve body: { inputData: { apiKey, ... } }
+    |        |
+    |        |--- apiKey written to workflow state via setState({ apiKey })
+    |        |        |
+    |        |        |--- State persisted to LibSQL by Mastra
+    |        |        |
+    |        |        |--- Step 1 reads inputData.apiKey
+    |        |        |--- Step 2 reads state.apiKey
+    |        |        |--- Step 3 reads state.apiKey
+    |        |        |
+    |        |        v
+    |        |    Each step: createOpenRouterProvider(apiKey)
+    |        |        -> stored on RequestContext as 'openrouter-provider'
+    |        |
+    |--- GET /api/credits?key=sk-or-... (API key in query string!)
+    |
+    |--- POST /api/solve/cancel (cancels ALL active runs, no scoping)
 ```
 
-## Component Responsibilities
+### Security Issues Identified
 
-| Component | Current Responsibility | v1.6 Change |
-|-----------|----------------------|-------------|
-| `agent-factory.ts` | Creates agents with OpenRouter model resolution | Add Claude Code provider branch in model callback |
-| `openrouter.ts` | OpenRouter provider singleton + factory | No change (provider code stays isolated) |
-| NEW: `claude-code-provider.ts` | N/A | Claude Code provider configuration, model mapping |
-| `request-context-types.ts` | Defines `WorkflowRequestContext` with `model-mode` and `openrouter-provider` | Add `provider-mode` key, deprecate or alias `model-mode` |
-| `request-context-helpers.ts` | `getOpenRouterProvider()` helper | Add `getProviderModel()` that returns the right model instance |
-| `workflow-schemas.ts` | `modelMode` in state, `rawProblemInputSchema` | Replace `modelMode` with `providerMode` enum |
-| `use-model-mode.ts` | Two-state toggle (testing/production) | Replace with three-state `useProviderMode` |
-| `model-mode-toggle.tsx` | Binary Switch component | Replace with segmented selector or dropdown |
-| Step files (01-extract, 02-hypothesize, 03-answer) | Create RequestContext with `model-mode` + `openrouter-provider` | Switch to `provider-mode`, conditionally skip OpenRouter provider setup |
-| `use-solver-workflow.ts` | Sends `modelMode` in body | Send `providerMode` instead |
-| `route.ts` (API) | Validates API key presence | Skip API key check when Claude Code mode |
+| Issue | Location | Risk |
+|-------|----------|------|
+| API key persisted to LibSQL via workflow state | `workflow-schemas.ts` L56, `01-extract.ts` L35 | Key stored on disk in plaintext |
+| API key in query string | `credits-badge.tsx` L50, `credits/route.ts` L7 | Key logged in server access logs, browser history, referrer headers |
+| Cancel endpoint kills all runs | `cancel/route.ts` -- iterates entire `activeRuns` map | Any client can cancel another client's workflow |
+| Synchronous filesystem logging | `logging-utils.ts` -- all functions use `fs.writeFileSync`/`fs.appendFileSync` | Blocks event loop; sensitive data (rules, vocabulary) written to disk unconditionally |
+| No API route protection | No `proxy.ts` exists | All API routes publicly accessible without method enforcement |
+
+## Target Architecture (Post-Security)
+
+### API Key Data Flow (Secured)
+
+```
+Client (localStorage)
+    |
+    |--- POST /api/solve
+    |    Headers: { x-openrouter-key: sk-or-... }
+    |    Body: { inputData: { rawProblemText, providerMode, ... } }  <-- no apiKey in body
+    |        |
+    |        v
+    |    proxy.ts (Next.js 16 proxy layer)
+    |        |--- Method enforcement (POST only)
+    |        |--- Passes through to route handler
+    |        v
+    |    route.ts
+    |        |--- Reads key from req.headers.get('x-openrouter-key')
+    |        |--- Injects apiKey into inputData for workflow
+    |        v
+    |    Workflow execution
+    |        |--- Step 1: receives key via inputData
+    |        |        |--- Creates provider, sets on RequestContext
+    |        |        |--- Persists key to state (pragmatic -- see rationale below)
+    |        |--- Step 2: reads state.apiKey, creates provider
+    |        |--- Step 3: reads state.apiKey, creates provider
+    |        |
+    |        v
+    |    Key lives in LibSQL (accepted for local dev tool)
+    |    Key NEVER appears in URLs, query strings, or logs
+    |
+    |--- GET /api/credits
+    |    Headers: { x-openrouter-key: sk-or-... }  <-- moved from query string
+    |
+    |--- POST /api/solve/cancel
+    |    Body: { runId: "specific-run-id" }  <-- scoped to one run
+```
+
+## Component Responsibilities (New and Modified)
+
+| Component | Status | Responsibility | Changes |
+|-----------|--------|----------------|---------|
+| `src/proxy.ts` | **NEW** | Thin request proxy for API route method enforcement | Method checks on `/api/solve` and `/api/solve/cancel` |
+| `workflow-schemas.ts` | **NO CHANGE** | Workflow state shape | `apiKey` stays in state (see Pattern 2 rationale) |
+| `solve/route.ts` | MODIFY | Read key from header instead of body | Read `x-openrouter-key` header; inject into `inputData` |
+| `credits/route.ts` | MODIFY | Read key from header instead of query string | Read `x-openrouter-key` header; stop reading query param |
+| `cancel/route.ts` | MODIFY | Cancel specific run by ID | Accept `{ runId }` in POST body; look up in `activeRuns` |
+| `active-runs.ts` | NO CHANGE | Track active runs by runId | Already stores by `runId`; no changes needed |
+| `use-solver-workflow.ts` | MODIFY | Send key via header, not body | Move `apiKey` to transport `headers` option |
+| `credits-badge.tsx` | MODIFY | Send key via header, not query string | Use `headers: { 'x-openrouter-key': apiKey }` in fetch |
+| `logging-utils.ts` | MODIFY | Async, opt-in logging | Replace sync fs with `fs/promises`; gate on `LOG_ENABLED` |
+| `workflow-schemas.ts` (`initializeWorkflowState`) | MODIFY | Conditional log file creation | Skip log file init when logging disabled |
+| Step files (01, 02, 03) | MODIFY | Await logging calls | All log function calls become `await`ed |
 
 ## Architectural Patterns
 
-### Pattern 1: Provider-Agnostic Model Resolution in Agent Factory
+### Pattern 1: Header-Based Key Transport
 
-**What:** The `createWorkflowAgent` factory's `model` callback resolves to either an OpenRouter model instance or a Claude Code model instance based on `provider-mode` in RequestContext. The agent itself is unaware of which provider is active.
+**What:** Move API key from request body and query strings to a custom HTTP header (`x-openrouter-key`).
 
-**When to use:** Every agent creation (all 12 workflow agents use the factory).
+**Why:** Headers are not logged in browser history, not included in referrer headers, and can be stripped by reverse proxies. This is the single highest-impact security fix.
 
-**Trade-offs:** Single point of change for provider logic (+). Claude Code provider may behave differently with tools and structured output, which the factory cannot abstract away (-).
+**Integration points:**
+- Frontend `use-solver-workflow.ts`: `DefaultChatTransport` accepts a `headers` option
+- Frontend `credits-badge.tsx`: standard `fetch()` with headers
+- Backend `solve/route.ts`: `req.headers.get('x-openrouter-key')`
+- Backend `credits/route.ts`: `req.headers.get('x-openrouter-key')`
 
-**Example:**
-
+**Frontend transport change:**
 ```typescript
-// claude-code-provider.ts (NEW)
-import { claudeCode } from 'ai-sdk-provider-claude-code';
+// use-solver-workflow.ts -- BEFORE
+const transport = useMemo(
+  () => new DefaultChatTransport({
+    api: '/api/solve',
+    prepareSendMessagesRequest: ({ messages }) => ({
+      body: {
+        inputData: {
+          rawProblemText: /* ... */,
+          providerMode,
+          ...(apiKey && { apiKey }),  // key in body
+        },
+      },
+    }),
+  }),
+  [providerMode, apiKey, workflowSettings],
+);
 
-export type ProviderMode = 'openrouter-testing' | 'openrouter-production' | 'claude-code';
+// use-solver-workflow.ts -- AFTER
+const transport = useMemo(
+  () => new DefaultChatTransport({
+    api: '/api/solve',
+    headers: apiKey ? { 'x-openrouter-key': apiKey } : undefined,
+    prepareSendMessagesRequest: ({ messages }) => ({
+      body: {
+        inputData: {
+          rawProblemText: /* ... */,
+          providerMode,
+          // NO apiKey in body
+        },
+      },
+    }),
+  }),
+  [providerMode, apiKey, workflowSettings],
+);
+```
 
-/** Claude Code model mapped from OpenRouter model role. */
-export function getClaudeCodeModel(productionModel: string) {
-  // Map agent roles to Claude Code model aliases.
-  // Reasoning agents (Gemini Flash) -> sonnet (balanced)
-  // Extraction agents (GPT-5-mini) -> sonnet (structured output capable)
-  // All agents use sonnet since Claude Code has no model granularity benefit
-  // and subscription cost is flat-rate.
-  return claudeCode('sonnet', {
-    permissionMode: 'bypassPermissions',
-    // No filesystem settings -- agents should not read CLAUDE.md
-    settingSources: [],
-    // Explicit system prompt is handled by Mastra agent instructions
-  });
-}
+**Backend route change:**
+```typescript
+// solve/route.ts -- key extraction
+export async function POST(req: Request) {
+  const apiKey = req.headers.get('x-openrouter-key') ?? undefined;
+  const params = await req.json();
+  const providerMode = params.inputData?.providerMode ?? 'openrouter-testing';
 
-// Updated agent-factory.ts
-import { getClaudeCodeModel, type ProviderMode } from './claude-code-provider';
+  if (isOpenRouterMode(providerMode) && !apiKey && !process.env.OPENROUTER_API_KEY) {
+    return new Response(JSON.stringify({ error: 'No API key provided' }), { status: 401 });
+  }
 
-export function createWorkflowAgent(config: WorkflowAgentConfig): Agent {
-  return new Agent({
-    // ...
-    model: ({ requestContext }) => {
-      const providerMode = requestContext?.get('provider-mode') as ProviderMode | undefined;
-
-      if (providerMode === 'claude-code') {
-        return getClaudeCodeModel(config.productionModel);
-      }
-
-      // OpenRouter path (existing behavior)
-      const isProduction = providerMode === 'openrouter-production';
-      const modelId = isProduction ? config.productionModel : config.testingModel;
-      return getOpenRouterProvider(requestContext)(modelId);
-    },
-    // ...
-  });
+  // Inject apiKey into inputData for the workflow (keeps workflow code unchanged)
+  const inputData = { ...params.inputData, apiKey };
+  const workflow = mastra.getWorkflowById('solver-workflow')!;
+  const run = await workflow.createRun();
+  // ...
 }
 ```
 
-### Pattern 2: Provider Mode in Workflow State (replaces Model Mode)
-
-**What:** The three-way `providerMode` replaces the binary `modelMode` in workflow state and input schemas. This is a semantic expansion -- the old `testing`/`production` distinction maps directly to `openrouter-testing`/`openrouter-production`, with `claude-code` as the new option.
-
-**When to use:** All workflow state initialization and propagation.
-
-**Trade-offs:** Breaking change to workflow schema (+cleaner semantics). Requires migration of all step files that read `modelMode` from state (-).
-
-**Example:**
-
+**Credits endpoint change:**
 ```typescript
-// workflow-schemas.ts
-export const rawProblemInputSchema = z.object({
-  rawProblemText: z.string(),
-  providerMode: z.enum([
-    'openrouter-testing',
-    'openrouter-production',
-    'claude-code',
-  ]).default('openrouter-testing'),
-  maxRounds: z.number().min(1).max(5).default(3),
-  perspectiveCount: z.number().min(2).max(7).default(3),
-  apiKey: z.string().optional(), // Only used for OpenRouter
+// credits/route.ts -- BEFORE
+const userKey = url.searchParams.get('key');
+
+// credits/route.ts -- AFTER
+const userKey = req.headers.get('x-openrouter-key');
+```
+
+### Pattern 2: apiKey Stays in Workflow State (Pragmatic Decision)
+
+**What:** Keep `apiKey: z.string().optional()` in `workflowStateSchema`. Do NOT attempt to remove it from persistent state.
+
+**Why this is the right call for this project:**
+
+The Mastra framework's inter-step data flow makes removing apiKey from state extremely difficult:
+
+1. **Step isolation:** Each step receives only its predecessor's output as `inputData`. The original workflow `inputData` (containing `apiKey`) is only directly available to Step 1.
+
+2. **No workflow-level requestContext:** The existing Key Decision log confirms "Mastra steps don't receive workflow-level requestContext." There is no transient cross-step channel.
+
+3. **Threading through I/O schemas:** To remove apiKey from state, every inter-step schema (`structuredProblemSchema`, `questionAnsweringInputSchema`) would need an `apiKey` field, polluting domain schemas with transport concerns.
+
+4. **`.map()` closures cannot capture workflow inputData:** The `.map()` between steps in `workflow.ts` receives the previous step's output, not the workflow's original input.
+
+**Risk assessment:** The LibSQL database (`mastra.db`) is:
+- Local to the dev machine
+- Already marked as ephemeral in CLAUDE.md ("Treat `mastra.db*` as ephemeral")
+- Not committed to git (gitignored)
+- The key is already in the client's localStorage
+
+**Conclusion:** The real exposure vectors are query strings (browser history, server logs, referrer headers) and unredacted filesystem logs. Those are fixed by Patterns 1 and 4. The LibSQL persistence is a theoretical risk with near-zero practical impact for a single-user local dev tool.
+
+### Pattern 3: Run-Scoped Cancellation
+
+**What:** Change `/api/solve/cancel` from "cancel all runs" to "cancel specific run by ID."
+
+**Current code analysis:** The `activeRuns` map in `active-runs.ts` already stores runs keyed by `runId`. The cancel endpoint iterates ALL entries. The fix is to accept a `runId` and do a single lookup.
+
+**Integration points:**
+- `cancel/route.ts`: Accept `{ runId }` in POST body
+- `solve/route.ts`: Already stores `run.runId` in `activeRuns`. Need to communicate `runId` back to client.
+- Frontend: Store `runId` when solve starts, send with cancel request
+
+**How to get runId to the client:**
+
+The solve endpoint uses AI SDK streaming (`createUIMessageStream`). The `runId` must reach the client before any cancel request. Three options:
+
+1. **Emit as stream event (recommended):** Add a `data-workflow-start` event containing `runId` as the first event in the stream. The existing trace event infrastructure handles this. The frontend already parses custom events via `WorkflowTraceEvent`.
+
+2. **Response header:** Set `x-run-id` header on the streaming response. But `createUIMessageStreamResponse` may not support custom headers cleanly, and the client may not read headers from a streaming response.
+
+3. **Client-generated ID:** Let the client generate and send a `runId`. The backend uses it as the map key. Risk: collisions if client reuses IDs.
+
+**Recommended approach -- stream event:**
+```typescript
+// solve/route.ts
+activeRuns.set(run.runId, run);
+
+const stream = createUIMessageStream({
+  execute: async ({ writer }) => {
+    // Emit runId as first event so client can use it for cancellation
+    writer.write({
+      type: 'data',
+      value: [{ type: 'data-workflow-start', data: { runId: run.runId } }],
+    });
+    // ... rest of stream
+  },
 });
 ```
 
-### Pattern 3: Conditional Tool/StructuredOutput Handling
+```typescript
+// cancel/route.ts
+export async function POST(req: Request) {
+  const body = await req.json();
+  const runId = body?.runId;
 
-**What:** Claude Code provider does NOT support AI SDK custom tools (Zod schemas in `tools` parameter). It DOES support `generateObject`/`streamObject` structured output. For agents that use custom Mastra tools (verifier orchestrator with testRule/testSentence), Claude Code mode either (a) must use a different execution strategy, or (b) those tools must be exposed via MCP.
+  if (!runId || typeof runId !== 'string') {
+    return Response.json({ error: 'runId is required' }, { status: 400 });
+  }
 
-**When to use:** Only affects agents with custom tools: verifier orchestrator (testRule, testSentence tools).
+  const run = activeRuns.get(runId);
+  if (!run) {
+    return Response.json({ error: 'Run not found or already completed' }, { status: 404 });
+  }
 
-**Trade-offs:** This is the **critical architectural decision** for v1.6. Options detailed below.
-
-**Impact assessment across all 12 agents:**
-
-| Agent | Uses Tools | Uses StructuredOutput | Claude Code Compatible |
-|-------|-----------|----------------------|----------------------|
-| structured-problem-extractor | No | Yes (structuredProblemSchema) | YES -- structured output works |
-| dispatcher | No | Yes (dispatcherOutputSchema) | YES |
-| initial-hypothesizer | Yes (vocab + rules tools) | No | PARTIAL -- tools won't work |
-| synthesizer | Yes (vocab + rules tools) | No | PARTIAL -- tools won't work |
-| improver-dispatcher | No | Yes (improverDispatcherOutputSchema) | YES |
-| rules-improver | Yes (vocab + rules tools) | No | PARTIAL -- tools won't work |
-| rules-improvement-extractor | No | Yes (rulesSchema) | YES |
-| verifier-orchestrator | Yes (testRule, testSentence) | No | PARTIAL -- tools won't work |
-| verifier-feedback-extractor | No | Yes (verifierFeedbackSchema) | YES |
-| rule-tester | No | No (text output) | YES |
-| sentence-tester | No | No (text output) | YES |
-| question-answerer | No | Yes (questionsAnsweredSchema) | YES |
-
-**5 of 12 agents use custom tools** that Claude Code provider cannot execute.
-
-## Data Flow
-
-### Request Flow (Current -- OpenRouter)
-
-```
-User clicks "Solve"
-    |
-    v
-useSolverWorkflow: body = { rawProblemText, modelMode, apiKey }
-    |
-    v
-POST /api/solve -> workflow.createRun({ inputData })
-    |
-    v
-Step 1 (extract): reads inputData.modelMode -> sets state.modelMode
-    creates RequestContext: 'model-mode', 'openrouter-provider'
-    calls agent.generate() -> agent.model({ requestContext }) -> OpenRouter(modelId)
-    |
-    v
-Step 2 (hypothesize): reads state.modelMode -> creates new RequestContext per sub-phase
-    propagates 'openrouter-provider' from main RequestContext to sub-contexts
-    |
-    v
-Step 3 (answer): reads state.modelMode -> creates new RequestContext
+  try {
+    await run.cancel();
+    return Response.json({ cancelled: [runId] });
+  } catch {
+    return Response.json({ cancelled: [runId] }); // idempotent
+  }
+}
 ```
 
-### Request Flow (Target -- Provider-Agnostic)
+### Pattern 4: Async Opt-In Logging
 
-```
-User clicks "Solve"
-    |
-    v
-useSolverWorkflow: body = { rawProblemText, providerMode, apiKey? }
-    |
-    v
-POST /api/solve
-    if providerMode !== 'claude-code' && !apiKey && !env.OPENROUTER_API_KEY:
-      return 401
-    |
-    v
-Step 1 (extract): reads inputData.providerMode -> sets state.providerMode
-    creates RequestContext: 'provider-mode'
-    if OpenRouter: also sets 'openrouter-provider'
-    calls agent.generate() -> agent.model({ requestContext }) ->
-      if 'claude-code': claudeCode('sonnet', opts)
-      else: OpenRouter(modelId)
-    |
-    v
-Step 2 (hypothesize): reads state.providerMode -> propagates to sub-contexts
-    |
-    v
-Step 3 (answer): reads state.providerMode
-```
+**What:** Replace all synchronous `fs.writeFileSync` / `fs.appendFileSync` calls with `fs/promises` equivalents, and gate logging behind `LOG_ENABLED=true` environment variable.
 
-### Key Data Flow Change
+**Why:** Sync filesystem operations block the Node.js event loop. During a workflow run with dozens of agent calls and tool invocations, frequent sync writes degrade response latency. Making logging opt-in prevents sensitive data (LLM outputs, rules, vocabulary) from being written to disk by default.
 
-The `apiKey` field becomes **optional** and **OpenRouter-only**. Claude Code authentication happens via `claude login` on the server -- there is no API key to pass. The API route must skip the key check for Claude Code mode.
+**Scope of changes in `logging-utils.ts`:**
 
-## Integration Points
+| Function | Current | After |
+|----------|---------|-------|
+| `initializeLogFile` | `fs.writeFileSync`, `fs.mkdirSync` | `fsp.writeFile`, `fsp.mkdir` (async) |
+| `logWorkflowSummary` | `fs.appendFileSync` | `fsp.appendFile` (async) |
+| `logAgentOutput` | `fs.appendFileSync` | `fsp.appendFile` (async) |
+| `logValidationError` | `fs.appendFileSync` | `fsp.appendFile` (async) |
+| `logVocabularyAdded` | `fs.appendFileSync` | `fsp.appendFile` (async) |
+| `logVocabularyUpdated` | `fs.appendFileSync` | `fsp.appendFile` (async) |
+| `logVocabularyRemoved` | `fs.appendFileSync` | `fsp.appendFile` (async) |
+| `logVocabularyCleared` | `fs.appendFileSync` | `fsp.appendFile` (async) |
+| `logSentenceTestResult` | `fs.appendFileSync` | `fsp.appendFile` (async) |
+| `logRuleTestResult` | `fs.appendFileSync` | `fsp.appendFile` (async) |
+| `logVerificationResults` | `fs.appendFileSync` | `fsp.appendFile` (async) |
+| `getLogFilePath` | synchronous (pure computation) | No change needed |
+| `recordStepTiming` | synchronous (pure computation) | No change needed |
+| `formatTimestamp` | synchronous (pure computation) | No change needed |
 
-### Critical Integration: Claude Code Provider with Mastra Agent.generate()
+**Ripple effect -- callers that must add `await`:**
 
-**Mechanism:** `claudeCode('sonnet')` returns a `LanguageModelV3` instance (AI SDK v6). Mastra 1.8.0's `Agent` class accepts `MastraModelConfig` which is `LanguageModelV1 | LanguageModelV2 | LanguageModelV3 | ...`. The dynamic `model` callback returns this type, so **the provider instance slots directly into Mastra's model resolution**.
+All logging function calls in step files must become `await`ed. Grep shows call sites in:
+- `01-extract.ts`: `logAgentOutput`, `logValidationError`
+- `02-hypothesize.ts`: `logVerificationResults`
+- `02b-hypothesize.ts`, `02c-verify.ts`, `02d-synthesize.ts`: various log functions
+- `03-answer.ts`: `logAgentOutput`, `logValidationError`, `logWorkflowSummary`
+- `vocabulary-tools.ts`: `logVocabularyAdded`, `logVocabularyUpdated`, `logVocabularyRemoved`, `logVocabularyCleared`
+- `tester-tools.ts`: `logSentenceTestResult`, `logRuleTestResult`
 
-**Confidence:** HIGH. The types align: `claudeCode()` -> `LanguageModelV3` -> `MastraModelConfig`. Mastra 1.8.0 explicitly supports V3 models.
+**`initializeWorkflowState` change:**
 
-### Critical Integration: Tool Compatibility
+Currently `initializeWorkflowState()` in `workflow-schemas.ts` is synchronous and calls `getLogFilePath()` + `initializeLogFile()`. After the change:
+- `getLogFilePath()` stays synchronous (pure path computation)
+- `initializeLogFile()` becomes async
+- `initializeWorkflowState()` must either become async OR defer log file creation to the first step
 
-**Problem:** `ai-sdk-provider-claude-code` does NOT support AI SDK custom tools passed via the `tools` parameter in `generateText`/`streamText`. Mastra agents that have `tools: { testRule, testSentence }` or vocabulary/rules tools will fail when the model callback returns a Claude Code model, because Mastra calls `agent.generate()` which internally uses AI SDK's `generateText`/`streamText` with the tools.
+**Recommended:** Keep `initializeWorkflowState()` synchronous. It still generates the log file path (cheap). Move the actual `initializeLogFile()` call to Step 1's execute function (which is already async). Gate it behind the logging check:
 
-**Confidence:** HIGH that this is a real blocker. The ai-sdk.dev documentation explicitly states "Tool usage: No" for this provider.
+```typescript
+// workflow-schemas.ts
+export const initializeWorkflowState = (): WorkflowState => {
+  const logFile = getLogFilePath();  // Just computes the path, no I/O
+  return {
+    vocabulary: {},
+    rules: {},
+    logFile,  // Path is set but file not created yet
+    startTime: new Date().toISOString(),
+    // ...
+  };
+};
 
-**Three approaches to handle this:**
-
-1. **Prompt-only approach (RECOMMENDED):** For Claude Code mode, agents that currently use tools receive the tool functionality as prompt context instead. Vocabulary and rules CRUD operations become instructions to output structured JSON that the step code parses and applies. This is how the Claude Code native solver (v1.4) already works -- agents output markdown that the orchestrator parses.
-
-2. **MCP bridge approach:** Wrap existing Mastra tools as MCP servers using `createSdkMcpServer()` from `@anthropic-ai/claude-agent-sdk`. Pass these as `mcpServers` in the Claude Code provider config. Tools would execute autonomously within the Claude Code session. **Risk:** This changes execution semantics -- the agent controls tool execution, not Mastra's step code.
-
-3. **Hybrid approach:** Use Claude Code provider only for tool-free agents, keep OpenRouter for tool-using agents even in "Claude Code mode." **Risk:** Mixed execution undermines the point of a single provider toggle.
-
-**Recommendation:** Approach 1 (prompt-only). Reasons:
-- The Claude Code native solver already proves this pattern works for this domain
-- 7 of 12 agents already work without tools (structured output or text-only)
-- The 5 tool-using agents use vocabulary/rules CRUD, which is fundamentally "write structured data" -- easily expressed as structured output
-- MCP bridge adds significant complexity for marginal benefit
-- Keeps the architecture simple: one provider mode, one code path per agent
-
-### Critical Integration: Structured Output Compatibility
-
-**Status:** Claude Code provider supports `generateObject()`/`streamObject()` with Zod schemas. However, the provider documentation warns: "Some JSON Schema features can cause the Claude Code CLI to silently fall back to prose." Complex regex patterns and format constraints may not work.
-
-**Impact:** The current schemas (structuredProblemSchema, verifierFeedbackSchema, etc.) use standard Zod types (string, number, enum, array, object) without format constraints. They should work.
-
-**Confidence:** MEDIUM. Standard schemas should work, but edge cases with deeply nested schemas or enum arrays need testing.
-
-### Integration: Cost Tracking
-
-**Current:** `extractCostFromResult()` reads `providerMetadata.openrouter.usage.cost`.
-
-**Claude Code:** Usage data comes in a different format: `usage.raw` contains raw provider usage (v3.0.0+). Cost is subscription-based, not per-token, so per-call cost tracking is meaningless. The cost display should show "subscription" or be hidden for Claude Code mode.
-
-**Confidence:** HIGH.
-
-### Integration: AbortSignal
-
-**Current:** `abortSignal` propagates through `mergedSignal` in `generateWithRetry`/`streamWithRetry` to the AI SDK call.
-
-**Claude Code:** The provider supports `AbortSignal` (documented in ai-sdk-provider-claude-code README). This should work transparently.
-
-**Confidence:** HIGH.
-
-### Integration: Streaming (streamWithRetry)
-
-**Current:** `streamWithRetry` uses `agent.stream()` which internally calls `streamText()`.
-
-**Claude Code:** The provider supports `streamText()`. However, streaming behavior may differ -- Claude Code runs an agent session that may have multi-turn internal execution before producing output. Latency characteristics will differ from direct API calls.
-
-**Confidence:** MEDIUM. Streaming works, but timing/chunking behavior may be different.
-
-## Recommended Project Structure
-
-### New Files
-
-```
-src/mastra/
-  claude-code-provider.ts     # ProviderMode type, getClaudeCodeModel(), Claude Code config
+// 01-extract.ts (in execute function)
+const initialState = initializeWorkflowState();
+if (isLoggingEnabled()) {
+  await initializeLogFile(initialState.logFile, initialState.startTime);
+}
 ```
 
-### Modified Files
+**Opt-in gate pattern:**
+```typescript
+// logging-utils.ts
+import * as fsp from 'fs/promises';
 
-```
-src/mastra/
-  workflow/
-    agent-factory.ts           # Add Claude Code branch in model callback
-    request-context-types.ts   # Add 'provider-mode' to WorkflowRequestContext
-    request-context-helpers.ts # Add getProviderModel() helper, update cost helpers
-    workflow-schemas.ts        # providerMode replaces modelMode in schemas
-    steps/01-extract.ts        # providerMode instead of modelMode
-    steps/02-hypothesize.ts    # providerMode propagation
-    steps/02a-dispatch.ts      # providerMode in sub-context
-    steps/02b-hypothesize.ts   # providerMode in sub-context
-    steps/02c-verify.ts        # providerMode in sub-context
-    steps/02d-synthesize.ts    # providerMode in sub-context
-    steps/03-answer.ts         # providerMode instead of modelMode
-src/hooks/
-  use-model-mode.ts -> use-provider-mode.ts  # Three-state selection
-src/components/
-  model-mode-toggle.tsx -> provider-mode-selector.tsx  # UI update
-src/hooks/
-  use-solver-workflow.ts       # Send providerMode in body
-src/app/api/solve/
-  route.ts                     # Skip API key check for Claude Code
+const isLoggingEnabled = (): boolean => process.env.LOG_ENABLED === 'true';
+
+export const logAgentOutput = async (
+  logFile: string,
+  stepName: string,
+  agentName: string,
+  output: unknown,
+  reasoning?: string | ReasoningChunk[] | null,
+  startTime?: number,
+): Promise<void> => {
+  if (!isLoggingEnabled()) return;
+  const content = /* ... build markdown string ... */;
+  await fsp.appendFile(logFile, content);
+};
 ```
 
-### Structure Rationale
+### Pattern 5: Next.js 16 Proxy for Method Enforcement
 
-- **`claude-code-provider.ts` alongside `openrouter.ts`:** Parallel structure -- each provider gets its own module at the `src/mastra/` level. Not inside `workflow/` because the provider is a model concern, not a workflow concern.
-- **RequestContext changes are minimal:** One new key (`provider-mode`) replaces one existing key (`model-mode`). The pattern of per-step context creation stays identical.
-- **Frontend changes are minimal:** One hook replacement, one component replacement. The data flow through transport/body stays the same shape.
+**What:** Add `src/proxy.ts` (Next.js 16's replacement for `middleware.ts`) to enforce HTTP methods on API routes.
 
-## Anti-Patterns
+**Important context:** Next.js 16 renamed `middleware.ts` to `proxy.ts` and the exported function from `middleware` to `proxy`. The proxy runs on the Node.js runtime (not Edge). It executes before route handlers.
 
-### Anti-Pattern 1: Creating Claude Code Sessions Per Agent Call
+**What the proxy should do (thin scope):**
+- Enforce POST method on `/api/solve` and `/api/solve/cancel`
+- Let all other API routes pass through (they are read-only GET endpoints)
 
-**What people do:** Instantiate a new `claudeCode()` provider for every `agent.generate()` call, potentially with different configs.
+**What the proxy should NOT do:**
+- Read request bodies (consumes the stream, breaks route handlers)
+- Perform heavy auth logic (defense-in-depth means route handlers validate independently)
+- Check `providerMode` (requires body parsing)
 
-**Why it's wrong:** Claude Code sessions have startup overhead (spawning CLI process, authentication handshake). Creating per-call instances adds unnecessary latency. The provider handles session lifecycle internally.
+**Implementation:**
+```typescript
+// src/proxy.ts
+import { NextResponse, type NextRequest } from 'next/server';
 
-**Do this instead:** Create the model instance once per provider mode resolution and let the provider manage sessions. The `claudeCode('sonnet', opts)` call creates a model reference, not a session -- sessions are created when AI SDK actually calls the model.
+export function proxy(request: NextRequest) {
+  const { pathname } = request.nextUrl;
 
-### Anti-Pattern 2: Trying to Make Custom Tools Work via Prompt Hacking
+  // Enforce POST-only on write endpoints
+  if (pathname === '/api/solve' && request.method !== 'POST') {
+    return Response.json({ error: 'Method not allowed' }, { status: 405 });
+  }
 
-**What people do:** Pass tools to the agent and hope Claude Code ignores the unsupported tool parameter, or try to serialize tool definitions into the prompt.
+  if (pathname === '/api/solve/cancel' && request.method !== 'POST') {
+    return Response.json({ error: 'Method not allowed' }, { status: 405 });
+  }
 
-**Why it's wrong:** The AI SDK will error when trying to pass tools to a provider that doesn't support them. Mastra's Agent class will pass the `tools` option through to the underlying `generateText` call.
+  return NextResponse.next();
+}
 
-**Do this instead:** For Claude Code mode, agents that need tool-like behavior should use structured output to return operation instructions, and the step code should execute those operations. Or use the `activeTools` mechanism to disable tools per-call.
+export const config = {
+  matcher: '/api/:path*',
+};
+```
 
-### Anti-Pattern 3: Sharing Authentication State Between OpenRouter and Claude Code
+**Trade-off:** The proxy adds a thin safety layer but is NOT a security boundary. CVE-2025-29927 demonstrated that Next.js middleware/proxy can be bypassed. Route handlers must still validate independently. The proxy's value is method enforcement and keeping invalid requests from reaching route handler code.
 
-**What people do:** Try to unify API key management across both providers.
+## Data Flow Changes Summary
 
-**Why it's wrong:** OpenRouter uses per-request API keys (user-provided or env). Claude Code uses `claude login` CLI auth (OAuth, stored locally). They are fundamentally different auth models.
+### Solve Request (Before vs After)
 
-**Do this instead:** Keep them completely separate. OpenRouter: `apiKey` in workflow state. Claude Code: pre-authenticated via CLI on the server. The frontend only shows the API key dialog when in OpenRouter mode.
+**Before:**
+```
+Frontend: POST /api/solve { inputData: { rawProblemText, providerMode, apiKey } }
+Route:    reads apiKey from body -> passes to workflow inputData
+Step 1:   reads inputData.apiKey -> setState({ apiKey }) -> LibSQL
+Steps 2-3: reads state.apiKey -> createOpenRouterProvider(state.apiKey)
+```
 
-## Scaling Considerations
+**After:**
+```
+Frontend: POST /api/solve { inputData: { rawProblemText, providerMode } }
+          Headers: { x-openrouter-key: sk-or-... }
+Proxy:    method check -> pass through
+Route:    reads apiKey from header -> injects into inputData
+Step 1:   reads inputData.apiKey -> setState({ apiKey }) -> LibSQL (unchanged)
+Steps 2-3: reads state.apiKey (unchanged)
+```
 
-| Concern | Impact |
-|---------|--------|
-| Claude Code process lifecycle | Each `claudeCode()` call spawns a CLI process. Multiple concurrent solves may overwhelm the server. Consider limiting concurrency for Claude Code mode. |
-| Subscription rate limits | Claude Pro/Max has usage limits. High-frequency agent calls (12+ per solve, multiple solves) may hit these. The provider's `maxTurns` and `maxBudgetUsd` options can help. |
-| Server requirement | Claude Code CLI must be installed and authenticated on the server. This limits deployment to environments where you control the server (dev machine, self-hosted). Not suitable for shared/serverless deployment. |
+Key change: apiKey never appears in the request body or URL. It travels via header from client to route handler, then via workflow inputData and state (internal transport).
 
-## Build Order
+### Credits Request (Before vs After)
 
-Based on dependency analysis, the recommended implementation order:
+**Before:** `GET /api/credits?key=sk-or-v1-abc123...`
+**After:** `GET /api/credits` with `x-openrouter-key` header
 
-1. **Provider types and configuration** (no existing code depends on new types)
-   - `claude-code-provider.ts` (new file)
-   - Update `request-context-types.ts` (add `provider-mode`)
-   - Update `workflow-schemas.ts` (add `providerMode` to schemas)
+### Cancel Request (Before vs After)
 
-2. **Agent factory update** (depends on step 1)
-   - Update `createWorkflowAgent` in `agent-factory.ts`
-   - Update `request-context-helpers.ts`
+**Before:** `POST /api/solve/cancel` (no body, cancels ALL)
+**After:** `POST /api/solve/cancel` with `{ runId: "uuid" }` (cancels ONE)
 
-3. **Step file migration** (depends on step 2)
-   - Update all step files to use `providerMode` instead of `modelMode`
-   - Update provider propagation logic
+## Suggested Build Order
 
-4. **API route update** (depends on step 3)
-   - Update `route.ts` to handle Claude Code mode (skip API key check)
+Build in this order to minimize rework and respect dependencies:
 
-5. **Frontend update** (can partially parallel with step 3)
-   - New `use-provider-mode.ts` hook
-   - New `provider-mode-selector.tsx` component
-   - Update `use-solver-workflow.ts`
+### Phase 1: Header-based key transport (highest impact, no dependencies)
 
-6. **Tool compatibility** (depends on step 2, highest risk)
-   - Validate which agents work with Claude Code
-   - Implement prompt-only alternatives for tool-using agents in Claude Code mode
-   - Likely needs per-agent `tools` override in the factory based on provider mode
+**Files:** `use-solver-workflow.ts`, `credits-badge.tsx`, `solve/route.ts`, `credits/route.ts`
 
-7. **Testing and validation** (depends on all above)
-   - Manual testing of each agent with Claude Code
-   - Verify structured output works with all schemas
-   - Verify abort signal propagation
+Rationale: Highest-impact security fix. Query strings expose keys in browser history, server logs, and referrer headers. The fix is self-contained: change where the key is read/sent without touching workflow internals.
+
+### Phase 2: Scoped cancellation (no dependencies, parallel-safe with Phase 1)
+
+**Files:** `cancel/route.ts`, `solve/route.ts` (emit runId event), frontend workflow control
+
+Rationale: Small, self-contained. The `activeRuns` map already stores by `runId`. Need to emit `runId` to client and accept it in cancel requests.
+
+### Phase 3: Async opt-in logging (independent, larger blast radius)
+
+**Files:** `logging-utils.ts`, `workflow-schemas.ts`, all step files, `vocabulary-tools.ts`, `tester-tools.ts`
+
+Rationale: Touches many files but changes are mechanical (sync to async, add guard). Must be done after Phases 1-2 to reduce merge conflict surface on shared step files.
+
+### Phase 4: Proxy layer (depends on Phase 1)
+
+**Files:** `src/proxy.ts` (new)
+
+Rationale: Depends on header-based transport being in place. Should be done last as it is the thinnest security layer (defense-in-depth, not primary auth).
+
+## Anti-Patterns to Avoid
+
+### Anti-Pattern 1: Proxy as Auth Boundary
+
+**What people do:** Put all authentication logic in `proxy.ts`, trusting it as the sole security boundary.
+
+**Why wrong:** CVE-2025-29927 showed middleware/proxy can be bypassed via header manipulation. Defense-in-depth requires route handlers to validate independently.
+
+**Do this instead:** Keep auth validation in route handlers (where it already lives). Use proxy only for method enforcement.
+
+### Anti-Pattern 2: Reading Request Body in Proxy
+
+**What people do:** Parse the request body in `proxy.ts` to check fields like `providerMode`.
+
+**Why wrong:** Reading the body in proxy consumes the stream. The route handler receives an empty body. Next.js 16 docs explicitly state proxy should be "thin" -- redirects, rewrites, header checks only.
+
+**Do this instead:** Check only headers, cookies, URL path, and query parameters in proxy. Leave body validation to route handlers.
+
+### Anti-Pattern 3: Encrypting State Instead of Excluding Secrets
+
+**What people do:** Add AES-256 encryption for `apiKey` in workflow state rather than keeping it out of state.
+
+**Why wrong for this project:** Adds complexity (key management, encryption/decryption per step) for a local dev tool with an ephemeral database. The encryption key itself becomes a new secret to manage.
+
+**Do this instead:** Accept the pragmatic trade-off for local dev tools. Focus security effort on the actual exposure vectors: URLs, logs, and network transport.
+
+### Anti-Pattern 4: Fire-and-Forget Async Logging
+
+**What people do:** Make logging async but don't await the calls, creating unhandled promise rejections.
+
+**Why wrong:** Unhandled rejections crash Node.js. Even if the log write is "optional," a disk-full or permission error becomes a process crash.
+
+**Do this instead:** Always `await` async log calls. The opt-in gate (`if (!isLoggingEnabled()) return;`) short-circuits before any I/O, so the performance cost is negligible when logging is disabled.
 
 ## Sources
 
-- [ai-sdk-provider-claude-code GitHub](https://github.com/ben-vargas/ai-sdk-provider-claude-code) -- Provider source, README, capabilities
-- [AI SDK Community Providers: Claude Code](https://ai-sdk.dev/providers/community-providers/claude-code) -- Official AI SDK listing, capabilities matrix
-- [Claude Agent SDK Custom Tools](https://platform.claude.com/docs/en/agent-sdk/custom-tools) -- MCP-based custom tool pattern
-- [t3ta/claude-code-mastra](https://github.com/t3ta/claude-code-mastra) -- Reference Mastra integration
-- [Mastra Agent Class Reference](https://mastra.ai/reference/agents/agent) -- DynamicArgument model pattern
-- [Mastra Agent.generate() Reference](https://mastra.ai/reference/agents/generate) -- RequestContext flow
-- [Mastra Models Documentation](https://mastra.ai/models) -- AI SDK provider support, MastraModelConfig types
-- Installed `@mastra/core@1.8.0` type definitions -- MastraLanguageModel, MastraModelConfig, DynamicArgument type verification
+- [Next.js 16 proxy.ts API reference](https://nextjs.org/docs/app/api-reference/file-conventions/proxy) -- HIGH confidence
+- [Next.js authentication guide](https://nextjs.org/docs/app/guides/authentication) -- HIGH confidence
+- [Mastra workflow state docs](https://mastra.ai/docs/workflows/workflow-state) -- MEDIUM confidence
+- [Node.js blocking vs non-blocking](https://nodejs.org/en/learn/asynchronous-work/overview-of-blocking-vs-non-blocking) -- HIGH confidence
+- [Next.js CVE-2025-29927 middleware bypass](https://www.turbostarter.dev/blog/complete-nextjs-security-guide-2025-authentication-api-protection-and-best-practices) -- HIGH confidence
+- Codebase analysis of `workflow-schemas.ts`, step files, route handlers, and frontend hooks -- HIGH confidence
 
 ---
-*Architecture research for: Claude Code provider integration into LO-Solver v1.6*
-*Researched: 2026-03-10*
+*Architecture research for: Security hardening of LO-Solver v1.7*
+*Researched: 2026-03-17*

@@ -1,274 +1,239 @@
-# Feature Research: Claude Code Provider Integration
+# Feature Research: Security Hardening
 
-**Domain:** AI SDK provider toggle for existing Mastra agentic workflow
-**Researched:** 2026-03-10
-**Confidence:** MEDIUM (critical tool bridging question has HIGH confidence answer but implementation complexity is unverified)
+**Domain:** Security hardening for single-user Next.js + Mastra AI agent solver
+**Researched:** 2026-03-17
+**Confidence:** HIGH (issues identified from direct code audit; remediation patterns well-established)
+
+## Context: What Kind of App Is This?
+
+LO-Solver is a **single-user development tool** running locally or on a personal server. There is no multi-tenancy, no user accounts, no public-facing production deployment. The threat model is:
+
+- **Primary risk:** Accidental secret exposure (API keys leaking to disk, browser history, or database files that could be shared/committed)
+- **Secondary risk:** Accidental cost burn if the app is briefly exposed on a network (no auth on expensive workflow endpoint)
+- **Not a risk:** Sophisticated attackers, credential stuffing, session hijacking, CSRF (single user, no auth system)
+
+This context means: fix real data leaks aggressively, add basic guardrails against accidental exposure, but skip enterprise patterns (OAuth, JWT rotation, WAF, audit logging).
 
 ## Feature Landscape
 
-### Table Stakes (Users Expect These)
+### Table Stakes (Must Fix)
 
-Features that must work for the Claude Code provider option to be usable.
+These are genuine security defects where secrets end up where they should not.
 
-| Feature | Why Expected | Complexity | Notes |
+| Feature | Why Essential | Complexity | Notes |
 |---------|--------------|------------|-------|
-| Three-way provider toggle | Users need to switch between OpenRouter Testing, OpenRouter Production, and Claude Code; replaces current binary toggle | MEDIUM | Current `ModelModeToggle` is a `Switch`; needs redesign as segmented control or dropdown. State stored in localStorage via `useModelMode`. Must propagate as `inputData.modelMode` through `prepareSendMessagesRequest`. |
-| Claude Code authentication gate | Users must have `claude login` completed before selecting Claude Code option; provider requires CLI auth, not API keys | MEDIUM | Unlike OpenRouter (API key dialog), Claude Code uses browser OAuth via `claude login`. Need to detect auth status and show clear error if not authenticated. Cannot reuse existing API key dialog pattern. |
-| Agents without tools work via Claude Code | 8 of 12 agents have no tools (extractors, dispatchers, testers, answerer); these should work immediately with `generateText`/`streamText` through the provider | LOW | `ai-sdk-provider-claude-code` supports `generateText()` and `streamText()`. These 8 agents just need model resolution to return a Claude Code model instead of an OpenRouter model. The agent factory's `model` callback already receives `requestContext` for dynamic resolution. |
-| Structured output (JSON extraction) via Claude Code | 5 agents produce structured JSON (extractors use two-agent chain: reasoner then JSON extractor); Claude Code provider supports `generateObject()` | MEDIUM | The provider supports "native structured outputs with guaranteed schema compliance" via `generateObject()`/`streamObject()`. Mastra agents using `generateText` with output schemas should work. Some JSON Schema features (format constraints, complex regex) may silently degrade to prose -- keep schemas simple. |
-| Agent factory provider abstraction | `createWorkflowAgent` must resolve to either OpenRouter or Claude Code provider based on request context, without changing individual agent definitions | MEDIUM | Current factory reads `requestContext.get('model-mode')` and `requestContext.get('openrouter-provider')`. Needs new `'provider-type'` key (or extend `ModelMode` to include `'claude-code'`). Factory returns `provider(modelId)` -- Claude Code equivalent is `claudeCode('opus')` or `claudeCode('sonnet')`. |
-| Cost tracking adaptation | OpenRouter returns cost in `providerMetadata.openrouter.usage.cost`; Claude Code uses subscription (no per-call cost); cost tracking must not crash | LOW | `extractCostFromResult()` reads `providerMetadata?.openrouter?.usage?.cost`. When using Claude Code, this path returns `undefined`, and `callCost` stays `0`. No crash, but cost display should show "Subscription" or similar instead of $0.00. |
-| Graceful error when Claude Code CLI not installed | User selects Claude Code but hasn't installed `@anthropic-ai/claude-code` CLI | LOW | Provider will throw on first `generateText` call. Catch and surface a clear error message directing user to install CLI and run `claude login`. |
+| Remove API key from workflow state | `apiKey` field in `workflowStateSchema` causes Mastra to persist the OpenRouter key into LibSQL (`mastra.db`). The key is written to `mastra_workflow_snapshot` table as serialized JSON on every `setState()` call. Anyone with access to the `.db` file gets the key. | LOW | Remove `apiKey` from both `workflowStateSchema` and `rawProblemInputSchema`. Instead, create the OpenRouter provider once in the API route handler and pass it via `RequestContext` (which is in-memory only, never persisted). Each step already reads from `requestContext.get('openrouter-provider')` -- just ensure the first step sets it and subsequent steps receive it. The Mastra `RequestContext` is per-execution and lives only in process memory. |
+| Move API key from query string to header | `/api/credits?key=sk-or-...` puts the API key in the URL. Browser history, server access logs, proxy logs, and Referer headers all capture query strings. | LOW | Change the `GET /api/credits` endpoint to read from `Authorization: Bearer <key>` header instead of `url.searchParams.get('key')`. Update the frontend `credits-badge.tsx` fetch call to send the key as a header. |
+| Scope cancel endpoint to current run | `POST /api/solve/cancel` iterates **all** entries in the `activeRuns` Map and cancels every one. If two browser tabs are running workflows, canceling one kills both. | LOW | Accept a `runId` in the cancel request body. The solve route already has `run.runId` -- return it to the frontend in the stream or response headers, then require it for cancel. Falls back to cancel-all only if no `runId` provided (backward compat). |
+| Redact API key from logs | `logAgentOutput()` writes `JSON.stringify(output)` to markdown files. If any agent output or step state contains the API key (e.g., from error messages that include config), the key lands on disk in plaintext. | LOW | Add a `redactSecrets(text: string)` utility that replaces patterns matching `sk-or-v1-*`, `sk-or-*`, and generic long alphanumeric tokens after known key prefixes. Apply it in `logAgentOutput`, `logValidationError`, and any other function that writes to the log file. Pattern: show first 5 and last 4 chars, mask the middle. |
+| Remove server key exposure in credits fallback | `GET /api/credits` falls back to `process.env.OPENROUTER_API_KEY` when no user key is provided, then sends it to OpenRouter. While it does not return the key to the client, any error or exception in the fetch (e.g., network timeout mid-stream) could expose it in server logs. More importantly, it means an unauthenticated request to `/api/credits` burns the server owner's key for a credits check. | LOW | Only use the server key for credits if explicitly intended. Add a `source` query param or separate route (`/api/credits/server` vs `/api/credits/user`). Or simpler: if no user key is provided and a server key exists, return `{ remaining: null, hasServerKey: true }` without making the OpenRouter API call. The frontend already handles this case. |
 
-### Differentiators (Competitive Advantage)
+### Differentiators (Should Fix)
 
-Features that enhance the integration beyond basic functionality.
+These improve security posture meaningfully but are not data-leak risks. They protect against accidental misuse.
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| Tool-using agents work via MCP bridge | 4 agents use Mastra tools (vocabulary CRUD, rules CRUD, testRule, testSentence); bridging these as MCP tools would make the full pipeline work with Claude Code | HIGH | **This is the hardest feature.** The `ai-sdk-provider-claude-code` explicitly does NOT support AI SDK custom tools (Zod schemas passed to `generateText`). Tools must be exposed via `createSdkMcpServer()` from `@anthropic-ai/claude-agent-sdk`. Each Mastra tool needs to be wrapped as an MCP tool with the same Zod schema and an `execute` handler that calls the original tool's logic. The tricky part: Mastra tools access `requestContext` for vocabulary/rules state -- MCP tool handlers don't receive Mastra's `requestContext`. A closure-based adapter is needed. |
-| Per-agent model mapping for Claude Code | Map OpenRouter model IDs to Claude Code equivalents (e.g., `google/gemini-3-flash-preview` maps to `sonnet`, `openai/gpt-5-mini` maps to `haiku`) | LOW | Simple lookup table. Claude Code offers `opus`, `sonnet`, `haiku`. Reasoning agents (Gemini Flash) map to `sonnet`. Extraction agents (GPT-5-mini) map to `haiku`. Orchestrator agents map to `sonnet`. |
-| Trace event streaming from Claude Code calls | Preserve the real-time trace UI (agent start/end, tool calls, step progress) when running via Claude Code provider | MEDIUM | `streamWithRetry` and `emitTraceEvent` emit trace events around agent calls in step files. These wrappers work at the step level, not the provider level, so they should continue to work. However, tool call trace events emitted from within MCP-bridged tools need the step writer closure. |
-| Auth status indicator in nav bar | Show whether Claude Code is authenticated (green dot) vs. not authenticated (red dot with setup instructions) | LOW | Run `claude --version` or attempt a lightweight `query()` to check auth. Display status near the provider toggle. Avoids confusing errors during solve. |
+| Basic rate limiting on `/api/solve` | Each solve request starts a multi-step workflow costing $0.10-$2.00+ in API credits. Without rate limiting, a script or browser loop could drain the API key rapidly. | MEDIUM | Use an in-memory sliding window counter (no Redis needed for single-user). Limit to ~3 concurrent workflows and ~10 requests per minute. Implement as a wrapper function in the route handler, not middleware (simpler, no additional config). Use `Map<string, number[]>` keyed by IP. |
+| Convert sync filesystem I/O to async | All 13 `fs.appendFileSync` / `fs.writeFileSync` calls in `logging-utils.ts` block the Node.js event loop. During verification loops with 20+ test calls, this creates noticeable latency spikes. | LOW | Replace `fs.appendFileSync` with `fs.promises.appendFile` (or `fs/promises`). Replace `fs.writeFileSync` with `fs.promises.writeFile`. Replace `fs.existsSync` + `fs.mkdirSync` with `fs.promises.mkdir({ recursive: true })`. All callers already `await` or can be trivially updated. |
+| Opt-in logging with redaction | Logging writes full agent reasoning and structured output to disk by default. This includes the complete linguistic analysis, which is fine, but also includes any errors that might contain config data. A dev tool should log, but offer a way to disable or redact. | LOW | Add `LOG_ENABLED` env var (default: `true`). When `false`, skip all file writes in logging-utils. When `true`, apply the `redactSecrets()` function from the table stakes feature. This is a lightweight opt-out, not a full logging framework. |
+| Hide debug trace panel behind toggle | `DevTracePanel` shows full agent reasoning, tool inputs/outputs, and internal workflow events in the main UI. This is the point of the tool, but a production-deployed instance might want to hide it. | LOW | Already client-side only. Add a `NEXT_PUBLIC_SHOW_TRACE` env var (default: `true`). When `false`, the layout renders without the trace column. The 3-column layout already supports conditional rendering (2 vs 3 columns). |
+| Reduce `/api/claude-auth` surface | Endpoint returns `email` and `subscriptionType` from `claude auth status --json`. For a local dev tool this is fine, but if deployed, it leaks account metadata. | LOW | Return only `{ authenticated: boolean }` by default. Add a `NEXT_PUBLIC_SHOW_CC_DETAILS` env var to opt into showing email/subscription. Or simpler: just remove `email` from the response since it is not used in the UI (only `authenticated` and `subscriptionType` are used). |
+| Guard eval API routes | `/api/evals` and `/api/evals/[id]` return full evaluation run data with no auth. Contains problem texts, model outputs, scores, and timing data. Not secret, but unnecessarily exposed. | LOW | Add a simple shared-secret check: read `EVAL_API_TOKEN` from env, require it as `Authorization: Bearer <token>` header. If not set, allow all requests (dev mode). This is a "lock if you want to" pattern. |
 
-### Anti-Features (Commonly Requested, Often Problematic)
+### Anti-Features (Do NOT Build)
+
+Features that seem security-related but would be over-engineering for this use case.
 
 | Feature | Why Requested | Why Problematic | Alternative |
 |---------|---------------|-----------------|-------------|
-| Auto-install Claude Code CLI | Users want zero-setup experience | Running `npm install -g` programmatically from a web app is a security concern and platform-specific; CLI installation is a one-time manual step | Show clear instructions with copy-paste commands when Claude Code is selected but not installed |
-| Claude Code built-in tools (Bash, Read, Write, Edit) | Claude Code has powerful built-in tools for code manipulation | These tools operate on the filesystem and have nothing to do with linguistics problem solving; allowing them creates security risks and confusing behavior | Only expose the specific Mastra vocabulary/rules/tester tools via MCP bridge; disable all Claude Code built-in tools via `disallowedTools` |
-| Simultaneous multi-provider solve | Compare OpenRouter vs Claude Code results side-by-side in real-time | Doubles API costs, doubles UI complexity, doubles streaming complexity; the eval harness already supports comparison | Use the eval harness to compare providers across problem sets; keep the live solver single-provider |
-| Claude Code session persistence | Resume or review past Claude Code agent sessions | The Mastra workflow manages its own state via RequestContext and workflow state; Claude Code session management is orthogonal and adds complexity | Use existing Mastra logs and trace UI for session review |
-| Dynamic provider switching mid-solve | Switch from OpenRouter to Claude Code during an active solve | Workflow state (vocabulary Map, rules Map, RequestContext) is provider-agnostic but the provider is resolved at step initialization; mid-solve switching creates inconsistency | Provider is locked at solve start; user must reset and re-solve to change providers |
+| Full authentication system (NextAuth, Clerk) | "Protect all endpoints" | Single-user tool. Adding user accounts, sessions, cookies, and CSRF protection creates massive complexity with zero value. No one else uses this app. | Use env-var feature flags for sensitive endpoints when deployed. |
+| Server-side API key storage (encrypted DB) | "Don't trust localStorage" | Requires encryption key management, key derivation, secure deletion. localStorage is appropriate for single-user -- the threat is the disk file, not the browser. If someone has access to your browser, they have access to everything. | Keep localStorage. Fix the real leak: remove key from workflow state/LibSQL. |
+| Request signing / HMAC verification | "Prevent tampering with API calls" | All calls are localhost. The client and server are the same machine. Signing adds complexity with no security benefit. | Skip entirely. |
+| Content Security Policy headers | "Prevent XSS" | No user-generated content, no third-party scripts, no CDN assets. CSP would only block legitimate functionality (inline styles from shadcn/ui, etc.) | Not needed for a dev tool with no untrusted input. |
+| API key rotation / expiry system | "Keys should rotate" | The user manages their own OpenRouter key. The app has no authority to rotate it. Building expiry logic for a pass-through key is meaningless. | Let OpenRouter handle key management. |
+| Encrypted log files | "Logs contain sensitive data" | Encryption at rest requires key management, which is harder than the problem it solves. The logs are on the user's own machine. | Redact secrets from logs (table stakes). Optionally disable logging entirely (differentiator). |
+| Rate limiting with Redis/Upstash | "Need distributed rate limiting" | Single-user, single-process app. Redis adds infrastructure dependency for a problem solvable with a `Map` and `Date.now()`. | In-memory sliding window counter. |
+| Audit logging for API access | "Track who accessed what" | Single user. There is no "who." | Console.log is sufficient for debugging. |
 
 ## Feature Dependencies
 
 ```
-[Three-way provider toggle]
+[Remove API key from workflow state]
     |
-    +--requires--> [Agent factory provider abstraction]
-    |                  |
-    |                  +--requires--> [Per-agent model mapping for Claude Code]
-    |                  |
-    |                  +--enables---> [Agents without tools work via Claude Code]
-    |                  |
-    |                  +--enables---> [Structured output via Claude Code]
+    +--> depends on --> [Pass OpenRouter provider via RequestContext across steps]
+    |                        |
+    |                        +--> requires understanding --> Mastra step-to-step context passing
     |
-    +--requires--> [Claude Code authentication gate]
-    |                  |
-    |                  +--enhances--> [Auth status indicator in nav bar]
-    |
-    +--enables---> [Cost tracking adaptation]
+    +--> enables --> [Redact API key from logs] (less critical if key never enters state)
 
-[Tool-using agents work via MCP bridge]
-    |
-    +--requires--> [Agent factory provider abstraction]
-    +--requires--> [Closure-based RequestContext adapter for MCP tools]
-    +--enhances--> [Trace event streaming from Claude Code calls]
+[Move API key from query to header]
+    +--> independent (frontend + API change only)
+
+[Scope cancel endpoint]
+    +--> requires --> [Return runId from solve route to frontend]
+    +--> independent of secret handling
+
+[Sync to async I/O]
+    +--> enhances --> [Opt-in logging with redaction] (both touch logging-utils.ts)
+    +--> should be done in same phase to avoid double-touching the file
+
+[Rate limiting]
+    +--> independent (API route wrapper only)
+
+[Guard eval APIs]
+    +--> independent (2 route files only)
 ```
 
 ### Dependency Notes
 
-- **Three-way toggle requires agent factory abstraction:** The toggle value must propagate through `inputData` to workflow steps to `requestContext` to the agent factory's `model` callback. The factory must know how to create both OpenRouter and Claude Code model instances.
-- **MCP bridge requires RequestContext adapter:** Mastra tools read/write vocabulary and rules state from `requestContext`. MCP tool handlers run in the Claude Agent SDK process context. The adapter must capture `requestContext` in a closure when creating the MCP server, then pass it to tool handlers. This is the critical path.
-- **Tool-using agents (MCP bridge) enhances trace streaming:** Without the bridge, 4 agents cannot use tools, which means the verify/improve loop does not work. The trace UI relies on tool call events emitted during verification.
-- **Auth gate enhances with status indicator:** The gate blocks solve attempts; the indicator provides proactive feedback before the user tries to solve.
+- **Remove API key from state** is the highest-priority fix and has a subtle dependency: the API key currently flows `inputData.apiKey -> setState({ apiKey }) -> state.apiKey` across steps. Removing it requires an alternative mechanism. `RequestContext` is step-local in Mastra (created fresh in each step's `execute` function). The alternative is to **keep the key in `inputData` (which is per-run, not persisted to LibSQL as state)** and have each step read it from `inputData` rather than `state`. Or, strip `apiKey` from the state schema while still passing it in `inputData` -- the state schema controls what is persisted, and `inputData` is transient.
+- **Async I/O and logging redaction** both modify `logging-utils.ts`. Do them in the same phase.
+- **Cancel scoping** requires the frontend to know the `runId`, which means the solve route must communicate it. A custom stream event or response header works.
 
 ## MVP Definition
 
-### Launch With (v1.6.0)
+### Phase 1: Fix Data Leaks (Critical)
 
-Minimum viable Claude Code integration -- the full pipeline works.
+Minimum changes to stop secrets from hitting disk or URLs.
 
-- [ ] **Agent factory provider abstraction** -- extend `createWorkflowAgent` to resolve Claude Code models when `model-mode` is `'claude-code'`
-- [ ] **Three-way provider toggle** -- replace `ModelModeToggle` switch with segmented control: Testing ($) / Production ($$$) / Claude Code
-- [ ] **Per-agent model mapping** -- lookup table mapping OpenRouter model IDs to Claude Code model shortcuts
-- [ ] **Claude Code authentication gate** -- detect auth status, block solve with clear message if not authenticated
-- [ ] **Tool-free agents work** -- 8 agents (extractors, dispatchers, answerer) work via `generateText`/`streamText`
-- [ ] **MCP tool bridge for Mastra tools** -- wrap vocabulary tools, rules tools, tester tools as MCP tools with RequestContext closure adapter
-- [ ] **Cost tracking adaptation** -- handle missing cost metadata gracefully, show "Subscription" label
+- [ ] Remove `apiKey` from `workflowStateSchema` -- stops LibSQL persistence
+- [ ] Keep `apiKey` in `rawProblemInputSchema` (transient input, not persisted as state)
+- [ ] Each step reads `inputData.apiKey` to create its OpenRouter provider (already the pattern in step 1; extend to steps 2 and 3)
+- [ ] Move `/api/credits` key transport from query string to `Authorization` header
+- [ ] Stop `/api/credits` from using server key for unauthenticated requests
+- [ ] Add `redactSecrets()` utility and apply to all logging functions
 
-### Add After Validation (v1.6.x)
+### Phase 2: Harden Endpoints (Important)
 
-Features to add once the basic integration is working.
+Basic guardrails against accidental misuse.
 
-- [ ] **Auth status indicator** -- show green/red dot in nav bar when Claude Code is selected
-- [ ] **Trace event streaming verification** -- ensure all trace events (agent start/end, tool calls, step progress, vocabulary/rules updates) work identically with Claude Code provider
-- [ ] **Claude Code model selection within provider** -- allow choosing Opus vs Sonnet vs Haiku for Claude Code mode (currently auto-mapped)
+- [ ] Scope cancel endpoint to specific `runId`
+- [ ] Add in-memory rate limiting to `/api/solve`
+- [ ] Guard eval APIs with optional bearer token
+- [ ] Trim `/api/claude-auth` response to only what the UI uses
 
-### Future Consideration (v2+)
+### Phase 3: Code Quality and Performance
 
-- [ ] **Eval harness with Claude Code** -- run `npm run eval` with `--provider claude-code` flag for cross-provider benchmarking
-- [ ] **Prompt engineering per Claude Code model** -- the 19 agent prompts were optimized for GPT-5-mini and Gemini Flash; Claude Code agents (Opus/Sonnet) may benefit from different prompt styles
+Non-security improvements surfaced by the audit.
+
+- [ ] Convert sync I/O to async in `logging-utils.ts`
+- [ ] Add opt-in logging disable via `LOG_ENABLED` env var
+- [ ] Add `NEXT_PUBLIC_SHOW_TRACE` env var for trace panel visibility
+- [ ] Fix nullability trap in workflow schemas (the `data: ... .nullable()` pattern in `structuredProblemSchema`)
+- [ ] Remove dead API surfaces and unused dependencies (Knip audit)
+- [ ] Fix naming inconsistencies and comment/code mismatches
+
+### Future Consideration (Only If Deployed Publicly)
+
+- [ ] Full endpoint auth -- only if the app is ever hosted for multiple users
+- [ ] HTTPS enforcement -- only if deployed (localhost is already secure context)
+- [ ] Security headers middleware -- only if serving to external users
 
 ## Feature Prioritization Matrix
 
-| Feature | User Value | Implementation Cost | Priority |
-|---------|------------|---------------------|----------|
-| Agent factory provider abstraction | HIGH | MEDIUM | P1 |
-| Three-way provider toggle (frontend) | HIGH | MEDIUM | P1 |
-| Per-agent model mapping | HIGH | LOW | P1 |
-| Claude Code authentication gate | HIGH | MEDIUM | P1 |
-| MCP tool bridge for Mastra tools | HIGH | HIGH | P1 |
-| Cost tracking adaptation | MEDIUM | LOW | P1 |
-| Graceful CLI-not-installed error | MEDIUM | LOW | P1 |
-| Auth status indicator | LOW | LOW | P2 |
-| Trace event streaming verification | MEDIUM | MEDIUM | P2 |
-| Claude Code model selection | LOW | LOW | P3 |
-| Eval harness Claude Code mode | MEDIUM | MEDIUM | P3 |
+| Feature | Security Value | Implementation Cost | Priority |
+|---------|---------------|---------------------|----------|
+| Remove API key from workflow state | HIGH | LOW | P1 |
+| Move API key from query to header | HIGH | LOW | P1 |
+| Redact secrets from logs | HIGH | LOW | P1 |
+| Stop server key use in credits fallback | MEDIUM | LOW | P1 |
+| Scope cancel to runId | MEDIUM | LOW | P1 |
+| In-memory rate limiting on /api/solve | MEDIUM | MEDIUM | P2 |
+| Convert sync to async I/O | LOW (perf, not security) | LOW | P2 |
+| Guard eval APIs | LOW | LOW | P2 |
+| Trim claude-auth response | LOW | LOW | P2 |
+| Opt-in logging disable | LOW | LOW | P3 |
+| Trace panel env var toggle | LOW | LOW | P3 |
+| Fix nullability in schemas | LOW (correctness) | LOW | P3 |
+| Dead code / naming cleanup | LOW (hygiene) | LOW | P3 |
 
 **Priority key:**
-- P1: Must have for launch -- pipeline must work end-to-end
-- P2: Should have, add when possible -- polish and verification
-- P3: Nice to have, future consideration
+- P1: Must fix -- active data leak or secret exposure
+- P2: Should fix -- reduces attack surface, improves robustness
+- P3: Nice to have -- cleanup and polish
 
-## Critical Implementation Details
+## Implementation Details for Key Features
 
-### How `ai-sdk-provider-claude-code` Works
+### Removing API Key from Workflow State
 
-**Confidence: HIGH** (verified via official AI SDK docs, GitHub README, and Anthropic Agent SDK docs)
+**Current flow:**
+```
+Frontend (localStorage) --> POST /api/solve body --> inputData.apiKey
+  --> Step 1: setState({ apiKey: inputData.apiKey }) --> LibSQL snapshot
+  --> Step 2: reads state.apiKey --> creates provider
+  --> Step 3: reads state.apiKey --> creates provider
+```
 
-The provider wraps the Claude Agent SDK's `query()` function behind the Vercel AI SDK `LanguageModelV2` interface. When you call `generateText({ model: claudeCode('sonnet'), prompt: '...' })`, it spawns a Claude Code CLI process, sends the prompt via `query()`, and collects the response.
+**Target flow:**
+```
+Frontend (localStorage) --> POST /api/solve body --> inputData.apiKey
+  --> Step 1: reads inputData.apiKey --> creates provider via RequestContext
+  --> Step 2: reads inputData.apiKey --> creates provider via RequestContext
+  --> Step 3: reads inputData.apiKey --> creates provider via RequestContext
+  (apiKey never in stateSchema, never persisted to LibSQL)
+```
 
-Key characteristics:
-- **Authentication:** Uses `claude login` OAuth flow (browser-based). Credentials stored in OS keychain. No API key in code.
-- **Model selection:** Shortcuts `opus`, `sonnet`, `haiku` or full identifiers like `claude-opus-4-5`.
-- **Structured output:** Supported via `generateObject()`/`streamObject()` with Zod schemas converted to JSON Schema via `z.toJSONSchema()`. Uses the Agent SDK's `outputFormat: { type: 'json_schema', schema }` option.
-- **Streaming:** Supported via `streamText()`/`streamObject()`.
-- **Tools:** Does NOT support AI SDK custom tools (Zod schemas in `tools` parameter). Shows "Tool Usage: false" in capability table. Uses Claude's built-in tools (Bash, Read, Write, Edit) and MCP servers instead.
+Key insight: `inputData` is available in every step's `execute` function. Steps already access `inputData.providerMode`, `inputData.maxRounds`, etc. The `apiKey` is already in `rawProblemInputSchema`. The only change is: stop copying it to state, and read from `inputData` instead of `state` in steps 2 and 3.
 
-### How to Bridge Mastra Tools via MCP
+Verify: does Mastra persist `inputData` to LibSQL? Check the `mastra_workflow_snapshot` table schema. If it does, the key would still leak. In that case, strip the key from inputData before passing to `workflow.stream()` and pass it via a closure or module-level map keyed by `runId`.
 
-**Confidence: MEDIUM** (architecture is sound based on official Claude Agent SDK custom tools docs, but no existing example of bridging Mastra tools specifically)
-
-The Claude Agent SDK provides `tool()` and `createSdkMcpServer()` for defining in-process MCP tools. These accept Zod schemas for input validation and async handlers for execution.
-
-**Bridge pattern:**
+### In-Memory Rate Limiter
 
 ```typescript
-import { tool, createSdkMcpServer } from '@anthropic-ai/claude-agent-sdk';
-import { z } from 'zod';
+// rate-limit.ts
+const windows = new Map<string, number[]>();
+const WINDOW_MS = 60_000;
+const MAX_REQUESTS = 10;
 
-// Capture requestContext in closure at step initialization
-function createMastraToolBridge(requestContext: RequestContext) {
-  return createSdkMcpServer({
-    name: 'mastra-tools',
-    version: '1.0.0',
-    tools: [
-      tool(
-        'addVocabulary',
-        'Add NEW vocabulary entries...',
-        { entries: z.array(vocabularyEntrySchema) },
-        async (args) => {
-          // Call original Mastra tool logic with captured requestContext
-          const result = await addVocabularyExecute(args, requestContext);
-          return { content: [{ type: 'text', text: JSON.stringify(result) }] };
-        }
-      ),
-      // ... wrap each Mastra tool similarly
-    ],
-  });
+export function checkRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const timestamps = windows.get(ip) ?? [];
+  const recent = timestamps.filter(t => now - t < WINDOW_MS);
+  if (recent.length >= MAX_REQUESTS) return false;
+  recent.push(now);
+  windows.set(ip, recent);
+  return true;
 }
 ```
 
-**Key challenge:** The MCP tool handler returns `{ content: [{ type: 'text', text: string }] }` not structured objects. The agent receives text and must parse it. This works because the agent prompts already expect structured tool results.
+No external dependencies. Resets on server restart (acceptable for dev tool).
 
-**Important constraint from Claude Agent SDK docs:** "Custom MCP tools require streaming input mode. You must use an async generator/iterable for the `prompt` parameter -- a simple string will not work with MCP servers." This means agent calls with MCP tools must use streaming input, which affects how the step files invoke agents.
+### Secret Redaction Pattern
 
-**Zod version concern:** The `ai-sdk-provider-claude-code` v3.2.0+ requires Zod 4. The project already uses Zod 4.3.6 -- no conflict.
+```typescript
+// redact.ts
+const SECRET_PATTERNS = [
+  /sk-or-v1-[a-zA-Z0-9]{20,}/g,     // OpenRouter v1 keys
+  /sk-or-[a-zA-Z0-9]{20,}/g,         // OpenRouter keys
+  /sk-[a-zA-Z0-9]{20,}/g,            // Generic sk- prefixed keys
+  /Bearer\s+[a-zA-Z0-9_-]{20,}/g,    // Bearer tokens in error messages
+];
 
-### Agent Tool Usage Breakdown
-
-| Agent | Has Tools | Tools Used | MCP Bridge Needed |
-|-------|-----------|------------|-------------------|
-| Structured Problem Extractor | No | -- | No |
-| Perspective Dispatcher | No | -- | No |
-| Improver Dispatcher | No | -- | No |
-| Initial Hypothesizer | **Yes** | vocabulary (5), rules (5), testRule, testSentence | **Yes** |
-| Hypothesis Synthesizer | **Yes** | vocabulary (5), rules (5), testRule, testSentence | **Yes** |
-| Verifier Orchestrator | **Yes** | testRule, testSentence | **Yes** |
-| Verifier Feedback Extractor | No | -- | No |
-| Rules Improver | **Yes** | vocabulary (5), testRule, testSentence | **Yes** |
-| Rules Improvement Extractor | No | -- | No |
-| Rule Tester (sub-agent) | No | -- | No |
-| Sentence Tester (sub-agent) | No | -- | No |
-| Question Answerer | No | -- | No |
-
-4 of 12 agents need the MCP bridge. These are the core workflow agents (hypothesizer, synthesizer, verifier orchestrator, improver).
-
-### Unique Tool Definitions to Bridge
-
-Counting unique tools across the 4 tool-using agents:
-
-| Tool | Used By | RequestContext Keys Read | Side Effects |
-|------|---------|--------------------------|-------------|
-| getVocabulary | hypothesizer, synthesizer, improver | `vocabulary-state` | None (read-only) |
-| addVocabulary | hypothesizer, synthesizer, improver | `vocabulary-state`, `log-file`, `step-writer`, `parent-agent-id`, `step-id`, `workflow-start-time` | Mutates vocabulary Map, emits trace events |
-| updateVocabulary | hypothesizer, synthesizer, improver | Same as addVocabulary | Mutates vocabulary Map, emits trace events |
-| removeVocabulary | hypothesizer, synthesizer, improver | Same as addVocabulary | Mutates vocabulary Map, emits trace events |
-| clearVocabulary | hypothesizer, synthesizer, improver | Same as addVocabulary | Mutates vocabulary Map, emits trace events |
-| getRules | hypothesizer, synthesizer, improver | `rules-state` | None (read-only) |
-| addRules | hypothesizer, synthesizer, improver | `rules-state`, `log-file`, `step-writer`, etc. | Mutates rules Map, emits trace events |
-| updateRules | hypothesizer, synthesizer, improver | Same as addRules | Mutates rules Map, emits trace events |
-| removeRules | hypothesizer, synthesizer, improver | Same as addRules | Mutates rules Map, emits trace events |
-| clearRules | hypothesizer, synthesizer, improver | Same as addRules | Mutates rules Map, emits trace events |
-| testRule | hypothesizer, synthesizer, verifier, improver | `structured-problem`, `vocabulary-state`, `current-rules`, `model-mode`, `log-file`, `step-writer`, `mastra` | Spawns sub-agent call, emits trace events |
-| testSentence | hypothesizer, synthesizer, verifier, improver | Same as testRule | Spawns sub-agent call, emits trace events |
-
-**12 unique tools** to bridge. The vocabulary and rules tools are relatively simple (Map operations with event emission). The tester tools are complex: they spawn sub-agent LLM calls using the Mastra instance from `requestContext`. This means the MCP bridge for tester tools must also have access to a Mastra instance and the ability to call `generateWithRetry()` on the tester agents.
-
-### Authentication UX
-
-**Confidence: HIGH** (verified via official Claude Code authentication docs)
-
-1. **First-time setup:** User installs `@anthropic-ai/claude-code` globally, runs `claude login` in terminal. Browser opens for OAuth. One-time per machine.
-2. **In-app detection:** Attempt a lightweight `query()` call or check for CLI presence. If not authenticated, show a dismissible banner: "Claude Code requires authentication. Run `claude login` in your terminal."
-3. **No API key needed in app:** Unlike OpenRouter which stores an API key in localStorage, Claude Code auth is machine-level via OS keychain. The app just needs the CLI to be installed and authenticated.
-4. **Per-request key not applicable:** The existing `useApiKey()` hook and API key dialog are OpenRouter-specific. When Claude Code is selected, the API key dialog should be hidden or disabled.
-
-### Provider Toggle UX
-
-**Confidence: HIGH** (straightforward frontend change)
-
-Current state: Binary `Switch` component with "Testing ($)" and "Production ($$$)" labels.
-
-New state: Three options. Recommended implementation: segmented control (radio group styled as tabs) or a `Select` dropdown.
-
-Options:
-1. **Testing ($)** -- OpenRouter with cheap models (GPT-OSS-120B)
-2. **Production ($$$)** -- OpenRouter with per-agent production models
-3. **Claude Code** -- Claude subscription, no per-call cost
-
-The toggle value flows: `useModelMode()` hook -> `localStorage` -> `useSolverWorkflow()` -> `prepareSendMessagesRequest` -> `inputData.modelMode` -> workflow step -> `requestContext.set('model-mode', ...)` -> `createWorkflowAgent` model callback.
-
-Extending `ModelMode` from `'testing' | 'production'` to `'testing' | 'production' | 'claude-code'` propagates through this entire chain.
-
-### Provider Configuration via `createClaudeCode()`
-
-**Confidence: HIGH** (verified via AI SDK community provider docs)
-
-The provider supports these configuration options relevant to this integration:
-
-| Option | Value for LO-Solver | Rationale |
-|--------|---------------------|-----------|
-| `allowedTools` | `['mcp__mastra-tools__*']` | Only allow the bridged Mastra tools |
-| `disallowedTools` | `['Bash', 'Read', 'Write', 'Edit', 'WebSearch', 'WebFetch']` | Block all Claude Code built-in tools -- they're irrelevant and potentially dangerous |
-| `permissionMode` | `'bypassPermissions'` | The MCP tools are all in-process; no filesystem operations to approve |
-| `maxTurns` | `30` | Match reasonable limits for tool-using agents (hypothesizer uses many tool calls) |
-| `cwd` | Not set | No filesystem operations needed |
-| `systemPrompt` | Not set (use Mastra agent instructions) | Agent instructions are passed via Mastra, not via provider config |
+export function redactSecrets(text: string): string {
+  let result = text;
+  for (const pattern of SECRET_PATTERNS) {
+    result = result.replace(pattern, (match) => {
+      if (match.length <= 12) return '[REDACTED]';
+      return `${match.slice(0, 5)}...${match.slice(-4)}`;
+    });
+  }
+  return result;
+}
+```
 
 ## Sources
 
-- [ai-sdk-provider-claude-code GitHub (ben-vargas)](https://github.com/ben-vargas/ai-sdk-provider-claude-code) -- community provider source, capability table, limitations
-- [AI SDK Community Providers: Claude Code](https://ai-sdk.dev/providers/community-providers/claude-code) -- official AI SDK listing with capability matrix
-- [Claude Agent SDK - Custom Tools](https://platform.claude.com/docs/en/agent-sdk/custom-tools) -- MCP tool bridge pattern with `tool()` and `createSdkMcpServer()`
-- [Claude Agent SDK - TypeScript Reference](https://platform.claude.com/docs/en/agent-sdk/typescript) -- `query()` options, model selection, permissions, `AgentDefinition` type
-- [Claude Agent SDK - Structured Outputs](https://platform.claude.com/docs/en/agent-sdk/structured-outputs) -- `outputFormat` option, Zod schema support, JSON Schema limitations
-- [Claude Code - Authentication](https://code.claude.com/docs/en/authentication) -- `claude login`, credential storage, auth methods
-- [t3ta/claude-code-mastra](https://github.com/t3ta/claude-code-mastra) -- reference integration of Claude Code SDK with Mastra framework (alternative approach using custom Agent class)
-- [@anthropic-ai/claude-agent-sdk npm](https://www.npmjs.com/package/@anthropic-ai/claude-agent-sdk) -- SDK package, version 0.1.50+
+- Direct code audit of `/home/cervo/Code/LO-Solver/src/app/api/` routes
+- Direct code audit of `/home/cervo/Code/LO-Solver/src/mastra/workflow/` state and logging
+- [Mastra workflow state docs](https://mastra.ai/docs/workflows/workflow-state) -- confirms state persists across suspend/resume via LibSQL snapshots
+- [Mastra LibSQL storage reference](https://mastra.ai/en/reference/storage/libsql) -- `mastra_workflow_snapshot` table stores serialized state
+- [Next.js data security guide](https://nextjs.org/docs/app/guides/data-security) -- recommends keeping secrets server-side, validating at data access points
+- [Next.js security blog](https://nextjs.org/blog/security-nextjs-server-components-actions) -- defense-in-depth, data minimization
+- [TurboStarter Next.js security guide 2025](https://www.turbostarter.dev/blog/complete-nextjs-security-guide-2025-authentication-api-protection-and-best-practices) -- API key transport, rate limiting patterns
+- [Rate limiting techniques in Next.js](https://www.jigz.dev/blogs/rate-limiting-techniques-in-next-js-with-examples) -- in-memory vs Redis approaches
+- [Node.js API security patterns 2025](https://dev.to/codanyks/secure-by-design-nodejs-api-security-patterns-for-2025-2a9k) -- Pino redaction, secret management
 
 ---
-*Feature research for: Claude Code provider integration (v1.6 milestone)*
-*Researched: 2026-03-10*
+*Feature research for: Security hardening of LO-Solver (v1.7 milestone)*
+*Researched: 2026-03-17*
