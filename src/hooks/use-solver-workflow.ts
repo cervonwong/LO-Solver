@@ -30,9 +30,11 @@ export function useSolverWorkflow({ onReset }: { onReset?: () => void } = {}) {
               providerMode,
               maxRounds: workflowSettings.maxRounds,
               perspectiveCount: workflowSettings.perspectiveCount,
-              ...(apiKey && { apiKey }),
             },
           },
+          ...(apiKey && {
+            headers: { 'x-openrouter-key': apiKey },
+          }),
         }),
       }),
     [providerMode, apiKey, workflowSettings],

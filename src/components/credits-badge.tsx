@@ -48,9 +48,9 @@ export function CreditsBadge({ providerMode, onClick, onServerKeyStatus }: Credi
     async function fetchCredits() {
       try {
         const res = await fetch('/api/credits', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(apiKey ? { key: apiKey } : {}),
+          ...(apiKey && {
+            headers: { 'x-openrouter-key': apiKey },
+          }),
         });
         const data = await res.json();
         if (data.remaining !== null && data.remaining !== undefined) {
