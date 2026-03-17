@@ -53,7 +53,6 @@ export const workflowStateSchema = z.object({
   maxRounds: z.number().default(3),
   perspectiveCount: z.number().default(3),
   workflowStartTime: z.number().default(0).describe('Epoch ms when workflow started'),
-  apiKey: z.string().optional(),
 });
 
 type WorkflowState = z.infer<typeof workflowStateSchema>;
@@ -83,7 +82,6 @@ export const rawProblemInputSchema = z.object({
   providerMode: z.enum(['openrouter-testing', 'openrouter-production', 'claude-code-testing', 'claude-code-production']).default('openrouter-testing'),
   maxRounds: z.number().min(1).max(5).default(3),
   perspectiveCount: z.number().min(2).max(7).default(3),
-  apiKey: z.string().optional(),
 });
 
 // ---------------------------------------------------------------------------

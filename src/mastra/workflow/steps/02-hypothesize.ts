@@ -45,7 +45,7 @@ export const multiPerspectiveHypothesisStep = createStep({
   inputSchema: structuredProblemDataSchema,
   outputSchema: questionAnsweringInputSchema,
   stateSchema: workflowStateSchema,
-  execute: async ({ inputData, mastra, bail, state, setState, writer, abortSignal }) => {
+  execute: async ({ inputData, mastra, bail, state, setState, writer, abortSignal, requestContext: workflowCtx }) => {
     const structuredProblem = inputData;
     const logFile = state.logFile;
     const stepId: StepId = 'multi-perspective-hypothesis';
@@ -76,8 +76,10 @@ export const multiPerspectiveHypothesisStep = createStep({
     mainRequestContext.set('workflow-start-time', state.workflowStartTime);
     mainRequestContext.set('abort-signal', abortSignal);
     mainRequestContext.set('cumulative-cost', 0);
-    if (state.apiKey)
-      mainRequestContext.set('openrouter-provider', createOpenRouterProvider(state.apiKey));
+    const userApiKey = workflowCtx?.get('user-api-key') as string | undefined;
+    if (userApiKey) {
+      mainRequestContext.set('openrouter-provider', createOpenRouterProvider(userApiKey));
+    }
 
     let lastTestResults: unknown = null;
     let previousPerspectiveIds: string[] = [];

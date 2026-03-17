@@ -26,13 +26,13 @@ export const extractionStep = createStep({
   inputSchema: rawProblemInputSchema,
   outputSchema: structuredProblemSchema,
   stateSchema: workflowStateSchema,
-  execute: async ({ inputData, mastra, bail, state, setState, writer, abortSignal }) => {
+  execute: async ({ inputData, mastra, bail, state, setState, writer, abortSignal, requestContext: workflowCtx }) => {
     // Initialize workflow state at the start of the workflow
     const initialState = initializeWorkflowState();
     const providerMode = inputData.providerMode ?? 'openrouter-testing';
     const maxRounds = inputData.maxRounds ?? 3;
     const perspectiveCount = inputData.perspectiveCount ?? 3;
-    const stateWithMode = { ...initialState, providerMode, maxRounds, perspectiveCount, apiKey: inputData.apiKey };
+    const stateWithMode = { ...initialState, providerMode, maxRounds, perspectiveCount };
     await setState(stateWithMode);
     const logFile = initialState.logFile;
 
@@ -46,8 +46,9 @@ export const extractionStep = createStep({
     requestContext.set('provider-mode', providerMode as ProviderMode);
     requestContext.set('workflow-start-time', initialState.workflowStartTime);
     requestContext.set('cumulative-cost', 0);
-    if (inputData.apiKey) {
-      requestContext.set('openrouter-provider', createOpenRouterProvider(inputData.apiKey));
+    const userApiKey = workflowCtx?.get('user-api-key') as string | undefined;
+    if (userApiKey) {
+      requestContext.set('openrouter-provider', createOpenRouterProvider(userApiKey));
     }
 
     const extractAgentId = generateEventId();

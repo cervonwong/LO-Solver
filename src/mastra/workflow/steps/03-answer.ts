@@ -28,7 +28,7 @@ export const answerQuestionsStep = createStep({
   inputSchema: questionAnsweringInputSchema,
   outputSchema: questionsAnsweredSchema,
   stateSchema: workflowStateSchema,
-  execute: async ({ inputData, mastra, bail, state, setState, writer, abortSignal }) => {
+  execute: async ({ inputData, mastra, bail, state, setState, writer, abortSignal, requestContext: workflowCtx }) => {
     const { structuredProblem, rules } = inputData;
     const logFile = state.logFile;
 
@@ -54,8 +54,9 @@ export const answerQuestionsStep = createStep({
     requestContext.set('provider-mode', state.providerMode as ProviderMode);
     requestContext.set('workflow-start-time', state.workflowStartTime);
     requestContext.set('cumulative-cost', 0);
-    if (state.apiKey) {
-      requestContext.set('openrouter-provider', createOpenRouterProvider(state.apiKey));
+    const userApiKey = workflowCtx?.get('user-api-key') as string | undefined;
+    if (userApiKey) {
+      requestContext.set('openrouter-provider', createOpenRouterProvider(userApiKey));
     }
 
     const answererAgentId = generateEventId();
