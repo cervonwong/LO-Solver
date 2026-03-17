@@ -9,9 +9,9 @@ Requirements for security hardening milestone. Each maps to roadmap phases.
 
 ### Secret Handling
 
-- [ ] **SEC-01**: API key is not persisted to LibSQL via workflow state schema
-- [ ] **SEC-02**: Solve endpoint receives API key via HTTP header instead of request body
-- [ ] **SEC-03**: Credits endpoint receives API key via HTTP header instead of query string
+- [x] **SEC-01**: API key is not persisted to LibSQL via workflow state schema
+- [x] **SEC-02**: Solve endpoint receives API key via HTTP header instead of request body
+- [x] **SEC-03**: Credits endpoint receives API key via HTTP header instead of query string
 
 ### Endpoint Hardening
 
@@ -55,9 +55,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SEC-01 | Phase 39 | Pending |
-| SEC-02 | Phase 39 | Pending |
-| SEC-03 | Phase 39 | Pending |
+| SEC-01 | Phase 39 | Complete |
+| SEC-02 | Phase 39 | Complete |
+| SEC-03 | Phase 39 | Complete |
 | GUARD-01 | Phase 40 | Pending |
 | GUARD-02 | Phase 40 | Pending |
 | GUARD-03 | Phase 40 | Pending |
