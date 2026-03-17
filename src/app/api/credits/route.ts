@@ -3,20 +3,7 @@ import { NextResponse } from 'next/server';
 export async function POST(req: Request) {
   const hasServerKey = !!process.env.OPENROUTER_API_KEY;
 
-  let userKey: string | null = null;
-  const rawBody = await req.text();
-  if (rawBody.trim()) {
-    try {
-      const body = JSON.parse(rawBody) as { key?: unknown };
-      userKey = typeof body.key === 'string' ? body.key : null;
-    } catch {
-      return NextResponse.json(
-        { remaining: null, hasServerKey, error: 'Request body must be valid JSON' },
-        { status: 400 }
-      );
-    }
-  }
-
+  const userKey = req.headers.get('x-openrouter-key');
   const effectiveKey = userKey || process.env.OPENROUTER_API_KEY;
 
   if (!effectiveKey) {

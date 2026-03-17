@@ -1,4 +1,5 @@
 import { toAISdkStream } from '@mastra/ai-sdk';
+import { RequestContext } from '@mastra/core/request-context';
 import { generateText, createUIMessageStream, createUIMessageStreamResponse } from 'ai';
 import { claudeCode } from '@/mastra/claude-code-provider';
 import { isClaudeCodeMode, isOpenRouterMode, type ProviderMode } from '@/mastra/openrouter';
@@ -10,9 +11,8 @@ export const maxDuration = 600;
 export async function POST(req: Request) {
   const params = await req.json();
 
-  // Extract API key from inputData — key stays in inputData for the workflow schema
-  // but we check availability here for early rejection
-  const apiKey: string | undefined = params.inputData?.apiKey;
+  // Extract API key from header (not from request body)
+  const apiKey = req.headers.get('x-openrouter-key') || undefined;
   const providerMode = (params.inputData?.providerMode ?? 'openrouter-testing') as ProviderMode;
 
   // OpenRouter modes require an API key
@@ -60,8 +60,14 @@ export async function POST(req: Request) {
 
   activeRuns.set(run.runId, run);
 
+  const requestContext = new RequestContext();
+  if (apiKey) {
+    requestContext.set('user-api-key', apiKey);
+  }
+
   const workflowStream = run.stream({
     inputData: params.inputData,
+    requestContext,
   });
 
   const stream = createUIMessageStream({
