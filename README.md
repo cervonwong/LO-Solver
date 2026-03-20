@@ -59,6 +59,41 @@ The `examples/` directory contains sample problems from linguistics olympiads:
 - **Okinawan** (IOL 2024) – Japonic language from Japan
 - **Saisiyat** (UKLO 2025) – Austronesian language from Taiwan
 
+## Evaluation
+
+Run the eval suite against ground-truth linguistics problems to measure solver accuracy.
+
+```bash
+npm run eval
+```
+
+### Flags
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--provider <openrouter\|claude-code>` | LLM provider | `openrouter` |
+| `--mode <testing\|production>` | Model tier | `testing` |
+| `--concurrency <N>` | Run N problems in parallel | `1` |
+| `--problem <id>` | Run a single problem by ID (e.g. `forest-enets`) | all problems |
+| `--comparison` | Also run zero-shot baseline and show delta | off |
+| `--rounds <N>` | Max verify/improve iterations (1–5) | `3` |
+| `--perspectives <N>` | Number of hypothesis perspectives (2–7) | `3` |
+
+### Examples
+
+```bash
+# Single problem with Claude Code production models
+npm run eval -- --problem forest-enets --provider claude-code --mode production
+
+# Full suite with zero-shot comparison
+npm run eval -- --comparison
+
+# Parallel execution with more iterations
+npm run eval -- --concurrency 3 --rounds 4 --perspectives 5
+```
+
+Results are saved as JSON in `evals/results/`. Workflow execution logs are written to `logs/`.
+
 ## Technologies
 
 - **[Mastra](https://mastra.ai/)** – AI agent orchestration framework
